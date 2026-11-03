@@ -7,9 +7,20 @@ SPDX-License-Identifier: GPL-3.0-or-later
 # Demo shows for cinq
 
 Shows to try cinq with, along with the sounds that they play, which Git LFS
-keeps.  Check them out next to the program, as with
-`git worktree add ../cinq-demo demo`, and open one, as with
-`cinq ../cinq-demo/storm.cinq.toml`.
+keeps.  Install Git LFS first, as with `brew install git-lfs` or the
+git-lfs package of your system, and run `git lfs install` once: without it,
+the sounds arrive as small pointer files, and cinq calls every audio cue
+broken.  Then, in a clone of cinq, check the shows out next to it and open
+one:
+
+```sh
+git fetch origin demo
+git worktree add ../cinq-demo demo
+cinq ../cinq-demo/storm.cinq.toml
+```
+
+A checkout made before Git LFS was installed gets its sounds with
+`git lfs pull` in `../cinq-demo`.
 
 - `storm.cinq.toml`: a scene in one list, from the preshow music through a
   storm, with fades that bring a cue up and take it out, a clip with a start
