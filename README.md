@@ -44,7 +44,8 @@ Minimal cue-based show controller, the
 #### General
 
 - Cargo
-- [scdoc](https://git.sr.ht/~sircmpwn/scdoc)
+- [scdoc](https://git.sr.ht/~sircmpwn/scdoc), for the manual pages that a
+  build lays out, as below
 - A C++ compiler, for openh264, which the build compiles from its source
 - [NASM](https://www.nasm.us/), optionally, for the faster x86 code of
   openh264
@@ -60,14 +61,18 @@ Minimal cue-based show controller, the
 
 ### Installing
 
-Every build lays out what cinq installs besides its program in
-`target/share`, as the share directory of a prefix holds it: the manual
-pages, completions for bash, zsh, fish, and Nushell, and, for GNU/Linux
-and the BSDs, the desktop entry with its icon and the type of show files.
-The Nix package installs it all.  Elsewhere, after `cargo build --release`,
-copy `target/release/cinq` into the `bin` directory of the prefix, which is
-often `/usr`, and what `target/share` holds into its `share` directory,
-then run `update-mime-database` with its `share/mime` directory.
+`cargo install cinq` builds cinq from crates.io and installs its program
+alone, in the `bin` directory of Cargo, which needs no scdoc.
+
+A build lays out what cinq installs besides its program in the directory
+that `CINQ_SHARE_DIR` names, which is `target/share` in the repository, as
+the share directory of a prefix holds it: the manual pages, completions for
+bash, zsh, fish, and Nushell, and, for GNU/Linux and the BSDs, the desktop
+entry with its icon and the type of show files.  The Nix package installs it
+all.  Elsewhere, after `cargo build --release`, copy `target/release/cinq`
+into the `bin` directory of the prefix, which is often `/usr`, and what
+`target/share` holds into its `share` directory, then run
+`update-mime-database` with its `share/mime` directory.
 
 Builds for Darwin also lay out the app bundle, `cinq.app`, in
 `target/Applications`, with all but the program, which goes into its
