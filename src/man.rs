@@ -10,9 +10,10 @@
 //! only the parts for the platform, for scdoc to render in turn.  The pages
 //! differ by platform only in where the configuration file and the unsaved
 //! changes are, which the dirs crate decides, in the program that opens the
-//! configuration file, and in the Wayland compositor that the window needs
-//! on GNU/Linux and the BSDs.  The program itself leaves this module out:
-//! only the build script and the tests compile it.
+//! configuration file, in the Wayland compositor that the window needs on
+//! GNU/Linux and the BSDs, and in the clock that waits for the windows to
+//! draw on Windows.  The program itself leaves this module out: only the
+//! build script and the tests compile it.
 
 #[cfg(test)]
 mod tests;

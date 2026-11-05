@@ -41,6 +41,7 @@ pub enum Action {
     Open,
     Save,
     SaveAs,
+    Fullscreen,
     Help,
     CloseHelp,
 }
@@ -78,6 +79,7 @@ impl Action {
             Action::Open => "Open a show",
             Action::Save => "Save the show",
             Action::SaveAs => "Save the show in another file",
+            Action::Fullscreen => "Toggle fullscreen on the stage window",
             Action::Help => "Show or hide this help",
             Action::CloseHelp => "Hide this help",
         }
@@ -91,6 +93,14 @@ impl Action {
     /// Returns whether the action is one of [`Action::AT_ONCE`]
     pub fn acts_at_once(self) -> bool {
         Self::AT_ONCE.contains(&self)
+    }
+
+    /// Returns whether a key of the action that is held down acts only
+    /// once: those of [`Action::AT_ONCE`], so that holding the key of Panic
+    /// does not cut a panic short, and that of fullscreen, which would
+    /// otherwise toggle the stage window back and forth
+    pub fn acts_once_a_press(self) -> bool {
+        self.acts_at_once() || self == Action::Fullscreen
     }
 
     /// Returns whether the keys of the action act in a text field, as the
@@ -146,6 +156,7 @@ impl Action {
             Action::Open => Message::Open,
             Action::Save => Message::Save,
             Action::SaveAs => Message::SaveAs,
+            Action::Fullscreen => Message::ToggleFullscreen,
             Action::Help => Message::ToggleHelp,
             Action::CloseHelp => Message::CloseHelp,
         }

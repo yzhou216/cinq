@@ -8,6 +8,7 @@
 
 use std::{ffi::OsString, path::PathBuf, time::Instant};
 
+use iced::{Size, window};
 use strum::{Display, VariantArray};
 
 use super::{
@@ -57,6 +58,8 @@ pub enum Message {
     PauseAll,
     ResumeAll,
     Stop(CueId),
+    /// Time of a tick of the playback clock, or of the moment that the
+    /// next picture of a video cue comes due
     Tick(Instant),
     Select(CueId),
     /// Moves the selection by a number of cues, downwards when positive
@@ -84,10 +87,10 @@ pub enum Message {
     Edit(CueId, Edit),
     /// Text typed into the level field of a cue
     LevelTyped(CueId, String),
-    /// Asks which sound file an audio cue plays
-    ChooseSound(CueId),
-    /// Sound file chosen for an audio cue
-    SoundChosen(CueId, PathBuf),
+    /// Asks which file an audio or video cue plays
+    ChooseFile(CueId),
+    /// File chosen for an audio or video cue
+    FileChosen(CueId, PathBuf),
     /// Takes back the latest change to the cues
     Undo,
     /// Makes again the change that undo took back last
@@ -103,8 +106,8 @@ pub enum Message {
         press: Press,
         repeat: bool,
     },
-    /// What loading the files of audio cues found, for the show of an
-    /// identity
+    /// What loading the files of audio and video cues found, for the show
+    /// of an identity
     Loaded(u64, Vec<Command>),
     /// Time to load again the files that could not be played
     Recheck,
@@ -135,8 +138,18 @@ pub enum Message {
     SaveTo(PathBuf),
     /// What saving the show found
     Saved(Saved),
-    /// Mouse button pressed anywhere in the window
+    /// Mouse button pressed anywhere in a window
     Clicked,
-    /// Window changed size
-    Resized,
+    /// Window changed size, to no size at all while it is minimized
+    Resized(window::Id, Size),
+    /// Window gained the keyboard
+    WindowFocused(window::Id),
+    /// Toggles the stage window between fullscreen and a window
+    ToggleFullscreen,
+    /// Stage window toggled, into fullscreen or out of it
+    StageToggled {
+        fullscreen: bool,
+    },
+    /// Window closed, as the operator closes it
+    Closed(window::Id),
 }

@@ -56,15 +56,27 @@ fn moved_cue_stops_at_either_end_of_its_list_and_keeps_standby() {
 fn loading_ignores_a_file_that_has_been_replaced() {
     let replaced = workspace(vec![audio(1)])
         .apply(Command::Edit(CueId(1), Edit::File("other.ogg".to_owned())));
-    let stale = replaced
-        .clone()
-        .apply(loaded(1, "sound.ogg", Media::Loaded { duration: 10.0 }));
+    let stale = replaced.clone().apply(loaded(
+        1,
+        "sound.ogg",
+        Media::Loaded {
+            duration: 10.0,
+            sound: Some(10.0),
+        },
+    ));
     let cue = stale.cue(CueId(1)).unwrap();
     assert_eq!(stale.problem(cue), Some(Problem::NotLoaded));
     // Failure of the file that was replaced leaves the cue playing
     let failed = loaded(1, "sound.ogg", Media::Failed("file not found".to_owned()));
     let playing = replaced
-        .apply(loaded(1, "other.ogg", Media::Loaded { duration: 10.0 }))
+        .apply(loaded(
+            1,
+            "other.ogg",
+            Media::Loaded {
+                duration: 10.0,
+                sound: Some(10.0),
+            },
+        ))
         .apply(GO)
         .apply(failed);
     assert!(playing.active_of(CueId(1)).is_some());
@@ -127,7 +139,7 @@ fn chosen_sound_file_goes_by_its_path_from_the_show_when_it_is_there() {
 #[test]
 fn sound_files_are_looked_for_next_to_the_file_a_cue_plays() {
     let workspace = Workspace::new(Vec::new()).directory("/show");
-    let directory = |file: &str| workspace.sound_directory(&playing(file));
+    let directory = |file: &str| workspace.file_directory(&playing(file));
     assert_eq!(directory("sounds/storm.ogg"), Path::new("/show/sounds"));
     assert_eq!(directory("/music/storm.ogg"), Path::new("/music"));
     assert_eq!(directory(""), Path::new("/show"));

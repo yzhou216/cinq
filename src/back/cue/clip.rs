@@ -2,9 +2,19 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Part of a sound file that an audio cue plays
+//! Part of a file that an audio or video cue plays
 
-/// Part of its sound file that an audio cue plays, from `start` to `end`
+use std::path::PathBuf;
+
+/// Part of a file that a run of an audio or video cue may start, which
+/// the sound and the video output make ready ahead of it
+#[derive(Debug, Clone, PartialEq)]
+pub struct Wanted {
+    pub(in crate::back) path: PathBuf,
+    pub(in crate::back) clip: Clip,
+}
+
+/// Part of its file that an audio or video cue plays, from `start` to `end`
 /// in seconds into the file, where `start` comes before `end`.  A clip
 /// that loops plays from its start again each time it reaches its end,
 /// until something stops its cue.
@@ -21,8 +31,8 @@ impl Clip {
         self.end - self.start
     }
 
-    /// Returns where in the file the sound is once `played` seconds of the
-    /// clip have played, counting every pass of a clip that loops
+    /// Returns where in the file the clip is once `played` seconds of it
+    /// have played, counting every pass of a clip that loops
     pub(in crate::back) fn position(&self, played: f64) -> f64 {
         let into = if self.looping {
             played % self.length()
