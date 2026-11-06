@@ -7,6 +7,7 @@
 
 mod editing;
 mod history;
+mod picture;
 mod playback;
 mod show;
 mod video;

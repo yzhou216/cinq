@@ -2,13 +2,15 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Loading the files that audio and video cues name, which reads them
+//! Loading the files that audio, video, and picture cues name, which reads
+//! them
 //!
 //! [`load_files`] finds how long each file plays, or why it cannot be
 //! played, without decoding it: the sound output reads sound files, and the
 //! video output reads video files, along with their sound tracks, which the
-//! sound output then reads in turn.  Reading can block on a slow drive, so
-//! the interface runs it off its own thread.
+//! sound output then reads in turn, and picture files, of which it reads
+//! the header alone.  Reading can block on a slow drive, so the interface
+//! runs it off its own thread.
 
 #[cfg(test)]
 mod tests;
@@ -20,8 +22,8 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use super::{Command, Cue, CueId, Kind, Media, Workspace, audio, video};
 
-/// File of an audio or video cue to load: the file as the cue names it,
-/// where it is, and the kind of cue that plays it
+/// File of an audio, video, or picture cue to load: the file as the cue
+/// names it, where it is, and the kind of cue that plays or shows it
 #[derive(Debug)]
 pub struct Load {
     cue: CueId,
@@ -75,7 +77,8 @@ pub fn load_files(loads: Vec<Load>) -> Vec<Command> {
 /// Reads how long a file plays for the kind of cue that plays it, and how
 /// long its sound plays, or why it cannot be played.  The sound track of a
 /// video file has to play as well, since the cue plays it along with the
-/// picture, while a video file without one plays its picture alone.
+/// picture, while a video file without one plays its picture alone.  A
+/// picture file plays for no time and holds no sound.
 fn probe((path, kind): &(PathBuf, Kind)) -> Media {
     let loaded = match kind {
         Kind::Video => video::probe(path).and_then(|(duration, sound)| {
@@ -85,6 +88,7 @@ fn probe((path, kind): &(PathBuf, Kind)) -> Media {
                 .map_err(|reason| format!("its sound cannot play: {reason}"))?;
             Ok((duration, sound))
         }),
+        Kind::Picture => video::probe_still(path).map(|()| (0.0, None)),
         _ => audio::probe(path).map(|duration| (duration, Some(duration))),
     };
     match loaded {

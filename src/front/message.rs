@@ -87,9 +87,9 @@ pub enum Message {
     Edit(CueId, Edit),
     /// Text typed into the level field of a cue
     LevelTyped(CueId, String),
-    /// Asks which file an audio or video cue plays
+    /// Asks which file an audio, video, or picture cue plays or shows
     ChooseFile(CueId),
-    /// File chosen for an audio or video cue
+    /// File chosen for an audio, video, or picture cue
     FileChosen(CueId, PathBuf),
     /// Takes back the latest change to the cues
     Undo,
@@ -106,8 +106,8 @@ pub enum Message {
         press: Press,
         repeat: bool,
     },
-    /// What loading the files of audio and video cues found, for the show
-    /// of an identity
+    /// What loading the files of audio, video, and picture cues found, for
+    /// the show of an identity
     Loaded(u64, Vec<Command>),
     /// Time to load again the files that could not be played
     Recheck,
@@ -146,10 +146,6 @@ pub enum Message {
     WindowFocused(window::Id),
     /// Toggles the stage window between fullscreen and a window
     ToggleFullscreen,
-    /// Stage window toggled, into fullscreen or out of it
-    StageToggled {
-        fullscreen: bool,
-    },
     /// Window closed, as the operator closes it
     Closed(window::Id),
 }

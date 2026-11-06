@@ -4,8 +4,8 @@
 
 //! Cues that GO has fired, kept as bookkeeping without side effects, with
 //! what they do once their pre-wait is over and the fades they make, which
-//! [`effect`] describes, and what audio and video cues play, which
-//! [`playing`] tells
+//! [`effect`] describes, and what audio and video cues play and what
+//! picture and video cues show, which [`playing`] tells
 //!
 //! Time here is counted in seconds as `f64`, since a clock that adds a
 //! tick forty times a second for an hour would drift by seconds in `f32`.
@@ -50,13 +50,15 @@ pub struct Active {
 }
 
 /// Where an active cue is in its lifetime.  An audio or video cue whose
-/// clip loops stays [`Phase::Looping`] until something stops it.
+/// clip loops stays [`Phase::Looping`] until something stops it, as a
+/// picture cue stays [`Phase::Showing`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Phase {
     Scheduled { starts_in: f64 },
     PreWait { remaining: f64 },
     Running { remaining: f64 },
     Looping,
+    Showing,
 }
 
 impl Active {
@@ -70,6 +72,7 @@ impl Active {
                 clip,
                 sound: cue.sounds(),
             }),
+            (Kind::Picture, _) => Effect::Picture,
             (Kind::Fade, Some(target)) => Effect::Fade {
                 target,
                 fade: Fade {
@@ -106,6 +109,7 @@ impl Active {
             elapsed if elapsed < self.pre_wait => Phase::PreWait {
                 remaining: self.pre_wait - elapsed,
             },
+            _ if self.effect == Effect::Picture => Phase::Showing,
             _ if self.loops() => Phase::Looping,
             elapsed => Phase::Running {
                 remaining: (self.pre_wait + self.length - elapsed).max(0.0),
@@ -121,6 +125,7 @@ impl Active {
             _ if self.length <= 0.0 => 1.0,
             Phase::Running { remaining } => 1.0 - remaining / self.length,
             Phase::Looping => self.played() % self.length / self.length,
+            Phase::Showing => 1.0,
         };
         progress as f32
     }
@@ -156,10 +161,10 @@ impl Active {
             .is_some_and(|fade| fade.then_stop && fade.remaining <= 0.0)
     }
 
-    /// Returns whether the action is over, which that of a cue that loops
-    /// never is
+    /// Returns whether the action is over, which that of a picture cue, or
+    /// of a cue that loops, never is
     pub(super) fn finished(&self) -> bool {
-        !self.loops() && self.elapsed >= self.pre_wait + self.length
+        !self.endless() && self.elapsed >= self.pre_wait + self.length
     }
 
     /// Returns the cue `seconds` later, or unchanged while it is paused

@@ -48,14 +48,15 @@ impl Cinq {
     /// Applies one message, lets the video and sound output catch up with
     /// the result, keeps the unsaved changes of the show, starts loading
     /// any file that the message named, and opens the stage window once the
-    /// show holds a video cue.  This is the only place where state is
-    /// replaced, and the video and sound output and the keeper of unsaved
-    /// changes are the only parts it calls that have side effects;
-    /// everything else builds new values.  The video output goes first, so
-    /// that a run whose picture cannot play has its sound stopped in the
-    /// same update.  A clock that the message starts counts from now, so
-    /// that its first tick counts only the time since.  Taking the state out
-    /// of `self` instead of cloning it keeps updates free of copies.
+    /// show holds a picture or video cue, or makes it fullscreen once GO
+    /// fires one.  This is the only place where state is replaced, and the
+    /// video and sound output and the keeper of unsaved changes are the only
+    /// parts it calls that have side effects; everything else builds new
+    /// values.  The video output goes first, so that a run whose picture
+    /// cannot play has its sound stopped in the same update.  A clock that
+    /// the message starts counts from now, so that its first tick counts
+    /// only the time since.  Taking the state out of `self` instead of
+    /// cloning it keeps updates free of copies.
     pub(in crate::front) fn update(&mut self, message: Message) -> Task<Message> {
         let (app, task) = std::mem::take(&mut self.app).next(message);
         let (workspace, pictures) = self.video.sync(app.workspace);

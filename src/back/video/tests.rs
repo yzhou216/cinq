@@ -5,11 +5,13 @@
 //! Tests of reading how long video files play and of decoding their
 //! pictures in time, from the sync sample before a clip and on later passes
 //! through a clip that loops, along with those of [`player`] and [`runs`],
-//! on videos that [`movie`] makes
+//! on videos that [`movie`] makes, and those of [`still`], on pictures of
+//! its own
 
 pub(in crate::back) mod movie;
 mod player;
 mod runs;
+mod still;
 
 use std::{fs, path::Path, sync::Arc, time::Duration};
 

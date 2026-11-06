@@ -97,8 +97,12 @@ fn form<'a>(app: &'a App, cue: &'a Cue, fields: &[Field]) -> Element<'a, Message
 /// Part of its file that an audio or video cue plays, and whether it
 /// loops, which become read-only in show mode
 fn time<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
-    if !cue.kind.plays_file() {
-        return text(format!("{} cues play no file", cue.kind)).into();
+    match cue.kind {
+        Kind::Picture => {
+            return text("Picture cues show their file until something stops them").into();
+        }
+        kind if !kind.plays_file() => return text(format!("{kind} cues play no file")).into(),
+        _ => {}
     }
     let id = cue.id;
     let looping = checkbox(cue.looping)
@@ -123,7 +127,7 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         }
         Kind::Audio | Kind::Video => "Level",
         Kind::Fade => "Fade target to",
-        Kind::Stop | Kind::Wait | Kind::Memo => {
+        Kind::Picture | Kind::Stop | Kind::Wait | Kind::Memo => {
             return text(format!("{} cues have no level", cue.kind)).into();
         }
     };

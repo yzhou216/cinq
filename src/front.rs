@@ -10,7 +10,7 @@
 //! [`Message`], [`update`] applies it, and [`view`] draws the result.  Keys
 //! become messages through [`keymap`], whose bindings a configuration file
 //! can change.  Besides the main window, a stage window shows the pictures
-//! of video cues once the show holds one.
+//! of picture and video cues once the show holds one.
 
 mod keymap;
 mod message;
@@ -117,7 +117,8 @@ struct App {
     workspace: Workspace,
     /// Main window, once it has been asked for, whose closing quits cinq
     main: Option<window::Id>,
-    /// Stage window, with the pictures of the video cues that play
+    /// Stage window, with the pictures of the picture and video cues that
+    /// run
     stage: Stage,
     /// Windows that are minimized, which iced does not draw
     minimized: Vec<window::Id>,
@@ -155,7 +156,7 @@ struct App {
     /// Why the link that the help page opened last failed to open, which
     /// the page shows while it stays open
     link_problem: Option<String>,
-    /// Whether the files of audio and video cues are being loaded
+    /// Whether the files of audio, video, and picture cues are being loaded
     loading: bool,
     /// Whether the files that could not be played are being read again
     rechecking: bool,
@@ -193,7 +194,7 @@ impl App {
         self.workspace
             .active()
             .iter()
-            .any(|active| active.shows_picture() && !active.paused)
+            .any(|active| active.shows_video() && !active.paused)
     }
 }
 

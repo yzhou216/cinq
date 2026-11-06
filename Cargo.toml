@@ -36,6 +36,10 @@ iced = { version = "0.14", default-features = false, features = [ # Wayland alon
   "web-colors",
   "wgpu",
 ] }
+image = { version = "0.25", default-features = false, features = [
+  "jpeg",
+  "png",
+] }
 itertools = "0.15"
 keyboard-types = "0.8"
 kira = { version = "0.12", default-features = false, features = [

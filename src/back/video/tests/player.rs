@@ -14,7 +14,7 @@ use super::{
     PATIENCE, clip,
     movie::{movie, picture_number},
 };
-use crate::back::video::player::Player;
+use crate::back::{Shown, video::player::Player};
 
 /// Moves `player` on to `played` seconds of its clip until it hands on the
 /// picture numbered `expected`, and returns the player with the numbers of
@@ -49,7 +49,7 @@ fn shown_since(
 #[test]
 fn player_hands_on_the_newest_picture_that_its_clock_has_reached() {
     let (_directory, path) = movie(15, 5);
-    let player = Player::start(path, clip(0.0, 0.5, false));
+    let player = Player::start(path, Shown::Clip(clip(0.0, 0.5, false)));
     let (player, first) = shown(player, 0.0, 0);
     assert_eq!(first, [0]);
     // Picture 6 shows at a fifth of a second, and picture 7 just after
@@ -67,7 +67,7 @@ fn player_hands_on_the_newest_picture_that_its_clock_has_reached() {
 fn player_of_a_clip_that_loops_shows_its_pictures_again_on_each_pass() {
     let (_directory, path) = movie(12, 4);
     // Pictures 3 to 5 make a tenth of a second, which loops after picture 5
-    let player = Player::start(path, clip(0.1, 0.2, true));
+    let player = Player::start(path, Shown::Clip(clip(0.1, 0.2, true)));
     let (player, first) = shown(player, 0.09, 5);
     assert_eq!(first.last(), Some(&5));
     let (player, second) = shown(player, 0.11, 3);

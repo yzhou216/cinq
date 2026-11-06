@@ -9,7 +9,8 @@
 //! of a video cue gets a thread of its own from the moment GO fires it,
 //! which decodes the clip of the run a few pictures ahead of the clock of
 //! the run, and a run whose clip loops gets a second one, which decodes the
-//! next pass through the clip before the pass under way ends.  Each sync
+//! next pass through the clip before the pass under way ends.  Each run of
+//! a picture cue gets a thread that decodes its one picture.  Each sync
 //! hands on the newest picture that the clock of each run has reached, so
 //! that the picture follows the clock of the show and holds still while
 //! the run is paused.  The sound follows the clock of the audio device
@@ -18,39 +19,55 @@
 //! of that, the pictures that the next GO of each list may start are made
 //! ready, as their sounds are, since decoding has to start at the sync
 //! sample before the start of a clip, a few seconds before it in many
-//! files.  The workspace stays the only record of what should be seen, so
-//! a picture that cannot play goes back to it as a file that cannot be
-//! played.  Video files hold H.264 in MP4, whose tracks [`track`] reads,
-//! and which [`decoder`] decodes with Cisco's openh264.
+//! files, and a large picture file takes a moment to decode.  The
+//! workspace stays the only record of what should be seen, so a picture
+//! that cannot play goes back to it as a file that cannot be played.  Video
+//! files hold H.264 in MP4, whose tracks [`track`] reads, and which
+//! [`decoder`] decodes with Cisco's openh264, while picture files hold PNG
+//! or JPEG, which [`still`] decodes.
 
 mod decoder;
 mod player;
+mod still;
 #[cfg(test)]
 pub(super) mod tests;
 mod track;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use itertools::{Either, Itertools};
 
-use super::{Active, Command, Cue, CueId, Kind, Media, Problem, Wanted, Workspace};
+use super::{Active, Command, Cue, CueId, Media, Problem, Shown, Workspace};
 pub use decoder::Picture;
 use player::{Advanced, Player};
+pub(super) use still::probe as probe_still;
 pub(super) use track::probe;
 
 /// Endings of the names of the video files that the video output plays,
 /// as MP4, QuickTime, and iTunes name them
 pub const VIDEO_FILES: [&str; 3] = ["m4v", "mov", "mp4"];
 
+/// Endings of the names of the picture files that the video output shows,
+/// as PNG and JPEG name them
+pub const PICTURE_FILES: [&str; 3] = ["jpeg", "jpg", "png"];
+
+/// File that a run of a video or picture cue may show, and what the stage
+/// window shows of it
+#[derive(Debug, Clone, PartialEq)]
+struct Showing {
+    path: PathBuf,
+    shown: Shown,
+}
+
 /// Video output for a workspace
 #[derive(Default)]
 pub struct Video {
-    /// Pictures of the runs of video cues that GO has fired, by cue, each
-    /// with the serial number of its run
+    /// Pictures of the runs of video and picture cues that GO has fired, by
+    /// cue, each with the serial number of its run
     runs: HashMap<CueId, (u32, Player)>,
     /// Pictures that the next GO may start, made ready ahead, by cue, each
-    /// with the part of a file that it plays
-    ready: HashMap<CueId, (Wanted, Player)>,
+    /// with the file that it shows and what of it
+    ready: HashMap<CueId, (Showing, Player)>,
 }
 
 impl Video {
@@ -67,8 +84,8 @@ impl Video {
             .iter()
             .filter_map(|active| {
                 let cue = workspace.cue(active.id)?;
-                let clip = active.video()?;
-                let wanted = workspace.path(cue).map(|path| Wanted { path, clip });
+                let shown = active.shown()?;
+                let showing = workspace.path(cue).map(|path| Showing { path, shown });
                 // Player of the run, or else the one made ready for it
                 let player = ended
                     .remove(&cue.id)
@@ -77,10 +94,10 @@ impl Video {
                     .or_else(|| {
                         ready
                             .remove(&cue.id)
-                            .filter(|(made, _)| Some(made) == wanted.as_ref())
+                            .filter(|(made, _)| Some(made) == showing.as_ref())
                             .map(|(_, player)| player)
                     });
-                Some((cue, active.run, moved_on(wanted, active, player)))
+                Some((cue, active.run, moved_on(showing, active, player)))
             })
             .collect();
         let (playing, failures): (Vec<_>, Vec<_>) =
@@ -100,16 +117,19 @@ impl Video {
         self.runs = runs;
         self.ready = workspace
             .upcoming()
-            .filter(|(cue, _)| cue.kind == Kind::Video)
-            .map(|(cue, wanted)| {
+            .filter_map(|(cue, path)| {
+                let showing = Showing {
+                    path,
+                    shown: cue.shown()?,
+                };
                 let player = ready
                     .remove(&cue.id)
-                    .filter(|(made, _)| *made == wanted)
+                    .filter(|(made, _)| *made == showing)
                     .map_or_else(
-                        || Player::start(wanted.path.clone(), wanted.clip),
+                        || Player::start(showing.path.clone(), showing.shown),
                         |(_, player)| player,
                     );
-                (cue.id, (wanted, player))
+                Some((cue.id, (showing, player)))
             })
             .collect();
         let pictures = pictures
@@ -140,16 +160,16 @@ impl Video {
     }
 }
 
-/// Returns the player of the run `active` of a video cue that plays
-/// `wanted`, moved on to the clock of the run once the pre-wait is over:
-/// `player`, the player of the run or the one made ready for it, or else
-/// one that starts now
-fn moved_on(wanted: Option<Wanted>, active: &Active, player: Option<Player>) -> Advanced {
+/// Returns the player of the run `active` of a video or picture cue that
+/// shows `showing`, moved on to the clock of the run once the pre-wait is
+/// over: `player`, the player of the run or the one made ready for it, or
+/// else one that starts now
+fn moved_on(showing: Option<Showing>, active: &Active, player: Option<Player>) -> Advanced {
     let player = match player {
         Some(player) => player,
         None => {
-            let wanted = wanted.ok_or_else(|| Problem::NoFile.to_string())?;
-            Player::start(wanted.path, wanted.clip)
+            let showing = showing.ok_or_else(|| Problem::NoFile.to_string())?;
+            Player::start(showing.path, showing.shown)
         }
     };
     if active.shows_picture() {

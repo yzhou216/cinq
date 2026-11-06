@@ -24,9 +24,10 @@ Minimal cue-based show controller, the
   times, seamless loops, and levels that change while they play.
 - **Video cues** in H.264 and MP4, with their sound, which cinq decodes
   itself with Cisco's openh264 rather than handing them to another player,
-  on a stage window that goes fullscreen.  A fade that stops a video, and
-  Panic, fade its picture out along with its sound, to black or to the video
-  that plays on under it.
+  and **picture cues** in PNG or JPEG, which hold until something stops
+  them.  Both show on a stage window that each GO of one makes fullscreen.
+  A fade that stops a picture or a video, and Panic, fade it out along with
+  its sound, to black or to the picture that shows on under it.
 - **Fade, stop, wait, and memo cues**, chained by auto-continue and
   auto-follow, with pre-waits and post-waits.
 - **Panic** fades everything out in a second, and a second Panic stops at

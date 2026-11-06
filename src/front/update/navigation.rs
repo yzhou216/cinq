@@ -6,7 +6,7 @@
 //! the cue list on screen
 
 use crate::{
-    back::{Command, CueId, Kind},
+    back::{Command, CueId},
     front::{App, step},
 };
 
@@ -15,24 +15,21 @@ impl App {
     /// page, so that the show is in view as it runs.  A selection on the
     /// standby cue moves on with standby, so that the cue list keeps the
     /// next cue in view as the show runs, while a selection elsewhere stays
-    /// where the operator put it.  A video cue that fires opens the stage
-    /// window again, if the operator has closed it.
+    /// where the operator put it.  A picture or video cue that fires opens
+    /// the stage window again, if the operator has closed it, and makes it
+    /// fullscreen.
     pub(super) fn gone(self) -> Self {
         let following = self.selected.is_some() && self.selected == self.current().standby;
-        let video = self
+        let staged = self
             .workspace
             .next_go(self.current())
-            .any(|(cue, _)| cue.kind == Kind::Video);
+            .any(|(cue, _)| cue.kind.on_stage());
         let go = Command::Go { list: self.list };
         let app = self.send(go);
         Self {
             help: false,
             selected: app.current().standby.filter(|_| following).or(app.selected),
-            stage: if video {
-                app.stage.reopened()
-            } else {
-                app.stage
-            },
+            stage: if staged { app.stage.cued() } else { app.stage },
             ..app
         }
     }

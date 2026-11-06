@@ -4,8 +4,8 @@
 
 //! Tests of typed levels, of the names that sound files give cues, of the
 //! clips that audio and video cues play, along with the sound of a video
-//! cue, of the delay after which a looping cue carries its chain on, and of
-//! the level that counts as silence
+//! cue, of the delay after which a looping cue carries its chain on, of
+//! the level that counts as silence, and of what a picture cue shows
 
 use super::*;
 
@@ -164,4 +164,24 @@ fn video_cue_that_starts_past_the_end_of_its_sound_plays_its_picture_alone() {
     assert!(!late.sounds());
     let clip = late.clip().expect("the picture plays");
     assert_eq!((clip.start as f32, clip.end), (9.7, 10.0));
+}
+
+#[test]
+fn picture_cue_shows_its_file_whole_and_follows_on_to_nothing() {
+    let picture = Cue {
+        media: Media::Loaded {
+            duration: 0.0,
+            sound: None,
+        },
+        advance: Advance::Follow,
+        ..Cue::new(CueId(1), "1", Kind::Picture, "New Picture cue").build()
+    };
+    assert_eq!(
+        (picture.clip(), picture.shown()),
+        (None, Some(Shown::Still))
+    );
+    assert!(picture.endless() && !picture.sounds());
+    assert_eq!(picture.next_delay(), None);
+    let named = picture.playing("slides/preshow.png".to_owned());
+    assert!(matches!(named, Edit::FileAndName { name, .. } if name == "preshow"));
 }

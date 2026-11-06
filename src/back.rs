@@ -21,14 +21,14 @@ mod workspace;
 
 use std::time::Duration;
 
-use cue::{Clip, Wanted};
+use cue::{Clip, Shown, Wanted};
 
 pub use audio::{Audio, SOUND_FILES};
 pub use cue::{
     Advance, Cue, CueId, CueList, Edit, Kind, LEVELS, LOUDEST, Media, Problem, SILENCE, parse_level,
 };
 pub use load::{Load, load_files};
-pub use video::{Picture, VIDEO_FILES, Video};
+pub use video::{PICTURE_FILES, Picture, VIDEO_FILES, Video};
 pub use workspace::{Active, Change, Command, Phase, Place, Turn, Workspace};
 
 /// Interval of the playback clock while any cue is running, which the front

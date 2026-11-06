@@ -6,7 +6,7 @@
 
 use strum::Display;
 
-/// What loading the file of an audio or video cue found
+/// What loading the file of an audio, video, or picture cue found
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum Media {
     /// File has not been loaded since it was set
@@ -15,7 +15,9 @@ pub enum Media {
     /// File plays for `duration` seconds, and its sound for `sound`
     /// seconds, apart from a video file with a picture alone, which holds
     /// no sound.  The two are the same for a sound file, while the sound
-    /// of a video file can end before its picture or after it.
+    /// of a video file can end before its picture or after it.  A picture
+    /// file, which shows until something stops its cue, plays for none and
+    /// holds no sound.
     Loaded { duration: f32, sound: Option<f32> },
     /// File cannot be played, for the given reason
     Failed(String),
@@ -24,14 +26,14 @@ pub enum Media {
 /// Reason a cue cannot play, which displays as the warnings list shows it
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
 pub enum Problem<'a> {
-    /// Audio or video cue has no file
+    /// Audio, video, or picture cue has no file
     #[strum(to_string = "no file set")]
     NoFile,
-    /// File of an audio or video cue has not been loaded yet
+    /// File of an audio, video, or picture cue has not been loaded yet
     #[strum(to_string = "file not loaded")]
     NotLoaded,
-    /// Loading the file of an audio or video cue failed for the given
-    /// reason
+    /// Loading the file of an audio, video, or picture cue failed for the
+    /// given reason
     #[strum(transparent)]
     LoadFailed(&'a str),
     /// Audio or video cue starts at or after its end, or past the end of

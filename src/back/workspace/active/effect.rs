@@ -5,10 +5,11 @@
 //! What a fired cue does once its pre-wait is over, and the fades that fade
 //! cues and panics make on the level of another cue
 
-use crate::back::{Clip, CueId};
+use crate::back::{Clip, CueId, Shown};
 
 /// Change to the level of an audio or video cue that a fade cue or a panic
-/// makes
+/// makes, which also fades out the picture of a video or picture cue that
+/// it stops
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Fade {
     /// Fade cue making the change, or `None` for a panic
@@ -52,6 +53,8 @@ pub(in crate::back) enum Effect {
     /// Plays a clip of the file of a video cue: its picture, along with its
     /// sound when the file holds any
     Video { clip: Clip, sound: bool },
+    /// Shows the picture file of a picture cue, until something stops it
+    Picture,
     /// Makes a fade on the level of a cue
     Fade { target: CueId, fade: Fade },
     /// Stops a cue
@@ -76,5 +79,21 @@ impl Effect {
             Effect::Sound(clip) | Effect::Video { clip, sound: true } => Some(clip),
             _ => None,
         }
+    }
+
+    /// Returns what the stage window shows of the file of a video or
+    /// picture cue
+    pub(in crate::back) fn shown(self) -> Option<Shown> {
+        match self {
+            Effect::Video { clip, .. } => Some(Shown::Clip(clip)),
+            Effect::Picture => Some(Shown::Still),
+            _ => None,
+        }
+    }
+
+    /// Returns whether the effect plays or shows a file, as those of audio,
+    /// video, and picture cues do
+    pub(in crate::back) fn plays(self) -> bool {
+        self.clip().is_some() || self == Effect::Picture
     }
 }
