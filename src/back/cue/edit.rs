@@ -12,8 +12,8 @@ pub enum Edit {
     Number(String),
     Name(String),
     File(String),
-    /// File of an audio or video cue together with the name it gives the
-    /// cue, as choosing the file makes
+    /// File of an audio, video, or picture cue together with the name it
+    /// gives the cue, as choosing the file makes
     FileAndName {
         file: String,
         name: String,

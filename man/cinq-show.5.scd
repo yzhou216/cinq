@@ -55,16 +55,18 @@ Each cue is a table in the array *cue* of its list:
 	Number of the cue, as the cue list shows it, which can be any text.
 
 *kind*
-	What the cue does: *audio*, *video*, *fade*, *stop*, *wait*, or *memo*.
-	An audio cue plays a sound file, and a video cue plays a video file, as
-	*VIDEO* describes.
+	What the cue does: *audio*, *video*, *picture*, *fade*, *stop*, *wait*, or
+	*memo*.
+	An audio cue plays a sound file, a video cue plays a video file, and a
+	picture cue shows a picture file, as *STAGE* describes.
 
 *name*
 	Name of the cue.
 
 *file*
-	Sound file that an audio cue plays, or video file that a video cue plays:
-	an absolute path, or one relative to the directory of the show file.
+	Sound file that an audio cue plays, video file that a video cue plays, or
+	picture file that a picture cue shows: an absolute path, or one relative
+	to the directory of the show file.
 	Sound files hold WAV, FLAC, Ogg Vorbis, MP3, or AAC in MP4.
 
 *start*
@@ -84,8 +86,8 @@ Each cue is a table in the array *cue* of its list:
 
 *target*
 	Identity of the cue that a fade or stop cue acts on.
-	A fade cue acts on an audio or video cue, and a stop cue on any cue but
-	itself.
+	A fade cue acts on an audio, video, or picture cue, and a stop cue on any
+	cue but itself.
 
 *pre_wait*
 	Seconds between the cue firing and its action, which are none by
@@ -104,7 +106,8 @@ Each cue is a table in the array *cue* of its list:
 	What happens to the next cue once this one has fired: *manual*, the
 	default, leaves it waiting for GO, *continue* fires it once the
 	post-wait is over, and *follow* fires it once the action of this cue
-	ends, which that of an audio or video cue that loops never does.
+	ends, which that of a picture cue, or of an audio or video cue that loops,
+	never does.
 
 *level*
 	Level in dB that an audio or video cue plays at, which is 0 by default, or
@@ -121,7 +124,7 @@ Each cue is a table in the array *cue* of its list:
 A file in which two cues share an identity, or a level lies outside its range,
 cannot be opened.
 
-# VIDEO
+# STAGE
 
 A video cue plays H.264 video in MP4, as files ending in _.mp4_, _.m4v_, or
 _.mov_ hold it, along with the sound of its AAC track, in mono or stereo.
@@ -129,24 +132,36 @@ A file without a sound track plays its picture alone.
 A video cue takes as long as the picture of its file, and its *start*, *end*,
 *loop*, *level*, and waits work as those of an audio cue do.
 
-The pictures of video cues show in a stage window of their own, which opens
-beside the main window once the show holds a video cue.
-It shows black while no video plays, and otherwise the picture of the video
-cue that fired last, whole and as large as the window allows, with black
-around it where its shape differs from that of the window.
-A fade cue that stops a video cue fades its picture out along with its sound,
-as a panic does: to black, or to the picture of an earlier video cue that
-plays on.
-Pausing holds the picture, and a cue that loops loops its picture with its
-sound.
+A picture cue shows a picture in PNG or JPEG, as files ending in _.png_,
+_.jpg_, or _.jpeg_ hold it, turned upright as the file tells, and laid on
+black where it is not wholly opaque.
+It shows until something stops it, such as a fade cue that stops it, a stop
+cue, or a panic, so that a cue that follows it waits for GO.
 
-Closing the stage window closes it until a video cue fires again, which opens
-it anew: as a window of its first size, wherever the platform puts it, or
-fullscreen if the key of *fullscreen* last made it fullscreen.
+The pictures of picture and video cues show in a stage window of their own,
+which opens beside the main window once the show holds a picture or video
+cue, as a window that the operator can move to the display of the audience.
+It shows black while no picture shows, and otherwise the picture of the cue
+that fired last, whole and as large as the window allows, with black around
+it where its shape differs from that of the window.
+Each GO that fires a picture or video cue makes the stage window fullscreen,
+on the display that it is on, and brings it before the other windows, so
+that the picture fills the screen as it comes up.
+A picture that comes up hides those of the cues that fired before it, which
+show again once it has gone, as that of a picture cue does once a video that
+fired after it ends, unless something has stopped the picture cue.
+A fade cue that stops a picture or video cue fades its picture out, along
+with the sound of a video, as a panic does: to black, or to the picture of
+an earlier cue that shows on.
+Pausing holds the picture of a video, and a video cue that loops loops its
+picture with its sound.
+
+Closing the stage window closes it until a picture or video cue fires again,
+which opens it anew, fullscreen, wherever the platform puts it.
 Closing the main window quits *cinq*.
 The key of *fullscreen* toggles the stage window between fullscreen and a
-window, and the other keys act on the cue list from either window, as
-*cinq*(5) describes.
+window, until the next GO that fires a picture or video cue, and the other
+keys act on the cue list from either window, as *cinq*(5) describes.
 
 # UNSAVED CHANGES
 
@@ -187,7 +202,7 @@ it, which the file marks for players to skip, so that it comes a few
 hundredths of a second after its picture.
 
 A picture wider or taller than the largest texture of the GPU, as a video in
-4K is on some older GPUs, does not show.
+4K or a large photograph is on some older GPUs, does not show.
 
 ; if windows
 Each tick of the show clock waits for both windows to draw, since Windows would
@@ -252,6 +267,40 @@ kind = "fade"
 name = "Titles out"
 target = 1
 duration = 3.0
+level = -60.0
+stop_target = true
+```
+
+A list in which a picture shows before the show, until GO starts a film,
+which hides it at once while a fade cue that continues from the film fades
+it out, so that it does not show again once the film ends:
+
+```
+[[list]]
+name = "Main"
+
+[[list.cue]]
+id = 1
+number = "1"
+kind = "picture"
+name = "Preshow"
+file = "pictures/preshow.png"
+
+[[list.cue]]
+id = 2
+number = "2"
+kind = "video"
+name = "Film"
+file = "video/film.mp4"
+advance = "continue"
+
+[[list.cue]]
+id = 3
+number = "3"
+kind = "fade"
+name = "Preshow out"
+target = 1
+duration = 1.0
 level = -60.0
 stop_target = true
 ```

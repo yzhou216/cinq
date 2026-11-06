@@ -19,7 +19,10 @@ pub enum Kind {
     Audio,
     /// Plays a video file: its picture in the stage window, with its sound
     Video,
-    /// Changes the level of a playing audio or video cue over time
+    /// Shows a picture file in the stage window until something stops it
+    Picture,
+    /// Changes the level of a playing audio or video cue over time, and
+    /// fades out the picture of a picture or video cue that it stops
     Fade,
     /// Stops another cue
     Stop,
@@ -32,7 +35,8 @@ pub enum Kind {
 impl Kind {
     /// Returns whether the operator sets how long the action of this kind
     /// takes.  Audio and video cues take as long as the part of their file
-    /// that they play, and the rest are instant.
+    /// that they play, picture cues last until something stops them, and
+    /// the rest are instant.
     pub fn has_duration(self) -> bool {
         matches!(self, Kind::Fade | Kind::Wait)
     }
@@ -41,6 +45,18 @@ impl Kind {
     /// sound, and video cues its picture along with its sound
     pub fn plays_file(self) -> bool {
         matches!(self, Kind::Audio | Kind::Video)
+    }
+
+    /// Returns whether cues of this kind name a file: those that play one,
+    /// and picture cues, which show one
+    pub fn has_file(self) -> bool {
+        self.plays_file() || self == Kind::Picture
+    }
+
+    /// Returns whether cues of this kind show in the stage window: video
+    /// cues, and picture cues
+    pub fn on_stage(self) -> bool {
+        matches!(self, Kind::Video | Kind::Picture)
     }
 
     /// Returns whether cues of this kind have a level: audio and video cues

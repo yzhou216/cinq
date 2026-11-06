@@ -9,8 +9,8 @@
 //! switches lists, and fires GO, [`editing`] adds, moves, and deletes cues,
 //! chooses their files, and undoes and redoes changes, [`keys`] reads keys
 //! and moves the keyboard focus, [`scroll`] keeps the selected cue in view
-//! whenever the selection moves, [`loading`] loads the files of audio and
-//! video cues and tries again those that could not be played,
+//! whenever the selection moves, [`loading`] loads the files of audio,
+//! video, and picture cues and tries again those that could not be played,
 //! [`show`](mod@show) opens and saves shows and keeps their unsaved changes,
 //! [`stage`] opens the stage window and keeps the pictures it shows,
 //! [`link`] opens the links of the help page, and [`subscription`] listens
@@ -136,10 +136,6 @@ impl App {
                 stage: self.stage.with_keyboard_in(window),
                 ..self
             },
-            Message::StageToggled { fullscreen } => Self {
-                stage: self.stage.toggled(fullscreen),
-                ..self
-            },
             Message::Edit(id, edit) => self.send(Command::Edit(id, edit)),
             Message::LevelTyped(cue, text) => {
                 let edit = parse_level(&text).map(|level| Command::Edit(cue, Edit::Level(level)));
@@ -213,7 +209,6 @@ impl App {
                 | Message::Saved(_)
                 | Message::Resized(..)
                 | Message::WindowFocused(_)
-                | Message::StageToggled { .. }
         );
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);

@@ -152,14 +152,14 @@ fn upcoming(workspace: &Workspace) -> Vec<Ask> {
             level: active.level,
         })
     });
-    let next = workspace
-        .upcoming()
-        .filter(|(cue, _)| cue.sounds())
-        .map(|(cue, wanted)| Ask {
+    let next = workspace.upcoming().filter_map(|(cue, path)| {
+        let clip = cue.clip().filter(|_| cue.sounds())?;
+        Some(Ask {
             cue: cue.id,
-            wanted,
+            wanted: Wanted { path, clip },
             level: cue.level,
-        });
+        })
+    });
     fired.chain(next).unique_by(|ask| ask.cue).collect()
 }
 

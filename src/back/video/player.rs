@@ -2,7 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Pictures of the clip of a video cue, which follow the clock of its run
+//! Pictures of the clip of a video cue, which follow the clock of its run,
+//! or the picture of a picture cue, which shows as soon as its run does
 
 use std::{
     path::PathBuf,
@@ -12,8 +13,11 @@ use std::{
     },
 };
 
-use super::decoder::{self, Frame, Picture, Sent, UNDECODABLE};
-use crate::back::Clip;
+use super::{
+    decoder::{self, Frame, Picture, Sent, UNDECODABLE},
+    still,
+};
+use crate::back::Shown;
 
 /// Player moved on to the clock of its run, along with the newest picture
 /// that has come due, if one has, or why the picture cannot play
@@ -25,10 +29,11 @@ pub(super) type Advanced = Result<(Player, Option<Picture>), String>;
 /// starts its clock.  The pass after the one under way of a clip that loops
 /// decodes ahead as well, so that it has decoded from the sync sample
 /// before the start of the clip by the time the pass under way ends.  The
-/// threads stop decoding once the player goes.
+/// threads stop decoding once the player goes.  The picture of a picture
+/// cue makes a single pass of one picture, which shows until the run ends.
 pub(super) struct Player {
     path: PathBuf,
-    clip: Clip,
+    shown: Shown,
     /// Number of the pass under way, counted from none
     pass: u32,
     /// Pictures of the pass under way, each with the time of the run at
@@ -45,15 +50,21 @@ pub(super) struct Player {
 }
 
 impl Player {
-    /// Starts decoding `clip` of the video file at `path`
-    pub(super) fn start(path: PathBuf, clip: Clip) -> Self {
+    /// Starts decoding what the stage window shows of the file at `path`:
+    /// a clip of a video file, or a picture file
+    pub(super) fn start(path: PathBuf, shown: Shown) -> Self {
         let life = Arc::new(());
-        let decoding = |pass| decoder::start(path.clone(), clip, pass, Arc::downgrade(&life));
-        let pictures = decoding(0);
-        let following = clip.looping.then(|| decoding(1));
+        let (pictures, following) = match shown {
+            Shown::Clip(clip) => {
+                let decoding =
+                    |pass| decoder::start(path.clone(), clip, pass, Arc::downgrade(&life));
+                (decoding(0), clip.looping.then(|| decoding(1)))
+            }
+            Shown::Still => (still::start(path.clone()), None),
+        };
         Self {
             path,
-            clip,
+            shown,
             pass: 0,
             pictures: Some(pictures),
             following,
@@ -109,16 +120,17 @@ impl Player {
 
     /// Returns the player once the pass under way has ended: for a clip
     /// that loops, playing the pass after it while the one after that
-    /// decodes ahead, and for any other, with no pass left to play
+    /// decodes ahead, and for any other, or a picture, with no pass left to
+    /// play
     fn passed(self) -> Self {
-        match self.following {
-            Some(following) => {
+        match (self.following, self.shown) {
+            (Some(following), Shown::Clip(clip)) => {
                 let pass = self.pass + 1;
                 Self {
                     pictures: Some(following),
                     following: Some(decoder::start(
                         self.path.clone(),
-                        self.clip,
+                        clip,
                         pass + 1,
                         Arc::downgrade(&self.life),
                     )),
@@ -126,7 +138,7 @@ impl Player {
                     ..self
                 }
             }
-            None => Self {
+            _ => Self {
                 pictures: None,
                 following: None,
                 ..self

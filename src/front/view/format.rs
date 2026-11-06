@@ -30,8 +30,9 @@ pub fn wait(seconds: f64) -> String {
 }
 
 /// Formats the length of a cue's action: the length of the clip for an
-/// audio or video cue, marked when it loops, a question mark while that is
-/// unknown, and a dash for instant cues
+/// audio or video cue, marked when it loops, a hold for a picture cue,
+/// which shows until something stops it, a question mark while the file
+/// of either has yet to load, and a dash for instant cues
 pub fn action(cue: &Cue) -> String {
     let length = clock(cue.action().into());
     match (cue.kind, &cue.media) {
@@ -39,7 +40,8 @@ pub fn action(cue: &Cue) -> String {
             format!("{length} loop")
         }
         (Kind::Audio | Kind::Video, Media::Loaded { .. }) | (Kind::Fade | Kind::Wait, _) => length,
-        (Kind::Audio | Kind::Video, _) => "?".to_owned(),
+        (Kind::Picture, Media::Loaded { .. }) => "hold".to_owned(),
+        (Kind::Audio | Kind::Video | Kind::Picture, _) => "?".to_owned(),
         (Kind::Stop | Kind::Memo, _) => "-".to_owned(),
     }
 }
@@ -62,12 +64,12 @@ pub fn advance(advance: Advance) -> &'static str {
     }
 }
 
-/// Describes what a cue acts on: the file name of an audio or video cue, or
-/// the number of the cue that a fade or stop cue targets, or its quoted
-/// name when it has no number
+/// Describes what a cue acts on: the file name of an audio, video, or
+/// picture cue, or the number of the cue that a fade or stop cue targets,
+/// or its quoted name when it has no number
 pub fn target(workspace: &Workspace, cue: &Cue) -> String {
     match cue.kind {
-        Kind::Audio | Kind::Video => cue
+        Kind::Audio | Kind::Video | Kind::Picture => cue
             .file_name()
             .and_then(|name| Path::new(name).file_name())
             .map_or_else(String::new, |name| name.to_string_lossy().into_owned()),
@@ -89,8 +91,9 @@ pub fn count(number: usize, noun: &str) -> String {
 }
 
 /// Describes where an active cue is in its lifetime: how soon its action
-/// starts, after the chain that fired it and its own pre-wait, or how long
-/// it has left
+/// starts, after the chain that fired it and its own pre-wait, how long it
+/// has left, or that it loops or shows its picture until something stops
+/// it
 pub fn phase(active: &Active) -> String {
     match active.phase() {
         Phase::Scheduled { starts_in: wait } | Phase::PreWait { remaining: wait } => {
@@ -98,6 +101,7 @@ pub fn phase(active: &Active) -> String {
         }
         Phase::Running { remaining } => format!("{} left", clock(remaining)),
         Phase::Looping => "looping".to_owned(),
+        Phase::Showing => "showing".to_owned(),
     }
 }
 

@@ -26,9 +26,10 @@ const LONG_VERSION: &str = concat!(
 /// the summary from the manifest of the crate
 const LONG_ABOUT: &str = "\
 cinq is a cue-based show controller in the spirit of QLab.  Its cue lists
-hold audio, video, fade, stop, wait, and memo cues, and GO fires the
-standby cue together with every cue that auto-continue or auto-follow
-chains to it.  Video cues play in a stage window of their own.
+hold audio, video, picture, fade, stop, wait, and memo cues, and GO fires
+the standby cue together with every cue that auto-continue or auto-follow
+chains to it.  Video and picture cues show in a stage window of their own,
+which each of them makes fullscreen as GO fires it.
 
 cinq opens SHOW, a show file that cinq-show(5) describes, or a new show
 without one.  Changes that are not saved yet are kept as they happen, and

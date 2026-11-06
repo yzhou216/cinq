@@ -282,9 +282,9 @@ The menu of a drop-down list
 	The menu keeps every other key until it closes.
 
 While the stage window has the keyboard, as the window manager may leave it
-once the stage window opens, *edit*, *next_field*, and *previous_field* do
-nothing, since the keys typed there would never reach a field of the main
-window.
+once the stage window opens, and as each GO that makes it fullscreen gives
+it, *edit*, *next_field*, and *previous_field* do nothing, since the keys
+typed there would never reach a field of the main window.
 A click on the main window gives it the keyboard.
 
 Show mode locks editing: *edit*, *add_below*, *add_above*, *move_down*,
@@ -385,8 +385,9 @@ page.
 	which the show goes by from then on.
 
 *fullscreen*
-	Toggle the stage window, which shows the pictures of video cues, between
-	fullscreen and a window, as *cinq-show*(5) describes.
+	Toggle the stage window, which shows the pictures of picture and video
+	cues, between fullscreen and a window, until the next GO that fires such
+	a cue makes it fullscreen again, as *cinq-show*(5) describes.
 	It does nothing while the stage window is closed.
 ; if darwin
 	Darwin keeps F11 for Show Desktop, a shortcut of Mission Control, so that

@@ -17,7 +17,7 @@ use std::{ffi::OsStr, fmt, ops::RangeInclusive, path::Path};
 
 use bon::Builder;
 
-pub use clip::{Clip, Wanted};
+pub use clip::{Clip, Shown, Wanted};
 pub use edit::Edit;
 pub use kind::{Advance, Kind};
 pub use list::CueList;
@@ -53,9 +53,10 @@ pub struct CueId(pub u32);
 ///
 /// [`Cue::new`] takes the settings every cue needs and returns a builder
 /// for the rest, which `build` finishes.  By default a cue has no target,
-/// no waits, and a manual advance, and an audio or video cue plays its
-/// whole file once.  Fade and wait cues last five seconds, and fade cues
-/// fade their target out and stop it, which is what most fades do.
+/// no waits, and a manual advance, an audio or video cue plays its whole
+/// file once, and a picture cue shows its file until something stops it.
+/// Fade and wait cues last five seconds, and fade cues fade their target
+/// out and stop it, which is what most fades do.
 #[derive(Debug, Clone, PartialEq, Builder)]
 #[builder(start_fn = new)]
 pub struct Cue {
@@ -67,7 +68,7 @@ pub struct Cue {
     pub kind: Kind,
     #[builder(start_fn, into)]
     pub name: String,
-    /// File that an audio or video cue plays
+    /// File that an audio or video cue plays, or that a picture cue shows
     #[builder(default, into)]
     pub file: String,
     /// What loading the file found
@@ -118,10 +119,10 @@ impl Cue {
         format!("New {kind} cue")
     }
 
-    /// Returns the edit that makes the cue play `file`, which names the cue
-    /// after the file as well while the cue goes by the name it was added
-    /// with, or by the name of the file it played before, as QLab names
-    /// audio and video cues
+    /// Returns the edit that makes the cue play or show `file`, which names
+    /// the cue after the file as well while the cue goes by the name it was
+    /// added with, or by the name of the file it had before, as QLab names
+    /// the cues of files
     pub fn playing(&self, file: String) -> Edit {
         let unnamed =
             self.name == Self::new_name(self.kind) || Some(self.name.as_str()) == stem(&self.file);
@@ -141,58 +142,10 @@ impl Cue {
         Some(self.file.trim()).filter(|name| !name.is_empty())
     }
 
-    /// Returns the part of its file that an audio or video cue plays: from
-    /// its start time to its end time, or to the end of the file where that
-    /// comes first.  A video cue that loops while its sound plays ends with
-    /// its sound, where that comes first, so that the sound loops with the
-    /// picture.  There is none for other kinds of cue, before the file has
-    /// loaded, or when the start is not before the end.
-    pub(in crate::back) fn clip(&self) -> Option<Clip> {
-        let Media::Loaded { duration, .. } = self.media else {
-            return None;
-        };
-        let length = match self.sound() {
-            Some(sound) if self.looping => duration.min(sound),
-            _ => duration,
-        };
-        let start = self.start.value();
-        let end = self.end.time().map_or(length, |end| end.min(length));
-        (self.kind.plays_file() && start < end).then_some(Clip {
-            start: start.into(),
-            end: end.into(),
-            looping: self.looping,
-        })
-    }
-
-    /// Returns how long the sound of the file of the cue plays, once the
-    /// file has loaded, when the clip of the cue starts before the sound
-    /// ends.  There is none for a video file with a picture alone.
-    fn sound(&self) -> Option<f32> {
-        match self.media {
-            Media::Loaded {
-                sound: Some(sound), ..
-            } => Some(sound).filter(|&sound| self.start.value() < sound),
-            _ => None,
-        }
-    }
-
-    /// Returns whether the clip of the cue has sound to play: that of an
-    /// audio cue always has, once its file has loaded, and that of a video
-    /// cue has unless its file holds a picture alone or its sound ends
-    /// before the clip starts
-    pub fn sounds(&self) -> bool {
-        self.sound().is_some()
-    }
-
-    /// Returns whether the cue is an audio or video cue that loops, and so
-    /// plays until something stops it
-    pub fn loops(&self) -> bool {
-        self.kind.plays_file() && self.looping
-    }
-
     /// Returns the length of the cue's action, which for an audio or video
-    /// cue is one pass through its clip.  It is zero for instant cues and
-    /// for audio and video cues without a clip to play.
+    /// cue is one pass through its clip.  It is zero for instant cues, for
+    /// audio and video cues without a clip to play, and for picture cues,
+    /// whose action has no end.
     pub fn action(&self) -> f32 {
         match self.kind {
             kind if kind.plays_file() => self.clip().map_or(0.0, |clip| clip.length() as f32),
@@ -201,26 +154,33 @@ impl Cue {
         }
     }
 
-    /// Returns whether this cue can act on `other`.  Fade cues act on audio
-    /// and video cues, stop cues on any cue but themselves, and the
+    /// Returns whether the action of the cue goes on until something stops
+    /// it, as that of a picture cue does, and that of an audio or video cue
+    /// that loops
+    pub fn endless(&self) -> bool {
+        self.kind == Kind::Picture || self.loops()
+    }
+
+    /// Returns whether this cue can act on `other`.  Fade cues act on audio,
+    /// video, and picture cues, stop cues on any cue but themselves, and the
     /// remaining kinds on none.
     pub fn can_target(&self, other: &Cue) -> bool {
         other.id != self.id
             && match self.kind {
-                Kind::Fade => other.kind.plays_file(),
+                Kind::Fade => other.kind.has_file(),
                 Kind::Stop => true,
-                Kind::Audio | Kind::Video | Kind::Wait | Kind::Memo => false,
+                Kind::Audio | Kind::Video | Kind::Picture | Kind::Wait | Kind::Memo => false,
             }
     }
 
     /// Returns the delay between this cue firing and it firing the next cue,
-    /// or `None` when the next cue waits for GO, as it does after an audio
-    /// or video cue that loops and follows, whose action never ends
+    /// or `None` when the next cue waits for GO, as it does after a cue that
+    /// follows and whose action never ends, such as a picture cue
     fn next_delay(&self) -> Option<f32> {
         match self.advance {
             Advance::Manual => None,
             Advance::Continue => Some(self.pre_wait.value() + self.post_wait.value()),
-            Advance::Follow if self.loops() => None,
+            Advance::Follow if self.endless() => None,
             Advance::Follow => Some(self.pre_wait.value() + self.action()),
         }
     }

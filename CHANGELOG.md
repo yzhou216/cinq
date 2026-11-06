@@ -10,6 +10,12 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Picture cues show a PNG or JPEG on the stage window until a fade, a stop
+  cue, or Panic ends them.
+- The stage window opens as a window, which the operator can move to the
+  display of the audience, and each GO that fires a picture or video cue
+  makes it fullscreen on that display.  The fullscreen key turns it back
+  into a window until the next such GO.
 - Problems in `config.toml` show on standard error each time that cinq
   reads the file, at startup and on each change, with the lines around each
   problem and its place marked, and the sidebar gives the line of each.  On

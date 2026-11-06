@@ -5,8 +5,10 @@
 //! Cue-based show controller in the spirit of QLab
 //!
 //! Audio cues play sound files, video cues play video files on a stage
-//! window, fade cues change the level of a playing audio or video cue, stop
-//! cues end another cue, and wait and memo cues pace and annotate the show.
+//! window, where picture cues show picture files, fade cues change the
+//! level of a playing audio or video cue and fade out the pictures of the
+//! cues that they stop, stop cues end another cue, and wait and memo cues
+//! pace and annotate the show.
 //! GO fires the standby cue together with every cue that auto-continue or
 //! auto-follow chains to it.  Selection and standby are independent:
 //! inspecting a cue never changes what the next GO fires.

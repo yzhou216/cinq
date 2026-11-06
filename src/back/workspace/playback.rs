@@ -4,11 +4,13 @@
 
 //! Rules of playback: GO, the clock, fades, pauses, and panics
 
+use std::path::PathBuf;
+
 use super::{
     Workspace,
     active::{Effect, Fade},
 };
-use crate::back::{Active, Cue, CueId, CueList, SILENCE, Wanted};
+use crate::back::{Active, Cue, CueId, CueList, SILENCE};
 
 /// Length in seconds of the fade-out that a panic starts
 pub(super) const PANIC_FADE: f64 = 1.0;
@@ -24,20 +26,14 @@ impl Workspace {
             .filter(move |(cue, _)| self.problem(cue).is_none())
     }
 
-    /// Returns the audio and video cues that the next GO of each list may
-    /// start, each with the part of a file that it plays, which the sound
-    /// and the video output make ready ahead
-    pub(in crate::back) fn upcoming(&self) -> impl Iterator<Item = (&Cue, Wanted)> {
+    /// Returns the cues that the next GO of each list may start that name a
+    /// file, each with its file, which the sound and the video output make
+    /// ready ahead
+    pub(in crate::back) fn upcoming(&self) -> impl Iterator<Item = (&Cue, PathBuf)> {
         self.lists
             .iter()
             .flat_map(|list| self.next_go(list))
-            .filter_map(|(cue, _)| {
-                let wanted = Wanted {
-                    path: self.path(cue)?,
-                    clip: cue.clip()?,
-                };
-                Some((cue, wanted))
-            })
+            .filter_map(|(cue, _)| Some((cue, self.path(cue)?)))
     }
 
     /// Fires the standby cue of `list` together with its chain, then moves
@@ -82,9 +78,9 @@ impl Workspace {
         Self { active, ..self }.started().without_finished()
     }
 
-    /// Fades out every playing audio and video cue and stops everything
-    /// else.  A panic while an earlier one is still fading stops everything
-    /// at once.
+    /// Fades out every playing audio, video, and picture cue and stops
+    /// everything else.  A panic while an earlier one is still fading stops
+    /// everything at once.
     pub(super) fn panic(self) -> Self {
         let fading = self
             .active
@@ -154,7 +150,7 @@ impl Workspace {
                 }
             }),
             Effect::Stop(target) => self.stopped(target),
-            Effect::Sound(_) | Effect::Video { .. } | Effect::Nothing => self,
+            Effect::Sound(_) | Effect::Video { .. } | Effect::Picture | Effect::Nothing => self,
         }
     }
 
