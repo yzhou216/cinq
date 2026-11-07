@@ -10,6 +10,8 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+## v0.1.1
+
 - Picture cues show a PNG or JPEG on the stage window until a fade, a stop
   cue, or Panic ends them.
 - The stage window opens as a window, which the operator can move to the
