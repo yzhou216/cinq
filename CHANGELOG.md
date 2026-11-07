@@ -30,6 +30,8 @@ Major changes and improvements in each release of cinq, newest first.
   was.
 - Video 1280 pixels wide that is cropped below 720 lines, such as
   letterboxed high definition, shows in the colors of high definition.
+- On Darwin, cinq follows the changes to `config.toml` in a directory
+  reached through a symbolic link, such as one under `/tmp`.
 
 ## v0.1.1
 
