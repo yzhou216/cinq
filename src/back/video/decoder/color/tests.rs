@@ -99,3 +99,10 @@ fn every_row_of_a_high_definition_picture_converts_whatever_its_strips() {
     let high = rgba(&picture(2, lines + 2, 63, 102, 240));
     assert!(all_close(&high.pixels, [255, 0, 0, 255]));
 }
+
+#[test]
+fn picture_cropped_to_no_width_converts_to_no_pixels() {
+    let (_, lines) = HIGH_DEFINITION;
+    assert!(rgba(&picture(0, lines, 63, 102, 240)).pixels.is_empty());
+    assert!(rgba(&picture(0, 2, 63, 102, 240)).pixels.is_empty());
+}

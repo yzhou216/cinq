@@ -95,6 +95,11 @@ fn high_definition(picture: &Frame) -> bool {
 fn converted(picture: &Frame, matrix: Matrix) -> Vec<u8> {
     let (width, height) = (picture.width as usize, picture.height as usize);
     let mut pixels = vec![0; width * height * 4];
+    // Chunks of a picture that a crafted stream crops to no width would
+    // panic
+    if pixels.is_empty() {
+        return pixels;
+    }
     if high_definition(picture) {
         let rows = height.div_ceil(*STRIPS).max(1);
         thread::scope(|scope| {
