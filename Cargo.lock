@@ -378,12 +378,14 @@ checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
 name = "cinq"
 version = "0.1.1"
 dependencies = [
+ "anstyle-query",
  "bon",
  "clap",
  "clap_complete",
  "clap_complete_nushell",
  "clap_mangen",
  "dirs",
+ "embed-manifest",
  "futures",
  "iced",
  "icns",
@@ -882,6 +884,12 @@ name = "either"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be"
+
+[[package]]
+name = "embed-manifest"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba92c8f4591bf29f89716b45e5f5f56577adbb81426e5620c6e994da7c88bb7a"
 
 [[package]]
 name = "equivalent"

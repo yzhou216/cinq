@@ -38,8 +38,10 @@ impl Errors {
     /// Returns standard error, as a screen when it is a terminal that can
     /// clear itself, which one that calls itself dumb cannot
     pub fn standard() -> Self {
-        let dumb = env::var_os("TERM").is_none_or(|term| term == "dumb");
-        if io::stderr().is_terminal() && !dumb {
+        // Windows consoles set no TERM, but take escape sequences once asked
+        let escapes = anstyle_query::windows::enable_ansi_colors() == Some(true)
+            || env::var_os("TERM").is_some_and(|term| term != "dumb");
+        if io::stderr().is_terminal() && escapes {
             Self::Screen(Box::new(io::stderr()))
         } else {
             Self::Log(Box::new(io::stderr()))

@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- On Windows, a terminal that starts cinq shows what cinq prints, such as
+  the problems of `config.toml` and the output of `--help`, and waits until
+  cinq closes.  Explorer still starts cinq without a console window.
+
 ## v0.1.1
 
 - Picture cues show a PNG or JPEG on the stage window until a fade, a stop
