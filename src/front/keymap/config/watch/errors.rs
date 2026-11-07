@@ -60,8 +60,6 @@ pub enum Errors {
 }
 
 impl Errors {
-    /// Returns standard error, as a screen when it is a terminal that can
-    /// switch screens, which one that calls itself dumb cannot
     pub fn standard() -> Self {
         if switchable() {
             Self::Screen

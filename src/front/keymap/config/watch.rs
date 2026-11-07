@@ -51,7 +51,6 @@ pub use errors::{Errors, guard, restore};
 /// lets an editor finish saving
 const SETTLE: Duration = Duration::from_millis(200);
 
-/// Watcher of the directory, which stops watching once it is dropped
 type Watcher = Debouncer<RecommendedWatcher, RecommendedCache>;
 
 /// Returns the configuration that `file` holds once the watch is in place,

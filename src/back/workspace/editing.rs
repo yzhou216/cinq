@@ -87,6 +87,9 @@ impl Workspace {
             .filter_map(|&id| self.place_of(id))
             .sorted_by_key(|placed| (placed.list, placed.index))
             .collect();
+        if cues.is_empty() {
+            return self;
+        }
         // Standby of each list that loses a cue, before it does
         let before: Vec<(usize, Option<CueId>)> = cues
             .iter()
@@ -94,7 +97,7 @@ impl Workspace {
             .dedup()
             .map(|list| (list, self.lists[list].standby))
             .collect();
-        let workspace = self.removed(ids.iter().copied());
+        let workspace = self.removed(cues.iter().map(|placed| placed.cue.id));
         let standby = before
             .into_iter()
             .map(|(list, before)| Standby {
@@ -103,11 +106,7 @@ impl Workspace {
                 after: workspace.lists[list].standby,
             })
             .collect();
-        if cues.is_empty() {
-            workspace
-        } else {
-            workspace.recorded(Change::Deleted { cues, standby })
-        }
+        workspace.recorded(Change::Deleted { cues, standby })
     }
 
     /// Moves a cue within its list by `by` places, downwards when positive,
@@ -225,7 +224,6 @@ impl Workspace {
         workspace.with_list_of(id, |cues| cues.loaded(id, media))
     }
 
-    /// Returns a cue with its place in the lists
     fn place_of(&self, id: CueId) -> Option<Placed> {
         self.lists.iter().enumerate().find_map(|(list, cues)| {
             cues.position(id).map(|index| Placed {

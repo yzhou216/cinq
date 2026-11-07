@@ -19,23 +19,27 @@
 #[cfg(test)]
 mod tests;
 
-use std::{num::NonZero, thread};
+use std::{num::NonZero, sync::LazyLock, thread};
 
 use rust_h264::decoder::Frame;
 
 /// Lines from which a picture counts as high definition
 const HIGH_DEFINITION: u32 = 720;
 
-/// Most strips of rows that a high-definition picture converts in at once,
-/// each on a thread of its own, enough to spread a picture over the cores
-/// of most machines
-const STRIPS: usize = 8;
+/// Strips of rows that a high-definition picture converts in at once, each
+/// on a thread of its own: one for each core, up to eight, enough to spread
+/// a picture over the cores of most machines.  The cores are counted once,
+/// since std counts them anew at each call, too slowly for every picture.
+static STRIPS: LazyLock<usize> = LazyLock::new(|| {
+    thread::available_parallelism()
+        .map_or(1, NonZero::get)
+        .min(8)
+});
 
-/// Picture of a video, in RGBA, row by row from the top
+/// Picture in RGBA, a byte for each channel, row by row from the top
 pub struct Picture {
     pub width: u32,
     pub height: u32,
-    /// Red, green, blue, and alpha of each pixel, a byte each
     pub pixels: Vec<u8>,
 }
 
@@ -49,7 +53,6 @@ struct Matrix {
     blue_of_blue: i32,
 }
 
-/// Matrix of BT.601, which smaller video takes
 const BT601: Matrix = Matrix {
     red_of_red: 409,
     green_of_blue: -100,
@@ -57,7 +60,6 @@ const BT601: Matrix = Matrix {
     blue_of_blue: 516,
 };
 
-/// Matrix of BT.709, which high-definition video takes
 const BT709: Matrix = Matrix {
     red_of_red: 459,
     green_of_blue: -55,
@@ -89,12 +91,7 @@ fn converted(picture: &Frame, matrix: Matrix) -> Vec<u8> {
     if picture.height < HIGH_DEFINITION {
         converted_rows(picture, matrix, 0, &mut pixels);
     } else {
-        let strips = thread::available_parallelism()
-            .map_or(1, NonZero::get)
-            .min(STRIPS);
-        // Rows of a strip, in pairs, so that a strip shares no chroma with
-        // the next
-        let rows = height.div_ceil(strips).next_multiple_of(2).max(2);
+        let rows = height.div_ceil(*STRIPS);
         thread::scope(|scope| {
             pixels
                 .chunks_mut(rows * width * 4)

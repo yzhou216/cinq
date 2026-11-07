@@ -81,3 +81,10 @@ fn pictures_take_the_matrix_of_their_size() {
     assert!(all_close(&high.pixels, [255, 0, 0, 255]));
     assert_eq!((high.width, high.height), (2, HIGH_DEFINITION));
 }
+
+#[test]
+fn every_row_of_a_high_definition_picture_converts_whatever_its_strips() {
+    // Strips of 91 rows on eight cores, so that some start on odd rows
+    let high = rgba(&picture(HIGH_DEFINITION + 2, 63, 102, 240));
+    assert!(all_close(&high.pixels, [255, 0, 0, 255]));
+}

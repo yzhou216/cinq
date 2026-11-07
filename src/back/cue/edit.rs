@@ -6,7 +6,6 @@
 
 use super::{Advance, Cue, CueId, Media, Seconds};
 
-/// Change to one setting of a cue
 #[derive(Debug, Clone, PartialEq)]
 pub enum Edit {
     Number(String),
@@ -18,13 +17,9 @@ pub enum Edit {
         file: String,
         name: String,
     },
-    /// Time in its file at which an audio or video cue starts
     Start(Seconds),
-    /// Time in its file at which an audio or video cue ends
     End(Seconds),
-    /// Whether an audio or video cue loops
     Loop(bool),
-    /// Cue that a fade or stop cue acts on, or none
     Target(Option<CueId>),
     Notes(String),
     PreWait(Seconds),

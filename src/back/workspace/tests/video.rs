@@ -17,14 +17,6 @@ fn video(id: u32) -> Cue {
         .build()
 }
 
-/// Returns how opaque the picture of cue `id` is
-fn opacity(workspace: &Workspace, id: u32) -> f32 {
-    workspace
-        .active_of(CueId(id))
-        .expect("the cue runs")
-        .opacity()
-}
-
 #[test]
 fn picture_fades_to_black_with_a_fade_that_stops_its_cue() {
     let continuing = Cue {

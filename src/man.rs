@@ -7,13 +7,9 @@
 //!
 //! cinq(1) comes from the command line, which clap_mangen renders.  cinq(5)
 //! and cinq-show(5) come from their scdoc sources, of which the build keeps
-//! only the parts for the platform, for scdoc to render in turn.  The pages
-//! differ by platform only in where the configuration file and the unsaved
-//! changes are, which the dirs crate decides, in the program that opens the
-//! configuration file, in the Wayland compositor that the window needs on
-//! GNU/Linux and the BSDs, and in the clock that waits for the windows to
-//! draw on Windows.  The program itself leaves this module out: only the
-//! build script and the tests compile it.
+//! only the parts for the platform, for scdoc to render in turn.  The
+//! program itself leaves this module out: only the build script and the
+//! tests compile it.
 
 #[cfg(test)]
 mod tests;
@@ -29,8 +25,7 @@ use strum::{IntoStaticStr, VariantArray};
 
 use super::cli::Cli;
 
-/// Pages that scdoc renders, by name, with their sources: cinq(5), of the
-/// configuration file, and cinq-show(5), of show files
+/// Pages that scdoc renders, by name, with their sources
 pub const SCDOC: [(&str, &str); 2] = [
     (
         "cinq.5",
@@ -50,7 +45,6 @@ const IF: &str = "; if ";
 /// which the source is for every platform again
 const END: &str = "; end";
 
-/// Section of cinq(1) as clap_mangen renders it
 type Section = fn(&Man, &mut dyn Write) -> io::Result<()>;
 
 /// Sections of cinq(1) that clap_mangen derives from the command line, in
@@ -78,8 +72,8 @@ pub enum Platform {
 }
 
 impl Platform {
-    /// Returns the platform of a target, which Rust names by its
-    /// `target_os`, as the dirs crate tells targets apart
+    /// Returns the platform of `target_os`, as the dirs crate tells targets
+    /// apart
     pub fn of(target_os: &str) -> Self {
         match target_os {
             "windows" => Platform::Windows,
@@ -114,10 +108,9 @@ impl Platform {
     }
 }
 
-/// Renders cinq(1) for `platform`, dated `date`: the sections that
-/// clap_mangen derives from the command line, then those that it cannot.
-/// Each section comes with the same preamble, which defines the
-/// apostrophe, and the page keeps it only once.
+/// Renders cinq(1) for `platform`, dated `date`.  Each section comes with
+/// the same preamble, which defines the apostrophe, and the page keeps it
+/// only once.
 pub fn command_page(platform: Platform, date: &str) -> String {
     let command = Cli::command();
     // man-pages(7) starts the summary in the NAME section in lower case
@@ -146,10 +139,7 @@ pub fn command_page(platform: Platform, date: &str) -> String {
 }
 
 /// Returns the sections of cinq(1) that clap_mangen cannot derive from the
-/// command line: the variables that name the Wayland compositor where
-/// `platform` needs one, the configuration file and the directory of
-/// unsaved changes of `platform`, the copyright `notice`, and the pages to
-/// see also
+/// command line
 fn epilogue(platform: Platform, notice: &str) -> Roff {
     // Lines of the notice, each after a line break but the first
     let notice: Vec<Inline> = notice
@@ -220,7 +210,6 @@ pub fn for_platform(source: &str, platform: Platform) -> String {
         .collect()
 }
 
-/// Returns the text with its first letter in lower case
 fn uncapitalized(text: &str) -> String {
     text.chars()
         .take(1)
