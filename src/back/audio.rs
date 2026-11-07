@@ -4,17 +4,14 @@
 
 //! Sound output, where the back end has side effects
 //!
-//! [`Audio::sync`] runs after every change to the workspace and makes the
-//! sound match it: it starts the audio and video cues that the workspace
-//! has sounding, follows their level and pause state, and stops the sounds
-//! whose cue has stopped.  The workspace stays the only record of what
-//! should be heard, so a sound that cannot start goes back to it as a file
-//! that cannot be played.  Ahead of that, a thread of its own makes ready
-//! the sounds that runs may start next, so that GO waits on no file.  The
-//! sound of a video file plays as that of a sound file does, from the
-//! file's sound track, along with the silence that AAC encoders put around
-//! the sound, since the decoder reads no edit list, which marks that
-//! silence for players to skip.
+//! [`Audio::sync`] runs after every change to the workspace.  The workspace
+//! stays the only record of what should be heard, so a sound that cannot
+//! start goes back to it as a file that cannot be played.  A thread of its
+//! own makes ready the sounds that runs may start next, so that GO waits on
+//! no file.  The sound of a video file plays from the file's sound track,
+//! along with the silence that AAC encoders put around the sound, since the
+//! decoder reads no edit list, which marks that silence for players to
+//! skip.
 
 mod preload;
 #[cfg(test)]
@@ -37,13 +34,9 @@ use voice::Voice;
 /// which the features of kira in `Cargo.toml` decide
 pub const SOUND_FILES: [&str; 5] = ["flac", "m4a", "mp3", "ogg", "wav"];
 
-/// Sound output for a workspace
 pub struct Audio {
-    /// Audio device, or the reason it could not be opened
     output: Result<AudioManager, String>,
-    /// Sounds of the audio and video cues that are sounding
     voices: HashMap<CueId, Voice>,
-    /// Sounds that runs may start next, made ready ahead
     preloader: Preloader,
 }
 
@@ -59,7 +52,6 @@ impl Audio {
         }
     }
 
-    /// Returns why the audio device could not be opened, if it could not
     pub fn error(&self) -> Option<&str> {
         self.output.as_ref().err().map(String::as_str)
     }

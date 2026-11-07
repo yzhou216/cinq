@@ -4,13 +4,8 @@
 
 //! Help page, which lists every key binding over the rest of the window
 //!
-//! The page links to the list of key values and to the configuration file,
-//! each of which opens in the program that the desktop opens it with, apart
-//! from the configuration file on Darwin, which opens in the default text
-//! editor.  The link makes a configuration file that is not there yet.  The
-//! page ends with the notice of the license of cinq.  The keys of the next
-//! and previous cue scroll it, and those of the first and last cue go to its
-//! top and its bottom.
+//! The keys of the next and previous cue scroll it, and those of the first
+//! and last cue go to its top and its bottom.
 
 use std::ffi::OsString;
 
@@ -32,14 +27,12 @@ use crate::front::{
 /// Widest that the page grows, so that its lines stay easy to read
 const WIDTH: f32 = 960.0;
 
-/// Space above and below the text of each row of the table
+/// Space above and below the text of each row of the table, closer than in
+/// the cue list, so that the page fits the window without scrolling
 const ROW_GAP: f32 = 2.0;
 
-/// List of the key values of the W3C UI Events specification
 const KEY_VALUES: &str = "https://www.w3.org/TR/uievents-key/";
 
-/// Licenses of the Free Software Foundation, to which the notice of the
-/// license of cinq points
 const LICENSES: &str = "https://www.gnu.org/licenses/";
 
 /// Notice of the license of cinq, as the README gives it, whose last
@@ -62,8 +55,6 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         ],
         Action::VARIANTS.iter().copied(),
     )
-    // Rows closer than those of the cue list, so that the page fits the
-    // window without scrolling
     .padding_y(ROW_GAP);
     let key_values = paragraph(
         "The manual page cinq(5) describes config.toml, where keys go by their W3C UI Events key values, listed at ",
@@ -133,8 +124,6 @@ fn paragraph<'a, Link: Clone + 'static>(
         .into()
 }
 
-/// Returns `label` as a link to `target`, in the color of links and
-/// underlined, as links usually are
 fn link<'a, Link>(label: impl IntoFragment<'a>, target: Link) -> Span<'a, Link> {
     span(label).link(target).color(theme::LINK).underline(true)
 }

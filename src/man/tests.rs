@@ -2,15 +2,12 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the manual pages, each of which names the configuration file
-//! and the directory of unsaved changes of its own platform alone, and
-//! mentions XDG and Wayland only where they apply
+//! Tests of the manual pages
 
 use strum::VariantArray;
 
 use super::*;
 
-/// Date that the pages give in the tests
 const DATE: &str = "2026-11-01";
 
 /// Writes a path as roff and scdoc both write it, with each backslash
@@ -19,7 +16,6 @@ fn escaped(path: &str) -> String {
     path.replace('\\', r"\\")
 }
 
-/// Returns the scdoc source of the page of `name` for `platform`
 fn page(name: &str, platform: Platform) -> String {
     let (_, source) = SCDOC
         .iter()

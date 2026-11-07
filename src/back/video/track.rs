@@ -50,7 +50,6 @@ const PARAMETER_LENGTH: usize = 4;
 /// H.264 track of a video file, ready to read
 pub(super) struct Track {
     reader: Mp4Reader<BufReader<File>>,
-    /// Identity of the track in its file
     id: u32,
     /// Samples in the order they decode
     pub(super) samples: Vec<Sample>,
@@ -61,7 +60,6 @@ pub(super) struct Track {
     parameters: Vec<u8>,
     /// Seconds that the picture lasts
     pub(super) duration: f64,
-    /// Whether the file holds a sound track besides
     sound: bool,
 }
 

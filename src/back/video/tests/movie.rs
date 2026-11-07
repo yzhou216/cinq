@@ -113,7 +113,6 @@ fn garbled(unit: &[u8]) -> Vec<u8> {
     [vec![header], vec![0x55; unit.len().saturating_sub(1)]].concat()
 }
 
-/// Returns the settings of the MP4 file of a test video
 fn mp4_config() -> Mp4Config {
     let brand = |name: &str| name.parse().expect("brands are four characters");
     Mp4Config {

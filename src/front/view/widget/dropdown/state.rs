@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! State that iced keeps for a drop-down list from one frame to the next,
-//! through which the keys that move between fields focus the list
+//! which keeps the labels that set the width of the list, and through
+//! which the keys that move between fields focus the list
 
 use iced::advanced::{
     text::paragraph,
@@ -13,10 +14,7 @@ use iced::advanced::{
 use super::menu::Shared;
 use crate::front::view::Paragraph;
 
-/// State of a drop-down list
 pub(super) struct State {
-    /// Whether the menu is open and where its highlight is, which the menu
-    /// shares while it is open
     pub(super) shared: Shared,
     /// Whether the list has the keyboard, which it has only until its menu
     /// opens

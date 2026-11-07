@@ -73,8 +73,6 @@ impl Keymap {
         self.alone(press).is_some_and(Action::acts_in_fields)
     }
 
-    /// Returns whether a key acts at once as GO or Panic, as
-    /// [`Action::acts_at_once`] tells
     pub fn acts_at_once(&self, press: Press) -> bool {
         self.alone(press).is_some_and(Action::acts_at_once)
     }
@@ -101,7 +99,6 @@ impl Keymap {
         })
     }
 
-    /// Returns the action bound to `keys`
     fn find(&self, keys: &[Press]) -> Option<Action> {
         self.bound()
             .find_map(|(action, bound)| (bound == keys).then_some(action))

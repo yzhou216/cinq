@@ -4,17 +4,8 @@
 
 //! Update cycle, which applies each message to the interface state
 //!
-//! Each concern of the update has a module of its own: [`cinq`] reaches
-//! the parts with side effects, [`navigation`] moves the selection,
-//! switches lists, and fires GO, [`editing`] adds, moves, and deletes cues,
-//! chooses their files, and undoes and redoes changes, [`keys`] reads keys
-//! and moves the keyboard focus, [`scroll`] keeps the selected cue in view
-//! whenever the selection moves, [`loading`] loads the files of audio,
-//! video, and picture cues and tries again those that could not be played,
-//! [`show`](mod@show) opens and saves shows and keeps their unsaved changes,
-//! [`stage`] opens the stage window and keeps the pictures it shows,
-//! [`link`] opens the links of the help page, and [`subscription`] listens
-//! for the events that become messages.  The key bindings follow the
+//! Each concern of the update has a module of its own, and only [`cinq`]
+//! reaches the parts with side effects.  The key bindings follow the
 //! configuration file as it changes, through
 //! [`keymap::config::watch`](fn@super::keymap::config::watch).
 
@@ -42,7 +33,6 @@ pub(super) use show::{Keeper, Read, Saved, Show};
 pub(super) use stage::Stage;
 
 impl App {
-    /// Returns the state along with the task that `task` starts from it
     fn with_task(self, task: impl FnOnce(&Self) -> Task<Message>) -> (Self, Task<Message>) {
         let task = task(&self);
         (self, task)
@@ -183,8 +173,6 @@ impl App {
         if changes { app.with_text() } else { app }
     }
 
-    /// Hands each of `commands` to the back end in turn, as [`App::send`]
-    /// does
     fn send_all(self, commands: impl IntoIterator<Item = Command>) -> Self {
         commands.into_iter().fold(self, Self::send)
     }

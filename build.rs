@@ -4,20 +4,12 @@
 
 //! Lays out what cinq installs besides its program in the directory that
 //! `CINQ_SHARE_DIR` names, as the share directory of a prefix holds it, so
-//! that a package copies it whole into place.  The manual pages for the
-//! platform of the build go in the directory of their section under `man`:
-//! cinq(1) from the command line, and cinq(5) and cinq-show(5) from their
-//! scdoc sources by scdoc, which has to be installed then.  The pages are
-//! dated by `SOURCE_DATE_EPOCH`, which reproducible builds set, or else by
-//! the day of the build.  The completions of the command line for bash,
-//! zsh, fish, and Nushell go where each shell looks for them, and the logo,
-//! drawn as the icon of the desktop entry, goes in the hicolor icon theme,
-//! next to the desktop entry and the type of show files from `share`.
-//! Builds for Darwin also lay out the app bundle, all but the program, in
-//! the Applications directory beside the one that `CINQ_SHARE_DIR` names.
-//! A relative `CINQ_SHARE_DIR` goes from the root of the package.  Builds
-//! for Windows embed the application manifest in the program, whether or
-//! not `CINQ_SHARE_DIR` is set.
+//! that a package copies it whole into place.  A relative `CINQ_SHARE_DIR`
+//! goes from the root of the package.  The manual pages are for the
+//! platform of the build, dated by `SOURCE_DATE_EPOCH`, which reproducible
+//! builds set, or else by the day of the build.  scdoc renders cinq(5) and
+//! cinq-show(5), so it has to be installed.  Builds for Darwin also lay out
+//! the app bundle beside the share directory.
 
 // Modules of the program that the build compiles as well, which keep their
 // own modules where the program finds them
@@ -90,8 +82,8 @@ fn main() {
     .for_each(|(what, error)| println!("cargo::error=cannot {what}: {error}"));
 }
 
-/// Files of the package that the share directory of a prefix holds as they
-/// are, each by its path under `share`
+/// Files that go in the share directory as they are, by their path under
+/// `share`
 const SHARED: [&str; 2] = ["applications/cinq.desktop", "mime/packages/cinq.xml"];
 
 /// Writes `contents` to `file`, along with the directories that it goes in
@@ -100,15 +92,12 @@ fn write(file: &Path, contents: impl AsRef<[u8]>) -> io::Result<()> {
     fs::write(file, contents)
 }
 
-/// Copies the [`SHARED`] files to their places under `share`
 fn copy(share: &Path) -> io::Result<()> {
     SHARED
         .iter()
         .try_for_each(|file| write(&share.join(file), fs::read(Path::new("share").join(file))?))
 }
 
-/// Writes the completions of the command line for bash, zsh, fish, and
-/// Nushell where each shell looks for them under `share`
 fn complete(share: &Path) -> io::Result<()> {
     [
         (script(Shell::Bash), "bash-completion/completions/cinq"),
@@ -120,7 +109,6 @@ fn complete(share: &Path) -> io::Result<()> {
     .try_for_each(|(script, file)| write(&share.join(file), script))
 }
 
-/// Returns the completions of the command line that `generator` writes
 fn script(generator: impl Generator) -> Vec<u8> {
     let mut script = Vec::new();
     generate(generator, &mut Cli::command(), "cinq", &mut script);
@@ -157,7 +145,6 @@ const MANIFEST: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?
 </assembly>
 "#;
 
-/// Embeds [`MANIFEST`] in the program, from a file in the output directory
 fn embed() -> io::Result<()> {
     let output = env::var_os("OUT_DIR").expect("cargo names the output directory");
     let manifest = Path::new(&output).join("cinq.exe.manifest");
@@ -182,8 +169,7 @@ fn render(man: &Path) -> io::Result<()> {
         .try_for_each(|(name, source)| scdoc(&man::for_platform(source, platform), &page(name)))
 }
 
-/// Returns the date of the build, written YYYY-MM-DD: that of
-/// `SOURCE_DATE_EPOCH`, in seconds since 1970, when it is set, or else today
+/// Returns the day of `SOURCE_DATE_EPOCH`, or else today, written YYYY-MM-DD
 fn date() -> String {
     let time = env::var_os("SOURCE_DATE_EPOCH").map_or_else(OffsetDateTime::now_utc, |seconds| {
         seconds
@@ -196,9 +182,10 @@ fn date() -> String {
 }
 
 /// Renders the scdoc `source` into the manual page `page` with scdoc, which
-/// dates it as [`date`] does.  The source reaches scdoc through a file in
-/// the output directory of the build, and the page is written only once
-/// scdoc has rendered all of it, so that a failure leaves no page behind.
+/// dates it as [`date`] does.  The source reaches scdoc through a file, so
+/// that the build need not feed scdoc while it reads what scdoc writes, and
+/// the page is written only once scdoc has rendered all of it, so that a
+/// failure leaves no page behind.
 fn scdoc(source: &str, page: &Path) -> io::Result<()> {
     let input = Path::new(&env::var_os("OUT_DIR").expect("cargo names the output directory"))
         .join(page.file_name().expect("a page is a file"))

@@ -5,10 +5,8 @@
 //! View functions, which keep iced's default look, apart from the
 //! exceptions that [`theme`] lists, and only space the controls apart
 //!
-//! Each part of the main window has a module of its own, with a `view`
-//! function that draws it, as does the stage window in [`stage`].  The
-//! text of back-end values comes from [`format`](mod@format), the colors
-//! from [`theme`], and the widgets that iced lacks from [`widget`].
+//! Each part of the main window has a module of its own, as does the stage
+//! window in [`stage`].
 
 mod cue_table;
 mod format;
@@ -45,8 +43,8 @@ use widget::{button, dropdown, keep_keys, marked_row};
 /// Identity of the cue list, through which the selection scrolls into view
 pub const CUES: &str = "cues";
 
-/// Identity of the selected row of the cue list, through which the list
-/// finds where the selected cue is, to scroll it into view
+/// Identity of the selected row, through which the list finds where to
+/// scroll
 pub const SELECTED: &str = "selected";
 
 /// Font of every text, a monospace one, so that columns of text line up
@@ -73,7 +71,7 @@ pub const NAME: &str = "name";
 /// so that every control stands apart from the next
 const SPACING: f32 = 10.0;
 
-/// Widest that the sidebar grows, which it is in a wide window
+/// Widest that the sidebar grows
 const SIDEBAR: f32 = 300.0;
 
 /// Paragraph that the renderer lays text out in
@@ -92,13 +90,10 @@ pub fn answered(told: String, keymap: &Keymap, action: Action) -> String {
     }
 }
 
-/// Draws the window, its parts stacked with rules between them, the keys
-/// that can come next over them just above the status bar, and the help
-/// page over everything while it is open.  The layers that come and go lie
-/// over those that stay, since iced leaves a missing layer out of its stack
-/// and matches the state of each widget to the widget in the same place,
-/// so that the cue list stays scrolled where it was, and the fields keep
-/// what they hold, as the layers come and go.
+/// Layers that come and go lie over those that stay, since iced leaves a
+/// missing layer out of its stack and matches the state of each widget to
+/// the widget in the same place, so that the cue list stays scrolled where
+/// it was, and the fields keep what they hold, as the layers come and go.
 pub fn view(app: &App) -> Element<'_, Message> {
     let parts = column![
         transport::view(app),
@@ -108,7 +103,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
         responsive(move |size| {
             // Sidebar takes at most a quarter of the width, so that a narrow
             // window, such as one tiled beside another, leaves the cue list
-            // room, which keeps to its own part of the window
+            // room
             let sidebar = (size.width / 4.0).min(SIDEBAR);
             row![
                 container(cue_table::view(app)).clip(true),
@@ -160,8 +155,7 @@ fn char_width() -> f32 {
     *WIDTH
 }
 
-/// Counts the cues that cannot play, a missing audio device, a problem
-/// with the show file, and the problems with the configuration file
+/// Counts the warnings that the sidebar lists
 fn warnings(app: &App) -> usize {
     app.workspace.problems().count()
         + usize::from(app.audio_error.is_some())

@@ -18,8 +18,6 @@ use crate::{
     },
 };
 
-/// Inspector field, one per row of a form, which goes by its name, apart
-/// from the target of an audio, video, or picture cue, which is its file
 #[derive(Debug, Clone, Copy, IntoStaticStr)]
 pub(super) enum Field {
     Number,
@@ -44,13 +42,9 @@ impl Field {
         }
     }
 
-    /// Returns the input for this field.  It is disabled when editing is
-    /// locked or when the value does not apply to the cue, such as the
-    /// post-wait of an auto-follow cue.  Values that come from elsewhere,
-    /// such as how long an audio cue plays, show in a disabled field too.
-    /// The file of an audio, video, or picture cue can be typed, or chosen
-    /// in the desktop's file chooser, and a time that reads as no time
-    /// stands out.
+    /// Returns the input for this field, disabled when the value does not
+    /// apply to the cue, such as the post-wait of an auto-follow cue, which
+    /// ignores it
     pub(super) fn input<'a>(self, app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         let id = cue.id;
         let editable = app.editable();
@@ -111,7 +105,7 @@ impl Field {
     }
 
     /// Returns whether the text of the field reads as a value, which only
-    /// the text of a time can fail to
+    /// a time can fail to
     fn valid(self, cue: &Cue) -> bool {
         match self {
             Field::PreWait => cue.pre_wait.is_valid(),
@@ -123,7 +117,6 @@ impl Field {
         }
     }
 
-    /// Returns the hint an empty field shows
     fn placeholder(self, cue: &Cue) -> &'static str {
         match self {
             Field::Target if cue.kind == Kind::Audio => "path of a sound file",
@@ -141,8 +134,6 @@ fn shown<'a>(value: &str) -> Element<'a, Message> {
     text_input("", value).into()
 }
 
-/// Menu of the cues that a fade or stop cue can act on, each shown by its
-/// number and name
 fn target_menu<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
     let id = cue.id;
     let targets: Vec<&Cue> = app
