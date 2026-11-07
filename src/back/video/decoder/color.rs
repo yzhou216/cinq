@@ -23,8 +23,10 @@ use std::{num::NonZero, sync::LazyLock, thread};
 
 use rust_h264::decoder::Frame;
 
-/// Lines from which a picture counts as high definition
-const HIGH_DEFINITION: u32 = 720;
+/// Width and lines from either of which a picture counts as high
+/// definition, so that a wide picture cropped from one of 1280 by 720, such
+/// as one of 1280 by 534, does as well
+const HIGH_DEFINITION: (u32, u32) = (1280, 720);
 
 /// Strips of rows that a high-definition picture converts in at once, each
 /// on a thread of its own: one for each core, up to eight, enough to spread
@@ -70,10 +72,10 @@ const BT709: Matrix = Matrix {
 /// Returns a decoded picture in RGBA, which holds its colors in eight bits
 /// and shares them among four pixels
 pub(super) fn rgba(picture: &Frame) -> Picture {
-    let matrix = if picture.height < HIGH_DEFINITION {
-        BT601
-    } else {
+    let matrix = if high_definition(picture) {
         BT709
+    } else {
+        BT601
     };
     Picture {
         width: picture.width,
@@ -82,16 +84,19 @@ pub(super) fn rgba(picture: &Frame) -> Picture {
     }
 }
 
+fn high_definition(picture: &Frame) -> bool {
+    let (width, lines) = HIGH_DEFINITION;
+    picture.width >= width || picture.height >= lines
+}
+
 /// Returns the pixels of `picture` in RGBA with `matrix`, in limited range,
 /// converting the strips of rows of a high-definition picture on threads of
 /// their own
 fn converted(picture: &Frame, matrix: Matrix) -> Vec<u8> {
     let (width, height) = (picture.width as usize, picture.height as usize);
     let mut pixels = vec![0; width * height * 4];
-    if picture.height < HIGH_DEFINITION {
-        converted_rows(picture, matrix, 0, &mut pixels);
-    } else {
-        let rows = height.div_ceil(*STRIPS);
+    if high_definition(picture) {
+        let rows = height.div_ceil(*STRIPS).max(1);
         thread::scope(|scope| {
             pixels
                 .chunks_mut(rows * width * 4)
@@ -100,6 +105,8 @@ fn converted(picture: &Frame, matrix: Matrix) -> Vec<u8> {
                     scope.spawn(move || converted_rows(picture, matrix, strip * rows, pixels));
                 });
         });
+    } else {
+        converted_rows(picture, matrix, 0, &mut pixels);
     }
     pixels
 }
