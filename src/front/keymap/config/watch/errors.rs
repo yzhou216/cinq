@@ -4,10 +4,14 @@
 
 //! Where the watch writes out the problems of each reading of the file
 //!
-//! On a terminal, the problems of each reading take the place of those
-//! before on the screen, which clears once none are left.  A file or a pipe
-//! takes them in turn, as a log.  A thread of the watch's own writes them
-//! out, in the order of the readings.
+//! On a terminal, the problems take a screen of their own while any are
+//! left, the alternate screen that full-screen programs use.  Each reading
+//! draws its problems there in place of those before, and the first reading
+//! without any switches back to the screen as it was, prompt and all.
+//! Problems left when the program ends come back to that screen once, so
+//! that they stay in sight.  A file or a pipe takes the problems of each
+//! reading in turn, as a log.  A thread of the watch's own writes them out,
+//! in the order of the readings.
 
 #[cfg(test)]
 mod tests;
@@ -15,38 +19,84 @@ mod tests;
 use std::{
     env,
     io::{self, IsTerminal, Write},
-    iter,
-    sync::mpsc,
+    iter, panic, process,
+    sync::{
+        Mutex, MutexGuard, PoisonError,
+        mpsc::{self, RecvTimeoutError},
+    },
     thread,
+    time::Duration,
 };
 
+use terminal_size::terminal_size_of;
+
 use crate::front::keymap::config::Config;
+
+/// Escape sequence that switches a terminal to its alternate screen
+const ENTER: &str = "\x1b[?1049h";
+
+/// Escape sequence that switches a terminal back to its main screen, which
+/// shows what it showed before
+const LEAVE: &str = "\x1b[?1049l";
 
 /// Escape sequence that moves the cursor of a terminal to the top left of
 /// its screen and erases the screen
 const CLEAR: &str = "\x1b[H\x1b[2J";
 
+/// Time between looks at the size of the terminal while the problems show
+const RESIZE: Duration = Duration::from_millis(250);
+
+/// Configuration whose problems the alternate screen of standard error
+/// shows, while it does
+static SHOWN: Mutex<Option<Config>> = Mutex::new(None);
+
 /// Where the watch writes out the problems of each reading of the file
 pub enum Errors {
-    /// Terminal, whose screen shows the problems of the latest reading alone
-    Screen(Box<dyn Write + Send>),
+    /// Terminal on standard error, which shows the problems on a screen of
+    /// their own while any are left
+    Screen,
     /// File or pipe, which takes the problems of each reading in turn
     Log(Box<dyn Write + Send>),
 }
 
 impl Errors {
     /// Returns standard error, as a screen when it is a terminal that can
-    /// clear itself, which one that calls itself dumb cannot
+    /// switch screens, which one that calls itself dumb cannot
     pub fn standard() -> Self {
-        // Windows consoles set no TERM, but take escape sequences once asked
-        let escapes = anstyle_query::windows::enable_ansi_colors() == Some(true)
-            || env::var_os("TERM").is_some_and(|term| term != "dumb");
-        if io::stderr().is_terminal() && escapes {
-            Self::Screen(Box::new(io::stderr()))
+        if switchable() {
+            Self::Screen
         } else {
             Self::Log(Box::new(io::stderr()))
         }
     }
+}
+
+/// Makes the program switch standard error back from the problems screen
+/// however it ends: on a panic, on Control+c, and on the signals that end
+/// a program
+pub fn guard() {
+    if !switchable() {
+        return;
+    }
+    let hook = panic::take_hook();
+    panic::set_hook(Box::new(move |info| {
+        // Thread that panics while it holds the lock would wait for itself
+        if let Ok(mut shown) = SHOWN.try_lock() {
+            restored(&mut shown);
+        }
+        hook(info);
+    }));
+    // Only a handler set before makes this fail, and none is
+    let _ = ctrlc::set_handler(|| {
+        restore();
+        process::exit(130);
+    });
+}
+
+/// Switches standard error back from the problems screen, if it shows, and
+/// writes out the problems left once
+pub fn restore() {
+    restored(&mut shown());
 }
 
 /// Starts the thread of a watch that writes out to `errors` the problems of
@@ -54,22 +104,91 @@ impl Errors {
 /// going ends the thread
 pub(super) fn warner(errors: Errors) -> mpsc::Sender<Config> {
     let (sender, configs) = mpsc::channel();
-    let screen = matches!(errors, Errors::Screen(_));
-    let (Errors::Screen(mut target) | Errors::Log(mut target)) = errors;
-    thread::spawn(move || {
-        configs.iter().fold(false, |shown, config| {
-            // Sidebar lists the problems even when standard error is gone
-            let _ = target.write_all(written(&config, screen, shown).as_bytes());
-            !config.problems.is_empty()
-        })
+    thread::spawn(move || match errors {
+        Errors::Screen => screen(&configs),
+        // Sidebar lists the problems even when standard error is gone
+        Errors::Log(mut target) => configs.iter().for_each(|config| {
+            let _ = target.write_all(written(&config).as_bytes());
+        }),
     });
     sender
 }
 
-/// Returns the problems of `config` as miette draws them, after a clearing
-/// of the `screen` when it has `shown` those of the reading before
-fn written(config: &Config, screen: bool, shown: bool) -> String {
-    let clear = if screen && shown { CLEAR } else { "" };
-    let drawn = config.reports().map(|report| format!("{report:?}\n"));
-    iter::once(clear.to_owned()).chain(drawn).collect()
+/// Draws the problems of each configuration from `configs` on the problems
+/// screen of standard error, and draws them again when the terminal changes
+/// size while they show
+fn screen(configs: &mpsc::Receiver<Config>) {
+    let size = || terminal_size_of(io::stderr());
+    // Readings, and while the problems show, a pause now and then without one
+    let readings = iter::from_fn(|| {
+        let reading = if shown().is_some() {
+            configs.recv_timeout(RESIZE)
+        } else {
+            configs.recv().map_err(|_| RecvTimeoutError::Disconnected)
+        };
+        match reading {
+            Err(RecvTimeoutError::Disconnected) => None,
+            reading => Some(reading.ok()),
+        }
+    });
+    readings.fold(size(), |seen, reading| {
+        let now = size();
+        let mut shown = shown();
+        let resized = shown.as_ref().filter(|_| now != seen).cloned();
+        if let Some(config) = reading.or(resized) {
+            let _ = io::stderr().write_all(switched(shown.is_some(), &config).as_bytes());
+            *shown = (!config.problems.is_empty()).then_some(config);
+        }
+        now
+    });
+}
+
+/// Returns what takes a terminal from the problems screen, when it is
+/// `showing`, or from its main screen, to the problems of `config`: their
+/// own screen while there are any, and the main screen once there are none
+fn switched(showing: bool, config: &Config) -> String {
+    let drawn = written(config);
+    match (showing, drawn.is_empty()) {
+        (false, true) => String::new(),
+        (true, true) => LEAVE.to_owned(),
+        (false, false) => format!("{ENTER}{CLEAR}{drawn}"),
+        (true, false) => format!("{CLEAR}{drawn}"),
+    }
+}
+
+/// Returns what takes a terminal back from the problems screen that shows
+/// those of `config`, followed by the problems, so that they stay in sight
+fn left(config: &Config) -> String {
+    format!("{LEAVE}{}", written(config))
+}
+
+/// Returns the problems of `config` as miette draws them
+fn written(config: &Config) -> String {
+    config
+        .reports()
+        .map(|report| format!("{report:?}\n"))
+        .collect()
+}
+
+/// Switches standard error back from the problems screen that `shown`
+/// holds, if any, writes out its problems, and leaves `shown` empty
+fn restored(shown: &mut Option<Config>) {
+    if let Some(config) = shown.take() {
+        let _ = io::stderr().write_all(left(&config).as_bytes());
+    }
+}
+
+/// Returns whether standard error is a terminal that can switch screens,
+/// which one that calls itself dumb cannot
+fn switchable() -> bool {
+    // Windows consoles set no TERM, but take escape sequences once asked
+    let escapes = anstyle_query::windows::enable_ansi_colors() == Some(true)
+        || env::var_os("TERM").is_some_and(|term| term != "dumb");
+    io::stderr().is_terminal() && escapes
+}
+
+/// Locks [`SHOWN`], which a thread that panicked while it held the lock
+/// leaves as it was
+fn shown() -> MutexGuard<'static, Option<Config>> {
+    SHOWN.lock().unwrap_or_else(PoisonError::into_inner)
 }
