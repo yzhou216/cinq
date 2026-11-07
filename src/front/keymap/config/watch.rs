@@ -25,6 +25,7 @@ mod errors;
 mod tests;
 
 use std::{
+    iter,
     path::{Path, PathBuf},
     thread,
     time::Duration,
@@ -99,11 +100,12 @@ async fn follow(file: &Path, output: &mut mpsc::Sender<Config>) -> notify::Resul
     let mut watched = None;
     loop {
         watched = rewatch(&mut watcher, watched.as_deref(), file)?;
+        let names = names(file, watched.as_deref());
         if let Some(config) = loaded(file).await {
             let _ = output.send(config).await;
         }
         let touched = (&mut events)
-            .any(|result| future::ready(touches(&result, file)))
+            .any(|result| future::ready(touches(&result, &names)))
             .await;
         if !touched {
             return Ok(());
@@ -111,25 +113,48 @@ async fn follow(file: &Path, output: &mut mpsc::Sender<Config>) -> notify::Resul
     }
 }
 
-/// Returns whether a burst of changes touches `file`, or a directory on the
-/// way to it.  Opening a file, which reading it does, changes nothing.  A
-/// watch that failed may have missed a change, so it counts as touching the
-/// file.
-fn touches(result: &DebounceEventResult, file: &Path) -> bool {
+/// Returns the paths that changes to `file` can come by: its own, and the
+/// one past every symbolic link of `watched`, the directory on the way to it
+/// that is watched, which is how FSEvents on Darwin reports them
+fn names(file: &Path, watched: Option<&Path>) -> Vec<PathBuf> {
+    let real = watched.and_then(|directory| {
+        let rest = file.strip_prefix(directory).ok()?;
+        directory.canonicalize().ok().map(|real| real.join(rest))
+    });
+    iter::once(file.to_owned()).chain(real).collect()
+}
+
+/// Returns whether a burst of changes touches the file that goes by
+/// `names`, or a directory on the way to it.  Opening a file, which reading
+/// it does, changes nothing.  A watch that failed may have missed a change,
+/// so it counts as touching the file.
+fn touches(result: &DebounceEventResult, names: &[PathBuf]) -> bool {
     match result {
         Ok(events) => events
             .iter()
             .filter(|event| !event.kind.is_access())
             .flat_map(|event| &event.paths)
-            .any(|path| file.starts_with(path)),
+            .any(|path| names.iter().any(|name| name.starts_with(path))),
         Err(_) => true,
     }
 }
 
+/// Whether the watcher is kqueue's, which tells of a directory only the
+/// entries that come and go, and not of a file in it written in place
+const KQUEUE: bool = cfg!(any(
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "ios",
+    target_os = "netbsd",
+    target_os = "openbsd",
+));
+
 /// Watches the [`directory`] of `file` in place of the directory `watched`,
-/// and returns the directory now watched, or why it cannot be watched.  The
-/// watch goes in anew even when the directory is the same, since a
-/// directory that was deleted and made again takes its old watch with it.
+/// and with kqueue the file itself as well, which an editor may write in
+/// place, and returns the directory now watched, or why it cannot be
+/// watched.  The watch goes in anew even when the directory is the same,
+/// since a directory that was deleted and made again takes its old watch
+/// with it.
 fn rewatch(
     watcher: &mut Watcher,
     watched: Option<&Path>,
@@ -139,13 +164,20 @@ fn rewatch(
     if let Some(watched) = watched {
         let _ = watcher.unwatch(watched);
     }
-    directory(file)
+    let directory = directory(file)
         .map(|directory| {
             watcher
                 .watch(&directory, RecursiveMode::NonRecursive)
                 .map(|()| directory)
         })
-        .transpose()
+        .transpose()?;
+    if KQUEUE {
+        // File that is missing, or that another has replaced, comes and
+        // goes through the watch on its directory, so a failure is moot
+        let _ = watcher.unwatch(file);
+        let _ = watcher.watch(file, RecursiveMode::NonRecursive);
+    }
+    Ok(directory)
 }
 
 /// Returns the directory to watch for `file`: the nearest one on the way to
