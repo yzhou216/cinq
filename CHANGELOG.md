@@ -32,6 +32,9 @@ Major changes and improvements in each release of cinq, newest first.
   letterboxed high definition, shows in the colors of high definition.
 - On Darwin, cinq follows the changes to `config.toml` in a directory
   reached through a symbolic link, such as one under `/tmp`.
+- On FreeBSD and the other BSDs, cinq follows the changes that an editor
+  writes into `config.toml` in place, and not only those that rename another
+  file over it.
 
 ## v0.1.1
 
