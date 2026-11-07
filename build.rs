@@ -59,7 +59,7 @@ fn main() {
     {
         println!("cargo::error=cannot embed the manifest: {error}");
     }
-    let Some(share) = env::var_os("CINQ_SHARE_DIR") else {
+    let Some(share) = env::var_os("CINQ_SHARE_DIR").filter(|share| !share.is_empty()) else {
         return;
     };
     let share = Path::new(&share);
