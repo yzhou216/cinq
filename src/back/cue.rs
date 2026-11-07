@@ -48,7 +48,8 @@ pub fn parse_level(text: &str) -> Option<f32> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CueId(pub u32);
 
-/// One cue of a cue list, which displays as its number and name
+/// One cue of a cue list, which displays as its number and name, or as its
+/// name alone when it has no number
 ///
 /// [`Cue::new`] takes the settings every cue needs and returns a builder
 /// for the rest, which `build` finishes.  By default a cue has no target,
@@ -107,7 +108,11 @@ pub struct Cue {
 
 impl fmt::Display for Cue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.number, self.name)
+        if self.number.trim().is_empty() {
+            f.write_str(&self.name)
+        } else {
+            write!(f, "{} {}", self.number, self.name)
+        }
     }
 }
 
