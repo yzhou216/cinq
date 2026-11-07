@@ -2,11 +2,14 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Video files that the tests make as they run, with openh264's encoder and
-//! the MP4 writer of the mp4 crate, so that the repository holds none
+//! Video files that the tests make as they run, with the H.264 that
+//! [`stream`] writes and the MP4 writer of the mp4 crate, so that the
+//! repository holds none
 //!
 //! Each picture of a test video is gray, and lighter than the one before
 //! it, so that a picture tells which one it is by its shade.
+
+mod stream;
 
 use std::{
     fs::File,
@@ -15,15 +18,12 @@ use std::{
 };
 
 use mp4::{AvcConfig, Bytes, MediaConfig, Mp4Config, Mp4Sample, Mp4Writer, TrackConfig, TrackType};
-use openh264::{
-    OpenH264API,
-    encoder::{Encoder, EncoderConfig, FrameType, IntraFramePeriod, RateControlMode},
-    formats::YUVBuffer,
-};
 use tempfile::TempDir;
 
+use stream::{MACROBLOCKS, STEP, picture, picture_parameter_set, sequence_parameter_set};
+
 /// Width and height of a test video, in pixels
-pub(in crate::back) const SIZE: (usize, usize) = (64, 48);
+const SIZE: (usize, usize) = (MACROBLOCKS.0 * 16, MACROBLOCKS.1 * 16);
 
 /// Pictures a second of a test video
 pub(in crate::back) const RATE: u32 = 30;
@@ -33,10 +33,7 @@ const TIMESCALE: u32 = 600;
 
 /// Shade of gray of the luma of the first picture, and how much lighter
 /// each picture is than the one before it
-const SHADES: (usize, usize) = (24, 8);
-
-/// NAL unit types of the sequence and picture parameter sets of H.264
-const PARAMETER_SETS: [u8; 2] = [7, 8];
+const SHADES: (usize, usize) = (24, STEP);
 
 /// Returns a temporary directory holding `movie.mp4`, a test video of
 /// `count` pictures, at most 25, that decoding can start at every
@@ -54,7 +51,7 @@ pub(in crate::back) fn broken_movie(
 ) -> (TempDir, PathBuf) {
     let directory = TempDir::new().expect("a temporary directory can be made");
     let path = directory.path().join("movie.mp4");
-    write_movie(&path, count, sync_every, broken);
+    write_movie(&path, count, sync_every as usize, broken);
     (directory, path)
 }
 
@@ -66,47 +63,15 @@ pub(in crate::back) fn picture_number(pixels: &[u8]) -> usize {
     ((luma - first as f64) / step as f64).round().max(0.0) as usize
 }
 
-/// Encodes a test video and writes it to `path`, with the pictures numbered
-/// in `broken` garbled
-fn write_movie(path: &Path, count: usize, sync_every: u32, broken: &[usize]) {
-    // Every picture, at a fixed quality, with sync samples where asked for
-    let config = EncoderConfig::new()
-        .skip_frames(false)
-        .rate_control_mode(RateControlMode::Off)
-        .scene_change_detect(false)
-        .intra_frame_period(IntraFramePeriod::from_num_frames(sync_every));
-    let mut encoder =
-        Encoder::with_api_config(OpenH264API::from_source(), config).expect("the encoder starts");
-    let pictures: Vec<(bool, Vec<Vec<u8>>)> = (0..count)
-        .map(|number| {
-            let encoded = encoder.encode(&gray(number)).expect("the picture encodes");
-            let sync = matches!(encoded.frame_type(), FrameType::IDR | FrameType::I);
-            let units = (0..encoded.num_layers())
-                .filter_map(|layer| encoded.layer(layer))
-                .flat_map(|layer| {
-                    (0..layer.nal_count()).filter_map(move |unit| {
-                        layer
-                            .nal_unit(unit)
-                            .map(|unit| without_start_code(unit).to_vec())
-                    })
-                })
-                .collect();
-            (sync, units)
-        })
-        .collect();
-    let set = |kind: u8| {
-        pictures
-            .iter()
-            .flat_map(|(_, units)| units)
-            .find(|unit| unit[0] & 0x1f == kind)
-            .cloned()
-            .expect("the first picture holds the parameter sets")
-    };
+/// Writes a test video to `path`, with the pictures numbered in `broken`
+/// garbled
+fn write_movie(path: &Path, count: usize, sync_every: usize, broken: &[usize]) {
+    let (width, height) = SIZE;
     let avc = AvcConfig {
-        width: SIZE.0 as u16,
-        height: SIZE.1 as u16,
-        seq_param_set: set(PARAMETER_SETS[0]),
-        pic_param_set: set(PARAMETER_SETS[1]),
+        width: width as u16,
+        height: height as u16,
+        seq_param_set: sequence_parameter_set(),
+        pic_param_set: picture_parameter_set(),
     };
     let file = BufWriter::new(File::create(path).expect("the video file can be made"));
     let mut writer = Mp4Writer::write_start(file, &mp4_config()).expect("the video starts");
@@ -119,21 +84,21 @@ fn write_movie(path: &Path, count: usize, sync_every: u32, broken: &[usize]) {
         })
         .expect("the track goes in");
     let duration = TIMESCALE / RATE;
-    pictures
-        .into_iter()
-        .zip(0..)
-        .try_for_each(|((sync, units), number)| {
-            let units = if broken.contains(&(number as usize)) {
-                units.iter().map(|unit| garbled(unit)).collect()
+    let (first, step) = SHADES;
+    (0..count)
+        .try_for_each(|number| {
+            let unit = picture(number, sync_every, (first + step * number) as u8);
+            let unit = if broken.contains(&number) {
+                garbled(&unit)
             } else {
-                units
+                unit
             };
             let sample = Mp4Sample {
-                start_time: u64::from(number * duration),
+                start_time: (number as u32 * duration).into(),
                 duration,
                 rendering_offset: 0,
-                is_sync: sync,
-                bytes: Bytes::from(avcc(&units)),
+                is_sync: number % sync_every == 0,
+                bytes: Bytes::from(avcc(&unit)),
             };
             writer.write_sample(1, &sample)
         })
@@ -159,37 +124,9 @@ fn mp4_config() -> Mp4Config {
     }
 }
 
-/// Returns picture `number` of a test video, in I420: gray, and lighter
-/// than the picture before it
-fn gray(number: usize) -> YUVBuffer {
-    let (width, height) = SIZE;
-    let (first, step) = SHADES;
-    let luma = (first + step * number).min(235) as u8;
-    let pixels = width * height;
-    let planes = [vec![luma; pixels], vec![128; pixels / 2]].concat();
-    YUVBuffer::from_vec(planes, width, height)
-}
-
-/// Returns a NAL unit without the start code before it, as openh264's
-/// encoder hands it out
-fn without_start_code(unit: &[u8]) -> &[u8] {
-    let start = unit
-        .iter()
-        .position(|&byte| byte == 1)
-        .map_or(0, |one| one + 1);
-    &unit[start..]
-}
-
-/// Returns the NAL units of a picture apart from the parameter sets, which
-/// the description of the track holds, each after its length in four
-/// bytes, as an MP4 sample holds them
-fn avcc(units: &[Vec<u8>]) -> Vec<u8> {
-    units
-        .iter()
-        .filter(|unit| !PARAMETER_SETS.contains(&(unit[0] & 0x1f)))
-        .flat_map(|unit| {
-            let length = u32::try_from(unit.len()).expect("units are small");
-            length.to_be_bytes().into_iter().chain(unit.iter().copied())
-        })
-        .collect()
+/// Returns a NAL unit after its length in four bytes, as an MP4 sample
+/// holds it
+fn avcc(unit: &[u8]) -> Vec<u8> {
+    let length = u32::try_from(unit.len()).expect("units are small");
+    [&length.to_be_bytes()[..], unit].concat()
 }

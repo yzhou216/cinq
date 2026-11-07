@@ -7,21 +7,22 @@
 //!
 //! A pass starts a decoder at the last sync sample before the start of the
 //! clip that shows no later than the first picture of the clip, and decodes
-//! from there to the last sample that shows before its end.  The pictures
-//! that the decoder hands out take the times that [`times`] keeps, and
-//! those before the start of the clip are let go without turning them into
-//! RGBA, which [`color`] turns the rest into.  The decoder flushes only
-//! where a closed group of pictures starts, and once the pass has read
-//! every sample, since flushing after each sample, as openh264 does by
-//! default, fails on the second picture of streams with B-frames.  A pass
-//! ends by telling its player that it has sent every picture, or why its
-//! picture cannot play, as a pass that decodes no picture cannot, and it
-//! stops decoding as soon as its player has gone.  Each pass opens its file
-//! and reads the index of its track anew, which takes a long file a moment,
-//! hidden for a clip that loops by the pass that decodes ahead.
+//! from there to the last sample that shows before its end.  Each sample
+//! holds a picture, which the decoder finishes as soon as it has read the
+//! sample rather than once the next picture starts, since a sample that
+//! fails to decode would otherwise take the picture before it along.  The
+//! pictures go out in the order they show, which [`order`] keeps, each at
+//! the time of its own sample, and those before the start of the clip are
+//! let go without turning them into RGBA, which [`color`] turns the rest
+//! into.  A pass ends by telling its player that it has sent every
+//! picture, or why its picture cannot play, as a pass that decodes no
+//! picture cannot, and it stops decoding as soon as its player has gone.
+//! Each pass opens its file and reads the index of its track anew, which
+//! takes a long file a moment, hidden for a clip that loops by the pass
+//! that decodes ahead.
 
 mod color;
-mod times;
+mod order;
 
 use std::{
     path::{Path, PathBuf},
@@ -32,16 +33,16 @@ use std::{
     thread,
 };
 
-use openh264::{
-    OpenH264API,
-    decoder::{DecodedYUV, Decoder, DecoderConfig, Flush},
+use rust_h264::{
+    decoder::{ChromaFormat, Decoder, Frame as Decoded},
+    nal::NalUnit,
 };
 
 use super::track::Track;
 use crate::back::Clip;
 pub use color::Picture;
 use color::rgba;
-use times::Times;
+use order::Order;
 
 /// Pictures that the thread of a pass decodes ahead of the clock of its
 /// run, besides the one it holds as it waits to send it: enough to ride out
@@ -50,7 +51,7 @@ use times::Times;
 /// as each picture of 1080p takes 8 MB
 const AHEAD: usize = 2;
 
-/// Why the picture of a file that holds H.264 cannot play, when openh264
+/// Why the picture of a file that holds H.264 cannot play, when the decoder
 /// decodes none of it
 pub(super) const UNDECODABLE: &str = "its picture cannot be decoded";
 
@@ -112,68 +113,57 @@ fn decoded(
     let Some((from, to, first)) = track.span(clip.start, clip.end) else {
         return Ok(0);
     };
-    let times = Times::new(track.samples[from..=to].iter().map(|sample| sample.shows));
     let passed = f64::from(pass) * (clip.end - clip.start);
-    // Picture that the decoder hands out, which shows at `shows`, and goes
-    // to the player when it belongs to the clip
-    let send = |picture: DecodedYUV<'_>, shows: Option<f64>| match shows {
-        Some(shows) if (first..clip.end).contains(&shows) => {
-            let at = passed + (shows - clip.start).max(0.0);
-            let frame = Frame {
-                at,
-                picture: rgba(&picture),
-            };
-            sender
-                .send(Sent::Picture(frame))
-                .map(|()| 1)
-                .map_err(|_| Stop::Gone)
-        }
-        _ => Ok(0),
+    // Pictures that show at their times, of which those that belong to the
+    // clip go to the player, after the `sent` that went before them
+    let send = |pictures: Vec<(f64, Decoded)>, sent: usize| {
+        pictures
+            .iter()
+            .filter(|(shows, _)| (first..clip.end).contains(shows))
+            .try_fold(sent, |sent, (shows, picture)| {
+                let at = passed + (shows - clip.start).max(0.0);
+                let frame = Frame {
+                    at,
+                    picture: rgba(picture),
+                };
+                sender
+                    .send(Sent::Picture(frame))
+                    .map(|()| sent + 1)
+                    .map_err(|_| Stop::Gone)
+            })
     };
-    let config = DecoderConfig::new().flush_after_decode(Flush::NoFlush);
-    let mut decoder = Decoder::with_api_config(OpenH264API::from_source(), config)
-        .map_err(|error| Stop::Failed(error.to_string()))?;
-    let (times, sent) = (from..=to).try_fold((times, 0), |(times, sent), index| {
+    let mut decoder = Decoder::new();
+    // Parameter sets that fail to decode leave every sample to fail as well
+    track.parameter_sets().iter().for_each(|unit| {
+        let _ = decoder.decode_nal(unit);
+    });
+    let order = Order::new(track.samples[from..=to].iter().map(|sample| sample.shows));
+    let (_, sent) = (from..=to).try_fold((order, 0), |(order, sent), index| {
         if player.strong_count() == 0 {
             return Err(Stop::Gone);
         }
-        // Closed group of pictures that starts here owes nothing to the
-        // pictures before it, so the decoder hands those out first, and
-        // the times start again from the first picture of the group
-        let (times, sent) = if index > from && track.starts_group(index) {
-            let held = decoder.flush_remaining().unwrap_or_default();
-            let (times, flushed) = handed_out(held, times, &send)?;
-            (times.from(track.samples[index].shows), sent + flushed)
-        } else {
-            (times, sent)
-        };
-        let packet = track.packet(index, index == from).map_err(Stop::Failed)?;
-        // Sample that fails to decode gives no picture, and decoding goes on
-        match decoder.decode(&packet) {
-            Ok(Some(picture)) => {
-                let (shows, times) = times.next();
-                Ok((times, sent + send(picture, shows)?))
-            }
-            _ => Ok((times, sent)),
-        }
+        let sample = track.sample(index).map_err(Stop::Failed)?;
+        let picture = picture(&mut decoder, &track.units(&sample));
+        let (due, order) = order.decoded(index - from, picture);
+        Ok((order, send(due, sent)?))
     })?;
-    let held = decoder.flush_remaining().unwrap_or_default();
-    let (_, flushed) = handed_out(held, times, &send)?;
-    Ok(sent + flushed)
+    Ok(sent)
 }
 
-/// Sends the pictures that the decoder hands out at once with `send`, each
-/// with the next of `times`.  Returns the times left, along with how many
-/// pictures went to the player.
-fn handed_out(
-    pictures: Vec<DecodedYUV<'_>>,
-    times: Times,
-    send: &impl Fn(DecodedYUV<'_>, Option<f64>) -> Result<usize, Stop>,
-) -> Result<(Times, usize), Stop> {
-    pictures
-        .into_iter()
-        .try_fold((times, 0), |(times, sent), picture| {
-            let (shows, times) = times.next();
-            Ok((times, sent + send(picture, shows)?))
-        })
+/// Decodes the NAL units of a sample with `decoder`, and returns its
+/// picture, once finished, when it decodes to one in eight bits for each
+/// color with the colors shared by four pixels, which [`rgba`] turns into
+/// RGBA
+fn picture(decoder: &mut Decoder, units: &[NalUnit<'_>]) -> Option<Decoded> {
+    // Unit that fails to decode adds nothing to the picture, which
+    // decoding goes on without, and a sample that holds two pictures, as no
+    // file should, keeps the second, which the decoder finishes last
+    let earlier = units
+        .iter()
+        .filter_map(|unit| decoder.decode_nal(unit).ok().flatten())
+        .last();
+    decoder
+        .flush()
+        .or(earlier)
+        .filter(|picture| picture.bit_depth == 8 && picture.chroma_format == ChromaFormat::Yuv420)
 }

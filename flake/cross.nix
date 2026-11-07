@@ -64,9 +64,8 @@
           '';
         };
       # cinq for Windows on the processor of `cross`, the Nixpkgs of a
-      # MinGW system, whose LLVM compiles the C and C++ of the crates
-      # and links the program.  The C runtime, the unwinder, and the
-      # C++ library go into the program, so that it needs no DLL that
+      # MinGW system, whose LLVM links the program.  The C runtime and the
+      # unwinder go into the program, so that it needs no DLL that
       # Windows lacks.
       windows =
         cross:
@@ -75,20 +74,12 @@
           target = hostPlatform.rust.rustcTarget;
           underscored = builtins.replaceStrings [ "-" ] [ "_" ] target;
           variable = "CARGO_TARGET_${lib.toUpper underscored}";
-          # C++ library without its DLL, which the linker would take first
-          staticCxx = pkgs.runCommand "libcxx-static" { } ''
-            mkdir -p "$out/lib"
-            ln -s ${cross.llvmPackages.libcxx}/lib/{libc++,libc++abi}.a "$out/lib"
-          '';
         in
         crossBuilt {
           inherit target;
           env = {
             "${variable}_LINKER" = "${cc}/bin/${cc.targetPrefix}cc";
-            "${variable}_RUSTFLAGS" = "-C target-feature=+crt-static -L native=${staticCxx}/lib";
-            "CC_${underscored}" = "${cc}/bin/${cc.targetPrefix}cc";
-            "CXX_${underscored}" = "${cc}/bin/${cc.targetPrefix}c++";
-            "AR_${underscored}" = "${cc.bintools.bintools}/bin/${cc.targetPrefix}ar";
+            "${variable}_RUSTFLAGS" = "-C target-feature=+crt-static";
           };
           install = release: ''install -D ${release}/cinq.exe "$out/bin/cinq.exe"'';
         };
@@ -103,10 +94,6 @@
           env = {
             SDKROOT = "${pkgs.apple-sdk.src}";
             CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER = "rust-lld";
-            # Compilers of the C and C++ of the crates, against the SDK
-            CC_aarch64_apple_darwin = "${pkgs.llvmPackages.clang-unwrapped}/bin/clang";
-            CXX_aarch64_apple_darwin = "${pkgs.llvmPackages.clang-unwrapped}/bin/clang++";
-            AR_aarch64_apple_darwin = "${pkgs.llvmPackages.llvm}/bin/llvm-ar";
           };
           install = release: ''
             install -D ${release}/cinq "$out/bin/cinq"

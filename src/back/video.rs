@@ -23,8 +23,8 @@
 //! workspace stays the only record of what should be seen, so a picture
 //! that cannot play goes back to it as a file that cannot be played.  Video
 //! files hold H.264 in MP4, whose tracks [`track`] reads, and which
-//! [`decoder`] decodes with Cisco's openh264, while picture files hold PNG
-//! or JPEG, which [`still`] decodes.
+//! [`decoder`] decodes with rust_h264, while picture files hold PNG or
+//! JPEG, which [`still`] decodes.
 
 mod decoder;
 mod player;

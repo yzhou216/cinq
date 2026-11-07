@@ -11,12 +11,10 @@
 //! to the time at which it shows, which [`timing`] reads.  The picture
 //! starts with the first sample to show, so that it starts with the sound,
 //! as the edit lists that encoders write for B-frames shift it.  Each
-//! sample holds NAL units after their lengths, which [`annex`] turns into
-//! the stream of start codes that openh264 reads, and the parameter sets
-//! that decoding needs are in the description of the track rather than in
-//! its samples.
+//! sample holds NAL units after their lengths, as the decoder reads them,
+//! and the parameter sets that decoding needs are in the description of the
+//! track rather than in its samples.
 
-mod annex;
 #[cfg(test)]
 mod tests;
 mod timing;
@@ -29,8 +27,8 @@ use std::{
 };
 
 use mp4::{MediaType, Mp4Reader, TrackType};
+use rust_h264::nal::{NalUnit, parse_avcc};
 
-use annex::{annex_b, units};
 pub(super) use timing::Sample;
 use timing::timeline;
 
@@ -41,9 +39,13 @@ const NO_VIDEO: &str = "holds no H.264 video";
 /// cannot be right
 const DAMAGED: &str = "holds a damaged H.264 track";
 
-/// Profiles of H.264 that openh264 decodes: Baseline, Main, and High, in
-/// eight bits for each color with the colors shared by four pixels
+/// Profiles of H.264 that play: Baseline, Main, and High, which hold eight
+/// bits for each color and share the colors among four pixels, as the
+/// pictures that the decoder turns into RGBA do
 const PROFILES: [u8; 3] = [66, 77, 100];
+
+/// Bytes before each parameter set of a track that give its length
+const PARAMETER_LENGTH: usize = 4;
 
 /// H.264 track of a video file, ready to read
 pub(super) struct Track {
@@ -54,7 +56,8 @@ pub(super) struct Track {
     pub(super) samples: Vec<Sample>,
     /// Bytes before each NAL unit of a sample that give its length
     length_size: usize,
-    /// Sequence and picture parameter sets of the track, in Annex B
+    /// Sequence and picture parameter sets of the track, each after its
+    /// length in [`PARAMETER_LENGTH`] bytes
     parameters: Vec<u8>,
     /// Seconds that the picture lasts
     pub(super) duration: f64,
@@ -127,12 +130,20 @@ impl Track {
         if samples.is_empty() || duration <= 0.0 {
             return Err(NO_VIDEO.to_owned());
         }
-        let parameters = annex_b(
-            avc.sequence_parameter_sets
-                .iter()
-                .chain(&avc.picture_parameter_sets)
-                .map(|set| set.bytes.as_slice()),
-        );
+        let parameters = avc
+            .sequence_parameter_sets
+            .iter()
+            .chain(&avc.picture_parameter_sets)
+            .flat_map(|set| {
+                // avcC counts the bytes of each set in two bytes, so that
+                // the length always fits
+                let length = set.bytes.len() as u32;
+                length
+                    .to_be_bytes()
+                    .into_iter()
+                    .chain(set.bytes.iter().copied())
+            })
+            .collect();
         Ok(Self {
             id: track.track_id(),
             length_size: usize::from(avc.length_size_minus_one) + 1,
@@ -148,25 +159,30 @@ impl Track {
         })
     }
 
-    /// Reads the sample at `index` in the order of decoding, in Annex B,
-    /// after the parameter sets of the track when it is the `first` that a
-    /// decoder reads
-    pub(super) fn packet(&mut self, index: usize, first: bool) -> Result<Vec<u8>, String> {
+    /// Returns the sequence and picture parameter sets of the track, which a
+    /// decoder reads before any sample
+    pub(super) fn parameter_sets(&self) -> Vec<NalUnit<'_>> {
+        parse_avcc(&self.parameters, PARAMETER_LENGTH)
+    }
+
+    /// Reads the bytes of the sample at `index` in the order of decoding,
+    /// which are none for a sample that the tables of the track list but
+    /// the file leaves out
+    pub(super) fn sample(&mut self, index: usize) -> Result<Vec<u8>, String> {
         let number = u32::try_from(index + 1).map_err(|error| error.to_string())?;
         let sample = self
             .reader
             .read_sample(self.id, number)
             .map_err(|error| error.to_string())?;
-        let length_size = self.length_size;
-        let units = sample
-            .iter()
-            .flat_map(|sample| units(&sample.bytes, length_size));
-        let parameters = if first {
-            self.parameters.as_slice()
-        } else {
-            &[]
-        };
-        Ok([parameters, &annex_b(units)].concat())
+        Ok(sample
+            .map(|sample| sample.bytes.to_vec())
+            .unwrap_or_default())
+    }
+
+    /// Returns the NAL units of the bytes of a sample, each of which follows
+    /// its length.  A sample cut short ends at its last whole unit.
+    pub(super) fn units<'a>(&self, sample: &'a [u8]) -> Vec<NalUnit<'a>> {
+        parse_avcc(sample, self.length_size)
     }
 
     /// Returns the samples that decoding the picture from `start` to `end`
@@ -174,11 +190,5 @@ impl Track {
     /// shows, as [`timing::span`] finds them
     pub(super) fn span(&self, start: f64, end: f64) -> Option<(usize, usize, f64)> {
         timing::span(&self.samples, start, end)
-    }
-
-    /// Returns whether the sample at `index` starts a closed group of
-    /// pictures, as [`timing::starts_group`] tells
-    pub(super) fn starts_group(&self, index: usize) -> bool {
-        timing::starts_group(&self.samples, index)
     }
 }
