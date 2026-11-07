@@ -5,10 +5,7 @@
 //! Interface together with the parts that have side effects: the sound and
 //! video output, the keeper of unsaved changes, and the windows
 
-use std::{
-    path::{Path, PathBuf},
-    time::Instant,
-};
+use std::path::{Path, PathBuf};
 
 use iced::{Element, Subscription, Task, window};
 
@@ -50,10 +47,8 @@ impl Cinq {
     /// sound output and the keeper of unsaved changes are the only parts it
     /// calls that have side effects; everything else builds new values.
     /// The video output goes first, so that a run whose picture cannot play
-    /// has its sound stopped in the same update.  A clock that the message
-    /// starts counts from now, so that its first tick counts only the time
-    /// since.  Taking the state out of `self` instead of cloning it keeps
-    /// updates free of copies.
+    /// has its sound stopped in the same update.  Taking the state out of
+    /// `self` instead of cloning it keeps updates free of copies.
     pub(in crate::front) fn update(&mut self, message: Message) -> Task<Message> {
         let (app, task) = std::mem::take(&mut self.app).next(message);
         let (workspace, pictures) = self.video.sync(app.workspace);
@@ -64,11 +59,8 @@ impl Cinq {
             file_problem: self.keeper.keep(&app.show).or(app.file_problem),
             workspace,
             ..app
-        };
-        let app = App {
-            last_tick: app.last_tick.or_else(|| app.running().then(Instant::now)),
-            ..app
-        };
+        }
+        .clocked();
         let (app, load) = app.load();
         let (app, stage) = app.staged();
         self.app = app;
