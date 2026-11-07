@@ -65,7 +65,7 @@ impl Active {
     pub fn opacity(&self) -> f32 {
         self.fade
             .filter(|fade| fade.then_stop)
-            .map_or(1.0, |fade| fade.left() as f32)
+            .map_or(1.0, |fade| fade.opacity * fade.left() as f32)
     }
 
     /// Returns whether the action goes on until something stops the cue,

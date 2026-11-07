@@ -92,17 +92,15 @@ impl Workspace {
             remaining: PANIC_FADE,
             length: PANIC_FADE,
             then_stop: true,
+            opacity: 1.0,
         };
         let active = if fading {
             Vec::new()
         } else {
             self.active
-                .iter()
+                .into_iter()
                 .filter(|active| !active.paused && active.playing())
-                .map(|active| Active {
-                    fade: Some(fade),
-                    ..*active
-                })
+                .map(|active| active.under(fade))
                 .collect()
         };
         Self { active, ..self }
@@ -140,11 +138,7 @@ impl Workspace {
         match fired.effect {
             Effect::Fade { target, fade } => self.with_active(target, |active| {
                 if active.playing() && active.fade.is_none_or(|current| current.yields_to(&fade)) {
-                    Active {
-                        fade: Some(fade),
-                        ..active
-                    }
-                    .faded(fired.played())
+                    active.under(fade).faded(fired.played())
                 } else {
                     active
                 }

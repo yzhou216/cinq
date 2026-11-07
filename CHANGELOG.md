@@ -25,6 +25,9 @@ Major changes and improvements in each release of cinq, newest first.
   `.#aarch64-darwin`, `.#x86_64-windows`, and `.#aarch64-windows`, in place of
   `.#aarch64-darwin-cross`, `.#x86_64-windows-cross`, and
   `.#aarch64-windows-cross`.
+- A picture fading out no longer jumps back to whole when a panic, or
+  another fade that stops its cue, takes over; it fades on from where it
+  was.
 
 ## v0.1.1
 
