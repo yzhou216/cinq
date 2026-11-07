@@ -91,8 +91,8 @@ impl Screen {
     /// `span` of its width and height
     pub(super) fn place(&self, queue: &wgpu::Queue, span: Size, opacity: f32) {
         let placement: Vec<u8> = [span.width, span.height, opacity, 0.0]
-            .iter()
-            .flat_map(|value| value.to_ne_bytes())
+            .into_iter()
+            .flat_map(f32::to_ne_bytes)
             .collect();
         queue.write_buffer(&self.placement, 0, &placement);
     }

@@ -92,15 +92,12 @@ impl Workspace {
             then_stop: true,
             opacity: 1.0,
         };
-        let active = if fading {
-            Vec::new()
-        } else {
-            self.active
-                .into_iter()
-                .filter(|active| !active.paused && active.playing())
-                .map(|active| active.under(fade))
-                .collect()
-        };
+        let active = self
+            .active
+            .into_iter()
+            .filter(|active| !fading && !active.paused && active.playing())
+            .map(|active| active.under(fade))
+            .collect();
         Self { active, ..self }
     }
 

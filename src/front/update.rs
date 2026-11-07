@@ -10,6 +10,7 @@
 //! [`keymap::config::watch`](fn@super::keymap::config::watch).
 
 mod cinq;
+mod clock;
 mod editing;
 mod keys;
 mod link;
@@ -27,7 +28,7 @@ use std::thread;
 use iced::{Task, futures::channel::oneshot};
 
 use super::{App, Message};
-use crate::back::{Command, Edit, TICK, parse_level};
+use crate::back::{Command, Edit, parse_level};
 use link::{edit_config, open_link};
 pub(super) use show::{Keeper, Read, Saved, Show};
 pub(super) use stage::Stage;
@@ -89,17 +90,7 @@ impl App {
             Message::PauseAll => self.send(Command::Pause(true)),
             Message::ResumeAll => self.send(Command::Pause(false)),
             Message::Stop(id) => self.send(Command::Stop(id)),
-            // Ticks of the timer and those that wake for pictures may come out
-            // of order, and an earlier one counts no time
-            Message::Tick(now) => {
-                let elapsed = self
-                    .last_tick
-                    .map_or(TICK, |last| now.saturating_duration_since(last));
-                Self {
-                    last_tick: Some(self.last_tick.map_or(now, |last| last.max(now))),
-                    ..self.send(Command::Tick(elapsed.as_secs_f64()))
-                }
-            }
+            Message::Tick(now) => self.ticked(now),
             // Nothing without a selected cue, as the toolbar's button does
             Message::StandbySelected => {
                 let standby = self.selected_here().map(|cue| Command::Standby {

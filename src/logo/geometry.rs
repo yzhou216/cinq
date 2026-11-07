@@ -12,8 +12,8 @@ use kurbo::{Arc, Circle, PathEl, Point, QuadBez, Vec2};
 /// grid halfway along, arching up or sagging down
 pub(super) fn arch(from: (f64, f64), middle: f64, to: (f64, f64)) -> QuadBez {
     let (from, to) = (Point::from(from), Point::from(to));
-    let control = Point::new((from.x + to.x) / 2.0, 2.0 * middle - (from.y + to.y) / 2.0);
-    QuadBez::new(from, control, to)
+    let half = from.midpoint(to);
+    QuadBez::new(from, Point::new(half.x, 2.0 * middle - half.y), to)
 }
 
 pub(super) fn at(circle: Circle, angle: f64) -> Point {

@@ -5,17 +5,7 @@
 //! Part of a file that an audio or video cue plays, and what the stage
 //! window shows of the file of a video or picture cue
 
-use std::path::PathBuf;
-
 use super::{Cue, Kind, Media};
-
-/// Part of a file that a run of an audio or video cue may start, which
-/// the sound output makes ready ahead of it
-#[derive(Debug, Clone, PartialEq)]
-pub struct Wanted {
-    pub(in crate::back) path: PathBuf,
-    pub(in crate::back) clip: Clip,
-}
 
 /// Part of its file that an audio or video cue plays, from `start` to `end`
 /// in seconds into the file, where `start` comes before `end`.  A clip

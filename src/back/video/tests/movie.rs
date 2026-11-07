@@ -38,7 +38,7 @@ const SHADES: (usize, usize) = (24, STEP);
 /// Returns a temporary directory holding `movie.mp4`, a test video of
 /// `count` pictures, at most 25, that decoding can start at every
 /// `sync_every` pictures, with the path of the video
-pub(in crate::back) fn movie(count: usize, sync_every: u32) -> (TempDir, PathBuf) {
+pub(in crate::back) fn movie(count: usize, sync_every: usize) -> (TempDir, PathBuf) {
     broken_movie(count, sync_every, &[])
 }
 
@@ -46,12 +46,12 @@ pub(in crate::back) fn movie(count: usize, sync_every: u32) -> (TempDir, PathBuf
 /// `broken` hold bytes that no decoder can read
 pub(in crate::back) fn broken_movie(
     count: usize,
-    sync_every: u32,
+    sync_every: usize,
     broken: &[usize],
 ) -> (TempDir, PathBuf) {
     let directory = TempDir::new().expect("a temporary directory can be made");
     let path = directory.path().join("movie.mp4");
-    write_movie(&path, count, sync_every as usize, broken);
+    write_movie(&path, count, sync_every, broken);
     (directory, path)
 }
 

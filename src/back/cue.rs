@@ -17,7 +17,7 @@ use std::{ffi::OsStr, fmt, ops::RangeInclusive, path::Path};
 
 use bon::Builder;
 
-pub use clip::{Clip, Shown, Wanted};
+pub use clip::{Clip, Shown};
 pub use edit::Edit;
 pub use kind::{Advance, Kind};
 pub use list::CueList;

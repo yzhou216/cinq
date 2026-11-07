@@ -39,15 +39,14 @@ pub struct Keymap {
 
 impl From<Preset> for Keymap {
     fn from(preset: Preset) -> Self {
-        Action::VARIANTS
-            .iter()
-            .fold(Self::empty(preset.name()), |keymap, &action| {
-                let keys = preset
-                    .keys(action)
-                    .iter()
-                    .filter_map(|keys| binding(keys).ok());
-                keymap.with(action, keys.collect())
-            })
+        let bindings = Action::VARIANTS.iter().map(|&action| {
+            let keys = preset.keys(action).iter();
+            (action, keys.filter_map(|keys| binding(keys).ok()).collect())
+        });
+        Self {
+            name: preset.name().to_owned(),
+            bindings: bindings.collect(),
+        }
     }
 }
 

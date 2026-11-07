@@ -10,8 +10,8 @@ use crate::back::{Cue, Kind, Media, Problem};
 
 impl Workspace {
     pub fn problem<'a>(&self, cue: &'a Cue) -> Option<Problem<'a>> {
-        match (cue.kind, &cue.media) {
-            (Kind::Audio | Kind::Video | Kind::Picture, media) => match media {
+        match cue.kind {
+            Kind::Audio | Kind::Video | Kind::Picture => match &cue.media {
                 _ if cue.file_name().is_none() => Some(Problem::NoFile),
                 Media::Unloaded => Some(Problem::NotLoaded),
                 Media::Failed(reason) => Some(Problem::LoadFailed(reason)),
@@ -20,11 +20,11 @@ impl Workspace {
                 }
                 Media::Loaded { .. } => None,
             },
-            (Kind::Fade | Kind::Stop, _) => match self.target(cue) {
+            Kind::Fade | Kind::Stop => match self.target(cue) {
                 Some(target) if cue.can_target(target) => None,
                 _ => Some(Problem::NoTarget),
             },
-            (Kind::Wait | Kind::Memo, _) => None,
+            Kind::Wait | Kind::Memo => None,
         }
     }
 

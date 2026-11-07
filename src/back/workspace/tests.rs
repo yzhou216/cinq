@@ -107,4 +107,11 @@ fn level(workspace: &Workspace, id: u32) -> Option<f32> {
     workspace.active_of(CueId(id)).map(|active| active.level)
 }
 
+fn opacity(workspace: &Workspace, id: u32) -> f32 {
+    workspace
+        .active_of(CueId(id))
+        .expect("the cue runs")
+        .opacity()
+}
+
 const GO: Command = Command::Go { list: 0 };
