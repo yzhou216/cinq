@@ -17,6 +17,10 @@ Major changes and improvements in each release of cinq, newest first.
   Cisco's openh264, so that building cinq compiles no C++, its program no
   longer needs the C++ library, and it builds on riscv64.  A sample that
   fails to decode now costs no picture but its own.
+- On a terminal, the problems of `config.toml` take a screen of their own
+  while any are left, as a pager's text does, so that fixing the file brings
+  back the prompt and what came before it instead of a cleared screen.
+  Problems still left when cinq ends stay on the terminal.
 
 ## v0.1.1
 

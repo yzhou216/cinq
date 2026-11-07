@@ -33,14 +33,17 @@ use update::{Keeper, Show, Stage};
 /// Opens the main window with the show in `show`, or a new show without
 /// one, and runs the interface until the main window closes.  The key
 /// bindings come from `config.toml` in `config_dir`, when it is given, and
-/// otherwise from the platform's configuration directory.
+/// otherwise from the platform's configuration directory.  A terminal that
+/// shows problems with the file on a screen of their own switches back
+/// however the interface ends.
 pub fn run(config_dir: Option<PathBuf>, show: Option<PathBuf>) -> iced::Result {
     if let Some(missing) = no_wayland() {
         return Err(missing);
     }
     let config = keymap::config::file(config_dir.as_deref());
     let show = show.map(|show| path::absolute(&show).unwrap_or(show));
-    iced::daemon(
+    keymap::config::guard();
+    let ran = iced::daemon(
         move || Cinq::new(config.as_deref(), show.clone()),
         Cinq::update,
         Cinq::view,
@@ -53,7 +56,9 @@ pub fn run(config_dir: Option<PathBuf>, show: Option<PathBuf>) -> iced::Result {
         ..iced::Settings::default()
     })
     .subscription(Cinq::subscription)
-    .run()
+    .run();
+    keymap::config::restore();
+    ran
 }
 
 /// Size that the main window opens at

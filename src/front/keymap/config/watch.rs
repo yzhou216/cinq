@@ -44,8 +44,8 @@ use notify_debouncer_full::{
 };
 
 use super::{Config, Problem, load};
-pub use errors::Errors;
 use errors::warner;
+pub use errors::{Errors, guard, restore};
 
 /// Time that changes must settle for before the file is read again, which
 /// lets an editor finish saving

@@ -26,6 +26,9 @@ include = [
 anstyle-query = "1.1"
 bon = "3.10"
 clap = { version = "4.6", features = ["derive"] }
+ctrlc = { version = "3.5", features = [ # Problems screen left on Control+c
+  "termination",
+] }
 dirs = "7.0"
 iced = { version = "0.14", default-features = false, features = [ # Wayland alone, and cinq's own theme
   "advanced",
@@ -67,6 +70,7 @@ rust_h264 = "0.6" # Decoder of H.264 in Rust
 serde = { version = "1.0", features = ["derive"] }
 strum = { version = "0.28", features = ["derive"] }
 tempfile = "3.27"
+terminal_size = "0.4" # Problems redrawn at a new size, which miette brings
 tokio = { version = "1.54", default-features = false, features = [ # Timer of the ticks, which needs iced's tokio executor
   "time",
 ] }

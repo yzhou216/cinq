@@ -44,7 +44,7 @@ use super::Keymap;
 use crate::front::read;
 pub(super) use parse::parse;
 pub use problem::Problem;
-pub use watch::{Errors, watch};
+pub use watch::{Errors, guard, restore, watch};
 
 /// Key bindings, along with where they came from and what was wrong with
 /// the file they came from
