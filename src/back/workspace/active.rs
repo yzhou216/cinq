@@ -81,6 +81,7 @@ impl Active {
                     remaining: length,
                     length,
                     then_stop: cue.stop_target,
+                    opacity: 1.0,
                 },
             },
             (Kind::Stop, Some(target)) => Effect::Stop(target),
@@ -177,6 +178,18 @@ impl Active {
                 ..self
             }
             .faded(seconds)
+        }
+    }
+
+    /// Returns the cue with `fade` on its level, whose picture fades from as
+    /// opaque as it is now
+    pub(super) fn under(self, fade: Fade) -> Self {
+        Self {
+            fade: Some(Fade {
+                opacity: self.opacity(),
+                ..fade
+            }),
+            ..self
         }
     }
 

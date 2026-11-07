@@ -22,6 +22,10 @@ pub struct Fade {
     pub(in crate::back) length: f64,
     /// Whether the faded cue stops once the fade ends
     pub(in crate::back) then_stop: bool,
+    /// Opacity of the picture of the faded cue as the fade starts, which is
+    /// less than whole where the fade takes over from one that stops the
+    /// cue, so that the picture fades on from where it was
+    pub(in crate::back) opacity: f32,
 }
 
 impl Fade {

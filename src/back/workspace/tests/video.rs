@@ -40,6 +40,25 @@ fn picture_fades_to_black_with_a_fade_that_stops_its_cue() {
 }
 
 #[test]
+fn picture_fading_out_fades_on_from_where_it_was_under_a_panic_or_another_fade() {
+    let continuing = Cue {
+        advance: Advance::Continue,
+        ..video(1)
+    };
+    let longer = Cue {
+        duration: 8.0.into(),
+        ..fade_out(3)
+    };
+    let halfway = workspace(vec![continuing, fade_out(2), longer])
+        .apply(GO)
+        .apply(Command::Tick(2.0));
+    let panicked = halfway.clone().apply(Command::Panic);
+    assert!((opacity(&panicked, 1) - 0.5).abs() < 1e-6);
+    let refaded = halfway.apply(GO).apply(Command::Tick(4.0));
+    assert!((opacity(&refaded, 1) - 0.25).abs() < 1e-6);
+}
+
+#[test]
 fn picture_stays_whole_under_a_fade_that_leaves_its_cue_playing() {
     let under = Cue::new(CueId(2), "2", Kind::Fade, "Under")
         .target(CueId(1))
