@@ -118,3 +118,17 @@ fn command_page_gives_its_date_and_version_in_their_places() {
         "cinq(1) lacks the title {title}"
     );
 }
+
+#[test]
+fn synopsis_gives_the_value_that_each_option_takes() {
+    let page = command_page(Platform::Xdg, DATE);
+    let synopsis = page
+        .lines()
+        .skip_while(|line| *line != ".SH SYNOPSIS")
+        .nth(1);
+    let expected = concat!(
+        r"\fBcinq\fR [\fB\-\-config\-dir\fR \fIDIRECTORY\fR] ",
+        r"[\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] [\fISHOW\fR]"
+    );
+    assert_eq!(synopsis, Some(expected));
+}
