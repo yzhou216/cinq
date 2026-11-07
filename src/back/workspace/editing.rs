@@ -188,14 +188,18 @@ impl Workspace {
     }
 
     /// Edits a cue without recording the edit, as undo and redo edit it.
-    /// A running audio or video cue stops when it gets a new file, and it
+    /// A running cue stops when it gets another file, which has yet to
+    /// load, while a file name that leads to the same file, such as the
+    /// one chosen again, leaves it playing.  A running audio or video cue
     /// takes a new level at once, which ends a fade on it.  A cue that a
     /// panic or a fade is stopping keeps fading out, so that no edit brings
     /// it back.
     pub(super) fn changed(self, id: CueId, edit: Edit) -> Self {
-        let plays = self.cue(id).is_some_and(|cue| cue.kind.plays_file());
+        let Some(cue) = self.cue(id) else {
+            return self;
+        };
+        let (path, plays) = (self.path(cue), cue.kind.plays_file());
         let workspace = match edit {
-            Edit::File(_) | Edit::FileAndName { .. } => self.stopped(id),
             Edit::Level(level) if plays => self.with_active(id, |active| match active.fade {
                 Some(fade) if fade.then_stop => active,
                 _ => Active {
@@ -205,8 +209,18 @@ impl Workspace {
                 },
             }),
             _ => self,
-        };
-        workspace.with_list_of(id, |cues| cues.edited(id, edit))
+        }
+        .with_list_of(id, |cues| cues.edited(id, edit));
+        let refiled = workspace
+            .cue(id)
+            .is_some_and(|cue| workspace.path(cue) != path);
+        if refiled {
+            workspace
+                .stopped(id)
+                .with_list_of(id, |cues| cues.loaded(id, Media::Unloaded))
+        } else {
+            workspace
+        }
     }
 
     /// Records what loading the file of a cue found, unless the cue has
