@@ -2,31 +2,33 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Pictures that openh264 decodes, turned into RGBA with the colors of the
-//! standard that their size implies
+//! Pictures that the decoder hands out, turned into RGBA with the colors of
+//! the standard that their size implies
 //!
 //! H.264 holds a picture as the luma of each pixel and two differences of
 //! color, which each square of four pixels shares, and a matrix turns them
 //! into red, green, and blue.  High-definition video takes the matrix of
-//! BT.709, while smaller video takes that of BT.601, which is the matrix
-//! that openh264 converts with, so pictures 720 lines tall or taller
-//! convert here instead, with BT.709 in its limited range.  The two pixels
-//! of each pair side by side share their differences, so each pair
-//! converts at once, and strips of rows convert on threads of their own,
-//! so that high-definition video keeps up at sixty pictures a second.
+//! BT.709, and smaller video that of BT.601, both in their limited range.
+//! The two pixels of each pair side by side share their differences, so
+//! each pair converts at once.  The strips of rows of a high-definition
+//! picture convert on threads of their own, so that it keeps up at sixty
+//! pictures a second, while a smaller picture converts on the thread that
+//! asks, since starting threads for each picture would cost it more than
+//! they save.
 
 #[cfg(test)]
 mod tests;
 
 use std::{num::NonZero, thread};
 
-use openh264::{decoder::DecodedYUV, formats::YUVSource};
+use rust_h264::decoder::Frame;
 
 /// Lines from which a picture counts as high definition
-const HIGH_DEFINITION: usize = 720;
+const HIGH_DEFINITION: u32 = 720;
 
-/// Most strips of rows that a picture converts in at once, each on a thread
-/// of its own, enough to spread a picture over the cores of most machines
+/// Most strips of rows that a high-definition picture converts in at once,
+/// each on a thread of its own, enough to spread a picture over the cores
+/// of most machines
 const STRIPS: usize = 8;
 
 /// Picture of a video, in RGBA, row by row from the top
@@ -37,70 +39,96 @@ pub struct Picture {
     pub pixels: Vec<u8>,
 }
 
-/// Returns a decoded picture in RGBA
-pub(super) fn rgba(picture: &DecodedYUV<'_>) -> Picture {
-    let (width, height) = picture.dimensions();
-    let pixels = if height < HIGH_DEFINITION {
-        bt601(picture)
+/// Parts that the differences of color of a pixel add to its red, green,
+/// and blue, in 256ths of a step of luma for each step of difference
+#[derive(Clone, Copy)]
+struct Matrix {
+    red_of_red: i32,
+    green_of_blue: i32,
+    green_of_red: i32,
+    blue_of_blue: i32,
+}
+
+/// Matrix of BT.601, which smaller video takes
+const BT601: Matrix = Matrix {
+    red_of_red: 409,
+    green_of_blue: -100,
+    green_of_red: -208,
+    blue_of_blue: 516,
+};
+
+/// Matrix of BT.709, which high-definition video takes
+const BT709: Matrix = Matrix {
+    red_of_red: 459,
+    green_of_blue: -55,
+    green_of_red: -136,
+    blue_of_blue: 541,
+};
+
+/// Returns a decoded picture in RGBA, which holds its colors in eight bits
+/// and shares them among four pixels
+pub(super) fn rgba(picture: &Frame) -> Picture {
+    let matrix = if picture.height < HIGH_DEFINITION {
+        BT601
     } else {
-        bt709(picture)
+        BT709
     };
-    // H.264 limits pictures to far fewer pixels a side than u32 counts
     Picture {
-        width: width as u32,
-        height: height as u32,
-        pixels,
+        width: picture.width,
+        height: picture.height,
+        pixels: converted(picture, matrix),
     }
 }
 
-/// Returns the pixels of `picture` in RGBA with the matrix of BT.601, as
-/// openh264 converts them
-fn bt601(picture: &DecodedYUV<'_>) -> Vec<u8> {
-    let (width, height) = picture.dimensions();
+/// Returns the pixels of `picture` in RGBA with `matrix`, in limited range,
+/// converting the strips of rows of a high-definition picture on threads of
+/// their own
+fn converted(picture: &Frame, matrix: Matrix) -> Vec<u8> {
+    let (width, height) = (picture.width as usize, picture.height as usize);
     let mut pixels = vec![0; width * height * 4];
-    picture.write_rgba8(&mut pixels);
-    pixels
-}
-
-/// Returns the pixels of `picture` in RGBA with the matrix of BT.709, in
-/// limited range, converting strips of its rows on threads of their own
-pub(super) fn bt709(picture: &(impl YUVSource + Sync)) -> Vec<u8> {
-    let (width, height) = picture.dimensions();
-    let strips = thread::available_parallelism()
-        .map_or(1, NonZero::get)
-        .min(STRIPS);
-    // Rows of a strip, in pairs, so that a strip shares no chroma with the
-    // next
-    let rows = height.div_ceil(strips).next_multiple_of(2).max(2);
-    let mut pixels = vec![0; width * height * 4];
-    thread::scope(|scope| {
-        pixels
-            .chunks_mut(rows * width * 4)
-            .enumerate()
-            .for_each(|(strip, pixels)| {
-                scope.spawn(move || bt709_rows(picture, strip * rows, pixels));
-            });
-    });
+    // Chunks of a picture that a crafted stream crops to no width would
+    // panic
+    if pixels.is_empty() {
+        return pixels;
+    }
+    if picture.height < HIGH_DEFINITION {
+        converted_rows(picture, matrix, 0, &mut pixels);
+    } else {
+        let strips = thread::available_parallelism()
+            .map_or(1, NonZero::get)
+            .min(STRIPS);
+        // Rows of a strip, in pairs, so that a strip shares no chroma with
+        // the next
+        let rows = height.div_ceil(strips).next_multiple_of(2).max(2);
+        thread::scope(|scope| {
+            pixels
+                .chunks_mut(rows * width * 4)
+                .enumerate()
+                .for_each(|(strip, pixels)| {
+                    scope.spawn(move || converted_rows(picture, matrix, strip * rows, pixels));
+                });
+        });
+    }
     pixels
 }
 
 /// Converts the rows of `picture` from `first` on into `pixels`, which hold
-/// as many rows in RGBA as they have room for
-fn bt709_rows(picture: &impl YUVSource, first: usize, pixels: &mut [u8]) {
-    let (width, _) = picture.dimensions();
-    let (luma_stride, blue_stride, red_stride) = picture.strides();
+/// as many rows in RGBA as they have room for, with `matrix`
+fn converted_rows(picture: &Frame, matrix: Matrix, first: usize, pixels: &mut [u8]) {
+    let width = picture.width as usize;
+    let chroma_width = picture.chroma_width() as usize;
     pixels
         .chunks_exact_mut(width * 4)
         .zip(first..)
         .for_each(|(line, row)| {
-            let lumas = &picture.y()[row * luma_stride..][..width];
-            let blues = &picture.u()[row / 2 * blue_stride..];
-            let reds = &picture.v()[row / 2 * red_stride..];
+            let lumas = &picture.y[row * width..][..width];
+            let blues = &picture.u[row / 2 * chroma_width..];
+            let reds = &picture.v[row / 2 * chroma_width..];
             line.chunks_mut(8)
                 .zip(lumas.chunks(2))
                 .zip(blues.iter().zip(reds))
                 .for_each(|((pair, lumas), (&blue, &red))| {
-                    let chroma = Chroma::bt709(blue, red);
+                    let chroma = Chroma::new(matrix, blue, red);
                     pair.as_chunks_mut::<4>()
                         .0
                         .iter_mut()
@@ -121,14 +149,14 @@ struct Chroma {
 
 impl Chroma {
     /// Returns the part that the differences `blue` and `red` add, with
-    /// the matrix of BT.709
+    /// `matrix`
     #[inline(always)]
-    fn bt709(blue: u8, red: u8) -> Self {
+    fn new(matrix: Matrix, blue: u8, red: u8) -> Self {
         let (blue, red) = (i32::from(blue) - 128, i32::from(red) - 128);
         Self {
-            red: 459 * red,
-            green: -55 * blue - 136 * red,
-            blue: 541 * blue,
+            red: matrix.red_of_red * red,
+            green: matrix.green_of_blue * blue + matrix.green_of_red * red,
+            blue: matrix.blue_of_blue * blue,
         }
     }
 

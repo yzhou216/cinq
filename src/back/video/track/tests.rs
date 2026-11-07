@@ -3,13 +3,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Tests of the times at which the samples of a track show, B-frames among
-//! them, of where decoding a part of the picture starts, in open groups of
-//! pictures as well, and of the NAL units of samples as openh264 reads them
+//! them, and of where decoding a part of the picture starts, in open groups
+//! of pictures as well
 
 use super::{
     Sample, Track,
-    annex::{annex_b, units},
-    timing::{span, starts_group, timeline},
+    timing::{span, timeline},
 };
 use crate::back::video::tests::movie::movie;
 
@@ -43,14 +42,6 @@ fn decoding_starts_at_a_sync_sample_that_shows_no_later_than_the_first_picture()
 }
 
 #[test]
-fn only_a_closed_group_owes_nothing_to_the_pictures_before_it() {
-    let groups = open_groups();
-    assert!(starts_group(&groups, 0));
-    assert!(!starts_group(&groups, 4));
-    assert!(!starts_group(&groups, 1));
-}
-
-#[test]
 fn samples_show_at_their_offsets_from_the_first_picture() {
     // I, P, and two B-frames, which decode in that order and show as I, B,
     // B, and P, two pictures of 512 units after they start to decode
@@ -77,17 +68,6 @@ fn samples_without_offsets_or_a_list_of_sync_samples_show_as_they_decode() {
     assert_eq!(shows, [0.0, 1.0, 2.0]);
     assert!(samples.iter().all(|sample| sample.sync));
     assert_eq!(end, 0.1);
-}
-
-#[test]
-fn units_of_a_sample_go_after_start_codes() {
-    // Second unit of two bytes, then a third whose length runs past the end
-    let sample = [0, 0, 0, 1, 0x65, 0, 0, 0, 2, 0x41, 0x9a, 0, 0, 0, 9, 1];
-    let found: Vec<&[u8]> = units(&sample, 4).collect();
-    assert_eq!(found, [&[0x65][..], &[0x41, 0x9a]]);
-    assert_eq!(annex_b(found), [0, 0, 0, 1, 0x65, 0, 0, 0, 1, 0x41, 0x9a]);
-    let short: Vec<&[u8]> = units(&[0, 1, 0x67], 2).collect();
-    assert_eq!(short, [&[0x67][..]]);
 }
 
 #[test]

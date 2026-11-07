@@ -31,9 +31,9 @@
           patchelf --set-interpreter ${loader} --remove-rpath "$out/usr/bin/cinq"
         '';
       # Package of portable cinq in the format of nfpm's `packager`, which
-      # depends on glibc, ALSA, the C++ library, and the libraries that
-      # cinq loads, apart from those of the GPU, without which it draws
-      # in software
+      # depends on glibc, the unwinder of GCC that the standard library of
+      # Rust takes, ALSA, and the libraries that cinq loads, apart from
+      # those of the GPU, without which it draws in software
       nfpm =
         packager:
         pkgs.runCommand "${crate.name}-${packager}"
@@ -62,7 +62,7 @@
                 deb.depends = [
                   "libc6 (>= ${glibc})"
                   "libasound2t64 | libasound2"
-                  "libstdc++6"
+                  "libgcc-s1"
                   "libdbus-1-3"
                   "libwayland-client0"
                   "libxkbcommon0"
@@ -70,7 +70,7 @@
                 rpm.depends = [
                   "glibc >= ${glibc}"
                   "alsa-lib"
-                  "libstdc++"
+                  "libgcc"
                   "dbus-libs"
                   "libwayland-client"
                   "libxkbcommon"

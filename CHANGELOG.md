@@ -13,6 +13,10 @@ Major changes and improvements in each release of cinq, newest first.
 - On Windows, a terminal that starts cinq shows what cinq prints, such as
   the problems of `config.toml` and the output of `--help`, and waits until
   cinq closes.  Explorer still starts cinq without a console window.
+- Video cues decode with rust_h264, a decoder written in Rust, in place of
+  Cisco's openh264, so that building cinq compiles no C++, its program no
+  longer needs the C++ library, and it builds on riscv64.  A sample that
+  fails to decode now costs no picture but its own.
 
 ## v0.1.1
 

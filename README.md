@@ -23,9 +23,9 @@ Minimal cue-based show controller, the
 - **Audio cues** in WAV, FLAC, Ogg Vorbis, MP3, or AAC, with start and end
   times, seamless loops, and levels that change while they play.
 - **Video cues** in H.264 and MP4, with their sound, which cinq decodes
-  itself with Cisco's openh264 rather than handing them to another player,
-  and **picture cues** in PNG or JPEG, which hold until something stops
-  them.  Both show on a stage window that each GO of one makes fullscreen.
+  itself with rust_h264 rather than handing them to another player, and
+  **picture cues** in PNG or JPEG, which hold until something stops them.
+  Both show on a stage window that each GO of one makes fullscreen.
   A fade that stops a picture or a video, and Panic, fade it out along with
   its sound, to black or to the picture that shows on under it.
 - **Fade, stop, wait, and memo cues**, chained by auto-continue and
@@ -47,9 +47,6 @@ Minimal cue-based show controller, the
 - Cargo
 - [scdoc](https://git.sr.ht/~sircmpwn/scdoc), for the manual pages that a
   build lays out, as below
-- A C++ compiler, for openh264, which the build compiles from its source
-- [NASM](https://www.nasm.us/), optionally, for the faster x86 code of
-  openh264
 
 #### GNU/Linux and the BSDs
 

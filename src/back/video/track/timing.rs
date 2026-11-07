@@ -2,9 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! When the samples of a track show, which samples decoding a part of the
-//! picture reads, and which groups of pictures owe nothing to the pictures
-//! before them
+//! When the samples of a track show, and which samples decoding a part of
+//! the picture reads
 //!
 //! In a closed group of pictures, which most encoders make, every picture
 //! of the group shows no sooner than the sync sample that starts it.  In an
@@ -88,17 +87,4 @@ pub(super) fn span(samples: &[Sample], start: f64, end: f64) -> Option<(usize, u
         .rposition(|sample| sample.shows < end)
         .unwrap_or(first);
     Some((from, to.max(first), shown.shows))
-}
-
-/// Returns whether the sample at `index` starts a closed group of pictures:
-/// a sync sample that shows before every sample after it up to the next
-/// sync sample, so that no picture of the group refers to one before it
-pub(super) fn starts_group(samples: &[Sample], index: usize) -> bool {
-    samples.get(index).is_some_and(|start| {
-        start.sync
-            && samples[index + 1..]
-                .iter()
-                .take_while(|later| !later.sync)
-                .all(|later| later.shows > start.shows)
-    })
 }
