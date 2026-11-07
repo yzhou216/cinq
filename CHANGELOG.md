@@ -28,6 +28,8 @@ Major changes and improvements in each release of cinq, newest first.
 - A picture fading out no longer jumps back to whole when a panic, or
   another fade that stops its cue, takes over; it fades on from where it
   was.
+- Video 1280 pixels wide that is cropped below 720 lines, such as
+  letterboxed high definition, shows in the colors of high definition.
 
 ## v0.1.1
 
