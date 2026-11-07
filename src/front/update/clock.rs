@@ -24,4 +24,18 @@ impl App {
             ..self.send(Command::Tick(elapsed.as_secs_f64()))
         }
     }
+
+    /// Returns the state with the clock going while any cue runs, from now
+    /// when it starts, so that its first tick counts only the time since,
+    /// and stopped otherwise, so that time spent idle or paused never
+    /// reaches the next tick.  It has to wait until the sound and video
+    /// output have caught up, since a cue that they cannot play stops then.
+    pub(in crate::front) fn clocked(self) -> Self {
+        Self {
+            last_tick: self
+                .running()
+                .then(|| self.last_tick.unwrap_or_else(Instant::now)),
+            ..self
+        }
+    }
 }

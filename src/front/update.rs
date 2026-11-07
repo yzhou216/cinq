@@ -173,10 +173,8 @@ impl App {
     /// command typed halfway, so that a stray `d` cannot wait through a
     /// click and an edit to delete a cue.  A level typed so far gives way to
     /// the level of its cue as well, apart from a click, which can land in
-    /// its own field.  The clock stops with the last running cue, so that
-    /// time spent idle or paused never reaches the next tick, and a link
-    /// that failed to open is forgotten once the help page that holds it
-    /// closes.
+    /// its own field.  A link that failed to open is forgotten once the help
+    /// page that holds it closes.
     fn next(self, message: Message) -> (Self, Task<Message>) {
         let passive = matches!(
             message,
@@ -198,7 +196,6 @@ impl App {
         };
         let (app, task) = app.handled(message);
         let app = Self {
-            last_tick: app.last_tick.filter(|_| app.running()),
             link_problem: app.link_problem.filter(|_| app.help),
             ..app
         };

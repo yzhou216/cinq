@@ -35,6 +35,8 @@ Major changes and improvements in each release of cinq, newest first.
 - On FreeBSD and the other BSDs, cinq follows the changes that an editor
   writes into `config.toml` in place, and not only those that rename another
   file over it.
+- A cue that GO fires right after a sound or video that could not play
+  ended the last running cue no longer starts ahead by the time spent idle.
 
 ## v0.1.1
 
