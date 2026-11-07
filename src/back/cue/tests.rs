@@ -29,6 +29,14 @@ fn typed_level_past_either_end_or_half_typed_reads_as_none() {
 }
 
 #[test]
+fn cue_without_a_number_displays_as_its_name_alone() {
+    let numbered = audio("Rain", "rain.wav");
+    let unnumbered = Cue::new(CueId(2), " ", Kind::Audio, "Rain").build();
+    assert_eq!(numbered.to_string(), "1 Rain");
+    assert_eq!(unnumbered.to_string(), "Rain");
+}
+
+#[test]
 fn chosen_sound_file_names_a_cue_until_the_operator_names_it() {
     let chosen = |cue: Cue| cue.playing("sounds/thunder.wav".to_owned());
     let thunder = Edit::FileAndName {
