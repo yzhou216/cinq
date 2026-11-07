@@ -10,6 +10,7 @@ permissions:
   contents: read
 jobs:
   build:
+    name: cinq built on ${{ matrix.system }}
     strategy:
       fail-fast: false # Failure on one system leaves the other running
       matrix:
@@ -31,8 +32,14 @@ jobs:
         with:
           path: cinq-${{ matrix.system }}.tar
           archive: false
-  packages: # Built on Ubuntu for Darwin, Windows, and other distributions of GNU/Linux
-    runs-on: ubuntu-latest
+  packages: # For Darwin, Windows, and other distributions, each named after where it runs, then after where it was built
+    name: packages built on ${{ matrix.system }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            system: x86_64-linux
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@main
       - uses: wimpysworld/nothing-but-nix@main
@@ -40,28 +47,28 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - run: |
-          nix build .#aarch64-darwin-cross .#deb .#rpm .#archlinux
-          tar -cf cinq-aarch64-darwin-cross.tar -C result .
+          nix build .#aarch64-darwin .#deb .#rpm .#archlinux
+          tar -cf cinq-aarch64-darwin-built-on-${{ matrix.system }}.tar -C result .
           cp result-*/* .
-          nix build .#x86_64-windows-cross .#aarch64-windows-cross
-          cp result/bin/cinq.exe cinq-x86_64-windows.exe
-          cp result-1/bin/cinq.exe cinq-aarch64-windows.exe
+          nix build .#x86_64-windows .#aarch64-windows
+          cp result/bin/cinq.exe cinq-x86_64-windows-built-on-${{ matrix.system }}.exe
+          cp result-1/bin/cinq.exe cinq-aarch64-windows-built-on-${{ matrix.system }}.exe
       - uses: actions/upload-artifact@main
         with:
-          path: cinq-aarch64-darwin-cross.tar
+          path: cinq-aarch64-darwin-built-on-${{ matrix.system }}.tar
           archive: false
       - uses: actions/upload-artifact@main
         with:
-          name: packages
+          name: cinq-${{ matrix.system }}-packages
           path: |
             cinq_*.deb
             cinq-*.rpm
             cinq-*.pkg.tar.zst
       - uses: actions/upload-artifact@main
         with:
-          path: cinq-x86_64-windows.exe
+          path: cinq-x86_64-windows-built-on-${{ matrix.system }}.exe
           archive: false
       - uses: actions/upload-artifact@main
         with:
-          path: cinq-aarch64-windows.exe
+          path: cinq-aarch64-windows-built-on-${{ matrix.system }}.exe
           archive: false

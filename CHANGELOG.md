@@ -21,6 +21,10 @@ Major changes and improvements in each release of cinq, newest first.
   while any are left, as a pager's text does, so that fixing the file brings
   back the prompt and what came before it instead of a cleared screen.
   Problems still left when cinq ends stay on the terminal.
+- The Nix packages for other systems go by the systems that they run on, as
+  `.#aarch64-darwin`, `.#x86_64-windows`, and `.#aarch64-windows`, in place of
+  `.#aarch64-darwin-cross`, `.#x86_64-windows-cross`, and
+  `.#aarch64-windows-cross`.
 
 ## v0.1.1
 

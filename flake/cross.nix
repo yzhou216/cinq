@@ -25,17 +25,21 @@
           "x86_64-pc-windows-gnullvm"
         ];
       };
-      # cinq that cargo cross-builds for the Rust target `target` with the
-      # variables of `env`, and that `install` lays out from the directory
-      # that the build leaves the program in
+      # cinq that cargo cross-builds for `platform`, a platform of Nixpkgs,
+      # with the variables of `env`, and that `install` lays out from the
+      # directory that the build leaves the program in, named after the
+      # system that it runs on
       crossBuilt =
         {
-          target,
+          platform,
           env,
           install,
         }:
+        let
+          target = platform.rust.rustcTarget;
+        in
         pkgs.stdenv.mkDerivation {
-          pname = "${crate.name}-${target}";
+          pname = "${crate.name}-${platform.system}";
           inherit (crate) version;
           inherit (config.packages.cinq) src cargoDeps;
 
@@ -71,12 +75,11 @@
         cross:
         let
           inherit (cross.stdenv) cc hostPlatform;
-          target = hostPlatform.rust.rustcTarget;
-          underscored = builtins.replaceStrings [ "-" ] [ "_" ] target;
+          underscored = builtins.replaceStrings [ "-" ] [ "_" ] hostPlatform.rust.rustcTarget;
           variable = "CARGO_TARGET_${lib.toUpper underscored}";
         in
         crossBuilt {
-          inherit target;
+          platform = hostPlatform;
           env = {
             "${variable}_LINKER" = "${cc}/bin/${cc.targetPrefix}cc";
             "${variable}_RUSTFLAGS" = "-C target-feature=+crt-static";
@@ -85,12 +88,14 @@
         };
     in
     {
+      # cinq for other systems, each named after the system that it runs on,
+      # while the system of the flake is the one that builds it
       packages = lib.optionalAttrs pkgs.stdenvNoCC.hostPlatform.isLinux {
         # cinq for Apple silicon, laid out as the package for Darwin is,
         # which cargo cross-builds against the SDK that Nixpkgs fetches
         # from Apple, linked by lld from the toolchain
-        aarch64-darwin-cross = crossBuilt {
-          target = "aarch64-apple-darwin";
+        aarch64-darwin = crossBuilt {
+          platform = lib.systems.elaborate "aarch64-darwin";
           env = {
             SDKROOT = "${pkgs.apple-sdk.src}";
             CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER = "rust-lld";
@@ -101,8 +106,8 @@
             ${installBundle}
           '';
         };
-        x86_64-windows-cross = windows pkgs.pkgsCross.mingw-ucrt-x86_64-llvm;
-        aarch64-windows-cross = windows pkgs.pkgsCross.mingw-ucrt-aarch64;
+        x86_64-windows = windows pkgs.pkgsCross.mingw-ucrt-x86_64-llvm;
+        aarch64-windows = windows pkgs.pkgsCross.mingw-ucrt-aarch64;
       };
     };
 }

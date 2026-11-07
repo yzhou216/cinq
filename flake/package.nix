@@ -8,6 +8,7 @@
       config,
       lib,
       pkgs,
+      system,
       crate,
       sourceDateEpoch,
       installBundle,
@@ -20,6 +21,9 @@
     {
       packages = {
         default = config.packages.cinq;
+        # Named after the system that it runs on, as the builds for other
+        # systems are, so that each system's name gives cinq for it
+        ${system} = config.packages.cinq;
 
         cinq = pkgs.rustPlatform.buildRustPackage {
           pname = crate.name;
