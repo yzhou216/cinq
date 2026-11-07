@@ -4,7 +4,7 @@
 
 //! Changes that the operator makes to one setting of a cue
 
-use super::{Advance, Cue, CueId, Media, Seconds};
+use super::{Advance, Cue, CueId, Seconds};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Edit {
@@ -32,23 +32,15 @@ pub enum Edit {
 }
 
 impl Cue {
-    /// Returns the cue with one edit applied.  A new file has not been
-    /// loaded yet.
+    /// Returns the cue with one edit applied.  Its media stays as it was,
+    /// since only the workspace, which knows where relative file names
+    /// start from, can tell whether a new file name leads to another file.
     pub(super) fn edited(self, edit: Edit) -> Self {
         match edit {
             Edit::Number(number) => Self { number, ..self },
             Edit::Name(name) => Self { name, ..self },
-            Edit::File(file) => Self {
-                file,
-                media: Media::Unloaded,
-                ..self
-            },
-            Edit::FileAndName { file, name } => Self {
-                file,
-                name,
-                media: Media::Unloaded,
-                ..self
-            },
+            Edit::File(file) => Self { file, ..self },
+            Edit::FileAndName { file, name } => Self { file, name, ..self },
             Edit::Start(start) => Self { start, ..self },
             Edit::End(end) => Self { end, ..self },
             Edit::Loop(looping) => Self { looping, ..self },

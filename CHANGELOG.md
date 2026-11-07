@@ -33,6 +33,8 @@ Major changes and improvements in each release of cinq, newest first.
   file over it.
 - A cue that GO fires right after a sound or video that could not play
   ended the last running cue no longer starts ahead by the time spent idle.
+- Choosing again the file that a running audio or video cue plays, or
+  typing its name with a space around it, leaves the cue playing.
 
 ## v0.1.1
 
