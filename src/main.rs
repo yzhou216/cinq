@@ -20,10 +20,6 @@
 //! names the show to open, and can name the directory that the key bindings
 //! come from.
 
-// Program with a window of its own, which Windows then starts without a
-// console window beside it
-#![cfg_attr(windows, windows_subsystem = "windows")]
-
 mod back;
 mod cli;
 mod front;

@@ -63,11 +63,11 @@
             runHook postInstall
           '';
         };
-      # cinq for Windows 10 and newer on the processor of `cross`, the
-      # Nixpkgs of a MinGW system, whose LLVM compiles the C and C++ of
-      # the crates and links the program.  The C runtime, the unwinder,
-      # and the C++ library go into the program, so that it needs no DLL
-      # that Windows lacks.
+      # cinq for Windows on the processor of `cross`, the Nixpkgs of a
+      # MinGW system, whose LLVM compiles the C and C++ of the crates
+      # and links the program.  The C runtime, the unwinder, and the
+      # C++ library go into the program, so that it needs no DLL that
+      # Windows lacks.
       windows =
         cross:
         let

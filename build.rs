@@ -15,7 +15,9 @@
 //! next to the desktop entry and the type of show files from `share`.
 //! Builds for Darwin also lay out the app bundle, all but the program, in
 //! the Applications directory beside the one that `CINQ_SHARE_DIR` names.
-//! A relative `CINQ_SHARE_DIR` goes from the root of the package.
+//! A relative `CINQ_SHARE_DIR` goes from the root of the package.  Builds
+//! for Windows embed the application manifest in the program, whether or
+//! not `CINQ_SHARE_DIR` is set.
 
 // Modules of the program that the build compiles as well, which keep their
 // own modules where the program finds them
@@ -40,6 +42,7 @@ use std::{
 use clap::CommandFactory;
 use clap_complete::{Generator, Shell, generate};
 use clap_complete_nushell::Nushell;
+use embed_manifest::embed_manifest_file;
 use time::OffsetDateTime;
 
 use src::{
@@ -58,11 +61,17 @@ fn main() {
     ["CINQ_SHARE_DIR", "SOURCE_DATE_EPOCH"]
         .iter()
         .for_each(|variable| println!("cargo::rerun-if-env-changed={variable}"));
+    let os = env::var("CARGO_CFG_TARGET_OS").expect("cargo names the target");
+    if os == "windows"
+        && let Err(error) = embed()
+    {
+        println!("cargo::error=cannot embed the manifest: {error}");
+    }
     let Some(share) = env::var_os("CINQ_SHARE_DIR") else {
         return;
     };
     let share = Path::new(&share);
-    let darwin = env::var("CARGO_CFG_TARGET_OS").expect("cargo names the target") == "macos";
+    let darwin = os == "macos";
     [
         ("render the manual pages", render(&share.join("man"))),
         ("write the shell completions", complete(share)),
@@ -133,6 +142,27 @@ fn assemble(share: &Path) -> io::Result<()> {
     fs::create_dir_all(contents.join("MacOS"))?;
     write(&contents.join("Info.plist"), bundle::info_plist())?;
     write(&contents.join("Resources/cinq.icns"), bundle::icns()?)
+}
+
+/// Application manifest of the program on Windows, which starts it without
+/// a console window from Explorer, while a shell runs it in its console as
+/// it runs any console program
+const MANIFEST: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <application>
+    <windowsSettings>
+      <consoleAllocationPolicy xmlns="http://schemas.microsoft.com/SMI/2024/WindowsSettings">detached</consoleAllocationPolicy>
+    </windowsSettings>
+  </application>
+</assembly>
+"#;
+
+/// Embeds [`MANIFEST`] in the program, from a file in the output directory
+fn embed() -> io::Result<()> {
+    let output = env::var_os("OUT_DIR").expect("cargo names the output directory");
+    let manifest = Path::new(&output).join("cinq.exe.manifest");
+    write(&manifest, MANIFEST)?;
+    embed_manifest_file(&manifest)
 }
 
 /// Renders the manual pages for the platform of the build into the
