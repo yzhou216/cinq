@@ -31,11 +31,10 @@ const HIGH_DEFINITION: u32 = 720;
 /// of most machines
 const STRIPS: usize = 8;
 
-/// Picture of a video, in RGBA, row by row from the top
+/// Picture in RGBA, a byte for each channel, row by row from the top
 pub struct Picture {
     pub width: u32,
     pub height: u32,
-    /// Red, green, blue, and alpha of each pixel, a byte each
     pub pixels: Vec<u8>,
 }
 
@@ -49,7 +48,6 @@ struct Matrix {
     blue_of_blue: i32,
 }
 
-/// Matrix of BT.601, which smaller video takes
 const BT601: Matrix = Matrix {
     red_of_red: 409,
     green_of_blue: -100,
@@ -57,7 +55,6 @@ const BT601: Matrix = Matrix {
     blue_of_blue: 516,
 };
 
-/// Matrix of BT.709, which high-definition video takes
 const BT709: Matrix = Matrix {
     red_of_red: 459,
     green_of_blue: -55,

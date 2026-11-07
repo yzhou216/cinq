@@ -67,8 +67,6 @@ impl Workspace {
         .tick(0.0)
     }
 
-    /// Advances every running cue, begins the actions that are due, and
-    /// drops the cues that have finished
     pub(super) fn tick(self, seconds: f64) -> Self {
         let active = self
             .active
@@ -115,10 +113,9 @@ impl Workspace {
         Self { active, ..self }
     }
 
-    /// Begins the action of every cue whose pre-wait is over.  Fade cues
-    /// start fading their target and stop cues stop theirs.  Audio and video
-    /// cues need nothing here, because making sound and pictures is the job
-    /// of the audio and video output.
+    /// Begins the action of every cue whose pre-wait is over.  Audio, video,
+    /// and picture cues need nothing here, since making sound and pictures
+    /// is the job of the audio and video output.
     fn started(self) -> Self {
         let due = self.active_where(Active::due);
         let active = self.active.into_iter().map(Active::begun).collect();

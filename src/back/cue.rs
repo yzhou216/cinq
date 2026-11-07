@@ -30,7 +30,6 @@ pub const SILENCE: f32 = -60.0;
 /// Loudest level in dB that the operator can give a cue
 pub const LOUDEST: f32 = 12.0;
 
-/// Levels in dB that the operator can give a cue
 pub const LEVELS: RangeInclusive<f32> = SILENCE..=LOUDEST;
 
 /// Returns the level in dB that `text` reads as, with its unit or without
@@ -71,7 +70,6 @@ pub struct Cue {
     /// File that an audio or video cue plays, or that a picture cue shows
     #[builder(default, into)]
     pub file: String,
-    /// What loading the file found
     #[builder(skip)]
     pub media: Media,
     /// Time in the file at which an audio or video cue starts
@@ -114,7 +112,6 @@ impl fmt::Display for Cue {
 }
 
 impl Cue {
-    /// Returns the name that a new cue of `kind` goes by
     fn new_name(kind: Kind) -> String {
         format!("New {kind} cue")
     }
@@ -186,8 +183,6 @@ impl Cue {
     }
 }
 
-/// Returns the name of a file without its directory and its ending, or
-/// none when there is no such name
 fn stem(file: &str) -> Option<&str> {
     Path::new(file.trim()).file_stem().and_then(OsStr::to_str)
 }

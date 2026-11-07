@@ -33,10 +33,7 @@ pub use press::{Press, written};
 /// Keys bound to each action
 #[derive(Debug, Clone)]
 pub struct Keymap {
-    /// Name of the keymap, a shipped one or one that the configuration
-    /// file defines
     name: String,
-    /// Key sequences bound to each action, which may be none
     bindings: HashMap<Action, Vec<Vec<Press>>>,
 }
 
@@ -61,7 +58,6 @@ impl Default for Keymap {
 }
 
 impl Keymap {
-    /// Returns a keymap named `name` that binds no keys at all
     fn empty(name: &str) -> Self {
         Self {
             name: name.to_owned(),
@@ -69,7 +65,6 @@ impl Keymap {
         }
     }
 
-    /// Returns the keymap under the name `name`, with the same keys
     fn named(self, name: &str) -> Self {
         Self {
             name: name.to_owned(),
@@ -77,7 +72,6 @@ impl Keymap {
         }
     }
 
-    /// Returns the keymap with the keys of `action` replaced by `keys`
     fn with(self, action: Action, keys: Vec<Vec<Press>>) -> Self {
         // Pair chained last wins over the keys that the action had
         let bindings = self.bindings.into_iter().chain([(action, keys)]).collect();
@@ -88,7 +82,6 @@ impl Keymap {
         &self.name
     }
 
-    /// Returns the key sequences bound to an action
     fn keys(&self, action: Action) -> &[Vec<Press>] {
         self.bindings.get(&action).map_or(&[], Vec::as_slice)
     }
@@ -99,13 +92,10 @@ impl Keymap {
         self.keys(action).first().map(|keys| written(keys))
     }
 
-    /// Writes the first key sequence bound to an action together with
-    /// what it does, as in `Control+s: save`
     pub fn hint(&self, action: Action, label: &str) -> Option<String> {
         self.key(action).map(|keys| format!("{keys}: {label}"))
     }
 
-    /// Writes the key sequences bound to an action as a list, or `none`
     pub fn listed(&self, action: Action) -> String {
         match self.keys(action) {
             [] => "none".to_owned(),

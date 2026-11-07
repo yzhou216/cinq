@@ -91,7 +91,6 @@ impl Press {
         })
     }
 
-    /// Returns the same key without modifiers
     pub(super) fn bare(self) -> Self {
         Self {
             ctrl: false,

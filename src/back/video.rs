@@ -6,25 +6,20 @@
 //!
 //! [`Video::sync`] runs after every change to the workspace, as
 //! [`super::Audio::sync`] does, and makes the pictures match it.  Each run
-//! of a video cue gets a thread of its own from the moment GO fires it,
-//! which decodes the clip of the run a few pictures ahead of the clock of
-//! the run, and a run whose clip loops gets a second one, which decodes the
-//! next pass through the clip before the pass under way ends.  Each run of
-//! a picture cue gets a thread that decodes its one picture.  Each sync
-//! hands on the newest picture that the clock of each run has reached, so
-//! that the picture follows the clock of the show and holds still while
-//! the run is paused.  The sound follows the clock of the audio device
-//! instead, from which the clock of the show drifts over a long video, as
-//! cinq-show(5) tells.  The threads of a run that ends go with it.  Ahead
-//! of that, the pictures that the next GO of each list may start are made
-//! ready, as their sounds are, since decoding has to start at the sync
-//! sample before the start of a clip, a few seconds before it in many
-//! files, and a large picture file takes a moment to decode.  The
-//! workspace stays the only record of what should be seen, so a picture
-//! that cannot play goes back to it as a file that cannot be played.  Video
-//! files hold H.264 in MP4, whose tracks [`track`] reads, and which
-//! [`decoder`] decodes with rust_h264, while picture files hold PNG or
-//! JPEG, which [`still`] decodes.
+//! of a video or picture cue gets a [`Player`] from the moment GO fires it,
+//! and each sync hands on the newest picture that the clock of each run has
+//! reached, so that the picture follows the clock of the show and holds
+//! still while the run is paused.  The sound follows the clock of the audio
+//! device instead, from which the clock of the show drifts over a long
+//! video, as cinq-show(5) tells.  The pictures that the next GO of each
+//! list may start are made ready ahead, as their sounds are, since decoding
+//! has to start at the sync sample before the start of a clip, a few
+//! seconds before it in many files, and a large picture file takes a moment
+//! to decode.  The workspace stays the only record of what should be seen,
+//! so a picture that cannot play goes back to it as a file that cannot be
+//! played.  Video files hold H.264 in MP4, whose tracks [`track`] reads,
+//! and which [`decoder`] decodes with rust_h264, while picture files hold
+//! PNG or JPEG, which [`still`] decodes.
 
 mod decoder;
 mod player;
@@ -51,22 +46,19 @@ pub const VIDEO_FILES: [&str; 3] = ["m4v", "mov", "mp4"];
 /// as PNG and JPEG name them
 pub const PICTURE_FILES: [&str; 3] = ["jpeg", "jpg", "png"];
 
-/// File that a run of a video or picture cue may show, and what the stage
-/// window shows of it
+/// What a player decodes, which one made ready ahead has to match for a
+/// run to take it
 #[derive(Debug, Clone, PartialEq)]
 struct Showing {
     path: PathBuf,
     shown: Shown,
 }
 
-/// Video output for a workspace
 #[derive(Default)]
 pub struct Video {
-    /// Pictures of the runs of video and picture cues that GO has fired, by
-    /// cue, each with the serial number of its run
+    /// Players of the runs, each with the serial number of its run
     runs: HashMap<CueId, (u32, Player)>,
-    /// Pictures that the next GO may start, made ready ahead, by cue, each
-    /// with the file that it shows and what of it
+    /// Players made ready ahead for the next GO
     ready: HashMap<CueId, (Showing, Player)>,
 }
 

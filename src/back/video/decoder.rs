@@ -67,7 +67,6 @@ pub(super) enum Sent {
     Picture(Frame),
     /// Pass is over, and every picture of it has been sent
     Ended,
-    /// Picture cannot play, for the given reason
     Failed(String),
 }
 

@@ -225,7 +225,6 @@ impl Workspace {
         workspace.with_list_of(id, |cues| cues.loaded(id, media))
     }
 
-    /// Returns a cue with its place in the lists
     fn place_of(&self, id: CueId) -> Option<Placed> {
         self.lists.iter().enumerate().find_map(|(list, cues)| {
             cues.position(id).map(|index| Placed {

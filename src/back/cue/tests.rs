@@ -2,10 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of typed levels, of the names that sound files give cues, of the
-//! clips that audio and video cues play, along with the sound of a video
-//! cue, of the delay after which a looping cue carries its chain on, of
-//! the level that counts as silence, and of what a picture cue shows
+//! Tests of cues: their levels, names, clips, and delays
 
 use super::*;
 
