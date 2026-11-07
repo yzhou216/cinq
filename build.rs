@@ -27,7 +27,7 @@ use std::{
     env,
     fs::{self, File},
     io,
-    path::Path,
+    path::{Path, PathBuf},
     process::Command,
 };
 
@@ -63,21 +63,19 @@ fn main() {
         return;
     };
     let share = Path::new(&share);
-    let darwin = os == "macos";
+    let platform = Platform::of(&os);
+    let icon = share.join("icons/hicolor/scalable/apps/cinq.svg");
     [
-        ("render the manual pages", render(&share.join("man"))),
+        ("render the manual pages", render(share, platform)),
         ("write the shell completions", complete(share)),
-        (
-            "draw the icon",
-            draw(&share.join("icons/hicolor/scalable/apps")),
-        ),
+        ("draw the icon", write(&icon, logo::svg())),
         (
             "copy the desktop entry and the type of show files",
             copy(share),
         ),
     ]
     .into_iter()
-    .chain(darwin.then(|| ("lay out the app bundle", assemble(share))))
+    .chain((os == "macos").then(|| ("lay out the app bundle", assemble(share))))
     .filter_map(|(what, done)| done.err().map(|error| (what, error)))
     .for_each(|(what, error)| println!("cargo::error=cannot {what}: {error}"));
 }
@@ -115,14 +113,9 @@ fn script(generator: impl Generator) -> Vec<u8> {
     script
 }
 
-/// Draws the logo into `directory` as the icon of the desktop entry
-fn draw(directory: &Path) -> io::Result<()> {
-    write(&directory.join("cinq.svg"), logo::svg())
-}
-
-/// Lays out the app bundle for Darwin in the Applications directory beside
-/// `share`: Info.plist, the icon, and the empty directory for the program,
-/// which the build script runs too early to fill
+/// Lays out the app bundle beside `share`, with its directory for the
+/// program left for a package to fill, since the program is linked after
+/// the build runs
 fn assemble(share: &Path) -> io::Result<()> {
     let contents = share
         .with_file_name("Applications")
@@ -146,22 +139,21 @@ const MANIFEST: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?
 "#;
 
 fn embed() -> io::Result<()> {
-    let output = env::var_os("OUT_DIR").expect("cargo names the output directory");
-    let manifest = Path::new(&output).join("cinq.exe.manifest");
-    write(&manifest, MANIFEST)?;
+    let manifest = out_dir().join("cinq.exe.manifest");
+    fs::write(&manifest, MANIFEST)?;
     embed_manifest_file(&manifest)
 }
 
-/// Renders the manual pages for the platform of the build into the
-/// directory of each one's section under `man`
-fn render(man: &Path) -> io::Result<()> {
-    let target = env::var("CARGO_CFG_TARGET_OS").expect("cargo names the target");
-    let platform = Platform::of(&target);
+fn out_dir() -> PathBuf {
+    env::var_os("OUT_DIR")
+        .expect("cargo names the output directory")
+        .into()
+}
+
+fn render(share: &Path, platform: Platform) -> io::Result<()> {
     let page = |name: &str| {
-        let section = Path::new(name)
-            .extension()
-            .expect("a page names its section");
-        man.join(format!("man{}", section.display())).join(name)
+        let (_, section) = name.rsplit_once('.').expect("a page names its section");
+        share.join(format!("man/man{section}/{name}"))
     };
     write(&page("cinq.1"), man::command_page(platform, &date()))?;
     man::SCDOC
@@ -187,7 +179,7 @@ fn date() -> String {
 /// the page is written only once scdoc has rendered all of it, so that a
 /// failure leaves no page behind.
 fn scdoc(source: &str, page: &Path) -> io::Result<()> {
-    let input = Path::new(&env::var_os("OUT_DIR").expect("cargo names the output directory"))
+    let input = out_dir()
         .join(page.file_name().expect("a page is a file"))
         .with_added_extension("scd");
     fs::write(&input, source)?;

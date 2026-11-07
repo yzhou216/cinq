@@ -48,24 +48,24 @@ impl Field {
     pub(super) fn input<'a>(self, app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         let id = cue.id;
         let editable = app.editable();
-        let field =
-            |value: &str, applies: bool, edit: fn(String) -> Edit| -> Element<'a, Message> {
-                let input = text_input(self.placeholder(cue), value)
-                    .on_input_maybe(
-                        (editable && applies).then_some(move |text| Message::Edit(id, edit(text))),
-                    )
-                    .style(theme::field(self.valid(cue)));
-                match self {
-                    Field::Name => input.id(NAME).into(),
-                    _ => input.into(),
-                }
-            };
+        let applies = !matches!(self, Field::PostWait) || cue.advance != Advance::Follow;
+        let field = |value: &str, edit: fn(String) -> Edit| -> Element<'a, Message> {
+            let input = text_input(self.placeholder(cue), value)
+                .on_input_maybe(
+                    (editable && applies).then_some(move |text| Message::Edit(id, edit(text))),
+                )
+                .style(theme::field(self.valid(cue)));
+            match self {
+                Field::Name => input.id(NAME).into(),
+                _ => input.into(),
+            }
+        };
         match self {
-            Field::Number => field(&cue.number, true, Edit::Number),
-            Field::Name => field(&cue.name, true, Edit::Name),
+            Field::Number => field(&cue.number, Edit::Number),
+            Field::Name => field(&cue.name, Edit::Name),
             Field::Target => match cue.kind {
                 Kind::Audio | Kind::Video | Kind::Picture => row![
-                    field(&cue.file, true, Edit::File),
+                    field(&cue.file, Edit::File),
                     button("Choose").on_press_maybe(editable.then_some(Message::ChooseFile(id))),
                 ]
                 .spacing(SPACING)
@@ -78,19 +78,13 @@ impl Field {
                 ),
                 Kind::Wait | Kind::Memo => shown(""),
             },
-            Field::Notes => field(&cue.notes, true, Edit::Notes),
-            Field::PreWait => field(cue.pre_wait.text(), true, |text| Edit::PreWait(text.into())),
+            Field::Notes => field(&cue.notes, Edit::Notes),
+            Field::PreWait => field(cue.pre_wait.text(), |text| Edit::PreWait(text.into())),
             Field::Duration if cue.kind.has_duration() => {
-                field(cue.duration.text(), true, |text| {
-                    Edit::Duration(text.into())
-                })
+                field(cue.duration.text(), |text| Edit::Duration(text.into()))
             }
             Field::Duration => shown(&format::action(cue)),
-            Field::PostWait => field(
-                cue.post_wait.text(),
-                cue.advance != Advance::Follow,
-                |text| Edit::PostWait(text.into()),
-            ),
+            Field::PostWait => field(cue.post_wait.text(), |text| Edit::PostWait(text.into())),
             Field::Then if editable => dropdown(
                 Advance::VARIANTS,
                 Some(cue.advance),
@@ -99,8 +93,8 @@ impl Field {
             )
             .into(),
             Field::Then => shown(&cue.advance.to_string()),
-            Field::Start => field(cue.start.text(), true, |text| Edit::Start(text.into())),
-            Field::End => field(cue.end.text(), true, |text| Edit::End(text.into())),
+            Field::Start => field(cue.start.text(), |text| Edit::Start(text.into())),
+            Field::End => field(cue.end.text(), |text| Edit::End(text.into())),
         }
     }
 

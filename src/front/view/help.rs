@@ -56,13 +56,37 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         Action::VARIANTS.iter().copied(),
     )
     .padding_y(ROW_GAP);
+    let example = keymap
+        .key(Action::Next)
+        .map_or_else(String::new, |keys| format!(", as in 3 {keys}"));
     let key_values = paragraph(
         "The manual page cinq(5) describes config.toml, where keys go by their W3C UI Events key values, listed at ",
         link(KEY_VALUES, OsString::from(KEY_VALUES)),
         ", apart from the space bar, which is Space.",
         Message::OpenLink,
     );
-    let source = match &app.config.source {
+    let page = column![
+        text(format!("Keys of the {} keymap", keymap.name())).size(24),
+        bindings,
+        text(format!("A count typed before a key repeats a move{example}, deletes as many cues, and picks the row for the first and last cue.")),
+        text("The keys of GO and Panic act at once, even halfway through another command."),
+        source(&app.config.source),
+        key_values,
+    ]
+    .extend(app.link_problem.as_deref().map(|why| text(why).into()))
+    .extend(notice())
+    .push(button("Close").on_press(Message::CloseHelp))
+    .spacing(SPACING);
+    let page = container(scrollable(page).id(HELP).spacing(0))
+        .style(container::bordered_box)
+        .padding(SPACING)
+        .max_width(WIDTH);
+    // Clicks beside the page close it, and the page keeps its own clicks
+    opaque(mouse_area(center(opaque(page))).on_press(Message::CloseHelp))
+}
+
+fn source(source: &Source) -> Element<'_, Message> {
+    match source {
         Source::File(file) => paragraph(
             "These keys come from ",
             link(file.display().to_string(), file.clone()),
@@ -76,43 +100,21 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
             Message::EditConfig,
         ),
         Source::NoDirectory => text("These are the default keys.").into(),
-    };
-    let example = keymap
-        .key(Action::Next)
-        .map_or_else(String::new, |keys| format!(", as in 3 {keys}"));
-    let [free, warranty, copy] = NOTICE;
-    let notice = [
-        text(free).into(),
-        text(warranty).into(),
-        paragraph(
-            copy,
-            link(LICENSES, OsString::from(LICENSES)),
-            ".",
-            Message::OpenLink,
-        ),
-    ];
-    let page = column![
-        text(format!("Keys of the {} keymap", keymap.name())).size(24),
-        bindings,
-        text(format!("A count typed before a key repeats a move{example}, deletes as many cues, and picks the row for the first and last cue.")),
-        text("The keys of GO and Panic act at once, even halfway through another command."),
-        source,
-        key_values,
-    ]
-    .extend(app.link_problem.as_deref().map(|why| text(why).into()))
-    .extend(notice)
-    .push(button("Close").on_press(Message::CloseHelp))
-    .spacing(SPACING);
-    let page = container(scrollable(page).id(HELP).spacing(0))
-        .style(container::bordered_box)
-        .padding(SPACING)
-        .max_width(WIDTH);
-    // Clicks beside the page close it, and the page keeps its own clicks
-    opaque(mouse_area(center(opaque(page))).on_press(Message::CloseHelp))
+    }
 }
 
-/// Returns a paragraph of `before`, `link`, and `after`, whose link `open`
-/// turns into the message that opens what it names
+fn notice<'a>() -> [Element<'a, Message>; 3] {
+    let [free, warranty, copy] = NOTICE;
+    let licenses = link(LICENSES, OsString::from(LICENSES));
+    [
+        text(free).into(),
+        text(warranty).into(),
+        paragraph(copy, licenses, ".", Message::OpenLink),
+    ]
+}
+
+/// Returns a paragraph whose link `open` turns into the message that opens
+/// what it names
 fn paragraph<'a, Link: Clone + 'static>(
     before: &'a str,
     link: Span<'a, Link>,

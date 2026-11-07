@@ -31,14 +31,14 @@ impl Keymap {
         let (digits, command) = split_count(&keys);
         let count = digits
             .iter()
-            .try_fold(0_usize, |count, key| {
-                count.checked_mul(10)?.checked_add(key.digit()?)
-            })
-            .filter(|&count| count > 0);
+            .filter_map(|key| key.digit())
+            .fold(0, |count: usize, digit| {
+                count.saturating_mul(10).saturating_add(digit)
+            });
         match self.find(command) {
             Some(action) => Outcome {
                 pending: Vec::new(),
-                action: Some((action, count)),
+                action: Some((action, Some(count).filter(|&count| count > 0))),
             },
             None if self.bound().any(|(_, bound)| bound.starts_with(command)) => Outcome {
                 pending: keys,

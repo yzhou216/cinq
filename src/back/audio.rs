@@ -18,7 +18,11 @@ mod preload;
 mod tests;
 mod voice;
 
-use std::{collections::HashMap, io, path::Path};
+use std::{
+    collections::HashMap,
+    io,
+    path::{Path, PathBuf},
+};
 
 use itertools::Itertools;
 use kira::{
@@ -26,8 +30,8 @@ use kira::{
     sound::{FromFileError, streaming::StreamingSoundData},
 };
 
-use super::{Active, Clip, Command, Cue, CueId, Media, Problem, Wanted, Workspace};
-use preload::{Ask, Preloader};
+use super::{Active, Clip, Command, Cue, CueId, Media, Problem, Workspace};
+use preload::{Ask, Preloader, Wanted};
 use voice::Voice;
 
 /// Endings of the names of the sound files that the sound output plays,
@@ -99,23 +103,10 @@ impl Audio {
         let (voices, failures) = sounding
             .into_iter()
             .map(|(id, (cue, active, clip))| {
-                // Voice that plays already, or else the sound made ready
-                // ahead if there is one, or else the file opened now
-                let voice = kept.remove(&id).map_or_else(
-                    || {
-                        let path = workspace
-                            .path(cue)
-                            .ok_or_else(|| Problem::NoFile.to_string())?;
-                        let wanted = Wanted { path, clip };
-                        match preloader.take(id, &wanted) {
-                            Some(Ok(preloaded)) => Voice::start(manager, preloaded, active),
-                            // Sound that could not be made ready, whose
-                            // file may have come back since
-                            _ => Voice::open(manager, &wanted.path, active, clip),
-                        }
-                    },
-                    Ok,
-                );
+                let voice = match kept.remove(&id) {
+                    Some(voice) => Ok(voice),
+                    None => started(manager, preloader, workspace.path(cue), active, clip),
+                };
                 voice
                     .map(|voice| (id, voice.followed(active)))
                     .map_err(|reason| Command::Loaded {
@@ -130,10 +121,28 @@ impl Audio {
     }
 }
 
-/// Returns the sounds that runs may start next, each of a cue and with the
-/// level to make it ready at: those of the runs that GO has fired that have
-/// yet to sound, then those of the cues that the next GO of each list
-/// fires, apart from the cues that GO skips
+/// Starts the sound of a run, from the sound made ready ahead if there is
+/// one
+fn started(
+    manager: &mut AudioManager,
+    preloader: &mut Preloader,
+    path: Option<PathBuf>,
+    active: &Active,
+    clip: Clip,
+) -> Result<Voice, String> {
+    let path = path.ok_or_else(|| Problem::NoFile.to_string())?;
+    let wanted = Wanted { path, clip };
+    match preloader.take(active.id, &wanted) {
+        Some(Ok(sound)) => Voice::start(manager, sound, active),
+        // Sound that could not be made ready, whose file may have come back
+        // since
+        _ => Voice::open(manager, &wanted.path, active, clip),
+    }
+}
+
+/// Returns the sounds that runs may start next: first those of the runs
+/// that GO has fired and that have yet to sound, which start soonest, then
+/// those of the next GO of each list
 fn upcoming(workspace: &Workspace) -> Vec<Ask> {
     let fired = workspace.active().iter().filter_map(|active| {
         let clip = active.pending()?;

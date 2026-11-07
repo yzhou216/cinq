@@ -83,6 +83,13 @@ fn pictures_take_the_matrix_of_their_size() {
 }
 
 #[test]
+fn every_row_of_a_high_definition_picture_converts_whatever_its_strips() {
+    // Strips of 91 rows on eight cores, so that some start on odd rows
+    let high = rgba(&picture(HIGH_DEFINITION + 2, 63, 102, 240));
+    assert!(all_close(&high.pixels, [255, 0, 0, 255]));
+}
+
+#[test]
 fn picture_cropped_to_no_width_converts_to_no_pixels() {
     for lines in [2, HIGH_DEFINITION] {
         let cropped = Frame {

@@ -28,11 +28,11 @@ mod still;
 pub(super) mod tests;
 mod track;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, io, path::PathBuf};
 
 use itertools::{Either, Itertools};
 
-use super::{Active, Command, Cue, CueId, Media, Problem, Shown, Workspace};
+use super::{Active, Command, CueId, Media, Problem, Shown, Workspace};
 pub use decoder::Picture;
 use player::{Advanced, Player};
 pub(super) use still::probe as probe_still;
@@ -71,7 +71,7 @@ impl Video {
         // takes, stay behind and go at the end
         let mut ended = std::mem::take(&mut self.runs);
         let mut ready = std::mem::take(&mut self.ready);
-        let advanced: Vec<(&Cue, u32, Advanced)> = workspace
+        let ((runs, pictures), failures): ((HashMap<_, _>, Vec<_>), Vec<_>) = workspace
             .active()
             .iter()
             .filter_map(|active| {
@@ -91,21 +91,17 @@ impl Video {
                     });
                 Some((cue, active.run, moved_on(showing, active, player)))
             })
-            .collect();
-        let (playing, failures): (Vec<_>, Vec<_>) =
-            advanced
-                .into_iter()
-                .partition_map(|(cue, run, advanced)| match advanced {
-                    Ok((player, picture)) => {
-                        Either::Left(((cue.id, (run, player)), (cue.id, picture)))
-                    }
-                    Err(reason) => Either::Right(Command::Loaded {
-                        cue: cue.id,
-                        file: cue.file.clone(),
-                        media: Media::Failed(reason),
-                    }),
-                });
-        let (runs, pictures): (HashMap<_, _>, Vec<_>) = playing.into_iter().unzip();
+            .partition_map(|(cue, run, advanced)| match advanced {
+                Ok((player, picture)) => Either::Left((
+                    (cue.id, (run, player)),
+                    picture.map(|picture| (cue.id, picture)),
+                )),
+                Err(reason) => Either::Right(Command::Loaded {
+                    cue: cue.id,
+                    file: cue.file.clone(),
+                    media: Media::Failed(reason),
+                }),
+            });
         self.runs = runs;
         self.ready = workspace
             .upcoming()
@@ -124,13 +120,9 @@ impl Video {
                 Some((cue.id, (showing, player)))
             })
             .collect();
-        let pictures = pictures
-            .into_iter()
-            .filter_map(|(cue, picture)| Some((cue, picture?)))
-            .collect();
         (
             failures.into_iter().fold(workspace, Workspace::apply),
-            pictures,
+            pictures.into_iter().flatten().collect(),
         )
     }
 
@@ -157,16 +149,21 @@ impl Video {
 /// over: `player`, the player of the run or the one made ready for it, or
 /// else one that starts now
 fn moved_on(showing: Option<Showing>, active: &Active, player: Option<Player>) -> Advanced {
-    let player = match player {
-        Some(player) => player,
-        None => {
-            let showing = showing.ok_or_else(|| Problem::NoFile.to_string())?;
-            Player::start(showing.path, showing.shown)
-        }
-    };
+    let player = player
+        .or_else(|| showing.map(|showing| Player::start(showing.path, showing.shown)))
+        .ok_or_else(|| Problem::NoFile.to_string())?;
     if active.shows_picture() {
         player.advanced(active.played())
     } else {
         Ok((player, None))
+    }
+}
+
+/// Tells why a video or picture file cannot be read, in the words that the
+/// sound output uses for a sound file
+fn unreadable(error: io::Error) -> String {
+    match error.kind() {
+        io::ErrorKind::NotFound => "file not found".to_owned(),
+        _ => error.to_string(),
     }
 }
