@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         system: [x86_64-linux, aarch64-linux]
-        host: [x86_64-windows, aarch64-windows]
+        host: [x86_64-windows, aarch64-windows, i686-windows]
         include:
           - {system: x86_64-linux, os: ubuntu-latest}
           - {system: aarch64-linux, os: ubuntu-24.04-arm}
@@ -39,10 +39,11 @@ jobs:
       fail-fast: false
       matrix:
         system: [x86_64-linux, aarch64-linux]
-        host: [x86_64-windows, aarch64-windows]
+        host: [x86_64-windows, aarch64-windows, i686-windows]
         include:
           - {host: x86_64-windows, os: windows-latest}
           - {host: aarch64-windows, os: windows-11-arm}
+          - {host: i686-windows, os: windows-latest}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/download-artifact@main
