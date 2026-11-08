@@ -79,10 +79,11 @@ that it runs on, which names the native build too, as `.#x86_64-linux` does
 on x86_64 GNU/Linux.  On GNU/Linux, `nix build` cross-builds it for the
 other systems as well: `.#x86_64-linux`, `.#aarch64-linux`, and
 `.#riscv64-linux` for GNU/Linux, `.#x86_64-freebsd` and `.#aarch64-freebsd`
-for FreeBSD, `.#aarch64-darwin` for Apple silicon, and `.#x86_64-windows`
-and `.#aarch64-windows`, which build `cinq.exe`, for Windows.  There
-`.#deb`, `.#rpm`, and `.#archlinux` build packages for other distributions,
-which need a glibc as new as that of Nixpkgs.
+for FreeBSD, `.#aarch64-darwin` for Apple silicon, and `.#x86_64-windows`,
+`.#aarch64-windows`, and `.#i686-windows`, which build `cinq.exe`, for
+Windows, the last of them for ReactOS as well.  There `.#deb`, `.#rpm`, and
+`.#archlinux` build packages for other distributions, which need a glibc as
+new as that of Nixpkgs.
 
 ## Configuration
 

@@ -23,6 +23,7 @@
         targets = [
           "aarch64-apple-darwin"
           "aarch64-pc-windows-gnullvm"
+          "i686-pc-windows-gnullvm"
           "x86_64-pc-windows-gnullvm"
         ];
       };
@@ -151,6 +152,20 @@
         };
         x86_64-windows = windows pkgs.pkgsCross.mingw-ucrt-x86_64-llvm;
         aarch64-windows = windows pkgs.pkgsCross.mingw-ucrt-aarch64;
+        # 32-bit cinq.exe, which runs on ReactOS too, from a MinGW of LLVM
+        # that Nixpkgs has no example of, and whose target it would name
+        # for libgcc's unwinder rather than LLVM's
+        i686-windows = windows (
+          import pkgs.path {
+            localSystem = pkgs.stdenv.hostPlatform;
+            crossSystem = {
+              config = "i686-w64-mingw32";
+              libc = "ucrt";
+              useLLVM = true;
+              rust.rustcTarget = "i686-pc-windows-gnullvm";
+            };
+          }
+        );
         x86_64-linux = nixpkgsCross pkgs.pkgsCross.gnu64;
         aarch64-linux = nixpkgsCross pkgs.pkgsCross.aarch64-multiplatform;
         riscv64-linux = nixpkgsCross pkgs.pkgsCross.riscv64;
