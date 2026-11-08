@@ -16,9 +16,41 @@ pub struct Guid(pub u32, pub u16, pub u16, pub [u8; 8]);
 pub const ERROR_CALL_NOT_IMPLEMENTED: u32 = 120;
 pub const ERROR_NO_MORE_ITEMS: u32 = 259;
 pub const ERROR_TIMEOUT: u32 = 1460;
+pub const E_CANCELLED: i32 = 0x8007_04C7_u32 as i32;
 pub const E_INVALIDARG: i32 = 0x8007_0057_u32 as i32;
+pub const E_NOINTERFACE: i32 = 0x8000_4002_u32 as i32;
 pub const E_NOTIMPL: i32 = 0x8000_4001_u32 as i32;
 pub const E_OUTOFMEMORY: i32 = 0x8007_000E_u32 as i32;
+pub const E_UNEXPECTED: i32 = 0x8000_FFFF_u32 as i32;
+pub const REGDB_E_CLASSNOTREG: i32 = 0x8004_0154_u32 as i32;
+
+/// `OPENFILENAMEW` of the older file dialogs
+#[repr(C)]
+pub struct OpenFileName {
+    pub size: u32,
+    pub owner: *mut c_void,
+    pub instance: *mut c_void,
+    pub filter: *const u16,
+    pub custom_filter: *mut u16,
+    pub custom_filter_size: u32,
+    pub filter_index: u32,
+    pub file: *mut u16,
+    pub file_size: u32,
+    pub file_title: *mut u16,
+    pub file_title_size: u32,
+    pub directory: *const u16,
+    pub title: *const u16,
+    pub flags: u32,
+    pub file_offset: u16,
+    pub file_extension: u16,
+    pub extension: *const u16,
+    pub custom_data: isize,
+    pub hook: *const c_void,
+    pub template: *const u16,
+    pub reserved: *mut c_void,
+    pub reserved_size: u32,
+    pub flags_ex: u32,
+}
 
 #[link(name = "kernel32")]
 unsafe extern "system" {
@@ -38,6 +70,14 @@ unsafe extern "system" {
 unsafe extern "system" {
     /// `RtlGenRandom`
     pub fn SystemFunction036(data: *mut u8, size: u32) -> u8;
+}
+
+// Imported, since ReactOS's comdlg32.dll has TLS, which a DLL gets only
+// when it loads with the program
+#[link(name = "comdlg32")]
+unsafe extern "system" {
+    pub fn GetOpenFileNameW(names: *mut OpenFileName) -> i32;
+    pub fn GetSaveFileNameW(names: *mut OpenFileName) -> i32;
 }
 
 #[link(name = "ole32")]

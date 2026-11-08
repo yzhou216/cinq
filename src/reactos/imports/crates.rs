@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Imports of winit, rfd, dirs, sys-locale, cpal, and the windows crate
+//! Imports of winit, dirs, sys-locale, cpal, and the windows crate
 
 use std::{ffi::c_void, ptr};
 
@@ -98,19 +98,6 @@ import!(
         path: *mut *mut u16,
     ) -> i32 {
         known_folder(id.cast(), path)
-    }
-);
-import!(
-    "shell32.dll",
-    16,
-    fn SHCreateItemFromParsingName(
-        path: *const u16,
-        context: *mut c_void,
-        interface: *const c_void,
-        item: *mut *mut c_void,
-    ) -> i32 {
-        unsafe { *item = ptr::null_mut() };
-        E_NOTIMPL
     }
 );
 import!(

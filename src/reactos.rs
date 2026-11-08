@@ -9,10 +9,14 @@
 //! Windows that ReactOS lacks, or keeps in private `*_vista.dll` companions
 //! of its DLLs.  [`imports`] defines each of them in the program itself.
 //! [`fls`] works around ReactOS running the callbacks of fiber local
-//! storage after it has freed a thread's TLS, and [`math`] replaces
-//! functions of the C runtime that ReactOS exports only as stubs.  On
-//! Windows the imports and fiber local storage are the system's own.
+//! storage after it has freed a thread's TLS, [`math`] replaces functions
+//! of the C runtime that ReactOS exports only as stubs, and [`dialog`]
+//! shows the older file dialogs in place of those that ReactOS lacks.  On
+//! Windows the imports, fiber local storage, and file dialogs are the
+//! system's own.
 
+#[cfg(reactos)]
+mod dialog;
 #[cfg(reactos)]
 mod fls;
 #[cfg(reactos)]
