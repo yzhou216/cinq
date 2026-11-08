@@ -42,6 +42,8 @@ Major changes and improvements in each release of cinq, newest first.
 - cinq formats `config.toml` each time it is saved, as taplo formats TOML by
   default, but never reorders keys or the items of arrays and inline tables.
   A file that is not TOML stays as it is.
+- On GNU/Linux, Nix cross-builds cinq for FreeBSD, as `.#x86_64-freebsd` and
+  `.#aarch64-freebsd`, and for GNU/Linux on riscv64, as `.#riscv64-linux`.
 
 ## v0.1.1
 

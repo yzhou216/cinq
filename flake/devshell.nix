@@ -9,7 +9,6 @@
       lib,
       pkgs,
       rustfmt,
-      runtimeLibs,
       ...
     }:
     {
@@ -26,7 +25,7 @@
         ]);
 
         env = lib.optionalAttrs pkgs.stdenvNoCC.hostPlatform.isLinux {
-          LD_LIBRARY_PATH = lib.makeLibraryPath runtimeLibs;
+          LD_LIBRARY_PATH = lib.makeLibraryPath config.packages.cinq.runtimeLibs;
         };
       };
     };
