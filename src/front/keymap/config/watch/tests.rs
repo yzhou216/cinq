@@ -140,6 +140,20 @@ fn changes_by_the_real_path_of_a_linked_directory_touch_the_file() -> io::Result
 }
 
 #[test]
+fn a_save_comes_back_formatted() -> io::Result<()> {
+    let home = TempDir::new()?;
+    let file = home.path().join("config.toml");
+    fs::write(&file, "keymap = \"cua\"\n")?;
+    let configs = watched(file.clone(), Errors::Log(Box::new(io::sink())));
+    until(&configs, from_file(Preset::Cua));
+    fs::write(&file, "keymap=\"vi\"\n")?;
+    // Reading that brings the keys of the save formats the file first
+    until(&configs, from_file(Preset::Vi));
+    assert_eq!(fs::read_to_string(&file)?, "keymap = \"vi\"\n");
+    Ok(())
+}
+
+#[test]
 fn keys_follow_the_file_while_standard_error_takes_nothing() -> io::Result<()> {
     let home = TempDir::new()?;
     let file = home.path().join("config.toml");

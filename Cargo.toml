@@ -69,6 +69,7 @@ rfd = "0.17"
 rust_h264 = "0.6" # Decoder of H.264 that needs no C++ compiler
 serde = { version = "1.0", features = ["derive"] }
 strum = { version = "0.28", features = ["derive"] }
+taplo = { version = "0.14", default-features = false } # Formatting of config.toml once saved
 tempfile = "3.27"
 terminal_size = "0.4" # Problems redrawn at a new size, which miette brings
 tokio = { version = "1.54", default-features = false, features = [ # Timer of the ticks, which needs iced's tokio executor

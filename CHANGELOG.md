@@ -39,6 +39,9 @@ Major changes and improvements in each release of cinq, newest first.
   ended the last running cue no longer starts ahead by the time spent idle.
 - Choosing again the file that a running audio or video cue plays, or
   typing its name with a space around it, leaves the cue playing.
+- cinq formats `config.toml` each time it is saved, as taplo formats TOML by
+  default, but never reorders keys or the items of arrays and inline tables.
+  A file that is not TOML stays as it is.
 
 ## v0.1.1
 
