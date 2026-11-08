@@ -26,6 +26,11 @@ jobs:
       - uses: cachix/install-nix-action@master
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: cachix/cachix-action@master
+        with:
+          name: yzhou216
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          pushFilter: -cinq- # cinq's own builds, which change with every commit
       - run: nix build .#${{ matrix.host }} && cp result/bin/cinq.exe cinq-${{ matrix.host }}-built-on-${{ matrix.system }}.exe # Program alone, all that Windows needs
       - uses: actions/upload-artifact@main
         with:
