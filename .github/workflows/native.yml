@@ -34,3 +34,42 @@ jobs:
         with:
           path: cinq-${{ matrix.system }}.tar
           archive: false
+  riscv64-linux: # Off until Nixpkgs' bootstrap compiler maps above the lowest address that the runner allows, https://github.com/NixOS/nixpkgs/pull/514892
+    name: cinq built on riscv64-linux
+    if: false
+    runs-on: ubuntu-24.04-riscv
+    timeout-minutes: 4320 # Everything from source, as cache.nixos.org holds next to nothing for riscv64
+    steps:
+      - uses: actions/checkout@main
+      - uses: cachix/install-nix-action@master
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - run: nix flake check
+      - run: nix build && tar -cf cinq-riscv64-linux.tar -C result .
+      - uses: actions/upload-artifact@main
+        with:
+          path: cinq-riscv64-linux.tar
+          archive: false
+  x86_64-freebsd: # Off until Nixpkgs' bootstrap files for FreeBSD hold programs that FreeBSD can run, https://github.com/NixOS/nixpkgs/issues/584846
+    name: cinq built on x86_64-freebsd
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+      - uses: vmactions/freebsd-vm@main
+        with:
+          mem: 13312
+          prepare: pkg install -y nix git ca_root_nss
+          run: |
+            chown -R root:wheel "$GITHUB_WORKSPACE" # Nix opens only repositories that the user owns
+            export NIX_CONFIG='experimental-features = nix-command flakes
+            build-users-group =
+            sandbox = false
+            ssl-cert-file = /usr/local/share/certs/ca-root-nss.crt'
+            nix flake check
+            nix build
+            tar -cf cinq-x86_64-freebsd.tar -C result .
+      - uses: actions/upload-artifact@main
+        with:
+          path: cinq-x86_64-freebsd.tar
+          archive: false
