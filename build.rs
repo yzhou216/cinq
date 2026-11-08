@@ -59,6 +59,13 @@ fn main() {
     {
         println!("cargo::error=cannot embed the manifest: {error}");
     }
+    // 32-bit programs for Windows from linkers that take MinGW's import
+    // libraries, the only kind that the workarounds for ReactOS fit
+    println!("cargo::rustc-check-cfg=cfg(reactos)");
+    let target = |key: &str| env::var(format!("CARGO_CFG_TARGET_{key}")).unwrap_or_default();
+    if os == "windows" && target("ARCH") == "x86" && target("ENV") == "gnu" {
+        println!("cargo::rustc-cfg=reactos");
+    }
     let Some(share) = env::var_os("CINQ_SHARE_DIR").filter(|share| !share.is_empty()) else {
         return;
     };

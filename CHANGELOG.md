@@ -10,6 +10,9 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- cinq runs on ReactOS when built for 32-bit Windows, though without sound,
+  since ReactOS has no WASAPI.
+
 ## v0.1.2
 
 - On Windows, a terminal that starts cinq shows what cinq prints, such as

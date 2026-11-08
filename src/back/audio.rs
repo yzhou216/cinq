@@ -49,8 +49,7 @@ impl Audio {
     /// runs and files still load, but nothing is heard.
     pub fn open() -> Self {
         Self {
-            output: AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())
-                .map_err(|error| error.to_string()),
+            output: output(),
             voices: HashMap::new(),
             preloader: Preloader::new(),
         }
@@ -119,6 +118,17 @@ impl Audio {
         self.voices = voices;
         failures
     }
+}
+
+/// Opens the default audio device, which cpal panics looking for where the
+/// system has no WASAPI, as ReactOS has none
+fn output() -> Result<AudioManager, String> {
+    #[cfg(reactos)]
+    if !crate::reactos::has_wasapi() {
+        return Err("the system has no WASAPI".to_owned());
+    }
+    AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())
+        .map_err(|error| error.to_string())
 }
 
 /// Starts the sound of a run, from the sound made ready ahead if there is
