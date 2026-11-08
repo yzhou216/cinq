@@ -7,7 +7,7 @@
 
 use rust_h264::decoder::{ChromaFormat, Frame};
 
-use super::{BT601, BT709, HIGH_DEFINITION, Matrix, converted, rgba};
+use super::{BT601, BT709, Chroma, HIGH_DEFINITION, Matrix, converted, rgba};
 
 /// Returns a picture `width` pixels wide of `lines` lines of `luma`, which
 /// share the differences of color `blue` and `red`
@@ -105,4 +105,36 @@ fn picture_cropped_to_no_width_converts_to_no_pixels() {
     let (_, lines) = HIGH_DEFINITION;
     assert!(rgba(&picture(0, lines, 63, 102, 240)).pixels.is_empty());
     assert!(rgba(&picture(0, 2, 63, 102, 240)).pixels.is_empty());
+}
+
+#[test]
+fn each_pixel_of_each_pair_takes_the_colors_of_its_own_luma() {
+    // Rows of nineteen pairs, of lumas and differences across their whole
+    // range
+    let (width, lines): (u32, u32) = (38, 8);
+    let values = |count: u32, step: u32| (0..count).map(move |index| (index * step % 256) as u8);
+    let shared = (width / 2) * (lines / 2);
+    let picture = Frame {
+        y: values(width * lines, 7).collect(),
+        u: values(shared, 11).collect(),
+        v: values(shared, 13).collect(),
+        ..picture(width, lines, 0, 0, 0)
+    };
+    // Each pixel alone, by the formula of the matrix in 256ths
+    let pixel = |row: usize, column: usize| {
+        let at = row / 2 * picture.chroma_width() as usize + column / 2;
+        let chroma = Chroma::new(BT709, picture.u[at], picture.v[at]);
+        let luma = 298 * (i32::from(picture.y[row * width as usize + column]) - 16);
+        let channel = |value: i32| ((value + 128) >> 8).clamp(0, 255) as u8;
+        [
+            channel(luma + chroma.red),
+            channel(luma + chroma.green),
+            channel(luma + chroma.blue),
+            255,
+        ]
+    };
+    let expected: Vec<u8> = (0..lines as usize)
+        .flat_map(|row| (0..width as usize).flat_map(move |column| pixel(row, column)))
+        .collect();
+    assert_eq!(converted(&picture, BT709), expected);
 }
