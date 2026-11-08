@@ -30,6 +30,13 @@ and binds actions to other keys.
 *cinq* reads the file when it starts and again whenever it changes, so that the
 keys, and the help page that lists them, follow each change as soon as it is
 saved.
+After each change, *cinq* first formats the file in place, as taplo formats
+TOML by default: it evens out spaces and blank lines, lines up the comments at
+the ends of lines, and folds each array onto one line or unfolds it over
+several to fit 80 columns, but never reorders keys or the items of arrays and
+inline tables.
+A file that is not TOML, or that *cinq* cannot write, stays as it is, and an
+editor that has the file open may offer to load it again.
 
 The help page, which the key of *help* opens, names the keymap in use, lists
 every action with its keys and its name in the file, links to the file that

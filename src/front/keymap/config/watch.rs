@@ -10,9 +10,9 @@
 //! the directory that holds the file instead.  While that directory is
 //! missing, it watches the nearest one above that exists, so that making
 //! the directories and then the file comes through as well.  Each burst of
-//! changes reads the file once, after it settles, and each reading writes
-//! out the problems with the file, which go to standard error in the
-//! program, as [`errors`] tells.
+//! changes reads the file once, after it settles, and formats it first, as
+//! [`format`] tells, and each reading writes out the problems with the
+//! file, which go to standard error in the program, as [`errors`] tells.
 //!
 //! The watch waits for changes on iced's executor, whose workers keep the
 //! clock ticking, and leaves reading and writing to threads: each reading
@@ -21,6 +21,7 @@
 //! without end, as it does while a terminal is paused with Control+s.
 
 mod errors;
+mod format;
 #[cfg(test)]
 mod tests;
 
@@ -63,7 +64,7 @@ pub fn watch(file: PathBuf, errors: Errors) -> impl Stream<Item = Config> {
     let warnings = warner(errors);
     stream::channel(1, async move |mut output| {
         if let Err(error) = follow(&file, &mut output).await
-            && let Some(config) = loaded(&file).await
+            && let Some(config) = loaded(&file, false).await
         {
             let problem = format!("is not watched, so changes apply after a restart: {error}");
             let problems = [config.problems, vec![Problem::new(problem)]].concat();
@@ -77,11 +78,15 @@ pub fn watch(file: PathBuf, errors: Errors) -> impl Stream<Item = Config> {
 }
 
 /// Returns the configuration that `file` holds, read on a thread of its
-/// own, or nothing when the thread ends without an answer
-async fn loaded(file: &Path) -> Option<Config> {
+/// own after formatting the file, when it has `changed`, or nothing when
+/// the thread ends without an answer
+async fn loaded(file: &Path, changed: bool) -> Option<Config> {
     let (sender, receiver) = oneshot::channel();
     let file = file.to_owned();
     thread::spawn(move || {
+        if changed {
+            format::reformat(&file);
+        }
         // Receiver has gone only when the watch has
         let _ = sender.send(load(Some(&file)));
     });
@@ -98,10 +103,12 @@ async fn follow(file: &Path, output: &mut mpsc::Sender<Config>) -> notify::Resul
         let _ = sender.unbounded_send(result);
     })?;
     let mut watched = None;
+    // First reading follows the start, which leaves the file as it was
+    let mut changed = false;
     loop {
         watched = rewatch(&mut watcher, watched.as_deref(), file)?;
         let names = names(file, watched.as_deref());
-        if let Some(config) = loaded(file).await {
+        if let Some(config) = loaded(file, changed).await {
             let _ = output.send(config).await;
         }
         let touched = (&mut events)
@@ -110,6 +117,7 @@ async fn follow(file: &Path, output: &mut mpsc::Sender<Config>) -> notify::Resul
         if !touched {
             return Ok(());
         }
+        changed = true;
     }
 }
 
