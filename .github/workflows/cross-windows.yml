@@ -31,3 +31,21 @@ jobs:
         with:
           path: cinq-${{ matrix.host }}-built-on-${{ matrix.system }}.exe
           archive: false
+  run:
+    name: cinq for ${{ matrix.host }} built on ${{ matrix.system }}, run on ${{ matrix.host }}
+    needs: build
+    if: ${{ !cancelled() }} # Builds that succeeded still run when another failed
+    strategy:
+      fail-fast: false
+      matrix:
+        system: [x86_64-linux, aarch64-linux]
+        host: [x86_64-windows, aarch64-windows]
+        include:
+          - {host: x86_64-windows, os: windows-latest}
+          - {host: aarch64-windows, os: windows-11-arm}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@main
+        with:
+          name: cinq-${{ matrix.host }}-built-on-${{ matrix.system }}.exe
+      - run: ./cinq-${{ matrix.host }}-built-on-${{ matrix.system }}.exe --version
