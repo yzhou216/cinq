@@ -29,3 +29,20 @@ jobs:
         with:
           path: cinq-aarch64-darwin-built-on-${{ matrix.system }}.tar
           archive: false
+  run:
+    name: cinq for aarch64-darwin built on ${{ matrix.system }}, run on aarch64-darwin
+    needs: build
+    if: ${{ !cancelled() }} # Builds that succeeded still run when another failed
+    strategy:
+      fail-fast: false
+      matrix:
+        system: [x86_64-linux, aarch64-linux]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@main
+        with:
+          name: cinq-aarch64-darwin-built-on-${{ matrix.system }}.tar
+      - run: |
+          mkdir cinq
+          tar -xf cinq-aarch64-darwin-built-on-${{ matrix.system }}.tar -C cinq
+          cinq/bin/cinq --version
