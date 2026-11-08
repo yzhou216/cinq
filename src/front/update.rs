@@ -26,7 +26,7 @@ use std::thread;
 use iced::{Task, futures::channel::oneshot};
 
 use super::{App, Message};
-use crate::back::{Command, Edit, parse_level};
+use crate::back::Command;
 use link::{edit_config, open_link};
 pub(super) use show::{Keeper, Read, Reader, Saved, Show};
 pub(super) use stage::Stage;
@@ -121,14 +121,15 @@ impl App {
                 ..self
             },
             Message::Edit(id, edit) => self.send(Command::Edit(id, edit)),
-            Message::LevelTyped(cue, text) => {
-                let edit = parse_level(&text).map(|level| Command::Edit(cue, Edit::Level(level)));
+            Message::Entered(entry, text) => {
+                let command = entry.command(&text);
                 Self {
-                    typed_level: Some((cue, text)),
+                    entered: Some((entry, text)),
                     ..self
                 }
-                .send_all(edit)
+                .send_all(command)
             }
+            Message::Patch(edit) => self.send(Command::Patch(edit)),
             Message::FileChosen(id, path) => {
                 let file = self.workspace.file_name_of(&path);
                 let playing = self.workspace.cue(id).map(|cue| cue.playing(file));
@@ -173,10 +174,10 @@ impl App {
 
     /// Anything the operator does other than typing drops a command typed
     /// halfway, so that a stray `d` cannot wait through a click and an edit
-    /// to delete a cue.  A level typed so far gives way to the level of its
-    /// cue as well, apart from a click, which can land in its own field.  A
-    /// link that failed to open is forgotten once the help page that holds
-    /// it closes.
+    /// to delete a cue.  Text typed so far into a field that takes it only
+    /// once it reads as a value gives way to the value as well, apart from
+    /// a click, which can land in its own field.  A link that failed to
+    /// open is forgotten once the help page that holds it closes.
     fn next(self, message: Message) -> (Self, Task<Message>) {
         let passive = matches!(
             message,
@@ -195,7 +196,7 @@ impl App {
         let clicked = matches!(message, Message::Clicked);
         let app = Self {
             keys: if typing { self.keys } else { Vec::new() },
-            typed_level: self.typed_level.filter(|_| passive || clicked),
+            entered: self.entered.filter(|_| passive || clicked),
             ..self
         };
         let (app, task) = app.handled(message);

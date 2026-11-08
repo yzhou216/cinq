@@ -9,6 +9,7 @@
 mod editing;
 mod files;
 mod history;
+mod light;
 mod picture;
 mod playback;
 mod show;
@@ -19,7 +20,8 @@ use std::path::Path;
 
 use super::{Workspace, playback::PANIC_FADE};
 use crate::back::{
-    Advance, Command, Cue, CueId, CueList, Edit, Kind, Media, Phase, Place, Problem, SILENCE,
+    Advance, Command, Contents, Cue, CueId, CueList, Edit, Kind, Media, Phase, Place, Problem,
+    SILENCE,
 };
 
 /// Returns a workspace with one list of cues, whose picture files have

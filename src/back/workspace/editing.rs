@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Changes to the cue lists: standby, loading, and the edits that show
-//! mode locks, which [`super::history`] records for undo
+//! mode locks, which [`super::history`] records for undo, with bringing
+//! back kept cue lists and patch in [`restoring`]
+
+mod restoring;
 
 use itertools::Itertools;
 
@@ -11,7 +14,7 @@ use super::{
     Workspace,
     history::{Change, Placed, Standby},
 };
-use crate::back::{Active, CueId, CueList, Edit, Kind, Media, Place};
+use crate::back::{Active, CueId, Edit, Kind, Media, Place};
 
 /// Returns the next whole number above every numeric cue number, which
 /// keeps new cue numbers apart across all lists as QLab does.  Numbers too
@@ -148,28 +151,6 @@ impl Workspace {
             }),
             None => self,
         }
-    }
-
-    pub(super) fn restored(self, lists: Vec<CueList>) -> Self {
-        let before = self.lists.clone();
-        self.with_lists(lists.clone()).recorded(Change::Restored {
-            before,
-            after: lists,
-        })
-    }
-
-    /// Puts `lists` in place of the cue lists without recording a change,
-    /// as undo and redo do.  The cues that have gone stop, and new cues get
-    /// identities that none of the lists holds.
-    pub(super) fn with_lists(self, lists: Vec<CueList>) -> Self {
-        let lists = super::listed(lists);
-        let workspace = Self {
-            next_id: super::next_id(&lists).max(self.next_id),
-            lists,
-            ..self
-        };
-        let gone = workspace.active_where(|active| workspace.cue(active.id).is_none());
-        gone.into_iter().fold(workspace, Self::stopped)
     }
 
     /// Removes cues from their lists and stops those that are running,

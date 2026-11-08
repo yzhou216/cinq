@@ -24,6 +24,7 @@ include = [
 
 [dependencies]
 anstyle-query = "1.1"
+artnet_protocol = "0.4"
 bon = "3.10"
 clap = { version = "4.6", features = ["derive"] }
 ctrlc = { version = "3.5", features = [ # Problems screen left on Control+c
@@ -40,6 +41,7 @@ iced = { version = "0.14", default-features = false, features = [ # Wayland alon
   "web-colors",
   "wgpu",
 ] }
+if-addrs = "0.15" # Networks that Art-Net broadcasts to
 image = { version = "0.25", default-features = false, features = [
   "jpeg",
   "png",

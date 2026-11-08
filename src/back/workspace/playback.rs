@@ -70,6 +70,7 @@ impl Workspace {
     pub(super) fn tick(self, seconds: f64) -> Self {
         self.with_each_active(|active| active.advanced(seconds))
             .started()
+            .dimmed()
             .without_finished()
     }
 
@@ -113,11 +114,12 @@ impl Workspace {
             .fold(self.with_each_active(Active::begun), Self::with_effect_of)
     }
 
-    /// Carries out the effect of a fade or stop cue on its target, unless
-    /// an effect earlier in the same tick has stopped the cue.  A fade acts
-    /// only on a target that is playing, takes over from a fade already on
-    /// it only where [`Fade::yields_to`] allows, and starts as far along as
-    /// the tick has passed the end of the pre-wait.
+    /// Carries out the effect of a fade or stop cue on its target, or of a
+    /// light cue on its instruments, unless an effect earlier in the same
+    /// tick has stopped the cue.  A fade acts only on a target that is
+    /// playing, takes over from a fade already on it only where
+    /// [`Fade::yields_to`] allows, and starts as far along as the tick has
+    /// passed the end of the pre-wait.
     fn with_effect_of(self, id: CueId) -> Self {
         let Some(fired) = self.active_of(id).copied() else {
             return self;
@@ -131,6 +133,7 @@ impl Workspace {
                 }
             }),
             Effect::Stop(target) => self.stopped(target),
+            Effect::Light => self.lit(fired.id, fired.run),
             Effect::Sound(_) | Effect::Video { .. } | Effect::Picture | Effect::Nothing => self,
         }
     }

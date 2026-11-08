@@ -22,7 +22,7 @@ use iced::{
 
 use crate::{
     back::{CueId, CueList, Load, Place, Workspace, audio, load_files},
-    front::{App, MAIN_SIZE, Message, Tab, keymap::Press},
+    front::{App, Entry, MAIN_SIZE, Message, Tab, keymap::Press},
 };
 
 /// Returns the state of the interface with `selected` selected in a show of
@@ -198,17 +198,18 @@ fn selection_on_standby_moves_on_with_it_and_stays_elsewhere() {
 #[test]
 fn level_typed_so_far_shows_until_the_operator_does_anything_else() {
     let app = show(Some(CueId(1)));
-    let typed = |text: &str| Message::LevelTyped(CueId(1), text.to_owned());
+    let level = Entry::Level(CueId(1));
+    let typed = |text: &str| Message::Entered(level, text.to_owned());
     let (half, _) = app.next(typed("-"));
-    assert_eq!(half.typed_level, Some((CueId(1), "-".to_owned())));
+    assert_eq!(half.entered, Some((level, "-".to_owned())));
     let (clicked, _) = half.next(Message::Clicked);
-    assert!(clicked.typed_level.is_some());
+    assert!(clicked.entered.is_some());
     let (typed, _) = clicked.next(typed("-6"));
     assert_eq!(typed.workspace.cue(CueId(1)).unwrap().level, -6.0);
     let (resized, _) = typed.next(Message::Resized(window::Id::unique(), MAIN_SIZE));
-    assert!(resized.typed_level.is_some());
+    assert!(resized.entered.is_some());
     let (moved, _) = resized.next(Message::Step(1));
-    assert_eq!(moved.typed_level, None);
+    assert_eq!(moved.entered, None);
 }
 
 #[test]

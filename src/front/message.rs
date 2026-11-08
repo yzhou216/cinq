@@ -15,7 +15,10 @@ use super::{
     keymap::{Press, config::Config},
     update::{Read, Saved},
 };
-use crate::back::{Command, CueId, Edit, Kind, Place};
+use crate::back::{
+    Command, CueId, Edit, InstrumentId, Kind, PatchEdit, Place, parse_address, parse_level,
+    parse_percent,
+};
 
 /// Page of the inspector, which goes by its name
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
@@ -25,6 +28,8 @@ pub enum Tab {
     #[strum(to_string = "Time & Loops")]
     Time,
     Levels,
+    #[strum(to_string = "Light Patch")]
+    Patch,
 }
 
 impl Tab {
@@ -33,6 +38,35 @@ impl Tab {
     pub fn stepped(self, offset: isize) -> Self {
         let count = Self::VARIANTS.len() as isize;
         Self::VARIANTS[(self as isize + offset).rem_euclid(count) as usize]
+    }
+}
+
+/// Text field that takes effect only once its text reads as a value, and
+/// that shows the text as typed until the operator does anything else
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Entry {
+    /// Level of a cue in dB
+    Level(CueId),
+    /// Level of an instrument in a light cue, in percent
+    Light(CueId, InstrumentId),
+    Address(InstrumentId),
+}
+
+impl Entry {
+    /// Returns the command that `text` makes, or none for text that reads
+    /// as no value
+    pub fn command(self, text: &str) -> Option<Command> {
+        match self {
+            Entry::Level(cue) => {
+                parse_level(text).map(|level| Command::Edit(cue, Edit::Level(level)))
+            }
+            Entry::Light(cue, id) => {
+                parse_percent(text).map(|level| Command::Edit(cue, Edit::Light(id, level)))
+            }
+            Entry::Address(id) => parse_address(text).map(|(universe, address)| {
+                Command::Patch(PatchEdit::Address(id, universe, address))
+            }),
+        }
     }
 }
 
@@ -85,7 +119,10 @@ pub enum Message {
     /// Deletes a number of cues from the selection down
     Delete(usize),
     Edit(CueId, Edit),
-    LevelTyped(CueId, String),
+    /// Text typed into a field that takes effect only once it reads as a
+    /// value
+    Entered(Entry, String),
+    Patch(PatchEdit),
     /// Asks which file an audio, video, or picture cue plays or shows
     ChooseFile(CueId),
     FileChosen(CueId, PathBuf),

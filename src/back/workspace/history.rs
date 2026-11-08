@@ -6,7 +6,8 @@
 //!
 //! Every change that the operator makes to the show is recorded: a cue
 //! added, moved, or deleted, a setting of a cue edited, a move of standby,
-//! and kept cue lists brought back in place of those of the show.  Playback
+//! an edit of the light patch, and kept cue lists and patch brought back in
+//! place of those of the show.  Playback
 //! is not, since what has been heard cannot be taken back.  A [`Change`]
 //! records only what it touched, so taking it back leaves alone whatever
 //! happened since, such as playback and the files that loaded.  Standby

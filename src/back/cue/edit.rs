@@ -7,7 +7,10 @@
 #[cfg(test)]
 mod tests;
 
+use std::mem;
+
 use super::{Advance, Cue, CueId, Seconds};
+use crate::back::InstrumentId;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Edit {
@@ -32,6 +35,20 @@ pub enum Edit {
     /// Level in dB
     Level(f32),
     StopTarget(bool),
+    /// Level in percent that a light cue fades an instrument to, or none
+    /// to leave the instrument out
+    Light(InstrumentId, Option<f32>),
+}
+
+impl Edit {
+    /// Returns whether `next` edits the same setting, which for the levels
+    /// of a light cue is the level of the same instrument
+    pub(in crate::back) fn same_setting(&self, next: &Edit) -> bool {
+        match (self, next) {
+            (Edit::Light(id, _), Edit::Light(next, _)) => id == next,
+            _ => mem::discriminant(self) == mem::discriminant(next),
+        }
+    }
 }
 
 impl Cue {
@@ -56,6 +73,15 @@ impl Cue {
             Edit::Level(level) => Self { level, ..self },
             Edit::StopTarget(stop_target) => Self {
                 stop_target,
+                ..self
+            },
+            Edit::Light(id, level) => Self {
+                lights: self
+                    .lights
+                    .into_iter()
+                    .filter(|(lit, _)| *lit != id)
+                    .chain(level.map(|level| (id, level)))
+                    .collect(),
                 ..self
             },
         }
@@ -83,6 +109,7 @@ impl Cue {
             Edit::Advance(_) => Edit::Advance(self.advance),
             Edit::Level(_) => Edit::Level(self.level),
             Edit::StopTarget(_) => Edit::StopTarget(self.stop_target),
+            Edit::Light(id, _) => Edit::Light(*id, self.lights.get(id).copied()),
         }
     }
 }

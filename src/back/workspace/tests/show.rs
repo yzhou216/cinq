@@ -152,7 +152,10 @@ fn restoring_kept_lists_is_one_change_that_undo_takes_back() {
         CueList::new("Main", vec![audio(1), audio(9)]),
         CueList::new("Preshow", Vec::new()),
     ];
-    let restored = saved.clone().apply(Command::Restore(kept));
+    let restored = saved.clone().apply(Command::Restore(Contents {
+        lists: kept,
+        ..Contents::default()
+    }));
     assert_eq!(restored.lists().len(), 2);
     assert_eq!(restored.next_cue_id(), Some(CueId(10)));
     let undone = restored.apply(Command::Undo);
@@ -165,7 +168,7 @@ fn restoring_kept_lists_is_one_change_that_undo_takes_back() {
 fn show_mode_keeps_the_lists_from_being_restored() {
     let locked = storm()
         .apply(Command::ShowMode(true))
-        .apply(Command::Restore(Vec::new()));
+        .apply(Command::Restore(Contents::default()));
     assert_eq!(ids(&locked), [1, 2]);
 }
 
@@ -173,7 +176,7 @@ fn show_mode_keeps_the_lists_from_being_restored() {
 fn show_always_holds_a_list() {
     assert_eq!(Workspace::default().lists().len(), 1);
     assert_eq!(Workspace::new(Vec::new()).lists().len(), 1);
-    let emptied = storm().apply(Command::Restore(Vec::new()));
+    let emptied = storm().apply(Command::Restore(Contents::default()));
     assert_eq!(emptied.lists().len(), 1);
     let read = Workspace::from_show("", "/show").expect("a file without lists reads");
     assert_eq!(read.lists().len(), 1);

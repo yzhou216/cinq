@@ -76,7 +76,7 @@ impl Field {
                         .target(cue)
                         .map_or_else(String::new, Cue::to_string),
                 ),
-                Kind::Wait | Kind::Memo => shown(""),
+                Kind::Light | Kind::Wait | Kind::Memo => shown(""),
             },
             Field::Notes => field(&cue.notes, Edit::Notes),
             Field::PreWait => field(cue.pre_wait.text(), |text| Edit::PreWait(text.into())),

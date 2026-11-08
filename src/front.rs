@@ -25,9 +25,9 @@ use std::{
 
 use iced::{Size, window};
 
-use crate::back::{Audio, CueId, CueList, Kind, Video, Workspace};
+use crate::back::{Audio, CueId, CueList, Kind, Lights, Video, Workspace};
 use keymap::{Press, config::Config};
-use message::{Focus, Message, Tab};
+use message::{Entry, Focus, Message, Tab};
 use update::{Keeper, Reader, Show, Stage};
 
 /// Opens the main window with the show in `show`, or a new show without
@@ -108,6 +108,7 @@ struct Cinq {
     app: App,
     audio: Audio,
     video: Video,
+    lights: Lights,
     keeper: Keeper,
 }
 
@@ -142,9 +143,9 @@ struct App {
     list: usize,
     /// Cue shown in the inspector
     selected: Option<CueId>,
-    /// Level of a cue as the operator types it, which its field shows in
-    /// place of the level until the operator does anything else
-    typed_level: Option<(CueId, String)>,
+    /// Text of a field as the operator types it, which the field shows in
+    /// place of its value until the operator does anything else
+    entered: Option<(Entry, String)>,
     tab: Tab,
     /// Kind of cue that Add cue creates
     new_kind: Kind,

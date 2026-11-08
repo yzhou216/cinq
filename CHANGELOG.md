@@ -10,6 +10,12 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Light cues fade the instruments of a light patch to levels of their own,
+  which the instruments keep until a later light cue names them, as in QLab.
+  The show file holds the patch, which the inspector edits on its tab Light
+  Patch, and cinq sends the levels as Art-Net to every network that the
+  computer is on.  Each instrument has one level, its intensity.
+
 ## v0.1.4
 
 - While the problems of `config.toml` take a screen of their own on a

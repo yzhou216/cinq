@@ -4,9 +4,7 @@
 
 //! What a change to the show records, which is only what it touched
 
-use std::mem;
-
-use crate::back::{Cue, CueId, CueList, Edit};
+use crate::back::{Contents, Cue, CueId, Edit, Instrument, PatchEdit};
 
 #[derive(Debug, Clone)]
 pub enum Change {
@@ -30,12 +28,15 @@ pub enum Change {
     Edited { cue: CueId, undo: Edit, redo: Edit },
     /// Standby of a list moved by the operator
     Standby(Standby),
-    /// Cue lists kept from before put in place of those of the show, with
-    /// the lists before and after
-    Restored {
-        before: Vec<CueList>,
-        after: Vec<CueList>,
+    /// Light patch edited, with the patch before and after
+    Patched {
+        edit: PatchEdit,
+        before: Vec<Instrument>,
+        after: Vec<Instrument>,
     },
+    /// Cue lists and patch kept from before put in place of those of the
+    /// show, with both before and after
+    Restored { before: Contents, after: Contents },
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +76,7 @@ impl Change {
             Change::Added { placed, .. } => Some(placed.cue.id),
             Change::Deleted { cues, .. } => cues.first().map(|placed| placed.cue.id),
             Change::Moved { cue, .. } | Change::Edited { cue, .. } => Some(*cue),
-            Change::Standby(_) | Change::Restored { .. } => None,
+            Change::Standby(_) | Change::Patched { .. } | Change::Restored { .. } => None,
         }
     }
 
@@ -91,7 +92,10 @@ impl Change {
                     redo: again,
                     ..
                 },
-            ) => cue == next && mem::discriminant(redo) == mem::discriminant(again),
+            ) => cue == next && redo.same_setting(again),
+            (Change::Patched { edit, .. }, Change::Patched { edit: next, .. }) => {
+                edit.same_setting(next)
+            }
             _ => false,
         }
     }
@@ -106,6 +110,11 @@ impl Change {
             (Self::Moved { cue, from, .. }, Self::Moved { to, .. }) => {
                 Self::Moved { cue, from, to }
             }
+            (Self::Patched { before, .. }, Self::Patched { edit, after, .. }) => Self::Patched {
+                edit,
+                before,
+                after,
+            },
             (_, next) => next,
         }
     }
@@ -116,6 +125,7 @@ impl Change {
         match self {
             Self::Edited { undo, redo, .. } => undo == redo,
             Self::Moved { from, to, .. } => from == to,
+            Self::Patched { before, after, .. } => before == after,
             _ => false,
         }
     }

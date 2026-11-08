@@ -36,7 +36,8 @@ pub fn action(cue: &Cue) -> String {
         (Kind::Audio | Kind::Video, Media::Loaded { .. }) if cue.loops() => {
             format!("{length} loop")
         }
-        (Kind::Audio | Kind::Video, Media::Loaded { .. }) | (Kind::Fade | Kind::Wait, _) => length,
+        (Kind::Audio | Kind::Video, Media::Loaded { .. })
+        | (Kind::Light | Kind::Fade | Kind::Wait, _) => length,
         (Kind::Picture, Media::Loaded { .. }) => "hold".to_owned(),
         (Kind::Audio | Kind::Video | Kind::Picture, _) => "?".to_owned(),
         (Kind::Stop | Kind::Memo, _) => "-".to_owned(),
@@ -68,6 +69,11 @@ pub fn target(workspace: &Workspace, cue: &Cue) -> String {
             .and_then(|name| Path::new(name).file_name())
             .map_or_else(String::new, |name| name.to_string_lossy().into_owned()),
         Kind::Fade | Kind::Stop => workspace.target(cue).map_or_else(String::new, number),
+        Kind::Light => {
+            let patched = workspace.patch().iter().map(|instrument| instrument.id);
+            let lit = patched.filter(|id| cue.lights.contains_key(id));
+            count(lit.count(), "instrument")
+        }
         Kind::Wait | Kind::Memo => String::new(),
     }
 }
@@ -160,12 +166,14 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
                 Edit::Advance(_) => format!("changed what follows cue {cue}"),
                 Edit::Level(_) => format!("changed the level of cue {cue}"),
                 Edit::StopTarget(_) => format!("changed whether cue {cue} stops its target"),
+                Edit::Light(..) => format!("changed the light levels of cue {cue}"),
             }
         }
         Change::Standby(standby) => match standby.after.and_then(|id| workspace.cue(id)) {
             Some(cue) => format!("moved standby to cue {}", number(cue)),
             None => "moved standby past the end".to_owned(),
         },
+        Change::Patched { .. } => "changed the light patch".to_owned(),
         Change::Restored { .. } => "brought back the unsaved changes".to_owned(),
     }
 }

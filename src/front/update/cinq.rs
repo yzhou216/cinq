@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Interface together with the parts that have side effects: the sound and
-//! video output, the keeper of unsaved changes, and the windows
+//! Interface together with the parts that have side effects: the sound,
+//! video, and light output, the keeper of unsaved changes, and the windows
 
 use std::path::{Path, PathBuf};
 
@@ -11,7 +11,7 @@ use iced::{Element, Subscription, Task, window};
 
 use super::{Keeper, device, show};
 use crate::{
-    back::{Audio, Video},
+    back::{Audio, Lights, Video},
     front::{App, Cinq, MAIN_SIZE, Message, keymap, view, window_settings},
 };
 
@@ -37,6 +37,7 @@ impl Cinq {
             },
             audio,
             video: Video::default(),
+            lights: Lights::open(),
             keeper,
         };
         let opening = show::open(show, reader);
@@ -47,13 +48,14 @@ impl Cinq {
     }
 
     /// Applies one message and lets the parts with side effects catch up.
-    /// This is the only place where state is replaced, and the video and
-    /// sound output and the keeper of unsaved changes are the only parts it
-    /// calls that have side effects; everything else builds new values.
-    /// The video output goes first, so that a run whose picture cannot play
-    /// has its sound stopped in the same update.  Each reading of the
-    /// configuration file and each choice of an audio device routes the
-    /// sound to the device chosen, or tries again to open one that failed.
+    /// This is the only place where state is replaced, and the video,
+    /// sound, and light output and the keeper of unsaved changes are the
+    /// only parts it calls that have side effects; everything else builds
+    /// new values.  The video output goes first, so that a run whose
+    /// picture cannot play has its sound stopped in the same update.  Each
+    /// reading of the configuration file and each choice of an audio device
+    /// routes the sound to the device chosen, or tries again to open one
+    /// that failed.
     /// Taking the state out of `self` instead of cloning it keeps updates
     /// free of copies.
     pub(in crate::front) fn update(&mut self, message: Message) -> Task<Message> {
@@ -68,6 +70,7 @@ impl Cinq {
         let (workspace, pictures) = self.video.sync(app.workspace);
         let due = self.video.next_due(&workspace);
         let workspace = self.audio.sync(workspace, app.config.sound.ready_ahead);
+        self.lights.sync(&workspace);
         let kept = self.keeper.keep(&app.show);
         let app = App {
             stage: app.stage.with_pictures(&workspace, pictures).with_due(due),

@@ -89,7 +89,7 @@ impl App {
         };
         let opened = match kept {
             Ok(Some(kept)) if kept.show(opened.show.directory()) != opened.show.saved => {
-                opened.send(Command::Restore(kept.lists().to_vec()))
+                opened.send(Command::Restore(kept.contents()))
             }
             Ok(_) => opened,
             Err(problem) => Self {

@@ -4,7 +4,7 @@
 
 //! Requests that change a workspace
 
-use crate::back::{CueId, CueList, Edit, Kind, Media};
+use crate::back::{CueId, CueList, Edit, Instrument, Kind, Media, PatchEdit};
 
 /// Request to change the show
 ///
@@ -36,9 +36,11 @@ pub enum Command {
     Move { cue: CueId, by: isize },
     /// Changes one setting of a cue
     Edit(CueId, Edit),
-    /// Puts cue lists kept from before in place of those of the show, as
-    /// one change, as bringing back unsaved changes does
-    Restore(Vec<CueList>),
+    /// Changes the light patch
+    Patch(PatchEdit),
+    /// Puts cue lists and a patch kept from before in place of those of
+    /// the show, as one change, as bringing back unsaved changes does
+    Restore(Contents),
     /// Takes back the last change to the cues
     Undo,
     /// Makes again the change that undo took back last
@@ -63,9 +65,18 @@ impl Command {
                 | Command::Delete(_)
                 | Command::Move { .. }
                 | Command::Edit(..)
+                | Command::Patch(_)
                 | Command::Restore(_)
         )
     }
+}
+
+/// Cue lists and light patch of a show, which bringing back its unsaved
+/// changes puts in place together
+#[derive(Debug, Clone, Default)]
+pub struct Contents {
+    pub lists: Vec<CueList>,
+    pub patch: Vec<Instrument>,
 }
 
 /// Where in its list a new cue goes

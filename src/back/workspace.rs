@@ -6,19 +6,21 @@
 //!
 //! Playback here is bookkeeping without side effects: fired cues count
 //! time, fades move levels, and stop cues end other cues.  The audio output
-//! in [`super::Audio`] turns the result into sound, and the video output in
-//! [`super::Video`] into pictures.  A [`Command`] asks for each change, and
-//! an [`Active`] records each cue that GO has fired.  The rules of playback
-//! live in [`playback`] and [`stopping`], those that change the cue lists
-//! in [`editing`], undo and redo in [`history`], show files in [`show`],
-//! the places of the files of cues in [`files`], and why cues cannot play
-//! in [`problems`].
+//! in [`super::Audio`] turns the result into sound, the video output in
+//! [`super::Video`] into pictures, and the light output in
+//! [`super::Lights`] into DMX.  A [`Command`] asks for each change, and an
+//! [`Active`] records each cue that GO has fired.  The rules of playback
+//! live in [`playback`] and [`stopping`], those of lights in [`lighting`],
+//! those that change the cue lists in [`editing`], undo and redo in
+//! [`history`], show files in [`show`], the places of the files of cues in
+//! [`files`], and why cues cannot play in [`problems`].
 
 mod active;
 mod command;
 mod editing;
 mod files;
 mod history;
+mod lighting;
 mod playback;
 mod problems;
 mod show;
@@ -26,24 +28,30 @@ mod stopping;
 #[cfg(test)]
 pub(super) mod tests;
 
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 pub use active::{Active, Phase};
-pub use command::{Command, Place};
+pub use command::{Command, Contents, Place};
 pub use history::{Change, Turn};
 
 use crate::back::{
-    Cue, CueId, CueList,
+    Cue, CueId, CueList, Instrument, InstrumentId,
     items::{replaced, replaced_where},
 };
 use history::History;
+use lighting::Dimmer;
+pub use lighting::Universe;
 
-/// Show as a whole, with its cue lists, running cues, and editing lock
+/// Show as a whole, with its cue lists, light patch, running cues, and
+/// editing lock
 ///
 /// A show always holds at least one cue list, which the front end shows.
 #[derive(Debug, Clone)]
 pub struct Workspace {
     lists: Vec<CueList>,
+    patch: Vec<Instrument>,
+    /// Level of each instrument that a light cue has set
+    dimmers: BTreeMap<InstrumentId, Dimmer>,
     active: Vec<Active>,
     /// Lock on editing during a performance, which leaves playback alone
     show_mode: bool,
@@ -86,6 +94,8 @@ impl Workspace {
         Self {
             next_id: next_id(&lists),
             lists,
+            patch: Vec::new(),
+            dimmers: BTreeMap::new(),
             active: Vec::new(),
             show_mode: false,
             next_run: 0,
@@ -184,7 +194,8 @@ impl Workspace {
             Command::Delete(ids) => self.deleted(&ids),
             Command::Move { cue, by } => self.moved(cue, by),
             Command::Edit(id, edit) => self.edited(id, edit),
-            Command::Restore(lists) => self.restored(lists),
+            Command::Patch(edit) => self.patched(edit),
+            Command::Restore(contents) => self.restored(contents),
         }
     }
 

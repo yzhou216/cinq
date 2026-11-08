@@ -2,20 +2,25 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Inspector, which shows every setting of the selected cue on three tabs
+//! Inspector, which shows every setting of the selected cue on three tabs,
+//! and the light patch of the show on a fourth
 
 mod field;
+mod light;
 
 use iced::{
     Center, Element, Fill,
-    widget::{checkbox, column, progress_bar, radio, row, rule, slider, table, text, text_input},
+    widget::{
+        TextInput, checkbox, column, progress_bar, radio, row, rule, slider, table, text,
+        text_input,
+    },
 };
 use strum::VariantArray;
 
 use super::{SPACING, char_width, format, keep_keys, theme};
 use crate::{
-    back::{Cue, Edit, Kind, LEVELS, Media, parse_level},
-    front::{App, Message, Tab},
+    back::{Cue, Edit, Kind, LEVELS, Media},
+    front::{App, Entry, Message, Tab},
 };
 use field::Field;
 
@@ -45,10 +50,18 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
                 .map(|&tab| radio(tab.to_string(), tab, Some(app.tab), Message::Tab).into()),
         )
         .spacing(SPACING);
-    let body = match app.selected.and_then(|id| app.workspace.cue(id)) {
-        Some(cue) => inspected(app, cue),
-        None if app.current().cues.is_empty() => text("This list has no cues to inspect").into(),
-        None => text("Select a cue to inspect it").into(),
+    let body = match (app.tab, app.selected.and_then(|id| app.workspace.cue(id))) {
+        (Tab::Patch, _) => light::patch(app),
+        (Tab::Basics, Some(cue)) => {
+            let basics = row(BASICS.map(|fields| form(app, cue, fields))).spacing(SPACING);
+            inspected(app, cue, basics.into())
+        }
+        (Tab::Time, Some(cue)) => inspected(app, cue, time(app, cue)),
+        (Tab::Levels, Some(cue)) => inspected(app, cue, levels(app, cue)),
+        (_, None) if app.current().cues.is_empty() => {
+            text("This list has no cues to inspect").into()
+        }
+        (_, None) => text("Select a cue to inspect it").into(),
     };
     keep_keys(
         row![tabs, rule::vertical(1), body]
@@ -59,23 +72,42 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     )
 }
 
-fn inspected<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
-    let fields = match app.tab {
-        Tab::Basics => row(BASICS.map(|fields| form(app, cue, fields)))
-            .spacing(SPACING)
-            .into(),
-        Tab::Time => time(app, cue),
-        Tab::Levels => levels(app, cue),
-    };
-    let lock = if app.editable() {
+fn inspected<'a>(app: &'a App, cue: &Cue, fields: Element<'a, Message>) -> Element<'a, Message> {
+    column![
+        text(format!("{cue}, {} cue{}", cue.kind, lock(app))),
+        fields
+    ]
+    .spacing(SPACING)
+    .width(Fill)
+    .into()
+}
+
+fn lock(app: &App) -> &'static str {
+    if app.editable() {
         ""
     } else {
         " (read-only in show mode)"
+    }
+}
+
+/// Returns the field of `entry`, which shows `value` unless the operator is
+/// typing into it
+fn entry<'a>(app: &App, entry: Entry, value: String, placeholder: &str) -> TextInput<'a, Message> {
+    let text = match &app.entered {
+        Some((typed, text)) if *typed == entry => text.clone(),
+        _ => value,
     };
-    column![text(format!("{cue}, {} cue{lock}", cue.kind)), fields]
-        .spacing(SPACING)
-        .width(Fill)
-        .into()
+    text_input(placeholder, &text)
+        .on_input_maybe(
+            app.editable()
+                .then_some(move |text| Message::Entered(entry, text)),
+        )
+        .style(theme::field(entry.command(&text).is_some()))
+}
+
+/// Returns the width of a text field that holds `chars` characters
+fn room(chars: f32) -> f32 {
+    char_width() * chars + text_input::DEFAULT_PADDING.x()
 }
 
 fn form<'a>(app: &'a App, cue: &'a Cue, fields: &[Field]) -> Element<'a, Message> {
@@ -116,20 +148,15 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         }
         Kind::Audio | Kind::Video => "Level",
         Kind::Fade => "Fade target to",
+        Kind::Light => return light::levels(app, cue),
         Kind::Picture | Kind::Stop | Kind::Wait | Kind::Memo => {
             return text(format!("{} cues have no level", cue.kind)).into();
         }
     };
     let id = cue.id;
     let editable = app.editable();
-    let typed = match &app.typed_level {
-        Some((typed, text)) if *typed == id => text.clone(),
-        _ => format::decibels(cue.level),
-    };
-    let field = text_input("", &typed)
-        .on_input_maybe(editable.then_some(move |text| Message::LevelTyped(id, text)))
-        .width(char_width() * LEVEL_ROOM + text_input::DEFAULT_PADDING.x())
-        .style(theme::field(parse_level(&typed).is_some()));
+    let field =
+        entry(app, Entry::Level(id), format::decibels(cue.level), "").width(room(LEVEL_ROOM));
     let level: Element<'_, Message> = if editable {
         slider(LEVELS, cue.level, move |db| {
             Message::Edit(id, Edit::Level(db))

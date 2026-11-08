@@ -75,6 +75,7 @@ impl Active {
                 sound: cue.sounds(),
             }),
             (Kind::Picture, _) => Effect::Picture,
+            (Kind::Light, _) => Effect::Light,
             (Kind::Fade, Some(target)) => Effect::Fade {
                 target,
                 fade: Fade {
