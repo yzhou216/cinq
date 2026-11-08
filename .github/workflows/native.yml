@@ -12,11 +12,13 @@ jobs:
   build:
     name: cinq built on ${{ matrix.system }}
     strategy:
-      fail-fast: false # Failure on one system leaves the other running
+      fail-fast: false # Failure on one system leaves the others running
       matrix:
         include:
           - os: ubuntu-latest
             system: x86_64-linux
+          - os: ubuntu-24.04-arm
+            system: aarch64-linux
           - os: macos-latest
             system: aarch64-darwin
     runs-on: ${{ matrix.os }}

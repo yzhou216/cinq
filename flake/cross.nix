@@ -151,6 +151,8 @@
         };
         x86_64-windows = windows pkgs.pkgsCross.mingw-ucrt-x86_64-llvm;
         aarch64-windows = windows pkgs.pkgsCross.mingw-ucrt-aarch64;
+        x86_64-linux = nixpkgsCross pkgs.pkgsCross.gnu64;
+        aarch64-linux = nixpkgsCross pkgs.pkgsCross.aarch64-multiplatform;
         riscv64-linux = nixpkgsCross pkgs.pkgsCross.riscv64;
         x86_64-freebsd = nixpkgsCross (freebsd "x86_64");
         # Rust's tier 3, which Nixpkgs leaves out of the platforms of what

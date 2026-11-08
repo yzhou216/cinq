@@ -76,12 +76,13 @@ Builds for Darwin also lay out the app bundle, `cinq.app`, in
 `target/Applications`, with all but the program, which goes into its
 `Contents/MacOS`.  Each Nix package of cinq goes by the name of the system
 that it runs on, which names the native build too, as `.#x86_64-linux` does
-on x86_64 GNU/Linux.  On GNU/Linux, `nix build .#aarch64-darwin`
-cross-builds the package for Apple silicon, `.#riscv64-linux` the one for
-GNU/Linux on riscv64, `.#x86_64-freebsd` and `.#aarch64-freebsd` those for
-FreeBSD, and `.#x86_64-windows` and `.#aarch64-windows` `cinq.exe` for
-Windows, while `.#deb`, `.#rpm`, and `.#archlinux` build packages for other
-distributions, which need a glibc as new as that of Nixpkgs.
+on x86_64 GNU/Linux.  On GNU/Linux, `nix build` cross-builds it for the
+other systems as well: `.#x86_64-linux`, `.#aarch64-linux`, and
+`.#riscv64-linux` for GNU/Linux, `.#x86_64-freebsd` and `.#aarch64-freebsd`
+for FreeBSD, `.#aarch64-darwin` for Apple silicon, and `.#x86_64-windows`
+and `.#aarch64-windows`, which build `cinq.exe`, for Windows.  There
+`.#deb`, `.#rpm`, and `.#archlinux` build packages for other distributions,
+which need a glibc as new as that of Nixpkgs.
 
 ## Configuration
 
