@@ -9,6 +9,7 @@
       config,
       lib,
       pkgs,
+      system,
       crate,
       sourceDateEpoch,
       installBundle,
@@ -86,11 +87,53 @@
           };
           install = release: ''install -D ${release}/cinq.exe "$out/bin/cinq.exe"'';
         };
-    in
-    {
+      # cinq that `cross`, the Nixpkgs of a system that Nixpkgs builds
+      # Rust's standard library for, cross-builds from the package of the
+      # flake itself, whose name Nixpkgs marks with the system's target
+      nixpkgsCross = cross: cross.callPackage ./cinq.nix { inherit crate sourceDateEpoch installBundle; };
+      # Nixpkgs of FreeBSD on the processor `cpu`.  FreeBSD's libraries
+      # write their symbol maps with clang's cpp, which Nixpkgs runs for
+      # the system that builds them rather than for FreeBSD, and which on
+      # another processor rejects FreeBSD's flags and writes nothing, so
+      # that libthr lost pthread_create.  There the cpp takes FreeBSD's
+      # target, until NixOS/nixpkgs#584780 is fixed.
+      freebsd =
+        cpu:
+        let
+          config = "${cpu}-unknown-freebsd";
+        in
+        if pkgs.stdenv.hostPlatform.parsed.cpu.name == cpu then
+          pkgs.pkgsCross."${cpu}-freebsd"
+        else
+          import pkgs.path {
+            localSystem = pkgs.stdenv.hostPlatform;
+            crossSystem = { inherit config; };
+            crossOverlays = [
+              (final: prev: {
+                freebsd = prev.freebsd.overrideScope (
+                  _: freebsd: {
+                    mkDerivation = lib.makeOverridable (
+                      attrs:
+                      freebsd.mkDerivation (
+                        attrs
+                        // {
+                          # Script rather than flags, since bmake splits
+                          # them off into flags of its own
+                          env = {
+                            CPP = final.buildPackages.writeShellScript "${config}-cpp" ''exec ${config}-cpp --target=${config} "$@"'';
+                          }
+                          // attrs.env or { };
+                        }
+                      )
+                    );
+                  }
+                );
+              })
+            ];
+          };
       # cinq for other systems, each named after the system that it runs on,
       # while the system of the flake is the one that builds it
-      packages = lib.optionalAttrs pkgs.stdenvNoCC.hostPlatform.isLinux {
+      builds = {
         # cinq for Apple silicon, laid out as the package for Darwin is,
         # which cargo cross-builds against the SDK that Nixpkgs fetches
         # from Apple, linked by lld from the toolchain
@@ -108,6 +151,19 @@
         };
         x86_64-windows = windows pkgs.pkgsCross.mingw-ucrt-x86_64-llvm;
         aarch64-windows = windows pkgs.pkgsCross.mingw-ucrt-aarch64;
+        riscv64-linux = nixpkgsCross pkgs.pkgsCross.riscv64;
+        x86_64-freebsd = nixpkgsCross (freebsd "x86_64");
+        # Rust's tier 3, which Nixpkgs leaves out of the platforms of what
+        # Rust builds, though it builds Rust's compiler for it
+        aarch64-freebsd = (nixpkgsCross (freebsd "aarch64")).overrideAttrs (old: {
+          meta = old.meta // {
+            platforms = [ "aarch64-freebsd" ];
+          };
+        });
       };
+    in
+    {
+      # All but the system's own, whose name stays with its native build
+      packages = lib.optionalAttrs pkgs.stdenvNoCC.hostPlatform.isLinux (removeAttrs builds [ system ]);
     };
 }
