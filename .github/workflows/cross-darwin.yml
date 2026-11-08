@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: 2026 Yiyu Zhou <yiyu@yiyuzhou.io>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    name: cinq for aarch64-darwin built on ${{ matrix.system }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {system: x86_64-linux, os: ubuntu-latest}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@main
+      - uses: wimpysworld/nothing-but-nix@main
+      - uses: cachix/install-nix-action@master
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - run: nix build .#aarch64-darwin && tar -cf cinq-aarch64-darwin-built-on-${{ matrix.system }}.tar -C result . # Tar keeps the modes and links that artifacts lose
+      - uses: actions/upload-artifact@main
+        with:
+          path: cinq-aarch64-darwin-built-on-${{ matrix.system }}.tar
+          archive: false
