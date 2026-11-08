@@ -23,19 +23,6 @@
           mv "$out/bin/cinq" "$out/Applications/cinq.app/Contents/MacOS"
           ln -s ../Applications/cinq.app/Contents/MacOS/cinq "$out/bin"
         '';
-        # Libraries that cinq loads at run time rather than links: those
-        # of winit and wgpu for Wayland alone, and libdbus, through which
-        # rfd reaches the file chooser portal
-        runtimeLibs = lib.optionals pkgs.stdenvNoCC.hostPlatform.isLinux (
-          with pkgs;
-          [
-            dbus
-            libGL
-            libxkbcommon
-            vulkan-loader
-            wayland
-          ]
-        );
       };
     };
 }
