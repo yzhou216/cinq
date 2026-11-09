@@ -186,3 +186,32 @@ fn picture_cue_shows_its_file_whole_and_follows_on_to_nothing() {
     let named = picture.playing("slides/preshow.png".to_owned());
     assert!(matches!(named, Edit::FileAndName { name, .. } if name == "preshow"));
 }
+
+#[test]
+fn audio_cue_that_follows_goes_on_when_its_clip_ends() {
+    let following = Cue {
+        advance: Advance::Follow,
+        pre_wait: 1.5.into(),
+        post_wait: 9.0.into(),
+        start: 2.0.into(),
+        ..loaded(audio("rain", "rain.ogg"))
+    };
+    // Auto-follow ignores the post-wait
+    assert_eq!(following.next_delay(), Some(9.5));
+}
+
+#[test]
+fn audio_cue_that_continues_goes_on_after_its_waits() {
+    let continuing = Cue {
+        advance: Advance::Continue,
+        pre_wait: 1.5.into(),
+        post_wait: 2.0.into(),
+        ..loaded(audio("rain", "rain.ogg"))
+    };
+    assert_eq!(continuing.next_delay(), Some(3.5));
+}
+
+#[test]
+fn audio_cue_that_waits_for_go_goes_on_to_nothing() {
+    assert_eq!(loaded(audio("rain", "rain.ogg")).next_delay(), None);
+}

@@ -6,6 +6,7 @@
 //! the show and leave playback alone
 
 use super::*;
+use crate::back::{Change, Turn};
 
 fn name(workspace: &Workspace, id: u32) -> Option<&str> {
     workspace.cue(CueId(id)).map(|cue| cue.name.as_str())
@@ -144,4 +145,47 @@ fn go_forgets_the_moves_of_the_standby_it_moves_on() {
         .apply(GO);
     assert!(played.undoable().is_none());
     assert_eq!(standby(&played.apply(Command::Undo)), Some(3));
+}
+
+#[test]
+fn latest_change_follows_what_was_done_undone_and_redone_last() {
+    let turn = |workspace: &Workspace| workspace.latest_change().map(|(turn, _)| turn);
+    let done = workspace(vec![audio(1)]);
+    assert_eq!(turn(&done), None);
+    let done = done.apply(rename(1, "Storm"));
+    assert_eq!(turn(&done), Some(Turn::Done));
+    let undone = done.apply(Command::Undo);
+    assert_eq!(turn(&undone), Some(Turn::Undone));
+    let redone = undone.clone().apply(Command::Redo);
+    assert_eq!(turn(&redone), Some(Turn::Redone));
+    let renewed = undone.apply(edit(1, Edit::Level(-6.0)));
+    assert_eq!(turn(&renewed), Some(Turn::Done));
+}
+
+#[test]
+fn latest_change_names_the_change_that_undo_acts_on() {
+    let undone = workspace(vec![audio(1)])
+        .apply(rename(1, "Storm"))
+        .apply(Command::Undo);
+    assert!(matches!(
+        undone.latest_change(),
+        Some((Turn::Undone, Change::Edited { redo: Edit::Name(name), .. })) if name == "Storm"
+    ));
+}
+
+#[test]
+fn change_names_the_cue_it_concerns_unless_it_concerns_none() {
+    let base = || workspace(vec![audio(1), audio(2), audio(3)]);
+    let cue = |workspace: Workspace| {
+        workspace
+            .latest_change()
+            .and_then(|(_, change)| change.cue())
+            .map(|id| id.0)
+    };
+    assert_eq!(cue(base().apply(rename(2, "Storm"))), Some(2));
+    assert_eq!(cue(base().apply(moving(3, -1))), Some(3));
+    assert_eq!(cue(base().apply(delete(&[3, 2]))), Some(2));
+    let new = base().next_cue_id().map(|id| id.0);
+    assert_eq!(cue(base().apply(add(0, Kind::Memo, Place::End))), new);
+    assert_eq!(cue(base().apply(move_standby(3))), None);
 }
