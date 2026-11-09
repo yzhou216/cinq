@@ -15,7 +15,7 @@ use iced::{
             operation::{self, Operation},
         },
     },
-    keyboard, overlay,
+    overlay,
     widget::{Scrollable, operation::AbsoluteOffset},
 };
 
@@ -23,7 +23,12 @@ use super::{
     Choice,
     rows::{Rows, row_height},
 };
-use crate::front::{Message, keymap::Press, reveal, view::widget::pressed};
+use crate::front::{
+    Message,
+    keymap::KeyPress,
+    reveal,
+    view::widget::{key_pressed, pressed},
+};
 
 pub(in crate::front::view::widget::dropdown) struct Menu<'b, T> {
     choice: Choice<'b, T>,
@@ -105,19 +110,12 @@ impl<T: ToString + Clone> Overlay<Message, Theme, Renderer> for Menu<'_, T> {
         if !shared.is_open() {
             return;
         }
-        match event {
-            Event::Keyboard(keyboard::Event::KeyPressed {
-                key,
-                modified_key,
-                modifiers,
-                ..
-            }) => self
-                .choice
-                .press(key, Press::from_key(modified_key, *modifiers), shell),
-            _ if pressed(event) && !cursor.is_over(layout.bounds()) => {
+        match key_pressed(event) {
+            Some(KeyPress { key, press, .. }) => self.choice.press(key, press, shell),
+            None if pressed(event) && !cursor.is_over(layout.bounds()) => {
                 self.choice.click_beside(cursor.is_over(self.target), shell);
             }
-            _ => {
+            None => {
                 let bounds = layout.bounds();
                 self.scrollable.update(
                     self.tree, event, layout, cursor, renderer, clipboard, shell, &bounds,

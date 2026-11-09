@@ -15,7 +15,7 @@
 
 mod notation;
 
-use iced::keyboard::{Key, Modifiers};
+use iced::keyboard::{self, Key, Modifiers};
 use itertools::Itertools;
 use keyboard_types::NamedKey;
 
@@ -105,5 +105,34 @@ impl Press {
             Name::Char(c) if !self.ctrl && !self.alt => c.to_digit(10).map(|digit| digit as usize),
             _ => None,
         }
+    }
+}
+
+/// Key pressed, with the [`Press`] that the key bindings know it by
+pub struct KeyPress<'a> {
+    pub key: &'a Key,
+    pub press: Option<Press>,
+    pub repeat: bool,
+}
+
+impl<'a> KeyPress<'a> {
+    /// Unpacks a key press from a keyboard event, with Shift applied to
+    /// the key, and returns nothing for any other keyboard event
+    pub fn of(event: &'a keyboard::Event) -> Option<Self> {
+        let keyboard::Event::KeyPressed {
+            key,
+            modified_key,
+            modifiers,
+            repeat,
+            ..
+        } = event
+        else {
+            return None;
+        };
+        Some(Self {
+            key,
+            press: Press::from_key(modified_key, *modifiers),
+            repeat: *repeat,
+        })
     }
 }

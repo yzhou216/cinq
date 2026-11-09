@@ -18,11 +18,19 @@ mod wrap;
 
 use iced::{Event, Rectangle, mouse, touch};
 
+use crate::front::keymap::KeyPress;
 pub use button::button;
 pub use dropdown::dropdown;
 pub use keep_keys::keep_keys;
 pub use marked_row::marked_row;
 pub use pictures::{Layer, pictures};
+
+fn key_pressed(event: &Event) -> Option<KeyPress<'_>> {
+    match event {
+        Event::Keyboard(event) => KeyPress::of(event),
+        _ => None,
+    }
+}
 
 fn pressed(event: &Event) -> bool {
     matches!(

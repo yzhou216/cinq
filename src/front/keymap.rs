@@ -19,7 +19,7 @@ use strum::VariantArray;
 
 pub use action::Action;
 pub use preset::Preset;
-pub use press::{Press, written};
+pub use press::{KeyPress, Press, written};
 
 #[derive(Debug, Clone)]
 pub struct Keymap {

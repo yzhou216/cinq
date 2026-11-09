@@ -17,7 +17,7 @@ use iced::{
         },
     },
     alignment,
-    keyboard::{self, Key, key::Named},
+    keyboard::{Key, key::Named},
     widget::{
         pick_list::{self, Status},
         text_input,
@@ -33,8 +33,8 @@ use super::{
 };
 use crate::front::{
     Message,
-    keymap::Press,
-    view::widget::{pointer_over, pressed},
+    keymap::KeyPress,
+    view::widget::{key_pressed, pointer_over, pressed},
 };
 
 impl<'a, T: ToString + PartialEq + Clone + 'a> Widget<Message, Theme, Renderer>
@@ -167,30 +167,23 @@ impl<'a, T: ToString + PartialEq + Clone + 'a> Widget<Message, Theme, Renderer>
             shell.request_redraw();
         }
         let choice = self.choice(&state.shared);
-        match event {
-            Event::Keyboard(keyboard::Event::KeyPressed {
-                key,
-                modified_key,
-                modifiers,
-                ..
-            }) if state.shared.is_open() => {
-                choice.press(key, Press::from_key(modified_key, *modifiers), shell);
+        match key_pressed(event) {
+            Some(KeyPress { key, press, .. }) if state.shared.is_open() => {
+                choice.press(key, press, shell);
             }
-            Event::Keyboard(keyboard::Event::KeyPressed {
+            Some(KeyPress {
                 key: Key::Named(Named::Enter),
-                modified_key,
-                modifiers,
+                press,
                 ..
-            }) if state.focused
-                && !Press::from_key(modified_key, *modifiers)
-                    .is_some_and(|press| self.keymap.acts_at_once(press)) =>
-            {
+            }) if state.focused && !press.is_some_and(|press| self.keymap.acts_at_once(press)) => {
                 state.focused = false;
                 self.open(choice, shell);
             }
             _ if pressed(event) && state.shared.is_open() => choice.click_beside(over, shell),
             _ if pressed(event) && over => self.open(choice, shell),
-            Event::Window(window::Event::RedrawRequested(_)) => state.over = over,
+            _ if matches!(event, Event::Window(window::Event::RedrawRequested(_))) => {
+                state.over = over;
+            }
             _ if over != state.over => shell.request_redraw(),
             _ => {}
         }

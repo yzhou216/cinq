@@ -20,7 +20,7 @@ use iced::{
 
 use crate::front::{
     App, Focus, Message, Tab,
-    keymap::{Action, Press},
+    keymap::{Action, KeyPress, Press},
     view,
 };
 
@@ -81,14 +81,6 @@ impl App {
 /// Reads a key that no widget captured, with Shift applied, so that Shift
 /// and `g` make `G`
 pub(super) fn key_press(event: keyboard::Event) -> Option<Message> {
-    let keyboard::Event::KeyPressed {
-        modified_key,
-        modifiers,
-        repeat,
-        ..
-    } = event
-    else {
-        return None;
-    };
-    Press::from_key(&modified_key, modifiers).map(|press| Message::Typed { press, repeat })
+    let KeyPress { press, repeat, .. } = KeyPress::of(&event)?;
+    press.map(|press| Message::Typed { press, repeat })
 }

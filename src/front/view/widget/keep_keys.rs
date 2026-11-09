@@ -24,13 +24,16 @@ use iced::{
         layout::Layout,
         widget::{Id, Operation, Tree, operation::Focusable},
     },
-    keyboard::{self, Key, key::Named},
+    keyboard::{Key, key::Named},
 };
 
-use super::wrap::{Intercept, wrap};
+use super::{
+    key_pressed,
+    wrap::{Intercept, wrap},
+};
 use crate::front::{
     Focus, Message,
-    keymap::{Keymap, Press},
+    keymap::{KeyPress, Keymap},
 };
 
 pub fn keep_keys<'a>(
@@ -52,24 +55,13 @@ impl Intercept for Keep<'_> {
         renderer: &Renderer,
         shell: &mut Shell<'_, Message>,
     ) {
-        let Event::Keyboard(keyboard::Event::KeyPressed {
-            key,
-            modified_key,
-            modifiers,
-            repeat,
-            ..
-        }) = event
-        else {
+        let Some(KeyPress { key, press, repeat }) = key_pressed(event) else {
             return;
         };
-        let press = Press::from_key(modified_key, *modifiers);
         if shell.is_event_captured() {
             let typed = matches!(key, Key::Character(_) | Key::Named(Named::Space));
             if let Some(press) = press.filter(|&press| !typed && self.0.acts_at_once(press)) {
-                shell.publish(Message::Typed {
-                    press,
-                    repeat: *repeat,
-                });
+                shell.publish(Message::Typed { press, repeat });
             }
             return;
         }
