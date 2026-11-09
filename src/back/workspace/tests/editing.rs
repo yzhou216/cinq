@@ -56,27 +56,13 @@ fn moved_cue_stops_at_either_end_of_its_list_and_keeps_standby() {
 fn loading_ignores_a_file_that_has_been_replaced() {
     let replaced = workspace(vec![audio(1)])
         .apply(Command::Edit(CueId(1), Edit::File("other.ogg".to_owned())));
-    let stale = replaced.clone().apply(loaded(
-        1,
-        "sound.ogg",
-        Media::Loaded {
-            duration: 10.0,
-            sound: Some(10.0),
-        },
-    ));
+    let stale = replaced.clone().apply(loaded(1, "sound.ogg", sound(10.0)));
     let cue = stale.cue(CueId(1)).unwrap();
     assert_eq!(stale.problem(cue), Some(Problem::NotLoaded));
     // Failure of the file that was replaced leaves the cue playing
     let failed = loaded(1, "sound.ogg", Media::Failed("file not found".to_owned()));
     let playing = replaced
-        .apply(loaded(
-            1,
-            "other.ogg",
-            Media::Loaded {
-                duration: 10.0,
-                sound: Some(10.0),
-            },
-        ))
+        .apply(loaded(1, "other.ogg", sound(10.0)))
         .apply(GO)
         .apply(failed);
     assert!(playing.active_of(CueId(1)).is_some());

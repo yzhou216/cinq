@@ -79,7 +79,7 @@ fn silence() -> Vec<u8> {
         &16_u16.to_le_bytes(),
         b"data",
         &data.to_le_bytes(),
-        &vec![0; 1600],
+        &[0; 1600],
     ]
     .concat()
 }

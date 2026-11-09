@@ -51,7 +51,7 @@ fn row(name: &str, cells: impl IntoIterator<Item = String>) -> Vec<String> {
 
 #[test]
 fn manual_lists_the_keys_of_every_keymap_in_order() {
-    let keymaps: Vec<Keymap> = Preset::VARIANTS.iter().copied().map(Keymap::from).collect();
+    let keymaps: Vec<_> = Preset::VARIANTS.iter().copied().map(Keymap::from).collect();
     let header = row(
         "Action",
         keymaps.iter().map(|keymap| keymap.name().to_owned()),

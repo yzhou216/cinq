@@ -12,8 +12,8 @@ fn opening_brings_back_kept_changes_as_one_change_that_undo_takes_back() {
     let kept = SHOW.replace("Note", "Changed");
     let app = App::default().opened(found(Some(STORM), Some(SHOW), Some(&kept)));
     assert!(app.show.unsaved());
-    let name = app.workspace.cue(CueId(1)).map(|cue| cue.name.clone());
-    assert_eq!(name.as_deref(), Some("Changed"));
+    let name = app.workspace.cue(CueId(1)).map(|cue| cue.name.as_str());
+    assert_eq!(name, Some("Changed"));
     assert!(!app.send(Command::Undo).show.unsaved());
 }
 
@@ -21,8 +21,8 @@ fn opening_brings_back_kept_changes_as_one_change_that_undo_takes_back() {
 fn opening_again_the_show_on_screen_brings_back_its_changes_on_screen() {
     let older = SHOW.replace("Note", "Older");
     let app = renamed(storm(), "Newer").opened(found(Some(STORM), Some(SHOW), Some(&older)));
-    let name = app.workspace.cue(CueId(1)).map(|cue| cue.name.clone());
-    assert_eq!(name.as_deref(), Some("Newer"));
+    let name = app.workspace.cue(CueId(1)).map(|cue| cue.name.as_str());
+    assert_eq!(name, Some("Newer"));
     // Nothing to tell of changes that stay on screen
     assert_eq!(app.told, None);
     assert!(!app.send(Command::Undo).show.unsaved());
@@ -32,8 +32,8 @@ fn opening_again_the_show_on_screen_brings_back_its_changes_on_screen() {
 fn new_show_brings_back_the_kept_changes_of_the_untitled_show() {
     let kept = SHOW.replace("Note", "Changed");
     let app = App::default().opened(found(None, None, Some(&kept)));
-    let name = app.workspace.cue(CueId(1)).map(|cue| cue.name.clone());
-    assert_eq!(name.as_deref(), Some("Changed"));
+    let name = app.workspace.cue(CueId(1)).map(|cue| cue.name.as_str());
+    assert_eq!(name, Some("Changed"));
     // Selection is the standby of the cues that came back
     assert_eq!(app.selected, Some(CueId(1)));
 }

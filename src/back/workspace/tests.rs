@@ -23,18 +23,16 @@ fn workspace(cues: Vec<Cue>) -> Workspace {
     let workspace = Workspace::new(vec![CueList::new("Main", cues)]);
     let loads: Vec<Command> = workspace
         .unloaded()
-        .map(|cue| {
-            loaded(
-                cue.id.0,
-                &cue.file,
-                Media::Loaded {
-                    duration: 10.0,
-                    sound: Some(10.0),
-                },
-            )
-        })
+        .map(|cue| loaded(cue.id.0, &cue.file, sound(10.0)))
         .collect();
     loads.into_iter().fold(workspace, Workspace::apply)
+}
+
+fn sound(seconds: f32) -> Media {
+    Media::Loaded {
+        duration: seconds,
+        sound: Some(seconds),
+    }
 }
 
 fn loaded(id: u32, file: &str, media: Media) -> Command {

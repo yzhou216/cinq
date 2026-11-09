@@ -18,10 +18,8 @@ fn keeper_keeps_unsaved_changes_until_they_are_gone() {
     let changed = renamed(app, "Cue");
     assert_eq!(keeper.keep(&changed.show), None);
     keeper.settled();
-    assert_eq!(
-        fs::read_to_string(&kept).ok(),
-        Some(changed.show.text.clone())
-    );
+    let text = fs::read_to_string(&kept).ok();
+    assert_eq!(text.as_ref(), Some(&changed.show.text));
     assert_eq!(keeper.keep(&changed.send(Command::Undo).show), None);
     keeper.settled();
     assert!(!kept.exists());

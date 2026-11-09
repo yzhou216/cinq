@@ -26,7 +26,7 @@ fn notation_writes_keys_the_way_it_reads_them() {
 
 #[test]
 fn notation_rejects_what_cannot_be_bound() {
-    let accepted: Vec<&str> = [
+    let accepted: Vec<_> = [
         "", "Foo", "escape", "gg", "Control+", "Shift", "Super", "Meta+x", "Shift+1",
     ]
     .into_iter()
