@@ -62,7 +62,6 @@ pub(super) struct Frame {
     pub(super) picture: Picture,
 }
 
-/// What the thread of a pass sends its player
 pub(super) enum Sent {
     Picture(Frame),
     /// Pass is over, and every picture of it has been sent
@@ -97,10 +96,7 @@ pub(super) fn start(path: PathBuf, clip: Clip, pass: u32, player: Weak<()>) -> R
     pictures
 }
 
-/// Decodes pass `pass` through `clip` of the file at `path`, and sends each
-/// of its pictures to `sender` with the time of the run at which it is due,
-/// for as long as the player whose life `player` watches is there.
-/// Returns how many pictures it sent.
+/// Returns how many pictures of the pass went to `sender`
 fn decoded(
     path: &Path,
     clip: Clip,
@@ -113,8 +109,6 @@ fn decoded(
         return Ok(0);
     };
     let passed = f64::from(pass) * clip.length();
-    // Pictures that show at their times, of which those that belong to the
-    // clip go to the player, after the `sent` that went before them
     let send = |pictures: Vec<(f64, Decoded)>, sent: usize| {
         pictures
             .iter()

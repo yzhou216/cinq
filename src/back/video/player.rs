@@ -49,8 +49,6 @@ pub(super) struct Player {
 }
 
 impl Player {
-    /// Starts decoding what the stage window shows of the file at `path`:
-    /// a clip of a video file, or a picture file
     pub(super) fn start(path: PathBuf, shown: Shown) -> Self {
         let life = Arc::new(());
         let (pictures, following) = match shown {
@@ -117,10 +115,6 @@ impl Player {
         }
     }
 
-    /// Returns the player once the pass under way has ended: for a clip
-    /// that loops, playing the pass after it while the one after that
-    /// decodes ahead, and for any other, or a picture, with no pass left to
-    /// play
     fn passed(self) -> Self {
         match (self.following, self.shown) {
             (Some(following), Shown::Clip(clip)) => {

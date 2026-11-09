@@ -18,7 +18,6 @@ pub struct Clip {
     pub(in crate::back) looping: bool,
 }
 
-/// What the stage window shows of the file of a video or picture cue
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Shown {
     Clip(Clip),
@@ -43,12 +42,8 @@ impl Clip {
 }
 
 impl Cue {
-    /// Returns the part of its file that an audio or video cue plays: from
-    /// its start time to its end time, or to the end of the file where that
-    /// comes first.  A video cue that loops while its sound plays ends with
-    /// its sound, where that comes first, so that the sound loops with the
-    /// picture.  There is none for other kinds of cue, before the file has
-    /// loaded, or when the start is not before the end.
+    /// A video cue that loops while its sound plays ends with its sound,
+    /// where that comes first, so that the sound loops with the picture.
     pub(in crate::back) fn clip(&self) -> Option<Clip> {
         let Media::Loaded { duration, .. } = self.media else {
             return None;
@@ -66,8 +61,6 @@ impl Cue {
         })
     }
 
-    /// Returns what the stage window shows of the file of the cue, once the
-    /// file has loaded
     pub(in crate::back) fn shown(&self) -> Option<Shown> {
         match self.kind {
             Kind::Video => self.clip().map(Shown::Clip),
@@ -78,8 +71,7 @@ impl Cue {
 
     /// Returns how long the sound of the file of the cue plays, once the
     /// file has loaded, when the clip of the cue starts before the sound
-    /// ends.  There is none for a video file with a picture alone, nor for
-    /// a picture file.
+    /// ends
     fn sound(&self) -> Option<f32> {
         match self.media {
             Media::Loaded {

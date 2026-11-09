@@ -11,9 +11,7 @@ use crate::{
     front::{Focus, Message},
 };
 
-/// Something the operator can do with a key, which the configuration file
-/// names in snake case, as `next_list`.  [`Action::VARIANTS`] lists every
-/// action in the order of the help page.
+/// [`Action::VARIANTS`] lists every action in the order of the help page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, IntoStaticStr, VariantArray)]
 #[strum(serialize_all = "snake_case")]
 pub enum Action {
@@ -116,10 +114,6 @@ impl Action {
         self.acts_at_once() || matches!(self, Action::Help | Action::CloseHelp)
     }
 
-    /// Returns the message that the action sends.  A count typed before
-    /// its keys repeats a move of the selection, of a cue, or between cue
-    /// lists, deletes as many cues, or picks the row that [`Action::First`]
-    /// and [`Action::Last`] go to.
     pub fn message(self, count: Option<usize>) -> Message {
         let times = count.unwrap_or(1);
         let step = isize::try_from(times).unwrap_or(isize::MAX);

@@ -92,9 +92,6 @@ fn high_definition(picture: &Frame) -> bool {
     picture.width >= width || picture.height >= lines
 }
 
-/// Returns the pixels of `picture` in RGBA with `matrix`, in limited range,
-/// converting the strips of rows of a high-definition picture on threads of
-/// their own
 fn converted(picture: &Frame, matrix: Matrix) -> Vec<u8> {
     let (width, height) = (picture.width as usize, picture.height as usize);
     let mut pixels = vec![0; width * height * 4];
@@ -156,8 +153,6 @@ struct Chroma {
 }
 
 impl Chroma {
-    /// Returns the part that the differences `blue` and `red` add, with
-    /// `matrix`
     #[inline(always)]
     fn new(matrix: Matrix, blue: u8, red: u8) -> Self {
         let (blue, red) = (i32::from(blue) - 128, i32::from(red) - 128);

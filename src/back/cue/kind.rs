@@ -7,8 +7,6 @@
 use serde::{Deserialize, Serialize};
 use strum::{Display, VariantArray};
 
-/// Kind of cue, named after what the cue does, which displays as its name
-/// and goes by it in lower case in a show file
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Display, VariantArray, Serialize, Deserialize,
 )]
@@ -49,13 +47,10 @@ impl Kind {
         self.plays_file() || self == Kind::Picture
     }
 
-    /// Returns whether cues of this kind show in the stage window
     pub fn on_stage(self) -> bool {
         matches!(self, Kind::Video | Kind::Picture)
     }
 
-    /// Returns whether cues of this kind have a level: audio and video cues
-    /// play at one, and fade cues fade their target to one
     pub(in crate::back) fn has_level(self) -> bool {
         self.plays_file() || self == Kind::Fade
     }

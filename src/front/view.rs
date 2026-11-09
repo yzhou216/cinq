@@ -4,9 +4,6 @@
 
 //! View functions, which keep iced's default look, apart from the
 //! exceptions that [`theme`] lists, and only space the controls apart
-//!
-//! Each part of the main window has a module of its own, as does the stage
-//! window in [`stage`].
 
 mod cue_table;
 mod format;

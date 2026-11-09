@@ -19,7 +19,6 @@ use strum::{IntoStaticStr, VariantArray};
 
 pub use command::command_page;
 
-/// Pages that scdoc renders, by name, with their sources
 pub const SCDOC: [(&str, &str); 2] = [
     (
         "cinq.5",
@@ -47,15 +46,11 @@ pub enum Platform {
     /// POSIX systems that follow the XDG Base Directory Specification, such
     /// as GNU/Linux and the BSDs
     Xdg,
-    /// Darwin, whose directory is `~/Library/Application Support`
     Darwin,
-    /// Windows, whose directory holds the roaming application data
     Windows,
 }
 
 impl Platform {
-    /// Returns the platform of `target_os`, as the dirs crate tells targets
-    /// apart
     pub fn of(target_os: &str) -> Self {
         match target_os {
             "windows" => Platform::Windows,
@@ -70,7 +65,6 @@ impl Platform {
         self.into()
     }
 
-    /// Returns the configuration file, as users of the platform write it
     fn config_file(self) -> &'static str {
         match self {
             Platform::Xdg => "$XDG_CONFIG_HOME/cinq/config.toml",
@@ -79,8 +73,6 @@ impl Platform {
         }
     }
 
-    /// Returns the directory that keeps unsaved changes, as users of the
-    /// platform write it
     fn unsaved_directory(self) -> &'static str {
         match self {
             Platform::Xdg => "$XDG_STATE_HOME/cinq/unsaved",

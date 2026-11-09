@@ -11,7 +11,6 @@ use miette::{GraphicalReportHandler, GraphicalTheme};
 
 use crate::front::keymap::config::{Config, Source, parse};
 
-/// Returns the configuration that a file holding `text` gives
 fn read(text: &str) -> Config {
     let (keymap, problems) = parse(text);
     Config {

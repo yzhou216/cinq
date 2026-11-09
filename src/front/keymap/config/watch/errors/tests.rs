@@ -7,7 +7,6 @@
 use super::{CLEAR, ENTER, LEAVE, left, switched, written};
 use crate::front::keymap::config::{Config, Problem};
 
-/// Configuration with a setting that does not exist
 fn broken() -> Config {
     Config {
         problems: vec![Problem::new("no setting is named `colour`")],

@@ -18,7 +18,6 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use super::{Command, Cue, CueId, Kind, Media, Workspace, audio, video};
 
-/// File of an audio, video, or picture cue to load
 #[derive(Debug)]
 pub struct Load {
     cue: CueId,
@@ -28,8 +27,6 @@ pub struct Load {
 }
 
 impl Load {
-    /// Returns what loading the files that `cues` name takes, finding each
-    /// file as `workspace` does
     pub fn all<'a>(workspace: &Workspace, cues: impl IntoIterator<Item = &'a Cue>) -> Vec<Self> {
         cues.into_iter()
             .filter_map(|cue| {

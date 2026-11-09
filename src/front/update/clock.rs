@@ -12,9 +12,8 @@ use crate::{
 };
 
 impl App {
-    /// Counts the time since the last tick.  Ticks of the timer and those
-    /// that wake for pictures may come out of order, and an earlier one
-    /// counts no time.
+    /// Ticks of the timer and those that wake for pictures may come out of
+    /// order, and an earlier one counts no time.
     pub(super) fn ticked(self, now: Instant) -> Self {
         let elapsed = self
             .last_tick

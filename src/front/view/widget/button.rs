@@ -24,8 +24,6 @@ use super::{
 };
 use crate::front::{Message, view::theme};
 
-/// Button that sends its message when pressed, and stays opaque when
-/// disabled
 pub struct Button<'a> {
     /// iced's button, which draws this one but never sees a press
     look: iced::widget::Button<'a, Message>,
@@ -45,8 +43,6 @@ impl Button<'_> {
         self.on_press_maybe(Some(message))
     }
 
-    /// Returns the button sending `message` when pressed, or disabled
-    /// without one
     pub fn on_press_maybe(self, message: Option<Message>) -> Self {
         Self {
             look: self.look.on_press_maybe(message.clone()),
@@ -61,8 +57,6 @@ impl Button<'_> {
         }
     }
 
-    /// Returns the button drawn by `style` in place of the theme's button
-    /// colors
     pub fn style(self, style: fn(&Theme, Status) -> Style) -> Self {
         Self {
             look: self.look.style(style),

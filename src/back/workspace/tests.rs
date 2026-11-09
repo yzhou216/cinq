@@ -53,7 +53,6 @@ fn moving(id: u32, by: isize) -> Command {
     Command::Move { cue: CueId(id), by }
 }
 
-/// Returns the identities of the cues of the first list
 fn ids(workspace: &Workspace) -> Vec<u32> {
     workspace.lists()[0]
         .cues
@@ -62,7 +61,6 @@ fn ids(workspace: &Workspace) -> Vec<u32> {
         .collect()
 }
 
-/// Returns the cue on standby in the first list
 fn standby(workspace: &Workspace) -> Option<u32> {
     workspace.lists()[0].standby.map(|id| id.0)
 }
@@ -80,7 +78,6 @@ fn playing(file: &str) -> Cue {
     }
 }
 
-/// Returns an audio cue that auto-continues, so the next cue fires with it
 fn continuing(id: u32) -> Cue {
     Cue {
         advance: Advance::Continue,

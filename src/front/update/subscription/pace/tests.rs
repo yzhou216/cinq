@@ -13,8 +13,6 @@ use super::{GRACE, Pace, STALL};
 /// Time between two ticks of the paces under test
 const WAIT: Duration = Duration::from_millis(25);
 
-/// Returns a pace of `windows` that starts at `start`, with its tick due
-/// [`WAIT`] later
 fn pace(windows: Vec<window::Id>, start: Instant) -> Pace {
     Pace::new(windows, start, start + WAIT)
 }

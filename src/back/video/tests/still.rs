@@ -24,9 +24,6 @@ use crate::back::{
     },
 };
 
-/// Returns a directory that holds `slide.png`, a picture four pixels wide
-/// and two high, all of them of `color`, along with the path of the
-/// picture
 fn slide(color: Rgba<u8>) -> (TempDir, PathBuf) {
     let directory = tempfile::tempdir().expect("a directory can be made");
     let path = directory.path().join("slide.png");
@@ -36,8 +33,6 @@ fn slide(color: Rgba<u8>) -> (TempDir, PathBuf) {
     (directory, path)
 }
 
-/// Returns a workspace in the directory of the picture at `path`, with one
-/// list of one picture cue that shows it, whose file has loaded
 fn showing(path: &Path) -> Workspace {
     showing_cue(
         path,

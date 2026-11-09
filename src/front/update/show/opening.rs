@@ -16,8 +16,6 @@ use crate::{
 };
 
 impl App {
-    /// Asks which show to open, starting in the directory of the show on
-    /// screen, and starts reading the show chosen
     pub(in crate::front::update) fn choose_show(&self) -> Task<Message> {
         let chooser = chooser(self.show.directory()).set_title("Open show");
         let unsaved_directory = self.unsaved_directory.clone();
@@ -25,12 +23,10 @@ impl App {
             .and_then(move |chosen| open(Some(chosen.path().to_owned()), unsaved_directory.clone()))
     }
 
-    /// Puts the show that `read` found on screen in place of the one
-    /// there, and brings back the unsaved changes kept for it as one
-    /// change.  The show that was on screen keeps its own unsaved changes,
-    /// which the keeper keeps as they happen.  A show opened again while it
-    /// is on screen with unsaved changes brings back the changes on screen,
-    /// since its kept file may still wait for the newest of them.
+    /// The show that was on screen keeps its own unsaved changes, which the
+    /// keeper keeps as they happen.  A show opened again while it is on
+    /// screen with unsaved changes brings back the changes on screen, since
+    /// its kept file may still wait for the newest of them.
     pub(in crate::front::update) fn opened(self, read: Read) -> Self {
         let name = read.file.as_deref().map_or_else(
             || "a new show".to_owned(),

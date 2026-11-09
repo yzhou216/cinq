@@ -73,10 +73,6 @@ impl Audio {
         failures.into_iter().fold(workspace, Workspace::apply)
     }
 
-    /// Starts, follows, and stops sounds, so that each sounding audio or
-    /// video cue plays its clip at the level and pause state of its run,
-    /// and nothing else plays.  Returns the commands that record the sounds
-    /// that could not start.
     fn play(&mut self, workspace: &Workspace) -> Vec<Command> {
         let Ok(manager) = &mut self.output else {
             return Vec::new();
@@ -121,8 +117,6 @@ impl Audio {
     }
 }
 
-/// Starts the sound of a run, from the sound made ready ahead if there is
-/// one
 fn started(
     manager: &mut AudioManager,
     preloader: &mut Preloader,
@@ -173,7 +167,6 @@ pub(super) fn probe(file: &Path) -> Result<f32, String> {
         .map_err(reason)
 }
 
-/// Describes why the sound of a file cannot be played
 fn reason(error: FromFileError) -> String {
     match error {
         FromFileError::IoError(error) if error.kind() == io::ErrorKind::NotFound => {

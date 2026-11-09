@@ -43,7 +43,6 @@ const MODIFIERS: [NamedKey; 14] = [
     NamedKey::Super,
 ];
 
-/// One press of a key, with the modifiers held
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Press {
     key: Name,
@@ -55,7 +54,6 @@ pub struct Press {
     shift: bool,
 }
 
-/// Key itself, apart from the modifiers held
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Name {
     Char(char),

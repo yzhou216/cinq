@@ -4,14 +4,6 @@
 
 //! Configuration file, which chooses a keymap and binds actions to keys
 //!
-//! The file is `cinq/config.toml` in the platform's configuration
-//! directory, as the dirs crate finds it, unless the command line names a
-//! directory of its own to read `config.toml` from.  [`parse`](mod@parse)
-//! reads its text into key bindings, and [`watch`](fn@watch) reads the file
-//! again whenever it changes, so that the keys follow the file while the
-//! program runs, and writes what is wrong with it to standard error each
-//! time, pointing into its text, as [`problem`] tells.
-//!
 //! `keymap` names the keymap that the keys start from, which is vi unless
 //! the file names another: a shipped one, or one of the `[keymaps]` table,
 //! which starts from the keymap that its `from` names, or from no keys at
@@ -46,8 +38,6 @@ pub(super) use parse::parse;
 pub use problem::Problem;
 pub use watch::{Errors, guard, restore, watch};
 
-/// Key bindings, along with where they came from and what was wrong with
-/// the file they came from
 #[derive(Debug, Clone, Default)]
 pub struct Config {
     pub keymap: Keymap,
@@ -60,7 +50,6 @@ pub struct Config {
     pub problems: Vec<Problem>,
 }
 
-/// Where the key bindings came from
 #[derive(Debug, Clone, Default)]
 pub enum Source {
     /// Configuration file that is there, even when it cannot be read
@@ -82,8 +71,8 @@ impl Source {
     }
 }
 
-/// Returns the file that may hold the configuration.  The directory goes by
-/// its absolute path, which the watcher reports changes by.
+/// The directory goes by its absolute path, which the watcher reports
+/// changes by.
 pub fn file(directory: Option<&Path>) -> Option<PathBuf> {
     directory
         .map(|directory| path::absolute(directory).unwrap_or_else(|_| directory.to_owned()))
@@ -93,8 +82,6 @@ pub fn file(directory: Option<&Path>) -> Option<PathBuf> {
 
 const MADE: &str = "# Key bindings of cinq, which the manual page cinq(5) describes\n";
 
-/// Makes the configuration file `file`, along with the directories that it
-/// goes in, holding [`MADE`], unless the file is there already
 pub fn make(file: &Path) -> io::Result<()> {
     if let Some(directory) = file.parent() {
         fs::create_dir_all(directory)?;
@@ -106,8 +93,6 @@ pub fn make(file: &Path) -> io::Result<()> {
     }
 }
 
-/// Reads the configuration from `file`, or gives the defaults when there
-/// is no such file
 pub fn load(file: Option<&Path>) -> Config {
     let Some(file) = file else {
         return Config::default();

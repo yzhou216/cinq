@@ -22,14 +22,12 @@ use serde::{Deserialize, Serialize};
 use super::Workspace;
 use crate::back::{Advance, Cue, CueId, CueList, Kind, LEVELS, LOUDEST, SILENCE};
 
-/// Show as its file holds it
 #[derive(Serialize, Deserialize)]
 struct ShowFile {
     #[serde(default, rename = "list")]
     lists: Vec<ListFile>,
 }
 
-/// Cue list as a show file holds it
 #[derive(Serialize, Deserialize)]
 struct ListFile {
     name: String,
@@ -37,11 +35,8 @@ struct ListFile {
     cues: Vec<CueFile>,
 }
 
-/// Cue as a show file holds it, without the settings that its kind does
-/// not use, and without those that keep their defaults, apart from its
-/// level, its duration, and whether a fade stops its target.  A setting
-/// that is `None` stays out of the file, since TOML has no null, and one
-/// that the file leaves out reads as `None`.
+/// Setting that is `None` stays out of the file, since TOML has no null,
+/// and one that the file leaves out reads as `None`.
 #[derive(Serialize, Deserialize)]
 struct CueFile {
     id: u32,
@@ -143,8 +138,6 @@ impl ListFile {
 }
 
 impl CueFile {
-    /// Returns a cue as a file holds it, where it names the file it plays
-    /// as `file`
     fn of(cue: &Cue, file: String) -> Self {
         let set = |seconds: f32| Some(seconds).filter(|&seconds| seconds > 0.0);
         let plays = cue.kind.plays_file();
@@ -168,8 +161,6 @@ impl CueFile {
         }
     }
 
-    /// Returns the cue that the file holds, with the defaults of its kind
-    /// for the settings that the file leaves out
     fn cue(self) -> Cue {
         Cue::new(CueId(self.id), self.number, self.kind, self.name)
             .file(self.file)
@@ -188,7 +179,6 @@ impl CueFile {
     }
 }
 
-/// Returns whether the next cue waits for GO, which a file leaves unsaid
 fn is_manual(advance: &Advance) -> bool {
     *advance == Advance::Manual
 }

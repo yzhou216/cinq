@@ -111,7 +111,6 @@ struct Cinq {
     keeper: Keeper,
 }
 
-/// State of the interface, around the workspace that it shows
 #[derive(Default)]
 struct App {
     workspace: Workspace,
@@ -162,13 +161,10 @@ impl App {
         &self.workspace.lists()[self.list]
     }
 
-    /// Returns the selection if it belongs to the list on screen
     fn selected_here(&self) -> Option<CueId> {
         self.selected.filter(|_| self.selected_row().is_some())
     }
 
-    /// Returns the row of the selection in the list on screen, if it
-    /// belongs there
     fn selected_row(&self) -> Option<usize> {
         self.selected.and_then(|id| self.current().position(id))
     }
@@ -177,14 +173,10 @@ impl App {
         !self.workspace.show_mode()
     }
 
-    /// Returns whether any fired cue counts time, which a paused cue does
-    /// not
     fn running(&self) -> bool {
         self.workspace.active().iter().any(|active| !active.paused)
     }
 
-    /// Returns whether the picture of any video cue moves, as it does while
-    /// the cue shows it and is not paused
     fn moving_pictures(&self) -> bool {
         self.workspace
             .active()

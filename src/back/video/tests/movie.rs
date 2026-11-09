@@ -63,8 +63,6 @@ pub(in crate::back) fn picture_number(pixels: &[u8]) -> usize {
     ((luma - first as f64) / step as f64).round().max(0.0) as usize
 }
 
-/// Writes a test video to `path`, with the pictures numbered in `broken`
-/// garbled
 fn write_movie(path: &Path, count: usize, sync_every: usize, broken: &[usize]) {
     let (width, height) = SIZE;
     let avc = AvcConfig {

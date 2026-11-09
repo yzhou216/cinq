@@ -10,7 +10,6 @@ use std::path::Path;
 
 use super::*;
 
-/// Returns a video cue that plays `movie.mp4`
 fn video(id: u32) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Video, "Movie")
         .file("movie.mp4")

@@ -16,10 +16,9 @@ pub struct Outcome {
 }
 
 impl Keymap {
-    /// Reads `press` after the keys typed before it.  Digits before a
-    /// command count it.  Keys that begin no command are dropped, but a
-    /// key that breaks off a command starts a new one, so that a stray key
-    /// never swallows the next.
+    /// Keys that begin no command are dropped, but a key that breaks off a
+    /// command starts a new one, so that a stray key never swallows the
+    /// next.
     pub fn parse(&self, pending: &[Press], press: Press) -> Outcome {
         if let Some((action, _)) = self.at_once_bound(press) {
             return Outcome {
@@ -67,8 +66,6 @@ impl Keymap {
             })
     }
 
-    /// Returns whether a key typed into a text field acts anyway, as
-    /// [`Action::acts_in_fields`] tells
     pub fn acts_in_fields(&self, press: Press) -> bool {
         self.alone(press).is_some_and(Action::acts_in_fields)
     }
@@ -77,9 +74,6 @@ impl Keymap {
         self.alone(press).is_some_and(Action::acts_at_once)
     }
 
-    /// Returns the action that a key carries out by itself, apart from any
-    /// keys typed before it: one of [`Action::AT_ONCE`], whatever the
-    /// modifiers held, or the action bound to the key alone
     pub fn alone(&self, press: Press) -> Option<Action> {
         self.at_once_bound(press)
             .map(|(action, _)| action)
@@ -105,7 +99,6 @@ impl Keymap {
     }
 }
 
-/// Splits keys into the digits of a count and the command after them
 fn split_count(keys: &[Press]) -> (&[Press], &[Press]) {
     keys.split_at(keys.iter().take_while(|key| key.digit().is_some()).count())
 }

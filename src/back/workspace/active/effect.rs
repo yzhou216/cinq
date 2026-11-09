@@ -48,7 +48,6 @@ impl Fade {
     }
 }
 
-/// What a fired cue does once its pre-wait is over
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(in crate::back) enum Effect {
     /// Plays a clip of the sound file of an audio cue

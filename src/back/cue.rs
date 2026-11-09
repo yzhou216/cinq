@@ -156,16 +156,10 @@ impl Cue {
         }
     }
 
-    /// Returns whether the action of the cue goes on until something stops
-    /// it, as that of a picture cue does, and that of an audio or video cue
-    /// that loops
     pub fn endless(&self) -> bool {
         self.kind == Kind::Picture || self.loops()
     }
 
-    /// Returns whether this cue can act on `other`.  Fade cues act on audio,
-    /// video, and picture cues, stop cues on any cue but themselves, and the
-    /// remaining kinds on none.
     pub fn can_target(&self, other: &Cue) -> bool {
         other.id != self.id
             && match self.kind {
@@ -176,8 +170,7 @@ impl Cue {
     }
 
     /// Returns the delay between this cue firing and it firing the next cue,
-    /// or `None` when the next cue waits for GO, as it does after a cue that
-    /// follows and whose action never ends, such as a picture cue
+    /// or `None` when the next cue waits for GO
     fn next_delay(&self) -> Option<f32> {
         match self.advance {
             Advance::Manual => None,

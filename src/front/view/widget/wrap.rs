@@ -21,7 +21,6 @@ use iced::{
 
 use crate::front::Message;
 
-/// What a [`Wrap`] does with an event around its content
 pub trait Intercept {
     /// Handles an event before the content sees it, and returns whether
     /// the content sees it at all

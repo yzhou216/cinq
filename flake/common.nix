@@ -7,8 +7,6 @@
   perSystem =
     { lib, pkgs, ... }:
     {
-      # Values that the other files share, which their perSystem functions
-      # take as arguments, just as they take pkgs
       _module.args = {
         crate = (lib.importTOML ../Cargo.toml).package;
         # Date of the latest commit, which the manual pages and packages
@@ -16,8 +14,6 @@
         sourceDateEpoch = toString inputs.self.lastModified;
         # Rustfmt with the unstable settings of rustfmt.toml turned on
         rustfmt = pkgs.rustfmt.override { asNightly = true; };
-        # Moves the program into the app bundle that builds for Darwin lay
-        # out, and links it back from bin
         installBundle = ''
           cp -r target/Applications "$out"
           mv "$out/bin/cinq" "$out/Applications/cinq.app/Contents/MacOS"

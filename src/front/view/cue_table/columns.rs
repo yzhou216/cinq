@@ -2,8 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Columns of the cue list: the text of each cell, the width of each
-//! column, and the state of a cue
+//! Columns of the cue list
 
 use iced::{Theme, widget::text};
 use strum::{IntoStaticStr, VariantArray};

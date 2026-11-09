@@ -33,8 +33,6 @@ use crate::{
     },
 };
 
-/// Actions whose keys give way in turn when the bar is too narrow, the
-/// first to go first
 const YIELDING: [Action; 4] = [Action::Go, Action::Panic, Action::Save, Action::Help];
 
 pub(super) fn view(app: &App) -> Element<'_, Message> {

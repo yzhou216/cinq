@@ -19,9 +19,6 @@ use super::{
     file::{kept_file, remove, write},
 };
 
-/// Keeper of unsaved changes, which writes them to the kept file of their
-/// show as they happen, and removes the file once they are gone
-///
 /// The keeper decides at once what to write and what to remove, and leaves
 /// the writing to a thread of its own, so that a slow disk never holds up
 /// GO, Panic, or the clock.  The thread makes the changes in the order that
@@ -114,7 +111,6 @@ impl Drop for Keeper {
     }
 }
 
-/// Work for the thread of a keeper
 #[derive(Debug)]
 enum Job {
     Change(Change),
@@ -122,7 +118,6 @@ enum Job {
     Settle(mpsc::Sender<()>),
 }
 
-/// Change to a kept file
 #[derive(Debug)]
 enum Change {
     Write(PathBuf, String),
@@ -136,10 +131,9 @@ impl Change {
         }
     }
 
-    /// Makes the change, and returns why it failed, if it did, naming the
-    /// show by its kept file, which goes by the name of the show's file.  A
-    /// write does not wait for the disk, since a kept file only has to
-    /// outlast a crash of the program.
+    /// A failure names the show by its kept file, which goes by the name of
+    /// the show's file.  A write does not wait for the disk, since a kept
+    /// file only has to outlast a crash of the program.
     fn made(&self) -> Result<(), String> {
         match self {
             Change::Write(file, text) => write(file, text, false),
@@ -152,9 +146,8 @@ impl Change {
     }
 }
 
-/// Makes the changes that `jobs` brings, and tells `failed` why those that
-/// fail do.  Each turn takes every job that waits, and makes only the
-/// newest change to each file, in the order of those changes.
+/// Each turn takes every job that waits, and makes only the newest change
+/// to each file, in the order of those changes.
 fn work(jobs: &mpsc::Receiver<Job>, failed: &mpsc::Sender<String>) {
     jobs.iter().for_each(|first| {
         let (changes, settles): (Vec<Change>, Vec<mpsc::Sender<()>>) = iter::once(first)

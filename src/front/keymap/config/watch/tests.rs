@@ -29,24 +29,19 @@ use crate::front::keymap::{
 /// Time that the watcher has to see a change before the test fails
 const PATIENCE: Duration = Duration::from_secs(10);
 
-/// Waits for a configuration from the watcher that `wanted` accepts
 fn until(configs: &mpsc::Receiver<Config>, wanted: impl Fn(&Config) -> bool) {
     let found = iter::from_fn(|| configs.recv_timeout(PATIENCE).ok()).any(|config| wanted(&config));
     assert!(found, "the watcher sent no such configuration");
 }
 
-/// Accepts a configuration read from a file that starts from `preset`
 fn from_file(preset: Preset) -> impl Fn(&Config) -> bool {
     move |config| matches!(config.source, Source::File(_)) && config.keymap.name() == preset.name()
 }
 
-/// Accepts the defaults of a configuration whose file is missing
 fn defaults(config: &Config) -> bool {
     matches!(config.source, Source::Missing(_))
 }
 
-/// Watches `file` on a thread of its own, writing problems to `errors`, and
-/// returns what the watcher sends
 fn watched(file: PathBuf, errors: Errors) -> mpsc::Receiver<Config> {
     let (sender, configs) = mpsc::channel();
     thread::spawn(move || {

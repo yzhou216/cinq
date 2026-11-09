@@ -46,8 +46,6 @@ fn show(selected: Option<CueId>) -> App {
     }
 }
 
-/// Presses a key with the default bindings while the help page is open,
-/// and returns whether the page stays open
 fn stays_open(key: Key) -> bool {
     let press = Press::from_key(&key, Modifiers::empty()).expect("keys in the tests are named");
     let open = App {

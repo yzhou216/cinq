@@ -23,8 +23,6 @@ const STORM: &str = "/shows/storm.cinq.toml";
 
 const CALM: &str = "/shows/calm.cinq.toml";
 
-/// Returns what reading the show in `file` found: `text` in its file, and
-/// `kept` among the unsaved changes
 fn found(file: Option<&str>, text: Option<&str>, kept: Option<&str>) -> Read {
     Read {
         file: file.map(PathBuf::from),
@@ -34,17 +32,14 @@ fn found(file: Option<&str>, text: Option<&str>, kept: Option<&str>) -> Read {
     }
 }
 
-/// Returns the state of the interface with the storm show open
 fn storm() -> App {
     App::default().opened(found(Some(STORM), Some(SHOW), None))
 }
 
-/// Renames the memo cue of the storm show
 fn renamed(app: App, name: &str) -> App {
     app.send(Command::Edit(CueId(1), Edit::Name(name.to_owned())))
 }
 
-/// Returns what saving the show of `app` in `file` finds when it succeeds
 fn saving(app: &App, file: &str) -> Saved {
     let file = PathBuf::from(file);
     Saved {

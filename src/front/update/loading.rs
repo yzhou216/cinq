@@ -19,8 +19,6 @@ use crate::{
 };
 
 impl App {
-    /// Starts loading the files that audio, video, and picture cues name and
-    /// have not loaded, unless a load is under way
     pub(super) fn load(self) -> (Self, Task<Message>) {
         let loads = Load::all(&self.workspace, self.workspace.unloaded());
         if self.loading || loads.is_empty() {
@@ -40,8 +38,6 @@ impl App {
         }
     }
 
-    /// Starts reading again the files that could not be played, unless a
-    /// recheck is under way
     pub(super) fn recheck(self) -> (Self, Task<Message>) {
         let loads = Load::all(&self.workspace, self.workspace.failed());
         if self.rechecking || loads.is_empty() {
@@ -72,8 +68,6 @@ impl App {
     }
 }
 
-/// Reads the files of `loads` on a thread of its own, and hands what it
-/// found to `done`, along with the identity of the show they belong to
 fn read(loads: Vec<Load>, show: u64, done: fn(u64, Vec<Command>) -> Message) -> Task<Message> {
     on_own_thread(move || load_files(loads)).map(move |found| done(show, found))
 }

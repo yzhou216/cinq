@@ -25,9 +25,8 @@ type Section = fn(&Man, &mut dyn Write) -> io::Result<()>;
 const BEFORE_SYNOPSIS: [Section; 2] = [Man::render_title, Man::render_name_section];
 const AFTER_SYNOPSIS: [Section; 2] = [Man::render_description_section, Man::render_options_section];
 
-/// Renders cinq(1) for `platform`, dated `date`.  Each section comes with
-/// the same preamble, which defines the apostrophe, and the page keeps it
-/// only once.
+/// Each section comes with the same preamble, which defines the apostrophe,
+/// and the page keeps it only once.
 pub fn command_page(platform: Platform, date: &str) -> String {
     let mut command = Cli::command();
     // Help and version options, which building adds
@@ -106,10 +105,7 @@ fn usage(argument: &Arg) -> Vec<Inline> {
         .collect()
 }
 
-/// Returns the sections of cinq(1) that clap_mangen cannot derive from the
-/// command line
 fn epilogue(platform: Platform, notice: &str) -> Roff {
-    // Lines of the notice, each after a line break but the first
     let notice: Vec<Inline> = notice
         .lines()
         .flat_map(|line| [line_break(), roman(line)])

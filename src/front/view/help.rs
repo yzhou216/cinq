@@ -113,8 +113,6 @@ fn notice<'a>() -> [Element<'a, Message>; 3] {
     ]
 }
 
-/// Returns a paragraph whose link `open` turns into the message that opens
-/// what it names
 fn paragraph<'a, Link: Clone + 'static>(
     before: &'a str,
     link: Span<'a, Link>,

@@ -16,9 +16,8 @@
       # glibc of Nixpkgs, which cinq links against, so that other
       # distributions need this one or a newer one
       glibc = lib.versions.majorMinor pkgs.glibc.version;
-      # cinq for other distributions of GNU/Linux, laid out under usr,
-      # which loads the system's loader and libraries rather than those
-      # of the Nix store
+      # cinq for other distributions of GNU/Linux, with their loader and
+      # libraries in place of the Nix store's
       portable =
         let
           directory = if pkgs.stdenv.hostPlatform.isx86_64 then "lib64" else "lib";
@@ -30,10 +29,9 @@
           chmod -R u+w "$out/usr"
           patchelf --set-interpreter ${loader} --remove-rpath "$out/usr/bin/cinq"
         '';
-      # Package of portable cinq in the format of nfpm's `packager`, which
-      # depends on glibc, the unwinder of GCC that the standard library of
-      # Rust takes, ALSA, and the libraries that cinq loads, apart from
-      # those of the GPU, without which it draws in software
+      # Package that depends on the unwinder of GCC, which Rust's standard
+      # library takes, but on no library of the GPU, without which cinq
+      # draws in software
       nfpm =
         packager:
         pkgs.runCommand "${crate.name}-${packager}"

@@ -15,19 +15,14 @@
       ...
     }:
     {
-      # What nix flake check holds the repository to, along with the
-      # formatting below: the build of cinq, which runs its tests, and
-      # the REUSE specification for every file
       checks = {
-        cinq = config.packages.cinq;
+        cinq = config.packages.cinq; # Its build runs the tests
         reuse = pkgs.runCommandLocal "reuse-lint" { nativeBuildInputs = [ pkgs.reuse ]; } ''
           reuse --root ${../.} lint
           touch "$out"
         '';
       };
 
-      # Formatters of every kind of file in the repository that has one,
-      # which nix fmt runs, and which nix flake check holds the files to
       treefmt = {
         projectRootFile = "flake.nix";
         programs = {

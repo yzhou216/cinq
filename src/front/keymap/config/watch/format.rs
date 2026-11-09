@@ -19,7 +19,6 @@ use taplo::{
     parser,
 };
 
-/// Formats `file` in place, when it is TOML that formatting changes
 pub(super) fn reformat(file: &Path) {
     let Ok(text) = fs::read_to_string(file) else {
         return;
@@ -33,11 +32,8 @@ pub(super) fn reformat(file: &Path) {
     }
 }
 
-/// Returns `text` formatted, or nothing when it is not TOML or is formatted
-/// already
 fn formatted(text: &str) -> Option<String> {
     let parsed = parser::parse(text);
-    // Order that the file was written in stays, whatever taplo's defaults
     let options = Options {
         reorder_keys: false,
         reorder_arrays: false,

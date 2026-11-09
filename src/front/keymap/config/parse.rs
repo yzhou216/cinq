@@ -71,13 +71,10 @@ pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, Vec<Problem>) {
     (keymap, problems)
 }
 
-/// Builds the keymap named `name`: a shipped one, or one of `keymaps`,
-/// which starts from the keymap that its `from` names, or from no keys at
-/// all without one, and binds the keys of its other entries.  `named_at` is
-/// the part of the text that names the keymap, if any, where a problem with
-/// the name lies.  `chain` holds the keymaps that start from this one, so
-/// that a keymap that comes back around to itself starts from no keys
-/// instead.
+/// `named_at` is the part of the text that names the keymap, if any, where a
+/// problem with the name lies.  `chain` holds the keymaps that start from
+/// this one, so that a keymap that comes back around to itself starts from
+/// no keys instead.
 fn build(
     name: &str,
     named_at: Option<Range<usize>>,
@@ -117,9 +114,6 @@ fn build(
     Ok((keymap, [problems, unbound].concat()))
 }
 
-/// Binds the keys of each entry of `entries` to its action in place of the
-/// keys that `keymap` gives it, along with the problems of the entries,
-/// each written after `place`
 fn bind<'a>(
     keymap: Keymap,
     entries: impl IntoIterator<Item = (&'a Spanned<DeString<'a>>, &'a Spanned<DeValue<'a>>)>,
@@ -137,9 +131,6 @@ fn bind<'a>(
         })
 }
 
-/// Binds the keys of one entry of the `[keys]` table or of a keymap to its
-/// action in place of the keys that `keymap` gives it, along with the
-/// problems that leave some of them out
 fn entry(
     keymap: Keymap,
     name: &Spanned<DeString>,
@@ -165,13 +156,10 @@ fn entry(
             keys.map_err(|problem| Problem::at(value.span(), problem))
         })
         .partition_result();
-    // Sequence listed twice binds it once
     let sequences = sequences.into_iter().unique().collect();
     (keymap.with(action, sequences), problems)
 }
 
-/// Returns a value of the file along with the bytes of its text that the
-/// value spans
 fn spanned<T>(value: &Spanned<T>) -> (&T, Range<usize>) {
     (value.get_ref(), value.span())
 }

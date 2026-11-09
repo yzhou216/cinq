@@ -42,7 +42,6 @@ fn show(kind: Kind) -> App {
     }
 }
 
-/// Returns a picture of one black pixel
 fn picture() -> Picture {
     Picture {
         width: 1,

@@ -19,8 +19,6 @@ const SPACE: &str = "Space";
 const HELD: [NamedKey; 3] = [NamedKey::Control, NamedKey::Alt, NamedKey::Shift];
 
 impl Name {
-    /// Reads the name of a key: its key value in the specification, or
-    /// [`SPACE`] for the space bar
     pub(super) fn read(name: &str) -> Option<Self> {
         match name {
             SPACE => Some(Name::Char(' ')),
@@ -33,7 +31,6 @@ impl Name {
 }
 
 impl Press {
-    /// Reads one press, such as `j`, `Enter`, or `Control+d`
     fn read(token: &str) -> Result<Self, String> {
         let (held, key) = modifiers(token)?;
         let key = Name::read(key).ok_or_else(|| format!("`{token}` names no key"))?;
@@ -74,13 +71,10 @@ impl fmt::Display for Press {
     }
 }
 
-/// Reads a sequence of presses separated by spaces, such as `g g` or
-/// `Control+w j`
 pub fn sequence(text: &str) -> Result<Vec<Press>, String> {
     text.split_whitespace().map(Press::read).collect()
 }
 
-/// Writes a sequence of presses as the configuration file does
 pub fn written(presses: &[Press]) -> String {
     presses.iter().join(" ")
 }

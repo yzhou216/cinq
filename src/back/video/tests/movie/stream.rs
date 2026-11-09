@@ -62,7 +62,6 @@ impl Bits {
         self.u(pad as u32, 0)
     }
 
-    /// Adds `count` bytes of `value`
     fn bytes(self, count: usize, value: u8) -> Self {
         (0..count).fold(self, |bits, _| bits.u(8, u32::from(value)))
     }
@@ -86,7 +85,6 @@ impl Bits {
     }
 }
 
-/// Returns the sequence parameter set of every test video
 pub(super) fn sequence_parameter_set() -> Vec<u8> {
     let (width, height) = MACROBLOCKS;
     Bits::default()
@@ -107,7 +105,6 @@ pub(super) fn sequence_parameter_set() -> Vec<u8> {
         .unit(3, 7)
 }
 
-/// Returns the picture parameter set of every test video
 pub(super) fn picture_parameter_set() -> Vec<u8> {
     Bits::default()
         .ue(0) // pic_parameter_set_id

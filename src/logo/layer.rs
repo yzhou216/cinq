@@ -11,7 +11,6 @@ use kurbo::{Affine, BezPath};
 
 use super::SIZE;
 
-/// Shape painted onto the logo
 #[derive(Debug, Clone)]
 pub(super) struct Layer {
     outline: BezPath,
@@ -47,8 +46,6 @@ impl Layer {
         Self { opacity, ..self }
     }
 
-    /// Returns the layer mirrored from left to right across the middle of
-    /// the grid
     pub(super) fn mirrored(self) -> Self {
         let mirror = Affine::translate((SIZE, 0.0)) * Affine::FLIP_X;
         Self {

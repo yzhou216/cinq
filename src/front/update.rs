@@ -4,10 +4,7 @@
 
 //! Update cycle, which applies each message to the interface state
 //!
-//! Each concern of the update has a module of its own, and only [`cinq`]
-//! reaches the parts with side effects.  The key bindings follow the
-//! configuration file as it changes, through
-//! [`keymap::config::watch`](fn@super::keymap::config::watch).
+//! Only [`cinq`] reaches the parts with side effects.
 
 mod cinq;
 mod clock;
@@ -39,8 +36,6 @@ impl App {
         (self, task)
     }
 
-    /// Applies one message to the state, along with the widget operations
-    /// it asks for
     fn handled(self, message: Message) -> (Self, Task<Message>) {
         let app = match message {
             Message::Typed { press, repeat } => return self.typed(press, repeat),
@@ -168,13 +163,12 @@ impl App {
         commands.into_iter().fold(self, Self::send)
     }
 
-    /// Returns the state after one message, with the widget operations it
-    /// asks for.  Anything the operator does other than typing drops a
-    /// command typed halfway, so that a stray `d` cannot wait through a
-    /// click and an edit to delete a cue.  A level typed so far gives way to
-    /// the level of its cue as well, apart from a click, which can land in
-    /// its own field.  A link that failed to open is forgotten once the help
-    /// page that holds it closes.
+    /// Anything the operator does other than typing drops a command typed
+    /// halfway, so that a stray `d` cannot wait through a click and an edit
+    /// to delete a cue.  A level typed so far gives way to the level of its
+    /// cue as well, apart from a click, which can land in its own field.  A
+    /// link that failed to open is forgotten once the help page that holds
+    /// it closes.
     fn next(self, message: Message) -> (Self, Task<Message>) {
         let passive = matches!(
             message,

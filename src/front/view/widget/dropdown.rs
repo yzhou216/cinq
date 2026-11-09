@@ -44,7 +44,6 @@ pub struct Dropdown<'a, T> {
     keymap: &'a Keymap,
 }
 
-/// Returns a drop-down list whose menu the keys of `keymap` move through
 pub fn dropdown<'a, T>(
     options: impl Into<Vec<T>>,
     selected: Option<T>,

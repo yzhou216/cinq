@@ -18,7 +18,6 @@ impl Active {
         )
     }
 
-    /// Returns the clip of an audio or video cue while it has a sound
     pub(in crate::back) fn sound(&self) -> Option<Clip> {
         self.effect.sound().filter(|_| self.under_way())
     }
@@ -46,8 +45,6 @@ impl Active {
         matches!(self.shown(), Some(Shown::Clip(_))) && self.under_way()
     }
 
-    /// Returns whether the cue plays the clip of an audio or video cue,
-    /// with sound or without, or shows the picture of a picture cue
     pub(in crate::back::workspace) fn playing(&self) -> bool {
         self.effect.plays() && self.under_way()
     }

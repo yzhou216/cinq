@@ -67,7 +67,6 @@ pub fn after(
     })
 }
 
-/// Recipe of [`after`]
 struct Ticks {
     last: Option<Instant>,
     wait: Duration,
@@ -110,7 +109,6 @@ impl Recipe for Ticks {
     }
 }
 
-/// Returns the window that `event` tells has drawn, if it tells of one
 fn drawn(event: subscription::Event) -> Option<window::Id> {
     match event {
         subscription::Event::Interaction {
@@ -136,8 +134,6 @@ struct Pace {
 }
 
 impl Pace {
-    /// Returns a pace whose next tick comes due at `due` and waits for
-    /// `windows` to draw from `since`
     fn new(windows: Vec<window::Id>, since: Instant, due: Instant) -> Self {
         Self {
             since,
@@ -160,7 +156,6 @@ impl Pace {
         }
     }
 
-    /// Returns the pace once `window` has drawn at `now`
     fn drawn(self, window: window::Id, now: Instant) -> Self {
         let undrawn = self
             .undrawn
