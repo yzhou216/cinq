@@ -19,7 +19,7 @@ Minimal cue-based show controller, the
   back.  Undo covers every edit, and nothing ever asks before acting.
 - **Keyboard first.**  vi and CUA keymaps, rebindable in a file that reloads
   as you save it.  GO and Panic act from anywhere, even halfway through
-  another key sequence.
+  another key sequence, apart from Space while a text field has the keyboard.
 - **Audio cues** in WAV, FLAC, Ogg Vorbis, MP3, or AAC, with start and end
   times, seamless loops, and levels that change while they play.
 - **Video cues** in H.264 and MP4, with their sound, which cinq decodes
