@@ -74,8 +74,7 @@
         cross:
         let
           inherit (cross.stdenv) cc hostPlatform;
-          underscored = builtins.replaceStrings [ "-" ] [ "_" ] hostPlatform.rust.rustcTarget;
-          variable = "CARGO_TARGET_${lib.toUpper underscored}";
+          variable = "CARGO_TARGET_${hostPlatform.rust.cargoEnvVarTarget}";
         in
         crossBuilt {
           platform = hostPlatform;
