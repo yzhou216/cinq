@@ -40,7 +40,7 @@ the help page, which lists every key, and config.toml can change the keys,
 as cinq(5) describes.";
 
 // Name, version, and summary come from the manifest of the crate
-#[derive(Debug, Parser)]
+#[derive(Parser)]
 #[command(version, long_version = LONG_VERSION, about, long_about = LONG_ABOUT)]
 pub struct Cli {
     /// Open the show in SHOW, or start a new show that saving puts there

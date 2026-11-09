@@ -11,7 +11,7 @@ use kurbo::{Affine, BezPath};
 
 use super::SIZE;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(super) struct Layer {
     outline: BezPath,
     paint: Paint,
@@ -20,7 +20,7 @@ pub(super) struct Layer {
 
 /// How a shape is painted: filled with a color, or stroked in a color at a
 /// width, with round ends and corners
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 enum Paint {
     Fill(&'static str),
     Stroke(&'static str, f64),

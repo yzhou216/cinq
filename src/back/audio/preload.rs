@@ -22,7 +22,7 @@ use super::voice;
 use crate::back::{Clip, CueId};
 
 /// Part of a file that a run of an audio or video cue may start
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub(super) struct Wanted {
     pub(super) path: PathBuf,
     pub(super) clip: Clip,

@@ -63,23 +63,23 @@ pub struct Stage {
 }
 
 impl Stage {
-    pub fn window(&self) -> Option<window::Id> {
+    pub(super) fn window(&self) -> Option<window::Id> {
         self.window
     }
 
-    pub fn due(&self) -> Option<f64> {
+    pub(super) fn due(&self) -> Option<f64> {
         self.due
     }
 
-    pub(in crate::front) fn with_due(self, due: Option<f64>) -> Self {
+    pub(super) fn with_due(self, due: Option<f64>) -> Self {
         Self { due, ..self }
     }
 
-    pub fn is_window(&self, window: window::Id) -> bool {
+    pub(super) fn is_window(&self, window: window::Id) -> bool {
         self.window == Some(window)
     }
 
-    pub fn has_keyboard(&self) -> bool {
+    pub(super) fn has_keyboard(&self) -> bool {
         self.keyboard
     }
 
@@ -95,7 +95,7 @@ impl Stage {
         self.pictures.get(&cue)
     }
 
-    pub(in crate::front) fn with_pictures(
+    pub(super) fn with_pictures(
         self,
         workspace: &Workspace,
         pictures: Vec<(CueId, Picture)>,
@@ -133,7 +133,7 @@ impl App {
     /// A window that opens fullscreen keeps the keyboard, while the main
     /// window asks for it back from one that opens as a window, which the
     /// window manager may refuse, as those of Wayland do.
-    pub(in crate::front) fn staged(self) -> (Self, Task<Message>) {
+    pub(super) fn staged(self) -> (Self, Task<Message>) {
         if let Some(window) = self.stage.window {
             let raising = if self.stage.cued {
                 raised(window)

@@ -25,8 +25,7 @@ use mp4::{MediaType, Mp4Reader, TrackType};
 use rust_h264::nal::{NalUnit, parse_avcc};
 
 use super::unreadable;
-pub(super) use timing::Sample;
-use timing::timeline;
+use timing::{Sample, timeline};
 
 const NO_VIDEO: &str = "holds no H.264 video";
 
@@ -53,7 +52,7 @@ pub(super) struct Track {
     /// length in [`PARAMETER_LENGTH`] bytes
     parameters: Vec<u8>,
     /// Seconds that the picture lasts
-    pub(super) duration: f64,
+    duration: f64,
     sound: bool,
 }
 

@@ -37,7 +37,7 @@ pub use keeper::Keeper;
 
 const EXTENSION: &str = "cinq.toml";
 
-#[derive(Debug, Clone, Default)]
+#[derive(Default)]
 pub struct Show {
     /// Serial number of the opening that brought the show, which tells a
     /// show that moved to another file apart from another show

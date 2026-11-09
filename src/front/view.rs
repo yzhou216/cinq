@@ -68,7 +68,7 @@ const SIDEBAR: f32 = 300.0;
 
 /// Line between the parts of the status bar, and between a message and the
 /// hint of the key that answers it
-pub const LINE: &str = " | ";
+const LINE: &str = " | ";
 
 /// Returns `told` followed by the hint of the key of `action`, which
 /// answers it, when `keymap` binds the action to a key

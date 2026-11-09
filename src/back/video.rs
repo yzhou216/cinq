@@ -48,7 +48,7 @@ pub const PICTURE_FILES: [&str; 3] = ["jpeg", "jpg", "png"];
 
 /// What a player decodes, which one made ready ahead has to match for a
 /// run to take it
-#[derive(Debug, Clone, PartialEq)]
+#[derive(PartialEq)]
 struct Showing {
     path: PathBuf,
     shown: Shown,

@@ -44,7 +44,7 @@ pub struct Config {
     pub source: Source,
     /// Text of the file, when it could be read, which the problems point
     /// into
-    pub text: Option<String>,
+    text: Option<String>,
     /// Problems with the file, each of which leaves the keys of the keymap
     /// in place
     pub problems: Vec<Problem>,

@@ -27,11 +27,11 @@ pub struct Problem {
 }
 
 impl Problem {
-    pub fn new(message: impl Into<String>) -> Self {
+    pub(super) fn new(message: impl Into<String>) -> Self {
         Self::at(None, message)
     }
 
-    pub fn at(span: impl Into<Option<Range<usize>>>, message: impl Into<String>) -> Self {
+    pub(super) fn at(span: impl Into<Option<Range<usize>>>, message: impl Into<String>) -> Self {
         Self {
             message: message.into(),
             span: span.into(),
@@ -52,7 +52,7 @@ impl Config {
     }
 
     /// Each report is a warning, since the rest of the file applies.
-    pub fn reports(&self) -> impl Iterator<Item = Report> + '_ {
+    pub(super) fn reports(&self) -> impl Iterator<Item = Report> + '_ {
         let file = self.source.file().unwrap_or(Path::new("config.toml"));
         let text = self.text.as_deref().unwrap_or_default();
         // Line break at the end, without which miette marks no place past

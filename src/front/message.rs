@@ -38,7 +38,7 @@ impl Tab {
 
 /// Text field that keys move the keyboard focus to, since iced itself
 /// moves it only on clicks
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Focus {
     /// Name field of the inspector, for editing the selected cue
     Name,

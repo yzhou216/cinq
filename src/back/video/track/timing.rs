@@ -13,7 +13,7 @@
 
 use std::iter;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub(in crate::back::video) struct Sample {
     /// Seconds into the picture at which the sample shows
     pub(in crate::back::video) shows: f64,

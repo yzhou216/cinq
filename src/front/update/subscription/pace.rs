@@ -55,7 +55,7 @@ const STALL: Duration = Duration::from_secs(1);
 /// tick, or `wait` from now without one, which waits for the windows of
 /// `windows` to draw, as far as [`GRACE`] and [`STALL`] allow.  The update
 /// of that tick asks for the next.
-pub fn after(
+pub(super) fn after(
     last: Option<Instant>,
     wait: Duration,
     windows: Vec<window::Id>,

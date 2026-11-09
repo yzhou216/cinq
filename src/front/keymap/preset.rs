@@ -12,7 +12,7 @@ use strum::{EnumString, IntoStaticStr, VariantArray};
 
 use super::Action;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, EnumString, IntoStaticStr, VariantArray)]
+#[derive(Debug, Clone, Copy, Default, EnumString, IntoStaticStr, VariantArray)]
 #[strum(serialize_all = "lowercase")]
 pub enum Preset {
     /// Keys in the manner of vi: letters move and act, some commands take

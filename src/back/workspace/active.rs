@@ -12,7 +12,7 @@ mod effect;
 mod playing;
 
 use crate::back::{Cue, CueId, Kind};
-pub(in crate::back) use effect::{Effect, Fade};
+pub(super) use effect::{Effect, Fade};
 
 /// Cue that GO has fired and that has not finished yet
 ///
@@ -21,7 +21,7 @@ pub(in crate::back) use effect::{Effect, Fade};
 /// edit changes the next run of a cue and not the one under way.  Only a
 /// running audio or video cue follows an edit at once: it takes a new
 /// level, and it stops when it gets a new file.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Active {
     pub id: CueId,
     /// Serial number of this firing, which tells a cue that GO fired again

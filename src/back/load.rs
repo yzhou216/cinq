@@ -18,7 +18,6 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use super::{Command, Cue, CueId, Kind, Media, Workspace, audio, video};
 
-#[derive(Debug)]
 pub struct Load {
     cue: CueId,
     file: String,

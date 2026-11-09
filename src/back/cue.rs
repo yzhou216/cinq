@@ -17,7 +17,7 @@ use std::{ffi::OsStr, fmt, ops::RangeInclusive, path::Path};
 
 use bon::Builder;
 
-pub use clip::{Clip, Shown};
+pub(in crate::back) use clip::{Clip, Shown};
 pub use edit::Edit;
 pub use kind::{Advance, Kind};
 pub use list::CueList;
@@ -156,7 +156,7 @@ impl Cue {
         }
     }
 
-    pub fn endless(&self) -> bool {
+    fn endless(&self) -> bool {
         self.kind == Kind::Picture || self.loops()
     }
 
