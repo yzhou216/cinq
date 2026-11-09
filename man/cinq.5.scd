@@ -216,8 +216,8 @@ A key goes by its value in the W3C's UI Events KeyboardEvent key Values.
 Control, Alt, and Shift can be held with a key, each joined to it by a *+*, as
 in *Control+d*, *Alt+ArrowUp*, or *Control+Shift+Tab*.
 A *+* with nothing after it is the plus key itself, as in *Control++*.
-Shift with a letter is the capital that it types, so that *Shift+g* is *G* and
-*Control+Shift+n* is *Control+N*.
+Shift with one of the letters *a* to *z* is the capital that it types, so that
+*Shift+g* is *G* and *Control+Shift+n* is *Control+N*.
 Any other key that types a character is written as the character it types
 with Shift held, as in *?* rather than *Shift+/*, and Shift cannot be added to
 it.
@@ -422,7 +422,8 @@ On a terminal, the problems take a screen of their own while any are left, as
 a pager's text does, and those of each reading take the place of those before.
 Once none are left, the terminal shows again what it showed before, and
 problems still left when *cinq* ends stay on it.
-A file takes the problems of each reading in turn.
+A file or a pipe takes the problems of each reading in turn, as does a
+terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
 
 - A file that cannot be read, or that is not TOML, leaves the keys of the vi
   keymap.
@@ -433,9 +434,9 @@ A file takes the problems of each reading in turn.
   keymap in use, and one named after a shipped keymap goes unused.
 - A setting other than *keymap*, *keymaps*, and *keys*, and an entry of a
   table that names no action, are ignored, and the rest of the file applies.
-- An empty string, a key that names no key, a sequence that starts with a
-  digit, and a value that is not a string are left out, and the action keeps
-  the other keys listed for it, which may be none.
+- An empty string, a key that names no key or that *KEYS* rules out, a
+  sequence that starts with a digit, and a value that is not a string are left
+  out, and the action keeps the other keys listed for it, which may be none.
 - A sequence bound to two actions goes to the one listed first under
   *ACTIONS*, and the other goes without it.
   A sequence that begins a longer one, as *g* begins *g g*, leaves the longer

@@ -126,8 +126,9 @@ cannot be opened.
 
 # STAGE
 
-A video cue plays H.264 video in MP4, as files ending in _.mp4_, _.m4v_, or
-_.mov_ hold it, along with the sound of its AAC track, in mono or stereo.
+A video cue plays H.264 video of the Baseline, Main, or High profile in MP4, as
+files ending in _.mp4_, _.m4v_, or _.mov_ hold it, along with the sound of its
+AAC track, in mono or stereo.
 A file without a sound track plays its picture alone.
 A video cue takes as long as the picture of its file, and its *start*, *end*,
 *loop*, *level*, and waits work as those of an audio cue do.
