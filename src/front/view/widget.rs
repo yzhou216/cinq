@@ -16,13 +16,43 @@ mod marked_row;
 mod pictures;
 mod wrap;
 
-use iced::{Event, Rectangle, mouse, touch};
+use iced::{
+    Event, Rectangle,
+    keyboard::{self, Key},
+    mouse, touch,
+};
 
+use crate::front::keymap::Press;
 pub use button::button;
 pub use dropdown::dropdown;
 pub use keep_keys::keep_keys;
 pub use marked_row::marked_row;
 pub use pictures::{Layer, pictures};
+
+/// Key pressed, with the [`Press`] that the key bindings know it by
+struct KeyPress<'a> {
+    key: &'a Key,
+    press: Option<Press>,
+    repeat: bool,
+}
+
+fn key_pressed(event: &Event) -> Option<KeyPress<'_>> {
+    let Event::Keyboard(keyboard::Event::KeyPressed {
+        key,
+        modified_key,
+        modifiers,
+        repeat,
+        ..
+    }) = event
+    else {
+        return None;
+    };
+    Some(KeyPress {
+        key,
+        press: Press::from_key(modified_key, *modifiers),
+        repeat: *repeat,
+    })
+}
 
 fn pressed(event: &Event) -> bool {
     matches!(
