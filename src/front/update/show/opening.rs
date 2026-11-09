@@ -18,9 +18,9 @@ use crate::{
 impl App {
     pub(in crate::front::update) fn choose_show(&self) -> Task<Message> {
         let chooser = chooser(self.show.directory()).set_title("Open show");
-        let unsaved_directory = self.unsaved_directory.clone();
+        let reader = self.reader.clone();
         Task::future(chooser.pick_file())
-            .and_then(move |chosen| open(Some(chosen.path().to_owned()), unsaved_directory.clone()))
+            .and_then(move |chosen| open(Some(chosen.path().to_owned()), reader.clone()))
     }
 
     /// The show that was on screen keeps its own unsaved changes, which the

@@ -101,3 +101,19 @@ fn shows_on_other_drives_keep_their_changes_in_other_files() {
     assert_eq!(kept(r"\\?\C:\x\a.cinq.toml"), kept(r"C:\x\a.cinq.toml"));
     assert_eq!(kept(r"C:\x\..\a.cinq.toml"), kept(r"C:\a.cinq.toml"));
 }
+
+#[test]
+fn reading_kept_changes_waits_for_the_newest_change_sent_before_the_asking() {
+    let (mut keeper, _directory) = keeper();
+    let reader = keeper.reader().expect("the keeper has a directory");
+    let file = Some(Path::new(STORM));
+    assert_eq!(reader.read(file), Ok(None));
+    let release = stalled(&keeper);
+    let changed = renamed(storm(), "Cue");
+    keeper.keep(&changed.show);
+    let later = renamed(changed, "Later");
+    keeper.keep(&later.show);
+    let answer = reader.asked(file);
+    drop(release);
+    assert_eq!(answer.recv(), Ok(Ok(Some(later.show.text))));
+}

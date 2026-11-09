@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Keeper of unsaved changes, and the thread of its own that writes them to
-//! the kept files of their shows
+//! Keeper of unsaved changes, and the thread of its own that writes and
+//! reads the kept files of their shows
 
 use std::{
     iter,
@@ -17,6 +17,7 @@ use itertools::{Either, Itertools};
 use super::{
     Show,
     file::{kept_file, remove, write},
+    read,
 };
 
 /// The keeper decides at once what to write and what to remove, and leaves
@@ -24,7 +25,8 @@ use super::{
 /// GO, Panic, or the clock.  The thread makes the changes in the order that
 /// they came, makes only the newest change to a file while several wait,
 /// and makes every change sent to it before the keeper goes, as the keeper
-/// does when the window closes.
+/// does when the window closes.  The same thread reads the kept files for
+/// the [`Reader`]s, each after the changes that came before the asking.
 pub struct Keeper {
     /// Directory that keeps unsaved changes, if the platform has one
     unsaved_directory: Option<PathBuf>,
@@ -33,7 +35,7 @@ pub struct Keeper {
     /// Kept file written last, with the identity of its show
     kept: Option<(u64, PathBuf)>,
     /// Way to the thread that makes the changes to the kept files, which
-    /// closes when the keeper goes, so that the thread ends
+    /// closes when the keeper and its readers go, so that the thread ends
     jobs: mpsc::Sender<Job>,
     /// Why the changes that failed did, in the order that they failed
     failures: mpsc::Receiver<String>,
@@ -88,16 +90,34 @@ impl Keeper {
         })
     }
 
+    /// Returns the way to read the kept files, or none when the platform
+    /// has no directory to keep them in
+    pub fn reader(&self) -> Option<Reader> {
+        self.unsaved_directory
+            .clone()
+            .map(|unsaved_directory| Reader {
+                unsaved_directory,
+                jobs: self.jobs.clone(),
+            })
+    }
+
     /// Sends `change` to the thread, which lives as long as the way to it,
     /// so that sending cannot fail
     fn send(&self, change: Change) {
         let _ = self.jobs.send(Job::Change(change));
     }
 
+    /// Has the thread run `then` once it has made every change sent before
+    pub(super) fn after(&self, then: impl FnOnce() + Send + 'static) {
+        let _ = self.jobs.send(Job::After(Box::new(then)));
+    }
+
     /// Waits for the thread to make every change sent to it so far
     pub(super) fn settled(&self) {
         let (done, settled) = mpsc::channel();
-        let _ = self.jobs.send(Job::Settle(done));
+        self.after(move || {
+            let _ = done.send(());
+        });
         let _ = settled.recv();
     }
 }
@@ -110,10 +130,47 @@ impl Drop for Keeper {
     }
 }
 
+/// Way to read the kept files that the keeper writes.  A file read straight
+/// from the disk can lack changes that the thread has yet to make, which
+/// brings back older text than the keeper was given, so the thread reads it
+/// after every change sent before the asking.
+#[derive(Clone)]
+pub struct Reader {
+    unsaved_directory: PathBuf,
+    jobs: mpsc::Sender<Job>,
+}
+
+impl Reader {
+    /// Returns the unsaved changes kept for the show in `file`, or for a new
+    /// show without one, or none when nothing is kept.  Waits for the
+    /// thread of the keeper, so it belongs on a thread of its own.
+    pub(super) fn read(&self, file: Option<&Path>) -> Result<Option<String>, String> {
+        self.asked(file)
+            .recv()
+            .unwrap_or_else(|_| Err("the keeper of unsaved changes has stopped".to_owned()))
+    }
+
+    /// Asks the thread for the changes kept for the show in `file`, and
+    /// returns the way to its answer
+    pub(super) fn asked(
+        &self,
+        file: Option<&Path>,
+    ) -> mpsc::Receiver<Result<Option<String>, String>> {
+        let kept = kept_file(&self.unsaved_directory, file);
+        let (reply, answer) = mpsc::channel();
+        let _ = self.jobs.send(Job::After(Box::new(move || {
+            let _ = reply.send(read(&kept));
+        })));
+        answer
+    }
+}
+
+type Then = Box<dyn FnOnce() + Send>;
+
 enum Job {
     Change(Change),
-    /// Answers once every change sent before it is made
-    Settle(mpsc::Sender<()>),
+    /// Runs once every change sent before it is made
+    After(Then),
 }
 
 enum Change {
@@ -143,15 +200,16 @@ impl Change {
     }
 }
 
-/// Each turn takes every job that waits, and makes only the newest change
-/// to each file, in the order of those changes.
+/// Each turn takes every job that waits, makes only the newest change to
+/// each file, in the order of those changes, and then runs what is to run
+/// after them.
 fn work(jobs: &mpsc::Receiver<Job>, failed: &mpsc::Sender<String>) {
     jobs.iter().for_each(|first| {
-        let (changes, settles): (Vec<_>, Vec<_>) = iter::once(first)
+        let (changes, afters): (Vec<_>, Vec<_>) = iter::once(first)
             .chain(jobs.try_iter())
             .partition_map(|job| match job {
                 Job::Change(change) => Either::Left(change),
-                Job::Settle(done) => Either::Right(done),
+                Job::After(then) => Either::Right(then),
             });
         let newest: Vec<Change> = changes
             .into_iter()
@@ -165,8 +223,6 @@ fn work(jobs: &mpsc::Receiver<Job>, failed: &mpsc::Sender<String>) {
             .for_each(|failure| {
                 let _ = failed.send(failure);
             });
-        settles.into_iter().for_each(|done| {
-            let _ = done.send(());
-        });
+        afters.into_iter().for_each(|then| then());
     });
 }

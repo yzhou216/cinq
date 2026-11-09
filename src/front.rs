@@ -28,7 +28,7 @@ use iced::{Size, window};
 use crate::back::{Audio, CueId, CueList, Kind, Video, Workspace};
 use keymap::{Press, config::Config};
 use message::{Focus, Message, Tab};
-use update::{Keeper, Show, Stage};
+use update::{Keeper, Reader, Show, Stage};
 
 /// Opens the main window with the show in `show`, or a new show without
 /// one, and runs the interface until the main window closes.  The key
@@ -126,9 +126,9 @@ struct App {
     /// What the latest opening or saving told, which the status bar shows
     /// until the show changes
     told: Option<String>,
-    /// Directory that keeps the unsaved changes of shows, if the platform
-    /// has one
-    unsaved_directory: Option<PathBuf>,
+    /// Way to read the unsaved changes kept for shows, if the platform has
+    /// a directory to keep them in
+    reader: Option<Reader>,
     audio_error: Option<String>,
     list: usize,
     /// Cue shown in the inspector

@@ -27,7 +27,7 @@ use iced::{Task, futures::channel::oneshot};
 use super::{App, Message};
 use crate::back::{Command, Edit, parse_level};
 use link::{edit_config, open_link};
-pub(super) use show::{Keeper, Read, Saved, Show};
+pub(super) use show::{Keeper, Read, Reader, Saved, Show};
 pub(super) use stage::Stage;
 
 impl App {

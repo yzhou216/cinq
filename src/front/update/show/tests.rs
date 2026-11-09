@@ -9,11 +9,14 @@ mod keeper;
 mod opening;
 mod saving;
 
-use std::fs;
+use std::{fs, sync::mpsc};
 
 use tempfile::TempDir;
 
-use super::{file::write, *};
+use super::{
+    file::{kept_file, write},
+    *,
+};
 use crate::back::{Command, CueId, Edit, Kind, Place};
 
 /// Show file of one list of one memo cue
@@ -60,4 +63,17 @@ fn temporary() -> TempDir {
 fn keeper() -> (Keeper, TempDir) {
     let directory = temporary();
     (Keeper::new(Some(directory.path().to_owned())), directory)
+}
+
+/// Holds the thread of `keeper` until the returned sender goes, as a slow
+/// disk does, and returns once the thread is held
+fn stalled(keeper: &Keeper) -> mpsc::Sender<()> {
+    let (started, running) = mpsc::channel();
+    let (release, held) = mpsc::channel::<()>();
+    keeper.after(move || {
+        let _ = started.send(());
+        let _ = held.recv();
+    });
+    running.recv().expect("the thread runs what is sent");
+    release
 }

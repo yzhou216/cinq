@@ -33,6 +33,9 @@ Major changes and improvements in each release of cinq, newest first.
   nothing while the stage window has the keyboard.  The key of Help also
   opens the page while the menu of a drop-down list is open, and the menu is
   open on the same option when the page closes.
+- Opening a show right after switching away from it, while cinq is still
+  keeping its unsaved changes, brings back the newest of them and no longer
+  older ones.
 
 ## v0.1.2
 

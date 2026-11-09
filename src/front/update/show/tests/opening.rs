@@ -79,7 +79,8 @@ fn show_read_back_holds_what_was_written_along_with_its_kept_changes() {
     let unsaved_directory = directory.path().join("unsaved");
     write(&file, SHOW, true).expect("the show can be written");
     write(&kept_file(&unsaved_directory, Some(&file)), "kept", false).expect("changes can be kept");
-    let read = Read::new(Some(file), Some(&unsaved_directory));
+    let keeper = Keeper::new(Some(unsaved_directory));
+    let read = Read::new(Some(file), keeper.reader().as_ref());
     assert_eq!(read.text, Ok(Some(SHOW.to_owned())));
     assert_eq!(read.kept, Ok(Some("kept".to_owned())));
 }

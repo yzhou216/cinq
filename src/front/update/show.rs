@@ -8,12 +8,13 @@
 //! A show lives in a file of its own, which the operator names on the
 //! command line or picks in the desktop's file chooser.  Opening reads the
 //! file and saving writes it, both on a thread of their own, as any reading
-//! of files is.  Changes that are not saved never go away unasked: as they
-//! happen, the [`Keeper`] keeps them in a file in the state directory of
-//! cinq, which the next opening of the show reads, so that neither closing
-//! the window, nor opening another show, nor a crash loses them.  The kept
-//! changes come back as one change, which undo takes back to the show as
-//! saved, so that nothing has to ask first.
+//! of files is, and the kept changes are read on the thread of the
+//! [`Keeper`], after the changes it has yet to write.  Changes that are not
+//! saved never go away unasked: as they happen, the [`Keeper`] keeps them in
+//! a file in the state directory of cinq, which the next opening of the show
+//! reads, so that neither closing the window, nor opening another show, nor
+//! a crash loses them.  The kept changes come back as one change, which undo
+//! takes back to the show as saved, so that nothing has to ask first.
 
 mod file;
 mod keeper;
@@ -32,8 +33,7 @@ use iced::Task;
 
 use super::on_own_thread;
 use crate::front::{App, Message, read};
-use file::kept_file;
-pub use keeper::Keeper;
+pub use keeper::{Keeper, Reader};
 
 const EXTENSION: &str = "cinq.toml";
 
@@ -97,15 +97,13 @@ pub struct Read {
 impl Read {
     /// A new show finds the files of its cues from the directory that cinq
     /// started in.
-    fn new(file: Option<PathBuf>, unsaved_directory: Option<&Path>) -> Self {
+    fn new(file: Option<PathBuf>, reader: Option<&Reader>) -> Self {
         let directory = file
             .as_deref()
             .and_then(Path::parent)
             .map_or_else(|| env::current_dir().unwrap_or_default(), Path::to_owned);
         let text = file.as_deref().map_or(Ok(None), read);
-        let kept = unsaved_directory.map_or(Ok(None), |directory| {
-            read(&kept_file(directory, file.as_deref()))
-        });
+        let kept = reader.map_or(Ok(None), |reader| reader.read(file.as_deref()));
         Self {
             file,
             directory,
@@ -137,8 +135,8 @@ pub(super) fn unsaved_directory() -> Option<PathBuf> {
         .map(|directory| directory.join("cinq").join("unsaved"))
 }
 
-pub(super) fn open(file: Option<PathBuf>, unsaved_directory: Option<PathBuf>) -> Task<Message> {
-    on_own_thread(move || Read::new(file, unsaved_directory.as_deref()))
+pub(super) fn open(file: Option<PathBuf>, reader: Option<Reader>) -> Task<Message> {
+    on_own_thread(move || Read::new(file, reader.as_ref()))
         .map(|read| Message::Opened(Box::new(read)))
 }
 

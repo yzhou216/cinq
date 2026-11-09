@@ -23,21 +23,22 @@ impl Cinq {
         show: Option<PathBuf>,
     ) -> (Self, Task<Message>) {
         let audio = Audio::open();
-        let unsaved_directory = show::unsaved_directory();
+        let keeper = Keeper::new(show::unsaved_directory());
+        let reader = keeper.reader();
         let (main, opened) = window::open(window_settings(MAIN_SIZE));
         let cinq = Self {
             app: App {
                 main: Some(main),
                 audio_error: audio.error().map(str::to_owned),
                 config: keymap::config::load(config),
-                unsaved_directory: unsaved_directory.clone(),
+                reader: reader.clone(),
                 ..App::default()
             },
             audio,
             video: Video::default(),
-            keeper: Keeper::new(unsaved_directory.clone()),
+            keeper,
         };
-        let opening = show::open(show, unsaved_directory);
+        let opening = show::open(show, reader);
         (cinq, Task::batch([opened.discard(), opening]))
     }
 
