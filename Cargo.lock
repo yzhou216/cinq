@@ -440,6 +440,7 @@ dependencies = [
  "rust_h264",
  "serde",
  "strum",
+ "symphonia",
  "taplo",
  "tempfile",
  "terminal_size",

@@ -14,7 +14,7 @@ use kira::{
     },
 };
 
-use super::preload::Preloaded;
+use super::{preload::Preloaded, preroll};
 use crate::back::{Active, Clip, TICK};
 
 /// Time a sound takes to reach a level the workspace asks for, which
@@ -44,7 +44,7 @@ impl Voice {
         active: &Active,
         clip: Clip,
     ) -> Result<Self, String> {
-        let data = StreamingSoundData::from_file(file).map_err(super::reason)?;
+        let data = preroll::open(file).map_err(super::reason)?;
         let data = clipped(data, clip, clip.position(active.played()), active.level);
         let sound = manager.play(data).map_err(|error| error.to_string())?;
         Ok(Self::of(sound, active))

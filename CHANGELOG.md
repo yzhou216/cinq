@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Loops, and starts partway into a file, no longer begin with a short burst of
+  noise in AAC and MP3 sound.  Ogg Vorbis sound that starts partway into a
+  file now starts at the right place.
+
 ## v0.1.2
 
 - On Windows, a terminal that starts cinq shows what cinq prints, such as

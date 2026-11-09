@@ -8,3 +8,8 @@ version = 1
 path = ["Cargo.lock", "flake.lock"]
 SPDX-FileCopyrightText = "2026 Yiyu Zhou <yiyu@yiyuzhou.io>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]] # Tones that the tests of the sound output decode, which cannot hold a comment
+path = "src/back/audio/tests/tone.*"
+SPDX-FileCopyrightText = "2026 Yiyu Zhou <yiyu@yiyuzhou.io>"
+SPDX-License-Identifier = "GPL-3.0-or-later"

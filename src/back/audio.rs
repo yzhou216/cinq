@@ -14,6 +14,7 @@
 //! skip.
 
 mod preload;
+mod preroll;
 #[cfg(test)]
 mod tests;
 mod voice;
@@ -24,10 +25,7 @@ use std::{
 };
 
 use itertools::Itertools;
-use kira::{
-    AudioManager, AudioManagerSettings, DefaultBackend,
-    sound::{FromFileError, streaming::StreamingSoundData},
-};
+use kira::{AudioManager, AudioManagerSettings, DefaultBackend, sound::FromFileError};
 
 use super::{
     Active, Clip, Command, Cue, CueId, Problem, Workspace,
@@ -160,7 +158,7 @@ fn upcoming(workspace: &Workspace) -> Vec<Ask> {
 /// played.  This opens the file and reads its format without decoding the
 /// sound.
 pub(super) fn probe(file: &Path) -> Result<f32, String> {
-    StreamingSoundData::from_file(file)
+    preroll::open(file)
         .map(|data| data.duration().as_secs_f32())
         .map_err(reason)
 }
