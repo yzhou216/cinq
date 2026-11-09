@@ -4,8 +4,6 @@
 
 //! Tests of adding, deleting, editing, and loading cues
 
-use std::path::PathBuf;
-
 use super::*;
 
 /// Returns the command that records that the sound file of cue `id` is
@@ -103,34 +101,6 @@ fn run_whose_sound_cannot_start_ends_and_its_chain_plays_on() {
         workspace.problem(cue),
         Some(Problem::LoadFailed("file not found"))
     );
-}
-
-#[test]
-fn file_paths_leave_out_surrounding_spaces() {
-    let workspace = Workspace::new(Vec::new()).directory("/show");
-    assert_eq!(
-        workspace.path(&playing(" sounds/storm.ogg\n")),
-        Some(PathBuf::from("/show/sounds/storm.ogg"))
-    );
-    assert_eq!(workspace.path(&playing(" \n")), None);
-}
-
-#[test]
-fn chosen_sound_file_goes_by_its_path_from_the_show_when_it_is_there() {
-    let workspace = Workspace::new(Vec::new()).directory("/show");
-    let name = |path: &str| workspace.file_name_of(Path::new(path));
-    assert_eq!(name("/show/sounds/storm.ogg"), "sounds/storm.ogg");
-    assert_eq!(name("/elsewhere/storm.ogg"), "/elsewhere/storm.ogg");
-    assert_eq!(name("/showcase/storm.ogg"), "/showcase/storm.ogg");
-}
-
-#[test]
-fn sound_files_are_looked_for_next_to_the_file_a_cue_plays() {
-    let workspace = Workspace::new(Vec::new()).directory("/show");
-    let directory = |file: &str| workspace.file_directory(&playing(file));
-    assert_eq!(directory("sounds/storm.ogg"), Path::new("/show/sounds"));
-    assert_eq!(directory("/music/storm.ogg"), Path::new("/music"));
-    assert_eq!(directory(""), Path::new("/show"));
 }
 
 #[test]

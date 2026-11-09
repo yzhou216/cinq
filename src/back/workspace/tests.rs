@@ -7,6 +7,7 @@
 //! outputs borrow
 
 mod editing;
+mod files;
 mod history;
 mod picture;
 mod playback;
@@ -113,13 +114,6 @@ pub(in crate::back) fn audio(id: u32) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Audio, "Sound")
         .file("sound.ogg")
         .build()
-}
-
-fn playing(file: &str) -> Cue {
-    Cue {
-        file: file.to_owned(),
-        ..audio(1)
-    }
 }
 
 fn continued(cue: Cue) -> Cue {
