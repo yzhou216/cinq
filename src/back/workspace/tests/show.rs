@@ -96,6 +96,20 @@ fn settings_that_a_file_leaves_out_take_the_defaults_of_their_kind() {
 }
 
 #[test]
+fn saving_leaves_out_a_file_and_a_target_that_the_kind_does_not_use() {
+    let read = read_list(
+        "[[list.cue]]\nid = 1\nkind = \"memo\"\nfile = \"storm.ogg\"\ntarget = 2\n\n\
+         [[list.cue]]\nid = 2\nkind = \"audio\"\nfile = \"storm.ogg\"\ntarget = 1\n\n\
+         [[list.cue]]\nid = 3\nkind = \"picture\"\nfile = \"slide.png\"\n",
+    )
+    .expect("the show reads");
+    let saved = shown(&read);
+    assert_eq!(saved.matches("storm.ogg").count(), 1, "{saved}");
+    assert!(saved.contains("slide.png"), "{saved}");
+    assert!(!saved.contains("\ntarget = "), "{saved}");
+}
+
+#[test]
 fn show_file_whose_cues_share_an_identity_cannot_be_read() {
     let twice = "[[list.cue]]\nid = 1\nkind = \"memo\"\n".repeat(2);
     assert_eq!(

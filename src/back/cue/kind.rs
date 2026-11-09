@@ -54,6 +54,10 @@ impl Kind {
     pub(in crate::back) fn has_level(self) -> bool {
         self.plays_file() || self == Kind::Fade
     }
+
+    pub(in crate::back) fn has_target(self) -> bool {
+        matches!(self, Kind::Fade | Kind::Stop)
+    }
 }
 
 /// What happens to the next cue in the list once this cue has started,

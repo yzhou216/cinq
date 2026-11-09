@@ -116,7 +116,7 @@ impl Workspace {
     /// `directory` rather than from the directory of the workspace, or as
     /// an absolute path without one
     fn written_file(&self, cue: &Cue, directory: Option<&Path>) -> String {
-        let Some(name) = cue.file_name() else {
+        let Some(name) = cue.file_name().filter(|_| cue.kind.has_file()) else {
             return String::new();
         };
         if Path::new(name).is_absolute() || directory == Some(self.directory.as_path()) {
@@ -150,7 +150,10 @@ impl CueFile {
             start: set(cue.start.value()).filter(|_| plays),
             end: cue.end.time().filter(|_| plays),
             looping: plays && cue.looping,
-            target: cue.target.map(|target| target.0),
+            target: cue
+                .target
+                .filter(|_| cue.kind.has_target())
+                .map(|target| target.0),
             pre_wait: set(cue.pre_wait.value()),
             duration: cue.kind.has_duration().then(|| cue.duration.value()),
             post_wait: set(cue.post_wait.value()),
