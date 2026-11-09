@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A key of GO or Panic that a text field takes without typing, such as
+  Control+c, Control+x, Control+v, or Control+a, which the field takes for
+  the clipboard and the selection, now acts while the field has the
+  keyboard, as Escape already did.
+
 ## v0.1.2
 
 - On Windows, a terminal that starts cinq shows what cinq prints, such as

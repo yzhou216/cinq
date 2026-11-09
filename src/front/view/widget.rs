@@ -18,7 +18,7 @@ mod wrap;
 
 use iced::{
     Event, Rectangle,
-    keyboard::{self, Key},
+    keyboard::{self, Key, Modifiers, key::Physical},
     mouse, touch,
 };
 
@@ -34,6 +34,10 @@ struct KeyPress<'a> {
     key: &'a Key,
     press: Option<Press>,
     repeat: bool,
+    /// Text that the key puts into a field, as the system reports it
+    text: Option<&'a str>,
+    modifiers: Modifiers,
+    physical: Physical,
 }
 
 fn key_pressed(event: &Event) -> Option<KeyPress<'_>> {
@@ -42,6 +46,8 @@ fn key_pressed(event: &Event) -> Option<KeyPress<'_>> {
         modified_key,
         modifiers,
         repeat,
+        text,
+        physical_key,
         ..
     }) = event
     else {
@@ -51,6 +57,9 @@ fn key_pressed(event: &Event) -> Option<KeyPress<'_>> {
         key,
         press: Press::from_key(modified_key, *modifiers),
         repeat: *repeat,
+        text: text.as_deref(),
+        modifiers: *modifiers,
+        physical: *physical_key,
     })
 }
 

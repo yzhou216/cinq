@@ -13,9 +13,13 @@
 //! those of GO and Panic, those that move between fields, and those that
 //! open and save shows.  Enter leaves a text field.  A field that takes a
 //! key of GO or Panic without typing it, as iced's text fields take Escape
-//! to give up the keyboard, leaves the key to act all the same.  The region
-//! decides as each key arrives, so keys act in the order the operator typed
-//! them.
+//! to give up the keyboard and Control with `c`, `x`, `v`, or `a` for the
+//! clipboard and the selection, leaves the key to act all the same.  The
+//! region decides as each key arrives, so keys act in the order the
+//! operator typed them.
+
+#[cfg(test)]
+mod tests;
 
 use iced::{
     Element, Event, Rectangle, Renderer,
@@ -31,7 +35,10 @@ use super::{
     KeyPress, key_pressed,
     wrap::{Intercept, wrap},
 };
-use crate::front::{Focus, Message, keymap::Keymap};
+use crate::front::{
+    Focus, Message,
+    keymap::{Keymap, Press},
+};
 
 pub fn keep_keys<'a>(
     content: impl Into<Element<'a, Message>>,
@@ -52,12 +59,14 @@ impl Intercept for Keep<'_> {
         renderer: &Renderer,
         shell: &mut Shell<'_, Message>,
     ) {
-        let Some(KeyPress { key, press, repeat }) = key_pressed(event) else {
+        let Some(pressed) = key_pressed(event) else {
             return;
         };
+        let KeyPress {
+            key, press, repeat, ..
+        } = pressed;
         if shell.is_event_captured() {
-            let typed = matches!(key, Key::Character(_) | Key::Named(Named::Space));
-            if let Some(press) = press.filter(|&press| !typed && self.0.acts_at_once(press)) {
+            if let Some(press) = left_to_act(self.0, &pressed) {
                 shell.publish(Message::Typed { press, repeat });
             }
             return;
@@ -79,6 +88,37 @@ impl Intercept for Keep<'_> {
             _ => shell.capture_event(),
         }
     }
+}
+
+/// Returns the press of a key that a widget captured, when it is a key of
+/// GO or Panic that the widget did not type, which therefore acts as well
+fn left_to_act(keymap: &Keymap, key: &KeyPress) -> Option<Press> {
+    key.press
+        .filter(|&press| !types_text(key) && keymap.acts_at_once(press))
+}
+
+/// Returns whether iced's text input inserts the key's text.  It inserts
+/// the first character of the text unless that is a control character,
+/// once the keys of the clipboard and the selection have taken their turn,
+/// which type nothing, whatever text a system reports for them.
+fn types_text(key: &KeyPress) -> bool {
+    !takes_clipboard_key(key)
+        && key
+            .text
+            .and_then(|text| text.chars().next())
+            .is_some_and(|first| !first.is_control())
+}
+
+/// Returns whether the key is one that iced's text input takes for the
+/// clipboard or the selection: the command modifier with `c`, `x`, `v`
+/// unless Alt is held, or `a`, as the letter reads on a Latin layout
+fn takes_clipboard_key(key: &KeyPress) -> bool {
+    key.modifiers.command()
+        && match key.key.to_latin(key.physical) {
+            Some('c' | 'x' | 'a') => true,
+            Some('v') => !key.modifiers.alt(),
+            _ => false,
+        }
 }
 
 /// Operation that finds out whether a text field or a drop-down list has

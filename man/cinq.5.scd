@@ -269,6 +269,9 @@ A text field of the inspector, or a drop-down list
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
 	*panic*, *next_field*, *previous_field*, *open*, *save*, and *save_as*,
 	which act unless a text field takes them for typing.
+	A key of *go* or *panic* acts all the same when a text field takes it for
+	something other than typing, as it takes Control+c to copy and Escape to
+	give up the keyboard.
 	Enter leaves a text field, and opens the menu of a drop-down list, which
 	takes the keyboard from there.
 
