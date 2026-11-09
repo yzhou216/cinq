@@ -86,3 +86,18 @@ fn keeper_makes_every_change_sent_to_it_before_it_goes() {
     drop(keeper);
     assert_eq!(fs::read_to_string(&kept).ok(), Some(changed.show.text));
 }
+
+#[cfg(windows)]
+#[test]
+fn shows_on_other_drives_keep_their_changes_in_other_files() {
+    let kept = |file: &str| kept_file(Path::new(r"C:\unsaved"), Some(Path::new(file)));
+    let shows = Path::new(r"C:\unsaved\shows");
+    assert_eq!(kept(r"C:\x\a.cinq.toml"), shows.join(r"C\x\a.cinq.toml"));
+    assert_eq!(kept(r"D:\x\a.cinq.toml"), shows.join(r"D\x\a.cinq.toml"));
+    assert_eq!(
+        kept(r"\\server\share\x\a.cinq.toml"),
+        shows.join(r"server\share\x\a.cinq.toml")
+    );
+    assert_eq!(kept(r"\\?\C:\x\a.cinq.toml"), kept(r"C:\x\a.cinq.toml"));
+    assert_eq!(kept(r"C:\x\..\a.cinq.toml"), kept(r"C:\a.cinq.toml"));
+}

@@ -8,7 +8,7 @@
 use std::{
     fs,
     io::{self, Write},
-    path::{Component, Path, PathBuf},
+    path::{Component, Path, PathBuf, PrefixComponent},
 };
 
 use super::EXTENSION;
@@ -16,12 +16,14 @@ use super::EXTENSION;
 /// Returns the file in `unsaved_directory` that keeps the unsaved changes
 /// of the show in `file`, or of a new show without one: by the path of the
 /// show's file under `shows`, in which `..` takes away the directory before
-/// it, or as `untitled.cinq.toml` for a new show
+/// it and a Windows drive or network share leads the path, or as
+/// `untitled.cinq.toml` for a new show
 pub(super) fn kept_file(unsaved_directory: &Path, file: Option<&Path>) -> PathBuf {
     match file {
         Some(file) => unsaved_directory.join("shows").join(file.components().fold(
             PathBuf::new(),
             |path, component| match component {
+                Component::Prefix(prefix) => path.join(drive(prefix)),
                 Component::Normal(name) => path.join(name),
                 Component::ParentDir => path.parent().map_or_else(PathBuf::new, Path::to_owned),
                 _ => path,
@@ -29,6 +31,19 @@ pub(super) fn kept_file(unsaved_directory: &Path, file: Option<&Path>) -> PathBu
         )),
         None => unsaved_directory.join(format!("untitled.{EXTENSION}")),
     }
+}
+
+/// Returns the name that a Windows drive, as `C:`, or a network share, as
+/// `\\server\share`, takes at the start of a kept path: `C` or
+/// `server\share`, so that the same path on two drives has two kept files.
+/// The colon goes, since no file name may hold one, and so do the marks of
+/// `\\?\` and `\\.\`, which only tell Windows how to read the path.
+fn drive(prefix: PrefixComponent<'_>) -> String {
+    prefix
+        .as_os_str()
+        .to_string_lossy()
+        .trim_start_matches(['\\', '?', '.'])
+        .replace(':', "")
 }
 
 /// Writes `text` to a file next to `file`, which then takes its place, so

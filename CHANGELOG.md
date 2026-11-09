@@ -10,6 +10,12 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- On Windows, the unsaved changes of shows with the same path on different
+  drives, or on different network shares, no longer share one kept file and
+  take each other's place.  The drive or share now leads the kept file's
+  path, so changes that an earlier version kept for a show on Windows do
+  not come back.  Other systems keep their kept files as they were.
+
 ## v0.1.2
 
 - On Windows, a terminal that starts cinq shows what cinq prints, such as

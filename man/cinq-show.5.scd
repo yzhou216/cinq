@@ -183,6 +183,11 @@ absolute path, as the XDG Base Directory Specification sets out.
 The changes to a show file go under _shows_ in that directory, by the
 absolute path of the file, and those to a show that has no file yet go in
 _untitled.cinq.toml_.
+; if windows
+The drive of the file leads its path, as _C_ for _C:\\_, and a network share
+does as _UNC\\server\\share_, so that files of the same path on another drive
+or share keep their changes apart.
+; end
 
 Closing the window, opening another show, or a crash leaves the kept changes
 in place.
