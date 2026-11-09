@@ -45,22 +45,22 @@ impl Workspace {
             let fired: Vec<Active> = self
                 .next_go(cues)
                 .zip(self.next_run..)
-                .map(|((cue, delay), run)| Active::new(cue, run, self.next_run, delay.into()))
+                .map(|((cue, delay), run)| {
+                    let after = (run > self.next_run).then(|| run - 1);
+                    Active::new(cue, run, after, delay.into())
+                })
                 .collect();
             Some((fired, cues.after(end)))
         }) else {
             return self;
         };
         let next_run = fired.last().map_or(self.next_run, |active| active.run + 1);
-        let workspace = self.with_standby(list, standby).played_from(list);
-        let active = workspace
-            .active
-            .into_iter()
-            .filter(|running| fired.iter().all(|cue| cue.id != running.id))
-            .chain(fired.iter().copied())
-            .collect();
+        let workspace = fired.iter().fold(
+            self.with_standby(list, standby).played_from(list),
+            |workspace, cue| workspace.without_run_of(cue.id),
+        );
         Self {
-            active,
+            active: workspace.active.into_iter().chain(fired).collect(),
             next_run,
             ..workspace
         }

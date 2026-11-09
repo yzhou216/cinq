@@ -12,6 +12,7 @@ mod history;
 mod picture;
 mod playback;
 mod show;
+mod stopping;
 mod video;
 
 use std::path::Path;

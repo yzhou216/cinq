@@ -17,6 +17,9 @@ Major changes and improvements in each release of cinq, newest first.
   not come back.  Other systems keep their kept files as they were.
 - cinq plays up to 1024 sounds at once, where it took the 129th for a
   broken file and kept checking that file again.
+- Stopping a cue also cancels the cues of its chain that it would have
+  started, even when a cue between them had been fired again or could not
+  play.
 
 ## v0.1.2
 

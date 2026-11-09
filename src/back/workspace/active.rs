@@ -27,9 +27,11 @@ pub struct Active {
     /// Serial number of this firing, which tells a cue that GO fired again
     /// apart from one that kept running
     pub(in crate::back) run: u32,
-    /// Serial number of the first cue that the same GO fired, which every
-    /// cue of one chain shares
-    pub(super) chain: u32,
+    /// Run of the cue whose start, or whose end for an auto-follow, starts
+    /// this one, or `None` for the cue that GO itself starts.  Runs of a
+    /// chain are not always consecutive, since a cue that GO fires again
+    /// takes a run of its own, so a cue finds the cues it starts by this.
+    pub(super) after: Option<u32>,
     /// Seconds since GO, negative while the cue waits its turn in a chain
     pub(super) elapsed: f64,
     pub paused: bool,
@@ -58,9 +60,9 @@ pub enum Phase {
 }
 
 impl Active {
-    /// Fires a cue `delay` seconds after GO, as run `run` of the chain that
-    /// starts with run `chain`
-    pub(super) fn new(cue: &Cue, run: u32, chain: u32, delay: f64) -> Self {
+    /// Fires a cue `delay` seconds after GO, as run `run`, started by run
+    /// `after` of the same chain, or by GO itself when `after` is `None`
+    pub(super) fn new(cue: &Cue, run: u32, after: Option<u32>, delay: f64) -> Self {
         let length = f64::from(cue.action());
         let effect = match (cue.kind, cue.target) {
             (Kind::Audio, _) => cue.clip().map_or(Effect::Nothing, Effect::Sound),
@@ -86,7 +88,7 @@ impl Active {
         Self {
             id: cue.id,
             run,
-            chain,
+            after,
             elapsed: -delay,
             paused: false,
             level: cue.level,
