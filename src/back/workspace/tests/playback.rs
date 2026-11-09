@@ -212,3 +212,30 @@ fn audio_cue_that_loops_leaves_the_cue_it_would_follow_to_go() {
     assert_eq!(running(&workspace), [1]);
     assert_eq!(standby(&workspace), Some(2));
 }
+
+#[test]
+fn progress_waits_out_the_pre_wait_and_then_counts_the_clip_played() {
+    let waiting = workspace(vec![Cue {
+        pre_wait: 4.0.into(),
+        ..audio(1)
+    }])
+    .apply(GO);
+    let progress = |workspace: &Workspace| workspace.active_of(CueId(1)).map(|a| a.progress());
+    assert_eq!(progress(&waiting), Some(0.0));
+    let in_wait = waiting.clone().apply(Command::Tick(2.0));
+    assert_eq!(progress(&in_wait), Some(0.0));
+    let halfway = waiting.apply(Command::Tick(9.0));
+    assert_eq!(progress(&halfway), Some(0.5));
+}
+
+#[test]
+fn progress_of_a_picture_that_shows_until_stopped_is_whole() {
+    let shown = workspace(vec![
+        Cue::new(CueId(1), "1", Kind::Picture, "Slide")
+            .file("slide.png")
+            .build(),
+    ])
+    .apply(GO);
+    let active = shown.active_of(CueId(1)).expect("the picture shows");
+    assert_eq!((active.phase(), active.progress()), (Phase::Showing, 1.0));
+}

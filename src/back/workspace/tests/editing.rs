@@ -204,3 +204,27 @@ fn editing_the_clip_of_a_running_cue_waits_for_its_next_run() {
     let active = workspace.active_of(CueId(1)).expect("the loop plays on");
     assert_eq!(active.phase(), Phase::Looping);
 }
+
+#[test]
+fn level_edit_takes_over_from_a_fade_that_leaves_its_target_playing() {
+    let fading = workspace(vec![continuing(1), fade_under(2)])
+        .apply(GO)
+        .apply(Command::Tick(1.0));
+    assert!(
+        fading
+            .active_of(CueId(1))
+            .is_some_and(|active| active.fade.is_some())
+    );
+    let edited = fading
+        .apply(edit(1, Edit::Level(-3.0)))
+        .apply(Command::Tick(1.0));
+    let active = edited.active_of(CueId(1)).expect("the cue plays on");
+    assert_eq!((active.level, active.fade.is_none()), (-3.0, true));
+}
+
+#[test]
+fn level_edit_of_a_cue_that_is_not_running_waits_for_its_run() {
+    let edited = workspace(vec![audio(1), audio(2)]).apply(edit(1, Edit::Level(-3.0)));
+    assert!(edited.active().is_empty());
+    assert_eq!(level(&edited.apply(GO), 1), Some(-3.0));
+}

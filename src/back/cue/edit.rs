@@ -4,6 +4,9 @@
 
 //! Changes that the operator makes to one setting of a cue
 
+#[cfg(test)]
+mod tests;
+
 use super::{Advance, Cue, CueId, Seconds};
 
 #[derive(Debug, Clone, PartialEq)]
