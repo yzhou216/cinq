@@ -14,7 +14,7 @@ use crate::{
     front::view::{char_width, format},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, VariantArray, IntoStaticStr)]
+#[derive(Clone, Copy, PartialEq, Eq, VariantArray, IntoStaticStr)]
 pub(super) enum Column {
     #[strum(serialize = "#")]
     Number,

@@ -4,6 +4,8 @@
 
 //! Tests of the logo
 
+use kurbo::Point;
+
 use super::*;
 
 fn near(point: Point, x: f64, y: f64) -> bool {

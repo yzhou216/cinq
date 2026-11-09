@@ -12,14 +12,14 @@ use super::{Cue, Kind, Media};
 /// that loops plays from its start again each time it reaches its end,
 /// until something stops its cue.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Clip {
+pub(in crate::back) struct Clip {
     pub(in crate::back) start: f64,
     pub(in crate::back) end: f64,
     pub(in crate::back) looping: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Shown {
+pub(in crate::back) enum Shown {
     Clip(Clip),
     Still,
 }
@@ -74,9 +74,7 @@ impl Cue {
     /// ends
     fn sound(&self) -> Option<f32> {
         match self.media {
-            Media::Loaded {
-                sound: Some(sound), ..
-            } => Some(sound).filter(|&sound| self.start.value() < sound),
+            Media::Loaded { sound, .. } => sound.filter(|&sound| self.start.value() < sound),
             _ => None,
         }
     }

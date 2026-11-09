@@ -6,8 +6,6 @@
 //! and where its sound file is, and of bringing back cue lists kept from
 //! before as one change
 
-use std::path::Path;
-
 use super::*;
 
 /// Returns a show in `/show` of a storm, an audio cue at -4 dB, and a fade
@@ -23,10 +21,6 @@ fn storm() -> Workspace {
             .build(),
     ])
     .directory("/show")
-}
-
-fn shown(workspace: &Workspace) -> String {
-    workspace.show(Some(Path::new("/show")))
 }
 
 fn read_list(cues: &str) -> Result<Workspace, String> {
@@ -85,9 +79,7 @@ fn show_file_reads_back_as_it_was_written() {
         CueList::new("Preshow", Vec::new()),
     ])
     .directory("/show");
-    let text = shown(&busy);
-    let read = Workspace::from_show(&text, "/show").expect("the show reads back");
-    assert_eq!(shown(&read), text);
+    let read = read_back(&shown(&busy));
     assert_eq!(read.lists().len(), 2);
     assert_eq!(read.next_cue_id(), Some(CueId(4)));
 }
@@ -133,11 +125,11 @@ fn relative_sound_files_go_from_wherever_the_file_is() {
 #[test]
 fn restoring_kept_lists_is_one_change_that_undo_takes_back() {
     let saved = storm();
-    let kept = Workspace::new(vec![
+    let kept = vec![
         CueList::new("Main", vec![audio(1), audio(9)]),
         CueList::new("Preshow", Vec::new()),
-    ]);
-    let restored = saved.clone().apply(Command::Restore(kept.lists().to_vec()));
+    ];
+    let restored = saved.clone().apply(Command::Restore(kept));
     assert_eq!(restored.lists().len(), 2);
     assert_eq!(restored.next_cue_id(), Some(CueId(10)));
     let undone = restored.apply(Command::Undo);
@@ -178,8 +170,7 @@ fn show_file_holds_where_an_audio_cue_starts_and_ends_and_whether_it_loops() {
     .directory("/show");
     let text = shown(&rain);
     assert!(text.contains("file = \"rain.ogg\"\nstart = 1.5\nend = 20.0\nloop = true\n"));
-    let read = Workspace::from_show(&text, "/show").expect("the show reads back");
-    assert_eq!(shown(&read), text);
+    let read = read_back(&text);
     let cue = read.cue(CueId(1)).expect("the rain is there");
     assert_eq!((cue.start.value(), cue.end.time()), (1.5, Some(20.0)));
     assert!(cue.looping);

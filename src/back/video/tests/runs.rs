@@ -14,7 +14,7 @@ use std::{
 };
 
 use super::{
-    PATIENCE,
+    GO, PATIENCE,
     movie::{broken_movie, movie, picture_number},
     showing_cue, synced,
 };
@@ -35,7 +35,7 @@ fn showing(path: &Path) -> Workspace {
 fn video_output_shows_the_pictures_of_a_run_and_lets_its_thread_go_once_it_stops() {
     let (_directory, path) = movie(15, 5);
     let mut video = Video::default();
-    let playing = showing(&path).apply(Command::Go { list: 0 });
+    let playing = showing(&path).apply(GO);
     let (playing, picture) = synced(&mut video, playing);
     let (cue, picture) = picture.expect("the first picture comes due");
     assert_eq!((cue, picture_number(&picture.pixels)), (CueId(1), 0));
@@ -62,7 +62,7 @@ fn due(video: &mut Video, workspace: Workspace, started: Instant) -> (Workspace,
 fn next_picture_of_a_run_comes_due_a_picture_after_the_one_it_shows() {
     let (_directory, path) = movie(15, 5);
     let mut video = Video::default();
-    let (playing, _) = synced(&mut video, showing(&path).apply(Command::Go { list: 0 }));
+    let (playing, _) = synced(&mut video, showing(&path).apply(GO));
     let (playing, next) = due(&mut video, playing, Instant::now());
     assert!(
         next.is_some_and(|next| (next * 30.0 - 1.0).abs() < 1e-6),
@@ -78,7 +78,7 @@ fn picture_that_the_next_go_starts_is_made_ready_ahead_for_its_run_to_take() {
     let mut video = Video::default();
     let (waiting, _) = video.sync(showing(&path));
     assert_eq!((video.ready.len(), video.runs.len()), (1, 0));
-    let (playing, _) = video.sync(waiting.apply(Command::Go { list: 0 }));
+    let (playing, _) = video.sync(waiting.apply(GO));
     assert_eq!((video.ready.len(), video.runs.len()), (0, 1));
     // List played to its end leaves nothing to make ready
     let (_, picture) = synced(&mut video, playing);
@@ -94,7 +94,7 @@ fn run_that_loops_a_picture_that_cannot_be_decoded_ends_with_a_warning() {
         .looping(true)
         .build();
     let mut video = Video::default();
-    let playing = showing_cue(&path, looping).apply(Command::Go { list: 0 });
+    let playing = showing_cue(&path, looping).apply(GO);
     let (ended, picture) = synced(&mut video, playing);
     assert!(picture.is_none());
     let cue = ended.cue(CueId(1)).expect("the cue is there");
@@ -108,7 +108,7 @@ fn run_whose_video_file_has_gone_since_it_loaded_ends_as_a_file_that_cannot_play
     let loaded = showing(&path);
     fs::remove_file(&path).expect("the video can be removed");
     let mut video = Video::default();
-    let (ended, _) = synced(&mut video, loaded.apply(Command::Go { list: 0 }));
+    let (ended, _) = synced(&mut video, loaded.apply(GO));
     let cue = ended.cue(CueId(1)).expect("the cue is there");
     assert_eq!(cue.media, Media::Failed("file not found".to_owned()));
     assert!(ended.active().is_empty());
@@ -117,7 +117,7 @@ fn run_whose_video_file_has_gone_since_it_loaded_ends_as_a_file_that_cannot_play
 #[test]
 fn video_file_without_sound_plays_its_picture_alone() {
     let (_directory, path) = movie(15, 5);
-    let playing = showing(&path).apply(Command::Go { list: 0 });
+    let playing = showing(&path).apply(GO);
     let active = playing.active_of(CueId(1)).expect("the cue runs");
     assert!(active.shows_picture());
     assert_eq!(active.sound(), None);
@@ -129,5 +129,5 @@ fn video_cue_whose_file_cannot_load_cannot_play() {
     let workspace = showing(Path::new("/nowhere/movie.mp4"));
     let cue = workspace.cue(CueId(1)).expect("the cue is there");
     assert_eq!(cue.media, Media::Failed("file not found".to_owned()));
-    assert!(workspace.apply(Command::Go { list: 0 }).active().is_empty());
+    assert!(workspace.apply(GO).active().is_empty());
 }

@@ -24,9 +24,8 @@ use std::{fs::File, io::BufReader, iter, path::Path};
 use mp4::{MediaType, Mp4Reader, TrackType};
 use rust_h264::nal::{NalUnit, parse_avcc};
 
-use super::unreadable;
-pub(super) use timing::Sample;
-use timing::timeline;
+use crate::back::load::unreadable;
+use timing::{Sample, timeline};
 
 const NO_VIDEO: &str = "holds no H.264 video";
 
@@ -53,7 +52,7 @@ pub(super) struct Track {
     /// length in [`PARAMETER_LENGTH`] bytes
     parameters: Vec<u8>,
     /// Seconds that the picture lasts
-    pub(super) duration: f64,
+    duration: f64,
     sound: bool,
 }
 
@@ -76,19 +75,11 @@ impl Track {
         let track = reader
             .tracks()
             .values()
-            .filter(|track| track.media_type().is_ok_and(|kind| kind == MediaType::H264))
+            .filter(|track| matches!(track.media_type(), Ok(MediaType::H264)))
             .min_by_key(|track| track.track_id())
             .ok_or(NO_VIDEO)?;
-        let avc = &track
-            .trak
-            .mdia
-            .minf
-            .stbl
-            .stsd
-            .avc1
-            .as_ref()
-            .ok_or(NO_VIDEO)?
-            .avcc;
+        let stbl = &track.trak.mdia.minf.stbl;
+        let avc = &stbl.stsd.avc1.as_ref().ok_or(NO_VIDEO)?.avcc;
         if !PROFILES.contains(&avc.avc_profile_indication) {
             return Err("holds H.264 video in a profile that cannot be decoded".to_owned());
         }
@@ -102,7 +93,6 @@ impl Track {
         // Tables of the track, whose runs of equal values give each sample
         // the time it takes to decode and its offset from there to the time
         // it shows, and list the samples that decoding can start at
-        let stbl = &track.trak.mdia.minf.stbl;
         let deltas = stbl
             .stts
             .entries
@@ -137,11 +127,10 @@ impl Track {
             id: track.track_id(),
             length_size: usize::from(avc.length_size_minus_one) + 1,
             parameters,
-            sound: reader.tracks().values().any(|track| {
-                track
-                    .track_type()
-                    .is_ok_and(|kind| kind == TrackType::Audio)
-            }),
+            sound: reader
+                .tracks()
+                .values()
+                .any(|track| matches!(track.track_type(), Ok(TrackType::Audio))),
             samples,
             duration,
             reader,

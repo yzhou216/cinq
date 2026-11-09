@@ -11,14 +11,13 @@
 #[cfg(test)]
 mod tests;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, io, path::PathBuf};
 
 use itertools::Itertools;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use super::{Command, Cue, CueId, Kind, Media, Workspace, audio, video};
 
-#[derive(Debug)]
 pub struct Load {
     cue: CueId,
     file: String,
@@ -84,5 +83,24 @@ fn probe((path, kind): &(PathBuf, Kind)) -> Media {
     match loaded {
         Ok((duration, sound)) => Media::Loaded { duration, sound },
         Err(reason) => Media::Failed(reason),
+    }
+}
+
+/// Returns the command that records why the file of `cue` cannot be
+/// played, as the sound and video outputs find when they play it
+pub(super) fn unplayable(cue: &Cue, reason: String) -> Command {
+    Command::Loaded {
+        cue: cue.id,
+        file: cue.file.clone(),
+        media: Media::Failed(reason),
+    }
+}
+
+/// Tells why a file cannot be read, in the same words for sound, video,
+/// and picture files
+pub(super) fn unreadable(error: io::Error) -> String {
+    match error.kind() {
+        io::ErrorKind::NotFound => "file not found".to_owned(),
+        _ => error.to_string(),
     }
 }

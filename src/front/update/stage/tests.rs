@@ -10,14 +10,14 @@
 
 use iced::{
     Size,
-    keyboard::{Key, Modifiers, key::Named},
+    keyboard::{Key, key::Named},
     window,
 };
 
 use super::Stage;
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Media, Picture, Workspace},
-    front::{App, Focus, MAIN_SIZE, Message, STAGE_SIZE, keymap::Press, view},
+    front::{App, Focus, MAIN_SIZE, Message, STAGE_SIZE, update::tests::press, view},
 };
 
 /// Returns the state of the interface with a show of `kind` cues, whose
@@ -191,7 +191,7 @@ fn no_field_takes_the_keyboard_while_the_stage_window_has_it() {
 #[test]
 fn key_of_fullscreen_held_down_toggles_the_stage_window_once() {
     let (open, _) = show(Kind::Video).staged();
-    let f11 = Press::from_key(&Key::Named(Named::F11), Modifiers::empty()).expect("F11 is a key");
+    let f11 = press(Key::Named(Named::F11));
     let (open, toggling) = open.typed(f11, false);
     assert_eq!(toggling.units(), 1);
     let (_, repeating) = open.typed(f11, true);

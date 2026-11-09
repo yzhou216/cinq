@@ -14,7 +14,7 @@ use std::{
 use image::{Rgb, RgbImage, Rgba, RgbaImage};
 use tempfile::TempDir;
 
-use super::{showing_cue, synced};
+use super::{GO, showing_cue, synced};
 use crate::back::{
     Command, Cue, CueId, Kind, Video, Workspace,
     video::{
@@ -80,7 +80,7 @@ fn picture_lies_on_black_where_it_is_not_wholly_opaque() {
 fn video_output_shows_the_picture_of_a_picture_cue_until_it_stops() {
     let (_directory, path) = slide(Rgba([0, 255, 0, 255]));
     let mut video = Video::default();
-    let (shown, picture) = synced(&mut video, showing(&path).apply(Command::Go { list: 0 }));
+    let (shown, picture) = synced(&mut video, showing(&path).apply(GO));
     let (cue, picture) = picture.expect("the picture comes due");
     assert_eq!((cue, picture.width, picture.height), (CueId(1), 4, 2));
     assert_eq!(picture.pixels[..4], [0, 255, 0, 255]);
@@ -97,7 +97,7 @@ fn picture_that_the_next_go_shows_is_made_ready_ahead() {
     let mut video = Video::default();
     let workspace = video.sync(showing(&path)).0;
     assert!(video.ready.contains_key(&CueId(1)));
-    let (_, picture) = synced(&mut video, workspace.apply(Command::Go { list: 0 }));
+    let (_, picture) = synced(&mut video, workspace.apply(GO));
     assert!(picture.is_some());
     assert!(video.ready.is_empty());
 }

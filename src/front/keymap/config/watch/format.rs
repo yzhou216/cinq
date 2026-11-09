@@ -20,11 +20,9 @@ use taplo::{
 };
 
 pub(super) fn reformat(file: &Path) {
-    let Ok(text) = fs::read_to_string(file) else {
-        return;
-    };
-    // Save that came in while formatting is newer than the text formatted
-    if let Some(formatted) = formatted(&text)
+    if let Ok(text) = fs::read_to_string(file)
+        && let Some(formatted) = formatted(&text)
+        // Save that came in while formatting is newer than the text formatted
         && fs::read_to_string(file).is_ok_and(|now| now == text)
     {
         // File that cannot be written, as in a read-only Nix store, stays
@@ -41,9 +39,9 @@ fn formatted(text: &str) -> Option<String> {
         crlf: text.contains("\r\n"),
         ..Options::default()
     };
-    let formatted = parsed
+    parsed
         .errors
         .is_empty()
-        .then(|| formatter::format_syntax(parsed.into_syntax(), options))?;
-    (formatted != text).then_some(formatted)
+        .then(|| formatter::format_syntax(parsed.into_syntax(), options))
+        .filter(|formatted| formatted != text)
 }

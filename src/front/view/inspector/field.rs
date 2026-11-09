@@ -18,7 +18,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Copy, IntoStaticStr)]
+#[derive(Clone, Copy, IntoStaticStr)]
 pub(super) enum Field {
     Number,
     Name,

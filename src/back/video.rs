@@ -28,11 +28,11 @@ mod still;
 pub(super) mod tests;
 mod track;
 
-use std::{collections::HashMap, io, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
 use itertools::{Either, Itertools};
 
-use super::{Active, Command, CueId, Media, Problem, Shown, Workspace};
+use super::{Active, CueId, Problem, Shown, Workspace, items::taken, load::unplayable};
 pub use decoder::Picture;
 use player::{Advanced, Player};
 pub(super) use still::probe as probe_still;
@@ -48,7 +48,7 @@ pub const PICTURE_FILES: [&str; 3] = ["jpeg", "jpg", "png"];
 
 /// What a player decodes, which one made ready ahead has to match for a
 /// run to take it
-#[derive(Debug, Clone, PartialEq)]
+#[derive(PartialEq)]
 struct Showing {
     path: PathBuf,
     shown: Shown,
@@ -77,16 +77,8 @@ impl Video {
                 let cue = workspace.cue(active.id)?;
                 let shown = active.shown()?;
                 let showing = workspace.path(cue).map(|path| Showing { path, shown });
-                let player = ended
-                    .remove(&cue.id)
-                    .filter(|(run, _)| *run == active.run)
-                    .map(|(_, player)| player)
-                    .or_else(|| {
-                        ready
-                            .remove(&cue.id)
-                            .filter(|(made, _)| Some(made) == showing.as_ref())
-                            .map(|(_, player)| player)
-                    });
+                let player = taken(&mut ended, &cue.id, |run| *run == active.run)
+                    .or_else(|| taken(&mut ready, &cue.id, |made| Some(made) == showing.as_ref()));
                 Some((cue, active.run, moved_on(showing, active, player)))
             })
             .partition_map(|(cue, run, advanced)| match advanced {
@@ -94,11 +86,7 @@ impl Video {
                     (cue.id, (run, player)),
                     picture.map(|picture| (cue.id, picture)),
                 )),
-                Err(reason) => Either::Right(Command::Loaded {
-                    cue: cue.id,
-                    file: cue.file.clone(),
-                    media: Media::Failed(reason),
-                }),
+                Err(reason) => Either::Right(unplayable(cue, reason)),
             });
         self.runs = runs;
         self.ready = workspace
@@ -108,13 +96,8 @@ impl Video {
                     path,
                     shown: cue.shown()?,
                 };
-                let player = ready
-                    .remove(&cue.id)
-                    .filter(|(made, _)| *made == showing)
-                    .map_or_else(
-                        || Player::start(showing.path.clone(), showing.shown),
-                        |(_, player)| player,
-                    );
+                let player = taken(&mut ready, &cue.id, |made| *made == showing)
+                    .unwrap_or_else(|| Player::start(showing.path.clone(), showing.shown));
                 Some((cue.id, (showing, player)))
             })
             .collect();
@@ -132,10 +115,9 @@ impl Video {
         self.runs
             .iter()
             .filter_map(|(&cue, (run, player))| {
-                let active = workspace
-                    .active_of(cue)
-                    .filter(|active| active.run == *run && !active.paused)
-                    .filter(|active| active.shows_picture())?;
+                let active = workspace.active_of(cue).filter(|active| {
+                    active.run == *run && !active.paused && active.shows_picture()
+                })?;
                 Some(player.next_due()? - active.played())
             })
             .min_by(f64::total_cmp)
@@ -154,14 +136,5 @@ fn moved_on(showing: Option<Showing>, active: &Active, player: Option<Player>) -
         player.advanced(active.played())
     } else {
         Ok((player, None))
-    }
-}
-
-/// Tells why a video or picture file cannot be read, in the words that the
-/// sound output uses for a sound file
-fn unreadable(error: io::Error) -> String {
-    match error.kind() {
-        io::ErrorKind::NotFound => "file not found".to_owned(),
-        _ => error.to_string(),
     }
 }

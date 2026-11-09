@@ -6,8 +6,6 @@
 //! no cue follows them, fades and panics fade them out as they fade the
 //! pictures of video cues, and show files hold them with their file alone
 
-use std::path::Path;
-
 use super::*;
 
 fn picture(id: u32) -> Cue {
@@ -16,29 +14,9 @@ fn picture(id: u32) -> Cue {
         .build()
 }
 
-/// Returns a workspace with one list of `cues`, whose picture files have
-/// loaded as pictures, and the rest as ten seconds of sound
-fn showing(cues: Vec<Cue>) -> Workspace {
-    let pictures: Vec<Command> = cues
-        .iter()
-        .filter(|cue| cue.kind == Kind::Picture)
-        .map(|cue| {
-            loaded(
-                cue.id.0,
-                &cue.file,
-                Media::Loaded {
-                    duration: 0.0,
-                    sound: None,
-                },
-            )
-        })
-        .collect();
-    pictures.into_iter().fold(workspace(cues), Workspace::apply)
-}
-
 #[test]
 fn picture_cue_shows_until_something_stops_it() {
-    let shown = showing(vec![picture(1)])
+    let shown = workspace(vec![picture(1)])
         .apply(GO)
         .apply(Command::Tick(3600.0));
     let active = shown.active_of(CueId(1)).expect("the picture still shows");
@@ -54,7 +32,7 @@ fn cue_after_a_picture_cue_that_follows_waits_for_go() {
         advance: Advance::Follow,
         ..picture(1)
     };
-    let shown = showing(vec![following, audio(2)])
+    let shown = workspace(vec![following, audio(2)])
         .apply(GO)
         .apply(Command::Tick(60.0));
     assert!(shown.active_of(CueId(2)).is_none());
@@ -63,11 +41,7 @@ fn cue_after_a_picture_cue_that_follows_waits_for_go() {
 
 #[test]
 fn picture_fades_to_black_with_a_fade_that_stops_its_cue() {
-    let continuing = Cue {
-        advance: Advance::Continue,
-        ..picture(1)
-    };
-    let fading = showing(vec![continuing, fade_out(2)])
+    let fading = workspace(vec![continued(picture(1)), fade_out(2)])
         .apply(GO)
         .apply(Command::Tick(1.0));
     assert!((opacity(&fading, 1) - 0.75).abs() < 1e-6);
@@ -76,7 +50,7 @@ fn picture_fades_to_black_with_a_fade_that_stops_its_cue() {
 
 #[test]
 fn panic_fades_a_picture_out() {
-    let panicked = showing(vec![picture(1)])
+    let panicked = workspace(vec![picture(1)])
         .apply(GO)
         .apply(Command::Panic)
         .apply(Command::Tick(PANIC_FADE / 4.0));
@@ -98,21 +72,19 @@ fn picture_cue_plays_once_its_file_has_loaded() {
     let unloaded = Workspace::new(vec![CueList::new("Main", vec![picture(1), unnamed])]);
     let problems: Vec<Problem> = unloaded.problems().map(|(_, problem)| problem).collect();
     assert_eq!(problems, [Problem::NotLoaded, Problem::NoFile]);
-    assert_eq!(showing(vec![picture(1)]).problems().count(), 0);
+    assert_eq!(workspace(vec![picture(1)]).problems().count(), 0);
 }
 
 #[test]
 fn new_fade_cue_targets_the_picture_cue_it_follows() {
-    let workspace = showing(vec![picture(1)]).apply(add(0, Kind::Fade, Place::After(CueId(1))));
+    let workspace = workspace(vec![picture(1)]).apply(add(0, Kind::Fade, Place::After(CueId(1))));
     assert_eq!(workspace.lists()[0].cues[1].target, Some(CueId(1)));
 }
 
 #[test]
 fn show_file_holds_a_picture_cue_with_its_file_alone() {
-    let workspace = showing(vec![picture(1)]).directory("/show");
-    let text = workspace.show(Some(Path::new("/show")));
+    let text = shown(&workspace(vec![picture(1)]).directory("/show"));
     let cue = "kind = \"picture\"\nname = \"Slide\"\nfile = \"slide.png\"\n";
     assert!(text.ends_with(cue), "{text}");
-    let read = Workspace::from_show(&text, "/show").expect("the show reads back");
-    assert_eq!(read.show(Some(Path::new("/show"))), text);
+    read_back(&text);
 }

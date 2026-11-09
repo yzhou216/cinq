@@ -66,7 +66,7 @@ impl Command {
 }
 
 /// Where in its list a new cue goes
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub enum Place {
     After(CueId),
     Before(CueId),

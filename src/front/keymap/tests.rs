@@ -42,7 +42,7 @@ fn action(text: &str) -> Option<(Action, Option<usize>)> {
 
 #[test]
 fn shipped_keymaps_are_valid_and_hide_no_binding() {
-    let invalid: Vec<&str> = Preset::VARIANTS
+    let invalid: Vec<_> = Preset::VARIANTS
         .iter()
         .flat_map(|preset| Action::VARIANTS.iter().map(|&action| preset.keys(action)))
         .flatten()
@@ -50,7 +50,7 @@ fn shipped_keymaps_are_valid_and_hide_no_binding() {
         .filter(|keys| binding(keys).is_err())
         .collect();
     assert!(invalid.is_empty(), "{invalid:?}");
-    let conflicts: Vec<(&str, Vec<String>)> = Preset::VARIANTS
+    let conflicts: Vec<_> = Preset::VARIANTS
         .iter()
         .map(|&preset| (preset.name(), Keymap::from(preset).conflicts()))
         .filter(|(_, conflicts)| !conflicts.is_empty())

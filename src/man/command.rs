@@ -78,16 +78,15 @@ fn synopsis(command: &Command) -> Roff {
 /// Returns `argument` as the synopsis gives it, after a space: its flags
 /// apart by bars, then its value, in brackets unless it is required
 fn usage(argument: &Arg) -> Vec<Inline> {
-    let flags = [
+    let flags: Vec<Inline> = [
         argument.get_short().map(|short| format!("-{short}")),
         argument.get_long().map(|long| format!("--{long}")),
-    ];
-    let flags: Vec<Inline> = flags
-        .into_iter()
-        .flatten()
-        .flat_map(|flag| [roman("|"), bold(flag)])
-        .skip(1)
-        .collect();
+    ]
+    .into_iter()
+    .flatten()
+    .flat_map(|flag| [roman("|"), bold(flag)])
+    .skip(1)
+    .collect();
     let value = argument
         .get_value_names()
         .map(|names| italic(names.join(" ")));

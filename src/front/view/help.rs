@@ -86,21 +86,21 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 }
 
 fn source(source: &Source) -> Element<'_, Message> {
-    match source {
-        Source::File(file) => paragraph(
-            "These keys come from ",
-            link(file.display().to_string(), file.clone()),
-            ", and change as it does.",
-            Message::EditConfig,
-        ),
-        Source::Missing(file) => paragraph(
+    let (before, file, after) = match source {
+        Source::File(file) => ("These keys come from ", file, ", and change as it does."),
+        Source::Missing(file) => (
             "These are the default keys, which a file at ",
-            link(file.display().to_string(), file.clone()),
+            file,
             " can change.  Following the link makes it.",
-            Message::EditConfig,
         ),
-        Source::NoDirectory => text("These are the default keys.").into(),
-    }
+        Source::NoDirectory => return text("These are the default keys.").into(),
+    };
+    paragraph(
+        before,
+        link(file.display().to_string(), file.clone()),
+        after,
+        Message::EditConfig,
+    )
 }
 
 fn notice<'a>() -> [Element<'a, Message>; 3] {

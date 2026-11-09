@@ -29,7 +29,7 @@ impl App {
     /// and stopped otherwise, so that time spent idle or paused never
     /// reaches the next tick.  It has to wait until the sound and video
     /// output have caught up, since a cue that they cannot play stops then.
-    pub(in crate::front) fn clocked(self) -> Self {
+    pub(super) fn clocked(self) -> Self {
         Self {
             last_tick: self
                 .running()

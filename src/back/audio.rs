@@ -20,7 +20,6 @@ mod voice;
 
 use std::{
     collections::HashMap,
-    io,
     path::{Path, PathBuf},
 };
 
@@ -30,7 +29,10 @@ use kira::{
     sound::{FromFileError, streaming::StreamingSoundData},
 };
 
-use super::{Active, Clip, Command, Cue, CueId, Media, Problem, Workspace};
+use super::{
+    Active, Clip, Command, Cue, CueId, Problem, Workspace,
+    load::{unplayable, unreadable},
+};
 use preload::{Ask, Preloader, Wanted};
 use voice::Voice;
 
@@ -105,11 +107,7 @@ impl Audio {
                 };
                 voice
                     .map(|voice| (id, voice.followed(active)))
-                    .map_err(|reason| Command::Loaded {
-                        cue: id,
-                        file: cue.file.clone(),
-                        media: Media::Failed(reason),
-                    })
+                    .map_err(|reason| unplayable(cue, reason))
             })
             .partition_result();
         self.voices = voices;
@@ -169,9 +167,7 @@ pub(super) fn probe(file: &Path) -> Result<f32, String> {
 
 fn reason(error: FromFileError) -> String {
     match error {
-        FromFileError::IoError(error) if error.kind() == io::ErrorKind::NotFound => {
-            "file not found".to_owned()
-        }
+        FromFileError::IoError(error) => unreadable(error),
         error => error.to_string(),
     }
 }

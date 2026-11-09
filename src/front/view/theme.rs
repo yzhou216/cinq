@@ -54,16 +54,16 @@ const BG_RED_SUBTLE: Color = color!(0x620f2a);
 const BG_RED_INTENSE: Color = color!(0x9d1f1f);
 
 /// Color of links, which modus-vivendi gives to `fg-link`
-pub const LINK: Color = BLUE_WARMER;
+pub(super) const LINK: Color = BLUE_WARMER;
 
 /// Background of the selected row of a table, which modus-vivendi gives to
 /// `bg-hl-line`, the line of the cursor, and on which every color of text
 /// stays legible
-pub const SELECTION: Color = BG_HL_LINE;
+pub(super) const SELECTION: Color = BG_HL_LINE;
 
 /// Colors of the roles of iced's palette, which spans of rich text take as
 /// they are
-pub const PALETTE: Palette = Palette {
+pub(super) const PALETTE: Palette = Palette {
     background: BG_MAIN,
     text: FG_MAIN,
     primary: BLUE,
@@ -124,19 +124,19 @@ fn extended() -> Extended {
     }
 }
 
-pub fn button(theme: &Theme, status: Status) -> Style {
+pub(super) fn button(theme: &Theme, status: Status) -> Style {
     painted(theme, status, BG_ACTIVE)
 }
 
-pub fn go(theme: &Theme, status: Status) -> Style {
+pub(super) fn go(theme: &Theme, status: Status) -> Style {
     painted(theme, status, BG_GREEN_INTENSE)
 }
 
-pub fn panic(theme: &Theme, status: Status) -> Style {
+pub(super) fn panic(theme: &Theme, status: Status) -> Style {
     painted(theme, status, BG_RED_INTENSE)
 }
 
-pub fn field(valid: bool) -> fn(&Theme, text_input::Status) -> text_input::Style {
+pub(super) fn field(valid: bool) -> fn(&Theme, text_input::Status) -> text_input::Style {
     if valid { text_input::default } else { invalid }
 }
 

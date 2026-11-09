@@ -25,7 +25,9 @@ use super::{
     decoder::{self, Sent, UNDECODABLE},
     probe,
 };
-use crate::back::{Clip, Cue, CueId, CueList, Load, Picture, Video, Workspace, load_files};
+use crate::back::{
+    Clip, Cue, CueId, CueList, Load, Picture, Video, Workspace, load_files, workspace::tests::GO,
+};
 use movie::{RATE, broken_movie, movie, picture_number};
 
 /// Longest that a test waits for a thread to decode a picture

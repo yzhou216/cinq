@@ -45,7 +45,7 @@ pub struct Placed {
     pub cue: Cue,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Standby {
     pub list: usize,
     pub before: Option<CueId>,

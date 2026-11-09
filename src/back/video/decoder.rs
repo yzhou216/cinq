@@ -114,9 +114,8 @@ fn decoded(
             .iter()
             .filter(|(shows, _)| (first..clip.end).contains(shows))
             .try_fold(sent, |sent, (shows, picture)| {
-                let at = passed + (shows - clip.start).max(0.0);
                 let frame = Frame {
-                    at,
+                    at: passed + (shows - clip.start).max(0.0),
                     picture: rgba(picture),
                 };
                 sender
@@ -131,16 +130,17 @@ fn decoded(
         let _ = decoder.decode_nal(unit);
     });
     let order = Order::new(track.samples[from..=to].iter().map(|sample| sample.shows));
-    let (_, sent) = (from..=to).try_fold((order, 0), |(order, sent), index| {
-        if player.strong_count() == 0 {
-            return Err(Stop::Gone);
-        }
-        let sample = track.sample(index).map_err(Stop::Failed)?;
-        let picture = picture(&mut decoder, &track.units(&sample));
-        let (due, order) = order.decoded(index - from, picture);
-        Ok((order, send(due, sent)?))
-    })?;
-    Ok(sent)
+    (from..=to)
+        .try_fold((order, 0), |(order, sent), index| {
+            if player.strong_count() == 0 {
+                return Err(Stop::Gone);
+            }
+            let sample = track.sample(index).map_err(Stop::Failed)?;
+            let picture = picture(&mut decoder, &track.units(&sample));
+            let (due, order) = order.decoded(index - from, picture);
+            Ok((order, send(due, sent)?))
+        })
+        .map(|(_, sent)| sent)
 }
 
 /// Decodes the NAL units of a sample with `decoder`, and returns its

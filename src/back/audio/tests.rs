@@ -18,31 +18,10 @@ use super::{
     preload::{Ask, Preloaded, Preloader, Wanted},
     upcoming,
 };
-use crate::back::{Advance, Clip, Command, Cue, CueId, CueList, Kind, Media, Workspace};
-
-fn audio(id: u32) -> Cue {
-    Cue::new(CueId(id), id.to_string(), Kind::Audio, "Sound")
-        .file("sound.wav")
-        .build()
-}
-
-/// Returns a workspace in `/show` with one list of `cues`, every file of
-/// which has loaded as ten seconds of sound
-fn loaded(cues: Vec<Cue>) -> Workspace {
-    let workspace = Workspace::new(vec![CueList::new("Main", cues)]).directory("/show");
-    let loads: Vec<Command> = workspace
-        .unloaded()
-        .map(|cue| Command::Loaded {
-            cue: cue.id,
-            file: cue.file.clone(),
-            media: Media::Loaded {
-                duration: 10.0,
-                sound: Some(10.0),
-            },
-        })
-        .collect();
-    loads.into_iter().fold(workspace, Workspace::apply)
-}
+use crate::back::{
+    Advance, Clip, Cue, CueId, Kind, Workspace,
+    workspace::tests::{GO, audio, loaded, silent, workspace},
+};
 
 fn upcoming_cues(workspace: &Workspace) -> Vec<u32> {
     upcoming(workspace)
@@ -79,7 +58,7 @@ fn silence() -> Vec<u8> {
         &16_u16.to_le_bytes(),
         b"data",
         &data.to_le_bytes(),
-        &vec![0; 1600],
+        &[0; 1600],
     ]
     .concat()
 }
@@ -127,12 +106,12 @@ fn sounds_made_ready_are_those_of_the_next_go_and_of_runs_yet_to_sound() {
         post_wait: 2.0.into(),
         ..audio(1)
     };
-    let workspace = loaded(vec![continuing, audio(2), audio(3)]);
+    let workspace = workspace(vec![continuing, audio(2), audio(3)]).directory("/show");
     assert_eq!(upcoming_cues(&workspace), [1, 2]);
-    let fired = workspace.apply(Command::Go { list: 0 });
+    let fired = workspace.apply(GO);
     assert_eq!(upcoming_cues(&fired), [2, 3]);
     let wanted = upcoming(&fired).remove(0).wanted;
-    assert_eq!(wanted.path, PathBuf::from("/show/sound.wav"));
+    assert_eq!(wanted.path, PathBuf::from("/show/sound.ogg"));
 }
 
 #[test]
@@ -143,17 +122,10 @@ fn sound_of_a_video_cue_is_made_ready_unless_its_file_holds_none() {
             .advance(Advance::Continue)
             .build()
     };
-    let workspace = loaded(vec![video(1), video(2)]);
+    let workspace = workspace(vec![video(1), video(2)]);
     assert_eq!(upcoming_cues(&workspace), [1, 2]);
-    let silent = Command::Loaded {
-        cue: CueId(2),
-        file: "movie.mp4".to_owned(),
-        media: Media::Loaded {
-            duration: 10.0,
-            sound: None,
-        },
-    };
-    assert_eq!(upcoming_cues(&workspace.apply(silent)), [1]);
+    let without_sound = workspace.apply(loaded(2, "movie.mp4", silent(10.0)));
+    assert_eq!(upcoming_cues(&without_sound), [1]);
 }
 
 #[test]

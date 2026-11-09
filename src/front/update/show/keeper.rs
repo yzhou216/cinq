@@ -25,7 +25,6 @@ use super::{
 /// they came, makes only the newest change to a file while several wait,
 /// and makes every change sent to it before the keeper goes, as the keeper
 /// does when the window closes.
-#[derive(Debug)]
 pub struct Keeper {
     /// Directory that keeps unsaved changes, if the platform has one
     unsaved_directory: Option<PathBuf>,
@@ -111,14 +110,12 @@ impl Drop for Keeper {
     }
 }
 
-#[derive(Debug)]
 enum Job {
     Change(Change),
     /// Answers once every change sent before it is made
     Settle(mpsc::Sender<()>),
 }
 
-#[derive(Debug)]
 enum Change {
     Write(PathBuf, String),
     Remove(PathBuf),
@@ -150,7 +147,7 @@ impl Change {
 /// to each file, in the order of those changes.
 fn work(jobs: &mpsc::Receiver<Job>, failed: &mpsc::Sender<String>) {
     jobs.iter().for_each(|first| {
-        let (changes, settles): (Vec<Change>, Vec<mpsc::Sender<()>>) = iter::once(first)
+        let (changes, settles): (Vec<_>, Vec<_>) = iter::once(first)
             .chain(jobs.try_iter())
             .partition_map(|job| match job {
                 Job::Change(change) => Either::Left(change),

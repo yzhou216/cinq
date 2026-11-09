@@ -64,8 +64,7 @@ fn pause_holds_time_and_fades() {
 fn go_skips_broken_cues_in_the_chain() {
     let untargeted = Cue::new(CueId(2), "2", Kind::Fade, "Fade").build();
     let workspace = workspace(vec![continuing(1), untargeted]).apply(GO);
-    assert_eq!(workspace.active().len(), 1);
-    assert!(workspace.active_of(CueId(1)).is_some());
+    assert_eq!(running(&workspace), [1]);
 }
 
 #[test]
@@ -79,18 +78,12 @@ fn stopping_a_cue_cancels_only_the_rest_of_its_chain_that_it_has_yet_to_start() 
     let unstarted = stopped(vec![continuing_after(1, 2.0), audio(2)]);
     assert!(unstarted.active().is_empty());
     let started = stopped(vec![continuing(1), continuing_after(2, 2.0), audio(3)]);
-    let left: Vec<CueId> = started.active().iter().map(|active| active.id).collect();
-    assert_eq!(left, [CueId(2), CueId(3)]);
+    assert_eq!(running(&started), [2, 3]);
 }
 
 #[test]
 fn fade_cue_leaves_a_cue_that_a_panic_is_stopping() {
-    let under = Cue::new(CueId(2), "2", Kind::Fade, "Under")
-        .target(CueId(1))
-        .level(-18.0)
-        .stop_target(false)
-        .build();
-    let workspace = workspace(vec![audio(1), under])
+    let workspace = workspace(vec![audio(1), fade_under(2)])
         .apply(GO)
         .apply(Command::Panic)
         .apply(GO)
@@ -216,6 +209,6 @@ fn audio_cue_that_loops_leaves_the_cue_it_would_follow_to_go() {
         ..audio(1)
     };
     let workspace = workspace(vec![following, audio(2)]).apply(GO);
-    assert_eq!(workspace.active().len(), 1);
+    assert_eq!(running(&workspace), [1]);
     assert_eq!(standby(&workspace), Some(2));
 }

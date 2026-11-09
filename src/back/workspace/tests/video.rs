@@ -6,8 +6,6 @@
 //! stop them, fade cues act on them, and show files hold them as they hold
 //! audio cues
 
-use std::path::Path;
-
 use super::*;
 
 fn video(id: u32) -> Cue {
@@ -18,11 +16,7 @@ fn video(id: u32) -> Cue {
 
 #[test]
 fn picture_fades_to_black_with_a_fade_that_stops_its_cue() {
-    let continuing = Cue {
-        advance: Advance::Continue,
-        ..video(1)
-    };
-    let workspace = workspace(vec![continuing, fade_out(2)])
+    let workspace = workspace(vec![continued(video(1)), fade_out(2)])
         .apply(GO)
         .apply(Command::Tick(1.0));
     assert!(workspace.active_of(CueId(1)).unwrap().shows_picture());
@@ -32,15 +26,11 @@ fn picture_fades_to_black_with_a_fade_that_stops_its_cue() {
 
 #[test]
 fn picture_fading_out_fades_on_from_where_it_was_under_a_panic_or_another_fade() {
-    let continuing = Cue {
-        advance: Advance::Continue,
-        ..video(1)
-    };
     let longer = Cue {
         duration: 8.0.into(),
         ..fade_out(3)
     };
-    let halfway = workspace(vec![continuing, fade_out(2), longer])
+    let halfway = workspace(vec![continued(video(1)), fade_out(2), longer])
         .apply(GO)
         .apply(Command::Tick(2.0));
     let panicked = halfway.clone().apply(Command::Panic);
@@ -51,16 +41,7 @@ fn picture_fading_out_fades_on_from_where_it_was_under_a_panic_or_another_fade()
 
 #[test]
 fn picture_stays_whole_under_a_fade_that_leaves_its_cue_playing() {
-    let under = Cue::new(CueId(2), "2", Kind::Fade, "Under")
-        .target(CueId(1))
-        .level(-18.0)
-        .stop_target(false)
-        .build();
-    let continuing = Cue {
-        advance: Advance::Continue,
-        ..video(1)
-    };
-    let workspace = workspace(vec![continuing, under])
+    let workspace = workspace(vec![continued(video(1)), fade_under(2)])
         .apply(GO)
         .apply(Command::Tick(2.0));
     assert_eq!(opacity(&workspace, 1), 1.0);
@@ -79,20 +60,8 @@ fn panic_fades_the_picture_out_with_the_sound() {
 
 #[test]
 fn video_cue_without_sound_still_fades_out_and_stops() {
-    let silent = loaded(
-        1,
-        "movie.mp4",
-        Media::Loaded {
-            duration: 10.0,
-            sound: None,
-        },
-    );
-    let continuing = Cue {
-        advance: Advance::Continue,
-        ..video(1)
-    };
-    let workspace = workspace(vec![continuing, fade_out(2)])
-        .apply(silent)
+    let workspace = workspace(vec![continued(video(1)), fade_out(2)])
+        .apply(loaded(1, "movie.mp4", silent(10.0)))
         .apply(GO);
     assert_eq!(workspace.active_of(CueId(1)).unwrap().sound(), None);
     let halfway = workspace.apply(Command::Tick(2.0));
@@ -113,10 +82,8 @@ fn show_file_holds_a_video_cue_as_it_holds_an_audio_cue() {
         looping: true,
         ..video(1)
     };
-    let workspace = workspace(vec![looping]).directory("/show");
-    let text = workspace.show(Some(Path::new("/show")));
+    let text = shown(&workspace(vec![looping]).directory("/show"));
     let cue = "kind = \"video\"\nname = \"Movie\"\nfile = \"movie.mp4\"\nstart = 1.5\nloop = true\nlevel = 0.0\n";
     assert!(text.contains(cue), "{text}");
-    let read = Workspace::from_show(&text, "/show").expect("the show reads back");
-    assert_eq!(read.show(Some(Path::new("/show"))), text);
+    read_back(&text);
 }

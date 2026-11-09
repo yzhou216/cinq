@@ -18,10 +18,8 @@ fn keeper_keeps_unsaved_changes_until_they_are_gone() {
     let changed = renamed(app, "Cue");
     assert_eq!(keeper.keep(&changed.show), None);
     keeper.settled();
-    assert_eq!(
-        fs::read_to_string(&kept).ok(),
-        Some(changed.show.text.clone())
-    );
+    let text = fs::read_to_string(&kept).ok();
+    assert_eq!(text.as_ref(), Some(&changed.show.text));
     assert_eq!(keeper.keep(&changed.send(Command::Undo).show), None);
     keeper.settled();
     assert!(!kept.exists());
@@ -62,7 +60,7 @@ fn show_named_through_a_parent_directory_keeps_its_changes_as_by_its_plain_path(
 
 #[test]
 fn keeper_tells_at_its_next_turn_why_a_change_failed() {
-    let directory = TempDir::new().expect("a temporary directory can be made");
+    let directory = temporary();
     // File where the directory of unsaved changes would go
     let blocked = directory.path().join("unsaved");
     fs::write(&blocked, "").expect("the file can be written");

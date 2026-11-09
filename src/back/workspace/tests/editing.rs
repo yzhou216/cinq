@@ -4,15 +4,21 @@
 
 //! Tests of adding, deleting, editing, and loading cues
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use super::*;
+
+/// Returns the command that records that the sound file of cue `id` is
+/// not found
+fn not_found(id: u32) -> Command {
+    loaded(id, "sound.ogg", Media::Failed("file not found".to_owned()))
+}
 
 #[test]
 fn show_mode_blocks_edits_but_not_playback() {
     let workspace = workspace(vec![audio(1), audio(2)])
         .apply(Command::ShowMode(true))
-        .apply(Command::Edit(CueId(1), Edit::Name("Renamed".to_owned())))
+        .apply(rename(1, "Renamed"))
         .apply(moving(1, 1))
         .apply(GO);
     assert_eq!(workspace.cue(CueId(1)).unwrap().name, "Sound");
@@ -54,31 +60,15 @@ fn moved_cue_stops_at_either_end_of_its_list_and_keeps_standby() {
 
 #[test]
 fn loading_ignores_a_file_that_has_been_replaced() {
-    let replaced = workspace(vec![audio(1)])
-        .apply(Command::Edit(CueId(1), Edit::File("other.ogg".to_owned())));
-    let stale = replaced.clone().apply(loaded(
-        1,
-        "sound.ogg",
-        Media::Loaded {
-            duration: 10.0,
-            sound: Some(10.0),
-        },
-    ));
+    let replaced = workspace(vec![audio(1)]).apply(edit(1, Edit::File("other.ogg".to_owned())));
+    let stale = replaced.clone().apply(loaded(1, "sound.ogg", sound(10.0)));
     let cue = stale.cue(CueId(1)).unwrap();
     assert_eq!(stale.problem(cue), Some(Problem::NotLoaded));
     // Failure of the file that was replaced leaves the cue playing
-    let failed = loaded(1, "sound.ogg", Media::Failed("file not found".to_owned()));
     let playing = replaced
-        .apply(loaded(
-            1,
-            "other.ogg",
-            Media::Loaded {
-                duration: 10.0,
-                sound: Some(10.0),
-            },
-        ))
+        .apply(loaded(1, "other.ogg", sound(10.0)))
         .apply(GO)
-        .apply(failed);
+        .apply(not_found(1));
     assert!(playing.active_of(CueId(1)).is_some());
 }
 
@@ -97,19 +87,17 @@ fn level_edit_leaves_a_cue_that_a_panic_is_stopping() {
     let workspace = workspace(vec![audio(1)])
         .apply(GO)
         .apply(Command::Panic)
-        .apply(Command::Edit(CueId(1), Edit::Level(-3.0)))
+        .apply(edit(1, Edit::Level(-3.0)))
         .apply(Command::Tick(PANIC_FADE));
     assert!(workspace.active().is_empty());
 }
 
 #[test]
 fn run_whose_sound_cannot_start_ends_and_its_chain_plays_on() {
-    let failed = loaded(1, "sound.ogg", Media::Failed("file not found".to_owned()));
     let workspace = workspace(vec![continuing_after(1, 2.0), audio(2)])
         .apply(GO)
-        .apply(failed);
-    let left: Vec<CueId> = workspace.active().iter().map(|active| active.id).collect();
-    assert_eq!(left, [CueId(2)]);
+        .apply(not_found(1));
+    assert_eq!(running(&workspace), [2]);
     let cue = workspace.cue(CueId(1)).unwrap();
     assert_eq!(
         workspace.problem(cue),
@@ -151,7 +139,7 @@ fn edit_that_changes_nothing_leaves_a_running_cue_playing_and_nothing_to_undo() 
     // as Backspace at the start of the field
     let workspace = workspace(vec![audio(1)])
         .apply(GO)
-        .apply(Command::Edit(CueId(1), Edit::File("sound.ogg".to_owned())));
+        .apply(edit(1, Edit::File("sound.ogg".to_owned())));
     let cue = workspace.cue(CueId(1)).unwrap();
     assert!(workspace.active_of(CueId(1)).is_some());
     assert_eq!(workspace.problem(cue), None);
@@ -170,11 +158,8 @@ fn choosing_the_file_that_a_running_cue_plays_leaves_it_playing() {
         .unwrap()
         .playing("sound.ogg".to_owned());
     let workspace = running
-        .apply(Command::Edit(CueId(1), chosen))
-        .apply(Command::Edit(
-            CueId(1),
-            Edit::File(" sound.ogg\n".to_owned()),
-        ));
+        .apply(edit(1, chosen))
+        .apply(edit(1, Edit::File(" sound.ogg\n".to_owned())));
     let cue = workspace.cue(CueId(1)).unwrap();
     assert_eq!(cue.name, "sound");
     assert_eq!(workspace.problem(cue), None);
@@ -186,7 +171,7 @@ fn editing_a_running_cue_leaves_the_run_under_way() {
     let workspace = workspace(vec![audio(1)])
         .apply(GO)
         .apply(Command::Tick(3.0))
-        .apply(Command::Edit(CueId(1), Edit::PreWait(10.0.into())));
+        .apply(edit(1, Edit::PreWait(10.0.into())));
     let active = workspace.active_of(CueId(1)).unwrap();
     assert_eq!(active.phase(), Phase::Running { remaining: 7.0 });
 }
@@ -194,11 +179,8 @@ fn editing_a_running_cue_leaves_the_run_under_way() {
 #[test]
 fn deleting_the_last_cue_on_standby_moves_standby_past_the_end() {
     let workspace = workspace(vec![audio(1), audio(2)])
-        .apply(Command::Standby {
-            list: 0,
-            cue: Some(CueId(2)),
-        })
-        .apply(Command::Delete(vec![CueId(2)]));
+        .apply(move_standby(2))
+        .apply(delete(&[2]));
     assert_eq!(workspace.lists()[0].standby, None);
 }
 
@@ -219,8 +201,7 @@ fn new_numbers_read_spaced_and_large_numbers_exactly_and_do_not_overflow() {
 
 #[test]
 fn files_that_could_not_be_played_are_listed_for_another_try() {
-    let failed = loaded(1, "sound.ogg", Media::Failed("file not found".to_owned()));
-    let workspace = workspace(vec![audio(1), audio(2)]).apply(failed);
+    let workspace = workspace(vec![audio(1), audio(2)]).apply(not_found(1));
     let listed: Vec<CueId> = workspace.failed().map(|cue| cue.id).collect();
     assert_eq!(listed, [CueId(1)]);
 }
@@ -234,8 +215,8 @@ fn editing_a_fade_cue_in_its_pre_wait_leaves_the_fade_it_will_make() {
     let workspace = workspace(vec![continuing(1), fade])
         .apply(GO)
         .apply(Command::Tick(1.0))
-        .apply(Command::Edit(CueId(2), Edit::Level(-10.0)))
-        .apply(Command::Edit(CueId(2), Edit::StopTarget(false)))
+        .apply(edit(2, Edit::Level(-10.0)))
+        .apply(edit(2, Edit::StopTarget(false)))
         .apply(Command::Tick(1.0));
     let fade = workspace.active_of(CueId(1)).unwrap().fade.unwrap();
     assert_eq!((fade.to, fade.then_stop), (SILENCE, true));
@@ -248,7 +229,7 @@ fn editing_the_clip_of_a_running_cue_waits_for_its_next_run() {
         ..audio(1)
     }])
     .apply(GO)
-    .apply(Command::Edit(CueId(1), Edit::Loop(false)))
+    .apply(edit(1, Edit::Loop(false)))
     .apply(Command::Tick(30.0));
     let active = workspace.active_of(CueId(1)).expect("the loop plays on");
     assert_eq!(active.phase(), Phase::Looping);

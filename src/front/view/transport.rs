@@ -18,15 +18,8 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     let standby = list.standby.and_then(|id| app.workspace.cue(id));
     // Summary keeps to three lines, each cut short at the edge rather than
     // wrapped, so that the parts below stay where they are as standby moves
-    let lines = standby.map_or_else(
-        || {
-            [
-                "Standby: end of list".to_owned(),
-                "Notes: none".to_owned(),
-                "GO fires nothing".to_owned(),
-            ]
-        },
-        |cue| {
+    let lines = match standby {
+        Some(cue) => {
             let notes = if cue.notes.trim().is_empty() {
                 "none".to_owned()
             } else {
@@ -37,8 +30,13 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
                 format!("Notes: {notes}"),
                 format::chain(&app.workspace, list, cue),
             ]
-        },
-    );
+        }
+        None => [
+            "Standby: end of list".to_owned(),
+            "Notes: none".to_owned(),
+            "GO fires nothing".to_owned(),
+        ],
+    };
     let [title, notes, chain] = lines.map(|line| text(line).wrapping(Wrapping::None));
     let summary = column![title.size(24), notes, chain];
     let paused = app.workspace.active().iter().any(|active| active.paused);

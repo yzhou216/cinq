@@ -19,10 +19,10 @@ use kira::sound::{
 };
 
 use super::voice;
-use crate::back::{Clip, CueId};
+use crate::back::{Clip, CueId, items::taken};
 
 /// Part of a file that a run of an audio or video cue may start
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub(super) struct Wanted {
     pub(super) path: PathBuf,
     pub(super) clip: Clip,
@@ -97,10 +97,7 @@ impl Preloader {
         cue: CueId,
         wanted: &Wanted,
     ) -> Option<Result<Preloaded, String>> {
-        self.ready
-            .remove(&cue)
-            .filter(|(made, _)| made == wanted)
-            .map(|(_, sound)| sound)
+        taken(&mut self.ready, &cue, |made| made == wanted)
     }
 
     /// Makes ready the sounds of `upcoming`, apart from those that are ready

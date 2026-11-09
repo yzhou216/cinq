@@ -46,13 +46,16 @@ fn show(selected: Option<CueId>) -> App {
     }
 }
 
+pub(super) fn press(key: Key) -> Press {
+    Press::from_key(&key, Modifiers::empty()).expect("keys in the tests are named")
+}
+
 fn stays_open(key: Key) -> bool {
-    let press = Press::from_key(&key, Modifiers::empty()).expect("keys in the tests are named");
     let open = App {
         help: true,
         ..App::default()
     };
-    open.typed(press, false).0.help
+    open.typed(press(key), false).0.help
 }
 
 #[test]
@@ -72,9 +75,7 @@ fn keys_that_move_the_selection_scroll_the_open_help_page() {
             ..show(Some(CueId(2)))
         };
         let (after, task) = keys.iter().fold((app, Task::none()), |(app, _), &key| {
-            let press = Press::from_key(&Key::Character(key.into()), Modifiers::empty())
-                .expect("keys in the tests are named");
-            app.typed(press, false)
+            app.typed(press(Key::Character(key.into())), false)
         });
         (after.selected, task.units() > 0)
     };

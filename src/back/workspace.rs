@@ -22,7 +22,7 @@ mod problems;
 mod show;
 mod stopping;
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
 
 use std::path::{Path, PathBuf};
 

@@ -50,9 +50,14 @@ fn saving(app: &App, file: &str) -> Saved {
     }
 }
 
+/// Returns a new temporary directory, which goes once the test drops it
+fn temporary() -> TempDir {
+    TempDir::new().expect("a temporary directory can be made")
+}
+
 /// Returns a keeper of unsaved changes in a new temporary directory, along
-/// with the directory, which goes once the test drops it
+/// with the directory
 fn keeper() -> (Keeper, TempDir) {
-    let directory = TempDir::new().expect("a temporary directory can be made");
+    let directory = temporary();
     (Keeper::new(Some(directory.path().to_owned())), directory)
 }

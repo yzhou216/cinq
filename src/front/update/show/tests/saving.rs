@@ -79,7 +79,7 @@ fn chosen_file_gets_the_ending_of_a_show_unless_it_is_toml() {
 fn saving_keeps_the_permissions_of_the_show_and_the_link_to_it() {
     use std::os::unix::fs::{PermissionsExt, symlink};
 
-    let directory = TempDir::new().expect("a temporary directory can be made");
+    let directory = temporary();
     let show = directory.path().join("storm.cinq.toml");
     fs::write(&show, SHOW).expect("the show can be written");
     fs::set_permissions(&show, fs::Permissions::from_mode(0o640))
