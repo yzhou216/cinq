@@ -7,14 +7,16 @@
 //!
 //! A pass starts a decoder at the last sync sample before the start of the
 //! clip that shows no later than the first picture of the clip, and decodes
-//! from there to the last sample that shows before its end.  Each sample
-//! holds a picture, which the decoder finishes as soon as it has read the
-//! sample rather than once the next picture starts, since a sample that
-//! fails to decode would otherwise take the picture before it along.  The
-//! pictures go out in the order they show, which [`order`] keeps, each at
-//! the time of its own sample, and those before the start of the clip are
-//! let go without turning them into RGBA, which [`color`] turns the rest
-//! into.  A pass ends by telling its player that it has sent every
+//! from there to the last sample that shows before its end.  The decoder
+//! spreads the pictures over the cores, which 1080p at sixty pictures a
+//! second and 4K need to keep up, and gives them back in the order they
+//! show, each with the index of the sample that started it, so that it
+//! shows at the time of its own sample.  Those before the start of the clip
+//! are let go without turning them into RGBA, which [`color`] turns the
+//! rest into.  The decoder holds back as many pictures as the stream says
+//! it reorders.  A picture that fails to decode is dropped, and those that
+//! refer to it, up to the next sync sample, draw on a grey picture in its
+//! place.  A pass ends by telling its player that it has sent every
 //! picture, or why its picture cannot play, as a pass that decodes no
 //! picture cannot, and it stops decoding as soon as its player has gone.
 //! Each pass opens its file and reads the index of its track anew, which
@@ -22,9 +24,9 @@
 //! that decodes ahead.
 
 mod color;
-mod order;
 
 use std::{
+    num::NonZero,
     path::{Path, PathBuf},
     sync::{
         Weak,
@@ -34,15 +36,15 @@ use std::{
 };
 
 use rust_h264::{
-    decoder::{ChromaFormat, Decoder, Frame as Decoded},
-    nal::NalUnit,
+    decoder::{ChromaFormat, Frame as Decoded},
+    nal::parse_sps_info,
+    threading::ThreadedDecoder,
 };
 
 use super::track::Track;
 use crate::back::Clip;
 pub use color::Picture;
 use color::rgba;
-use order::Order;
 
 /// Pictures that the thread of a pass decodes ahead of the clock of its
 /// run, besides the one it holds as it waits to send it: enough to ride out
@@ -50,6 +52,16 @@ use order::Order;
 /// group of pictures, and few enough to keep the memory of a pass small,
 /// as each picture of 1080p takes 8 MB
 const AHEAD: usize = 2;
+
+/// Most threads that decode the pictures of a pass, one for each core:
+/// enough to spread them over the cores of most machines
+const THREADS: usize = 8;
+
+/// Pictures that the decoder holds back to put in order when the stream
+/// does not say how many it reorders, which is the decoder's own default,
+/// and the most that it holds back for any stream, which is as many as
+/// H.264 allows
+const REORDER: usize = 16;
 
 /// Why the picture of a file that holds H.264 cannot play, when the decoder
 /// decodes none of it
@@ -109,14 +121,21 @@ fn decoded(
         return Ok(0);
     };
     let passed = f64::from(pass) * clip.length();
-    let send = |pictures: Vec<(f64, Decoded)>, sent: usize| {
+    // Copied out, as reading a sample borrows the track anew
+    let times: Vec<f64> = track.samples.iter().map(|sample| sample.shows).collect();
+    let send = |pictures: Vec<(Decoded, usize)>, sent: usize| {
         pictures
-            .iter()
-            .filter(|(shows, _)| (first..clip.end).contains(shows))
+            .into_iter()
+            .map(|(picture, index)| (times[index], picture))
+            .filter(|(shows, picture)| {
+                (first..clip.end).contains(shows)
+                    && picture.bit_depth == 8
+                    && picture.chroma_format == ChromaFormat::Yuv420
+            })
             .try_fold(sent, |sent, (shows, picture)| {
                 let frame = Frame {
                     at: passed + (shows - clip.start).max(0.0),
-                    picture: rgba(picture),
+                    picture: rgba(&picture),
                 };
                 sender
                     .send(Sent::Picture(frame))
@@ -124,39 +143,32 @@ fn decoded(
                     .map_err(|_| Stop::Gone)
             })
     };
-    let mut decoder = Decoder::new();
-    // Parameter sets that fail to decode leave every sample to fail as well
-    track.parameter_sets().iter().for_each(|unit| {
-        let _ = decoder.decode_nal(unit);
-    });
-    let order = Order::new(track.samples[from..=to].iter().map(|sample| sample.shows));
-    (from..=to)
-        .try_fold((order, 0), |(order, sent), index| {
-            if player.strong_count() == 0 {
-                return Err(Stop::Gone);
-            }
-            let sample = track.sample(index).map_err(Stop::Failed)?;
-            let picture = picture(&mut decoder, &track.units(&sample));
-            let (due, order) = order.decoded(index - from, picture);
-            Ok((order, send(due, sent)?))
-        })
-        .map(|(_, sent)| sent)
-}
-
-/// Decodes the NAL units of a sample with `decoder`, and returns its
-/// picture, once finished, when it decodes to one in eight bits for each
-/// color with the colors shared by four pixels, which [`rgba`] turns into
-/// RGBA
-fn picture(decoder: &mut Decoder, units: &[NalUnit<'_>]) -> Option<Decoded> {
-    // Unit that fails to decode adds nothing to the picture, which
-    // decoding goes on without, and a sample that holds two pictures, as no
-    // file should, keeps the second, which the decoder finishes last
-    let earlier = units
+    let parameters = track.parameter_sets();
+    let reorder = parameters
         .iter()
-        .filter_map(|unit| decoder.decode_nal(unit).ok().flatten())
-        .last();
-    decoder
-        .flush()
-        .or(earlier)
-        .filter(|picture| picture.bit_depth == 8 && picture.chroma_format == ChromaFormat::Yuv420)
+        .find_map(|unit| parse_sps_info(unit).ok())
+        .and_then(|info| info.max_reorder_frames)
+        .map_or(REORDER, |frames| (frames as usize).min(REORDER));
+    let threads = thread::available_parallelism().map_or(1, NonZero::get);
+    let mut decoder = ThreadedDecoder::with_max_depth(threads.min(THREADS), reorder);
+    // Parameter sets that fail to decode leave every sample to fail as well
+    parameters.iter().for_each(|unit| {
+        let _ = decoder.decode_nal_with_meta(unit, 0);
+    });
+    let sent = (from..=to).try_fold(0, |sent, index| {
+        if player.strong_count() == 0 {
+            return Err(Stop::Gone);
+        }
+        let bytes = track.sample(index).map_err(Stop::Failed)?;
+        // Unit that fails to decode adds nothing to the picture, which
+        // decoding goes on without
+        let pictures = track
+            .units(&bytes)
+            .iter()
+            .filter_map(|unit| decoder.decode_nal_with_meta(unit, index).ok())
+            .flatten()
+            .collect();
+        send(pictures, sent)
+    })?;
+    send(decoder.flush_with_meta(), sent)
 }

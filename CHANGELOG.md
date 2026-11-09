@@ -44,6 +44,11 @@ Major changes and improvements in each release of cinq, newest first.
   time it opens, so that a device plugged in since shows.
 - A drop-down list too narrow for its options cuts the chosen one short
   with an ellipsis, and its menu grows as wide as the longest option.
+- Video cues decode on several threads, one for each core up to eight, so
+  that 1080p plays at 60 pictures a second and 4K plays in full, where
+  pictures used to drop.  In a damaged video, the pictures after one that
+  fails to decode now show grey where they draw on it, until the next
+  keyframe.
 
 ## v0.1.3
 
