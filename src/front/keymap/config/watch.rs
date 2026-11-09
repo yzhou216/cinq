@@ -152,12 +152,12 @@ const KQUEUE: bool = cfg!(any(
     target_os = "openbsd",
 ));
 
-/// Watches the [`directory`] of `file` in place of the directory `watched`,
-/// and with kqueue the file itself as well, which an editor may write in
-/// place, and returns the directory now watched, or why it cannot be
-/// watched.  The watch goes in anew even when the directory is the same,
-/// since a directory that was deleted and made again takes its old watch
-/// with it.
+/// Watches the nearest directory on the way to `file` in place of the
+/// directory `watched`, and with kqueue the file itself as well, which an
+/// editor may write in place, and returns the directory now watched, or why
+/// no directory can be watched.  The watch goes in anew even when the
+/// directory is the same, since a directory that was deleted and made again
+/// takes its old watch with it.
 fn rewatch(
     watcher: &mut Watcher,
     watched: Option<&Path>,
@@ -167,13 +167,9 @@ fn rewatch(
     if let Some(watched) = watched {
         let _ = watcher.unwatch(watched);
     }
-    let directory = directory(file)
-        .map(|directory| {
-            watcher
-                .watch(&directory, RecursiveMode::NonRecursive)
-                .map(|()| directory)
-        })
-        .transpose()?;
+    let directory = watch_nearest(file, |directory| {
+        watcher.watch(directory, RecursiveMode::NonRecursive)
+    })?;
     if KQUEUE {
         // File that is missing, or that another has replaced, comes and
         // goes through the watch on its directory, so a failure is moot
@@ -183,9 +179,21 @@ fn rewatch(
     Ok(directory)
 }
 
-fn directory(file: &Path) -> Option<PathBuf> {
+/// Calls `add` on the nearest directory on the way to `file` that exists,
+/// and returns it once watched.  A directory can go between the check that
+/// it exists and the watch, with no event to tell of it, so a watch that
+/// fails on a directory gone by then falls back to the next one up, while
+/// any other failure is an error.
+fn watch_nearest(
+    file: &Path,
+    mut add: impl FnMut(&Path) -> notify::Result<()>,
+) -> notify::Result<Option<PathBuf>> {
     file.ancestors()
         .skip(1)
-        .find(|directory| directory.is_dir())
-        .map(Path::to_owned)
+        .filter(|directory| directory.is_dir())
+        .find_map(|directory| match add(directory) {
+            Err(_) if !directory.is_dir() => None,
+            result => Some(result.map(|()| directory.to_owned())),
+        })
+        .transpose()
 }

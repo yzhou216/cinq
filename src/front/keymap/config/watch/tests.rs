@@ -10,7 +10,7 @@ use std::{
     fs,
     io::{self, Write},
     iter,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::mpsc,
     thread,
     time::Duration,
@@ -18,9 +18,10 @@ use std::{
 
 use futures::executor;
 use iced::futures::{StreamExt, future};
+use notify_debouncer_full::notify;
 use tempfile::TempDir;
 
-use super::{Errors, watch};
+use super::{Errors, watch, watch_nearest};
 use crate::front::keymap::{
     Preset,
     config::{Config, Source},
@@ -159,5 +160,37 @@ fn keys_follow_the_file_while_standard_error_takes_nothing() -> io::Result<()> {
     until(&configs, |config| !config.problems.is_empty());
     fs::write(&file, "keymap = \"cua\"\n")?;
     until(&configs, from_file(Preset::Cua));
+    Ok(())
+}
+
+#[test]
+fn a_directory_that_vanishes_before_it_is_watched_gives_way_to_the_next_up() -> io::Result<()> {
+    let home = TempDir::new()?;
+    let nearest = home.path().join("config").join("cinq");
+    fs::create_dir_all(&nearest)?;
+    let file = nearest.join("config.toml");
+    // Directory goes after the check that it exists, so watching it fails
+    let add = |directory: &Path| {
+        if directory == nearest {
+            fs::remove_dir(directory)?;
+        }
+        directory
+            .is_dir()
+            .then_some(())
+            .ok_or_else(notify::Error::path_not_found)
+    };
+    let watched = watch_nearest(&file, add).map_err(io::Error::other)?;
+    assert_eq!(watched, Some(home.path().join("config")));
+    Ok(())
+}
+
+#[test]
+fn a_directory_that_refuses_the_watch_but_is_there_is_an_error() -> io::Result<()> {
+    let home = TempDir::new()?;
+    let file = home.path().join("config.toml");
+    let refuse =
+        |directory: &Path| Err(notify::Error::generic("refused").add_path(directory.into()));
+    let error = watch_nearest(&file, refuse).expect_err("the nearest directory refuses the watch");
+    assert_eq!(error.paths, [home.path()]);
     Ok(())
 }
