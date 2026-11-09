@@ -6,6 +6,7 @@
 //! moves, through the passes of a clip that loops as well
 
 use std::{
+    ops::ControlFlow,
     thread,
     time::{Duration, Instant},
 };
@@ -13,6 +14,7 @@ use std::{
 use super::{
     PATIENCE, clip,
     movie::{movie, picture_number},
+    repeated,
 };
 use crate::back::{Shown, video::player::Player};
 
@@ -20,30 +22,24 @@ use crate::back::{Shown, video::player::Player};
 /// picture numbered `expected`, and returns the player with the numbers of
 /// every picture that it handed on
 fn shown(player: Player, played: f64, expected: usize) -> (Player, Vec<usize>) {
-    shown_since(player, played, expected, Instant::now(), Vec::new())
-}
-
-/// Goes on with [`shown`], which started at `started` and has seen the
-/// pictures numbered `seen`
-fn shown_since(
-    player: Player,
-    played: f64,
-    expected: usize,
-    started: Instant,
-    seen: Vec<usize>,
-) -> (Player, Vec<usize>) {
-    if seen.last() == Some(&expected) || started.elapsed() > PATIENCE {
-        return (player, seen);
-    }
-    let (player, picture) = player.advanced(played).expect("the pictures decode");
-    let seen = match picture {
-        Some(picture) => [seen, vec![picture_number(&picture.pixels)]].concat(),
-        None => {
-            thread::sleep(Duration::from_millis(5));
-            seen
-        }
-    };
-    shown_since(player, played, expected, started, seen)
+    let started = Instant::now();
+    repeated(
+        (player, Vec::new()),
+        |(player, seen): (Player, Vec<usize>)| {
+            if seen.last() == Some(&expected) || started.elapsed() > PATIENCE {
+                return ControlFlow::Break((player, seen));
+            }
+            let (player, picture) = player.advanced(played).expect("the pictures decode");
+            let seen = match picture {
+                Some(picture) => [seen, vec![picture_number(&picture.pixels)]].concat(),
+                None => {
+                    thread::sleep(Duration::from_millis(5));
+                    seen
+                }
+            };
+            ControlFlow::Continue((player, seen))
+        },
+    )
 }
 
 #[test]

@@ -8,6 +8,7 @@
 
 use std::{
     fs,
+    ops::ControlFlow,
     path::Path,
     thread,
     time::{Duration, Instant},
@@ -16,7 +17,7 @@ use std::{
 use super::{
     GO, PATIENCE,
     movie::{broken_movie, movie, picture_number},
-    showing_cue, synced,
+    repeated, showing_cue, synced,
 };
 use crate::back::{
     Command, Cue, CueId, Kind, Media, Video, Workspace, video::decoder::UNDECODABLE,
@@ -47,15 +48,18 @@ fn video_output_shows_the_pictures_of_a_run_and_lets_its_thread_go_once_it_stops
 
 /// Syncs `video` with `workspace`, which keeps its clock where it is, until
 /// the next picture has arrived, and returns when it is due
-fn due(video: &mut Video, workspace: Workspace, started: Instant) -> (Workspace, Option<f64>) {
-    let (workspace, _) = video.sync(workspace);
-    match video.next_due(&workspace) {
-        None if started.elapsed() < PATIENCE => {
-            thread::sleep(Duration::from_millis(5));
-            due(video, workspace, started)
+fn due(video: &mut Video, workspace: Workspace) -> (Workspace, Option<f64>) {
+    let started = Instant::now();
+    repeated(workspace, |workspace| {
+        let (workspace, _) = video.sync(workspace);
+        match video.next_due(&workspace) {
+            None if started.elapsed() < PATIENCE => {
+                thread::sleep(Duration::from_millis(5));
+                ControlFlow::Continue(workspace)
+            }
+            next => ControlFlow::Break((workspace, next)),
         }
-        next => (workspace, next),
-    }
+    })
 }
 
 #[test]
@@ -63,7 +67,7 @@ fn next_picture_of_a_run_comes_due_a_picture_after_the_one_it_shows() {
     let (_directory, path) = movie(15, 5);
     let mut video = Video::default();
     let (playing, _) = synced(&mut video, showing(&path).apply(GO));
-    let (playing, next) = due(&mut video, playing, Instant::now());
+    let (playing, next) = due(&mut video, playing);
     assert!(
         next.is_some_and(|next| (next * 30.0 - 1.0).abs() < 1e-6),
         "{next:?}"

@@ -14,7 +14,8 @@ mod runs;
 mod still;
 
 use std::{
-    fs,
+    fs, iter,
+    ops::ControlFlow,
     path::Path,
     sync::Arc,
     thread,
@@ -40,27 +41,33 @@ fn showing_cue(path: &Path, cue: Cue) -> Workspace {
     loads.into_iter().fold(workspace, Workspace::apply)
 }
 
+/// Calls `step` on `state` again and again until it breaks with a result.
+/// The steps of these tests wait for a thread to decode, which takes
+/// seconds on a busy machine, so recursing would leave a stack frame for
+/// every poll and overflow the stack of the test thread, which aborts the
+/// whole run instead of failing the one test.
+fn repeated<S, T>(state: S, mut step: impl FnMut(S) -> ControlFlow<T, S>) -> T {
+    iter::repeat(())
+        .try_fold(state, |state, ()| step(state))
+        .break_value()
+        .expect("an endless iterator ends only by breaking")
+}
+
 /// Syncs `video` with `workspace` until a picture comes due or the
 /// workspace no longer runs the cue, and returns the workspace, along with
 /// the picture
 fn synced(video: &mut Video, workspace: Workspace) -> (Workspace, Option<(CueId, Picture)>) {
-    synced_since(video, workspace, Instant::now())
-}
-
-/// Goes on with [`synced`], which started at `started`
-fn synced_since(
-    video: &mut Video,
-    workspace: Workspace,
-    started: Instant,
-) -> (Workspace, Option<(CueId, Picture)>) {
-    let (workspace, pictures) = video.sync(workspace);
-    match pictures.into_iter().next() {
-        None if started.elapsed() < PATIENCE && !workspace.active().is_empty() => {
-            thread::sleep(Duration::from_millis(5));
-            synced_since(video, workspace, started)
+    let started = Instant::now();
+    repeated(workspace, |workspace| {
+        let (workspace, pictures) = video.sync(workspace);
+        match pictures.into_iter().next() {
+            None if started.elapsed() < PATIENCE && !workspace.active().is_empty() => {
+                thread::sleep(Duration::from_millis(5));
+                ControlFlow::Continue(workspace)
+            }
+            picture => ControlFlow::Break((workspace, picture)),
         }
-        picture => (workspace, picture),
-    }
+    })
 }
 
 fn clip(start: f64, end: f64, looping: bool) -> Clip {
