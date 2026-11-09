@@ -28,12 +28,6 @@ const RECHECK: Duration = Duration::from_secs(2);
 const SOONEST: Duration = Duration::from_millis(1);
 
 impl App {
-    /// Listens for keys and clicks in either window, windows that gain the
-    /// keyboard, change size, or close, and changes of the configuration,
-    /// for clock ticks while any cue is running, a tick after the last, or
-    /// sooner when the next picture of a video cue comes due before then,
-    /// so that it shows then, and for the time to try again the files that
-    /// could not be played
     pub(super) fn subscription(&self) -> Subscription<Message> {
         let tick = self.running().then_some(TICK);
         let picture = self

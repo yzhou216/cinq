@@ -61,8 +61,6 @@ pub fn advance(advance: Advance) -> &'static str {
     }
 }
 
-/// Describes what a cue acts on: its file name without the directory, or
-/// the cue that it targets
 pub fn target(workspace: &Workspace, cue: &Cue) -> String {
     match cue.kind {
         Kind::Audio | Kind::Video | Kind::Picture => cue

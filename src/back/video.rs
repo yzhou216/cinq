@@ -58,14 +58,13 @@ struct Showing {
 pub struct Video {
     /// Players of the runs, each with the serial number of its run
     runs: HashMap<CueId, (u32, Player)>,
-    /// Players made ready ahead for the next GO
     ready: HashMap<CueId, (Showing, Player)>,
 }
 
 impl Video {
-    /// Makes the pictures match the workspace.  Returns the workspace with
-    /// the files whose picture cannot play, along with the pictures that
-    /// have come due since the last sync, each with its cue.
+    /// Returns the workspace with the files whose picture cannot play, along
+    /// with the pictures that have come due since the last sync, each with
+    /// its cue.
     pub fn sync(&mut self, workspace: Workspace) -> (Workspace, Vec<(CueId, Picture)>) {
         // Players whose run has ended, and those made ready that no run
         // takes, stay behind and go at the end
@@ -78,7 +77,6 @@ impl Video {
                 let cue = workspace.cue(active.id)?;
                 let shown = active.shown()?;
                 let showing = workspace.path(cue).map(|path| Showing { path, shown });
-                // Player of the run, or else the one made ready for it
                 let player = ended
                     .remove(&cue.id)
                     .filter(|(run, _)| *run == active.run)

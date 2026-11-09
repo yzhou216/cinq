@@ -28,7 +28,6 @@ use super::unreadable;
 pub(super) use timing::Sample;
 use timing::timeline;
 
-/// Why a file holds no picture to play
 const NO_VIDEO: &str = "holds no H.264 video";
 
 /// Why a file holds no picture to play when the tables of its H.264 track
@@ -43,7 +42,6 @@ const PROFILES: [u8; 3] = [66, 77, 100];
 /// Bytes before each parameter set of a track that give its length
 const PARAMETER_LENGTH: usize = 4;
 
-/// H.264 track of a video file, ready to read
 pub(super) struct Track {
     reader: Mp4Reader<BufReader<File>>,
     id: u32,
@@ -150,8 +148,6 @@ impl Track {
         })
     }
 
-    /// Returns the sequence and picture parameter sets of the track, which a
-    /// decoder reads before any sample
     pub(super) fn parameter_sets(&self) -> Vec<NalUnit<'_>> {
         parse_avcc(&self.parameters, PARAMETER_LENGTH)
     }
@@ -176,9 +172,6 @@ impl Track {
         parse_avcc(sample, self.length_size)
     }
 
-    /// Returns the samples that decoding the picture from `start` to `end`
-    /// seconds reads, and the time at which the first picture of the part
-    /// shows, as [`timing::span`] finds them
     pub(super) fn span(&self, start: f64, end: f64) -> Option<(usize, usize, f64)> {
         timing::span(&self.samples, start, end)
     }

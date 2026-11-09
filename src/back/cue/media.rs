@@ -6,7 +6,6 @@
 
 use strum::Display;
 
-/// What loading the file of an audio, video, or picture cue found
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum Media {
     /// File has not been loaded since it was set
@@ -23,7 +22,6 @@ pub enum Media {
     Failed(String),
 }
 
-/// Reason a cue cannot play, which displays as the warnings list shows it
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
 pub enum Problem<'a> {
     #[strum(to_string = "no file set")]

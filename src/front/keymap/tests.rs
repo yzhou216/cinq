@@ -18,18 +18,15 @@ use super::{
     typing::Outcome,
 };
 
-/// Reads keys written as the configuration file writes them
 fn keys(text: &str) -> Vec<Press> {
     sequence(text).expect("keys in the tests are valid")
 }
 
-/// Reads the first of the keys written
 fn one(text: &str) -> Option<Press> {
     keys(text).first().copied()
 }
 
-/// Types keys in turn with the default bindings, and returns what the last
-/// one amounts to
+/// Returns what the last key amounts to
 fn typed(text: &str) -> Outcome {
     let keymap = Keymap::default();
     keys(text)

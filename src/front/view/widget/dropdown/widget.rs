@@ -2,8 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Drop-down list as an iced widget, which lays itself out, draws itself in
-//! the look of iced's pick list, and opens its menu
+//! Drop-down list as an iced widget
 
 use iced::{
     Event, Length, Point, Rectangle, Renderer, Size, Theme, Vector,

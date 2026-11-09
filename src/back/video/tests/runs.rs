@@ -22,8 +22,6 @@ use crate::back::{
     Command, Cue, CueId, Kind, Media, Video, Workspace, video::decoder::UNDECODABLE,
 };
 
-/// Returns a workspace in the directory of the video at `path`, with one
-/// list of one video cue that plays it, whose file has loaded
 fn showing(path: &Path) -> Workspace {
     showing_cue(
         path,

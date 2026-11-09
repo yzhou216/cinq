@@ -12,14 +12,12 @@ use crate::back::{
     Command, Cue, CueId, CueList, Kind, Media, Workspace, video::tests::movie::movie,
 };
 
-/// Returns a cue of `kind` that plays `file`
 fn playing(id: u32, kind: Kind, file: &str) -> Cue {
     Cue::new(CueId(id), id.to_string(), kind, "Cue")
         .file(file)
         .build()
 }
 
-/// Returns what loading the files of `cues` in `directory` finds, by cue
 fn found(cues: Vec<Cue>, directory: &Path) -> Vec<(u32, Media)> {
     let workspace = Workspace::new(vec![CueList::new("Main", cues)]).directory(directory);
     load_files(Load::all(&workspace, workspace.unloaded()))

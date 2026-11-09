@@ -43,8 +43,6 @@ impl Workspace {
         self.files_where(|media| matches!(media, Media::Failed(_)))
     }
 
-    /// Returns the audio, video, and picture cues that name a file and
-    /// whose media passes `test`
     fn files_where(&self, test: fn(&Media) -> bool) -> impl Iterator<Item = &Cue> {
         self.cues()
             .filter(move |cue| cue.kind.has_file() && test(&cue.media) && cue.file_name().is_some())

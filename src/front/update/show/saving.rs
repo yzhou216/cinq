@@ -12,7 +12,6 @@ use super::{EXTENSION, Saved, Show, chooser, file::write, with_extension};
 use crate::front::{App, Message, update::on_own_thread};
 
 impl App {
-    /// Asks where to save the show, and saves it there
     pub(in crate::front::update) fn choose_file(&self) -> Task<Message> {
         let chooser = chooser(self.show.directory())
             .set_title("Save show")
@@ -24,7 +23,6 @@ impl App {
             .and_then(|chosen| Task::done(Message::SaveTo(with_extension(chosen.path()))))
     }
 
-    /// Saves the show in its file, or asks where to save a show without one
     pub(in crate::front::update) fn save(&self) -> Task<Message> {
         match self.show.file.clone() {
             Some(file) => self.save_to(file),
@@ -32,8 +30,8 @@ impl App {
         }
     }
 
-    /// Starts saving the show in `file`, with the relative paths of the
-    /// files of its cues going from the directory of the file
+    /// Relative paths of the files of the cues go from the directory of
+    /// `file`
     pub(in crate::front::update) fn save_to(&self, file: PathBuf) -> Task<Message> {
         let show = self.show.id;
         let text = self.workspace.show(file.parent());
@@ -46,10 +44,9 @@ impl App {
         .map(Message::Saved)
     }
 
-    /// Records what saving the show found.  The show then goes by the file
-    /// it went to, and any change made while it was being saved stays
-    /// unsaved.  A save that ends after another show has opened leaves that
-    /// show alone.
+    /// The show then goes by the file it went to, and any change made while
+    /// it was being saved stays unsaved.  A save that ends after another show
+    /// has opened leaves that show alone.
     pub(in crate::front::update) fn saved(self, saved: Saved) -> Self {
         match saved.result {
             Ok(()) if saved.show != self.show.id => self,

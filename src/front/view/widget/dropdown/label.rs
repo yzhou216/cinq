@@ -17,7 +17,6 @@ pub(super) fn line_height(renderer: &Renderer) -> f32 {
     f32::from(text::LineHeight::default().to_absolute(renderer.default_size()))
 }
 
-/// Returns a label to draw from its top left corner at [`start`]
 pub(super) fn label<C>(renderer: &Renderer, content: C, width: f32) -> Text<C> {
     Text {
         content,

@@ -37,7 +37,6 @@ pub use keeper::Keeper;
 
 const EXTENSION: &str = "cinq.toml";
 
-/// Show on screen, with the file that holds it
 #[derive(Debug, Clone, Default)]
 pub struct Show {
     /// Serial number of the opening that brought the show, which tells a
@@ -58,8 +57,6 @@ impl Show {
         self.text != self.saved
     }
 
-    /// Returns the mark that follows the name of the show while it has
-    /// unsaved changes
     pub fn mark(&self) -> &'static str {
         if self.unsaved() { " (unsaved)" } else { "" }
     }
@@ -98,9 +95,8 @@ pub struct Read {
 }
 
 impl Read {
-    /// Reads the show in `file`, or a new show without one, along with the
-    /// unsaved changes kept for it in `unsaved_directory`.  A new show finds
-    /// the files of its cues from the directory that cinq started in.
+    /// A new show finds the files of its cues from the directory that cinq
+    /// started in.
     fn new(file: Option<PathBuf>, unsaved_directory: Option<&Path>) -> Self {
         let directory = file
             .as_deref()
@@ -147,8 +143,6 @@ pub(super) fn open(file: Option<PathBuf>, unsaved_directory: Option<PathBuf>) ->
 }
 
 impl App {
-    /// Returns the state with the show as its file would hold it brought up
-    /// to date, as after a change to the cues
     pub(super) fn with_text(self) -> Self {
         let text = self.workspace.show(self.show.directory());
         if text == self.show.text {
@@ -166,8 +160,6 @@ impl App {
     }
 }
 
-/// Returns the desktop's file chooser for shows, which starts in
-/// `directory`, or wherever the desktop starts without one
 fn chooser(directory: Option<&Path>) -> rfd::AsyncFileDialog {
     let chooser = rfd::AsyncFileDialog::new().add_filter("Shows", &[EXTENSION]);
     match directory {
@@ -176,8 +168,6 @@ fn chooser(directory: Option<&Path>) -> rfd::AsyncFileDialog {
     }
 }
 
-/// Returns `file` with the ending of a show file, unless it ends in
-/// `.toml` already
 fn with_extension(file: &Path) -> PathBuf {
     if file
         .extension()

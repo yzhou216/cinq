@@ -112,7 +112,6 @@ impl CueList {
             })
     }
 
-    /// Inserts a cue at an index, or at the end when the list is shorter
     pub(in crate::back) fn with_cue_at(self, index: usize, cue: Cue) -> Self {
         let mut cues = self.cues;
         cues.insert(index.min(cues.len()), cue);

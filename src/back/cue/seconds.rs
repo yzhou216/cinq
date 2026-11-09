@@ -15,7 +15,6 @@ mod tests;
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Seconds {
     text: String,
-    /// Time that the text reads as, or none when it reads as no time
     value: Option<f32>,
 }
 

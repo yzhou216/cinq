@@ -25,13 +25,10 @@ fn storm() -> Workspace {
     .directory("/show")
 }
 
-/// Returns the cue lists of a workspace as a show file in `/show` holds
-/// them
 fn shown(workspace: &Workspace) -> String {
     workspace.show(Some(Path::new("/show")))
 }
 
-/// Reads a show in `/show` whose file holds one list, Main, of `cues`
 fn read_list(cues: &str) -> Result<Workspace, String> {
     Workspace::from_show(&format!("[[list]]\nname = \"Main\"\n{cues}"), "/show")
 }

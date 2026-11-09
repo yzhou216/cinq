@@ -11,13 +11,9 @@ use crate::{
 };
 
 impl App {
-    /// Fires the standby cue of the list on screen, and closes the help
-    /// page, so that the show is in view as it runs.  A selection on the
-    /// standby cue moves on with standby, so that the cue list keeps the
-    /// next cue in view as the show runs, while a selection elsewhere stays
-    /// where the operator put it.  A picture or video cue that fires opens
-    /// the stage window again, if the operator has closed it, and makes it
-    /// fullscreen.
+    /// A selection on the standby cue moves on with standby, so that the cue
+    /// list keeps the next cue in view as the show runs, while a selection
+    /// elsewhere stays where the operator put it.
     pub(super) fn gone(self) -> Self {
         let following = self.selected.is_some() && self.selected == self.current().standby;
         let staged = self
@@ -34,7 +30,6 @@ impl App {
         }
     }
 
-    /// Selects a cue and shows the list that holds it
     pub(super) fn with_selection(self, id: CueId) -> Self {
         Self {
             list: self.workspace.list_of(id).unwrap_or(self.list),
@@ -43,8 +38,6 @@ impl App {
         }
     }
 
-    /// Moves the selection by a number of cues, downwards when positive,
-    /// and stays put past either end
     pub(super) fn stepped(self, offset: isize) -> Self {
         let cues = &self.current().cues;
         let selected = step(self.selected_row(), offset, cues.len()).map(|row| cues[row].id);
@@ -76,8 +69,6 @@ impl App {
         }
     }
 
-    /// Shows the cue list a number of lists further down the sidebar, and
-    /// stays put past either end
     pub(super) fn stepped_list(self, offset: isize) -> Self {
         let list = step(Some(self.list), offset, self.workspace.lists().len()).unwrap_or(self.list);
         if list == self.list {

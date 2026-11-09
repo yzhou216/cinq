@@ -8,7 +8,6 @@ use std::mem;
 
 use crate::back::{Cue, CueId, CueList, Edit};
 
-/// Change to the show that the operator made
 #[derive(Debug, Clone)]
 pub enum Change {
     /// Cue added, with the standby of its list before and after, which the
@@ -39,7 +38,6 @@ pub enum Change {
     },
 }
 
-/// Cue at its place in a list
 #[derive(Debug, Clone)]
 pub struct Placed {
     pub list: usize,
@@ -47,7 +45,6 @@ pub struct Placed {
     pub cue: Cue,
 }
 
-/// Standby of a list before and after a change moved it
 #[derive(Debug, Clone, Copy)]
 pub struct Standby {
     pub list: usize,
@@ -56,7 +53,6 @@ pub struct Standby {
 }
 
 impl Standby {
-    /// Returns the move that takes this one back
     pub(super) fn reversed(self) -> Self {
         Self {
             before: self.after,
@@ -66,7 +62,6 @@ impl Standby {
     }
 }
 
-/// Way that the latest change went
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Turn {
     Done,
@@ -75,8 +70,6 @@ pub enum Turn {
 }
 
 impl Change {
-    /// Returns the first cue that the change added, moved, deleted, or
-    /// edited
     pub fn cue(&self) -> Option<CueId> {
         match self {
             Change::Added { placed, .. } => Some(placed.cue.id),

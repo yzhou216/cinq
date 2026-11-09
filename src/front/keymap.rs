@@ -3,15 +3,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Key bindings, which turn key presses into the messages that buttons send
-//!
-//! Every keymap in [`preset`] binds keys to every action.  The configuration
-//! file in [`config`] chooses one, or builds keymaps of its own, and can
-//! replace the keys of any action, and [`press`] names keys as the W3C UI
-//! Events specification does.  [`typing`] reads a command of several keys,
-//! such as a count followed by a key, once it is complete, and the status
-//! bar shows the keys typed so far.  The keys bound to GO and Panic act at
-//! once, whatever was typed before them and whatever modifiers are held, so
-//! that nothing holds them back.
 
 mod action;
 pub mod config;
@@ -30,7 +21,6 @@ pub use action::Action;
 pub use preset::Preset;
 pub use press::{Press, written};
 
-/// Keys bound to each action
 #[derive(Debug, Clone)]
 pub struct Keymap {
     name: String,
@@ -102,12 +92,10 @@ impl Keymap {
         }
     }
 
-    /// Describes the bindings that hide others: a sequence bound to two
-    /// actions, which only the first gets, a sequence that begins a longer
-    /// one, which can then never be typed, and a key of
-    /// [`Action::AT_ONCE`], which keeps every other sequence that holds it
-    /// from being typed, by acting halfway through it or when held with
-    /// other modifiers than it is bound with
+    /// Describes the bindings that hide others: those that [`conflict`]
+    /// finds, and a key of [`Action::AT_ONCE`], which keeps every other
+    /// sequence that holds it from being typed, by acting halfway through it
+    /// or when held with other modifiers than it is bound with
     fn conflicts(&self) -> Vec<String> {
         let hidden = self
             .bound()
@@ -129,7 +117,6 @@ impl Keymap {
         hidden.chain(cut_short).collect()
     }
 
-    /// Returns every binding, in the order of [`Action::VARIANTS`]
     fn bound(&self) -> impl Iterator<Item = Binding<'_>> + Clone {
         Action::VARIANTS.iter().flat_map(move |&action| {
             self.keys(action)
@@ -139,12 +126,10 @@ impl Keymap {
     }
 }
 
-/// Action with one key sequence bound to it
 type Binding<'a> = (Action, &'a [Press]);
 
-/// Reads the keys of a binding, written as the configuration file writes
-/// them.  A binding needs at least one key, and cannot start with a digit,
-/// since digits typed first count the command.
+/// A binding cannot start with a digit, since digits typed first count the
+/// command.
 fn binding(text: &str) -> Result<Vec<Press>, String> {
     let keys = press::sequence(text)?;
     match keys.first() {
@@ -157,9 +142,7 @@ fn binding(text: &str) -> Result<Vec<Press>, String> {
 }
 
 /// Describes how one of two bindings, in the order of [`Action::VARIANTS`],
-/// hides the other, if one does: a sequence bound to both actions goes to
-/// the earlier alone, and a sequence that begins a longer one, earlier or
-/// later, keeps the longer from being typed
+/// hides the other, if one does
 fn conflict((earlier, keys): Binding, (later, other): Binding) -> Option<String> {
     if keys == other {
         let (earlier, later) = (earlier.name(), later.name());

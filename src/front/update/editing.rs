@@ -15,9 +15,6 @@ use crate::{
 };
 
 impl App {
-    /// Adds a cue next to the selection, on the side that `place` picks, or
-    /// at the end of the list without a selection.  The new cue is
-    /// selected, if the back end added it.
     pub(super) fn with_new_cue(self, place: fn(CueId) -> Place) -> Self {
         let id = self.workspace.next_cue_id();
         let add = Command::Add {
@@ -28,11 +25,6 @@ impl App {
         self.send(add).showing(id, None)
     }
 
-    /// Asks which file the audio, video, or picture cue `id` plays or shows,
-    /// in the desktop's file chooser, which offers the sound, video, or
-    /// picture files that the cue can take, and starts in the directory of
-    /// the file that the cue has now, or else in the directory that
-    /// relative paths start from
     pub(super) fn choose_cue_file(&self, id: CueId) -> Task<Message> {
         let Some(cue) = self.workspace.cue(id) else {
             return Task::none();
@@ -60,17 +52,11 @@ impl App {
             .and_then(move |chosen| Task::done(Message::FileChosen(id, chosen.path().to_owned())))
     }
 
-    /// Moves the selected cue by a number of places in its list, downwards
-    /// when positive, which the selection follows
     pub(super) fn with_selected_moved(self, by: isize) -> Self {
         let moved = self.selected_here().map(|cue| Command::Move { cue, by });
         self.send_all(moved)
     }
 
-    /// Deletes a number of cues from the selection down, as one change that
-    /// undo takes back whole, and selects the cue after them, or the one
-    /// before them at the end of the list.  A count past the end of the
-    /// list deletes to the end.
     pub(super) fn without_selected(self, count: usize) -> Self {
         let Some(first) = self.selected_row() else {
             return self;
@@ -83,16 +69,12 @@ impl App {
         self.send(Command::Delete(ids)).showing(None, Some(first))
     }
 
-    /// Takes back the latest change to the show, and selects the cue it
-    /// brought back or changed back
     pub(super) fn undone(self) -> Self {
         let cue = self.workspace.undoable().and_then(Change::cue);
         let row = self.selected_row();
         self.send(Command::Undo).showing(cue, row)
     }
 
-    /// Makes again the change that undo took back last, and selects the cue
-    /// it added or changed
     pub(super) fn redone(self) -> Self {
         let cue = self.workspace.redoable().and_then(Change::cue);
         let row = self.selected_row();

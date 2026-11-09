@@ -20,7 +20,6 @@ use super::{
 };
 use crate::back::{Advance, Clip, Command, Cue, CueId, CueList, Kind, Media, Workspace};
 
-/// Returns an audio cue that plays `sound.wav`
 fn audio(id: u32) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Audio, "Sound")
         .file("sound.wav")
@@ -45,7 +44,6 @@ fn loaded(cues: Vec<Cue>) -> Workspace {
     loads.into_iter().fold(workspace, Workspace::apply)
 }
 
-/// Returns the cues of the sounds that runs may start next, in order
 fn upcoming_cues(workspace: &Workspace) -> Vec<u32> {
     upcoming(workspace)
         .into_iter()
@@ -98,8 +96,6 @@ fn whole(path: &Path) -> Wanted {
     }
 }
 
-/// Returns a temporary directory that holds a tenth of a second of silence,
-/// with the whole of that sound as wanted
 fn silent_file() -> (TempDir, Wanted) {
     let directory = TempDir::new().expect("a temporary directory can be made");
     let file = directory.path().join("silence.wav");

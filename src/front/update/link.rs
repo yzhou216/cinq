@@ -31,8 +31,7 @@ impl App {
 
 /// Opens a web page or a file in the program that the desktop opens it
 /// with: through xdg-open on desktops that follow the XDG specifications,
-/// and through the system's own opener elsewhere.  Returns why it failed,
-/// if it did.
+/// and through the system's own opener elsewhere.
 pub(super) fn open_link(target: &OsStr) -> Result<(), String> {
     open::that_detached(target)
         .map_err(|error| format!("Cannot open {}: {error}", target.to_string_lossy()))
@@ -41,7 +40,6 @@ pub(super) fn open_link(target: &OsStr) -> Result<(), String> {
 /// Opens the configuration file `file` as [`open_link`] does, after making
 /// it when it is not there yet, except on Darwin, which opens it in the
 /// default text editor, since few programs there say they open TOML.
-/// Returns why it failed, if it did.
 pub(super) fn edit_config(file: &Path) -> Result<(), String> {
     keymap::config::make(file)
         .map_err(|error| format!("Cannot make {}: {error}", file.display()))?;
@@ -52,9 +50,7 @@ pub(super) fn edit_config(file: &Path) -> Result<(), String> {
     }
 }
 
-/// Opens `file` in the default text editor through `open -t`, and waits
-/// for `open`, which tells whether there is one.  Returns why it failed, if
-/// it did.
+/// Waits for `open -t`, which tells whether there is a default text editor.
 fn open_in_text_editor(file: &Path) -> Result<(), String> {
     let cannot = |why: String| format!("Cannot open {}: {why}", file.display());
     let status = std::process::Command::new("/usr/bin/open")

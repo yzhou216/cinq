@@ -84,7 +84,6 @@ fn main() {
 /// `share`
 const SHARED: [&str; 2] = ["applications/cinq.desktop", "mime/packages/cinq.xml"];
 
-/// Writes `contents` to `file`, along with the directories that it goes in
 fn write(file: &Path, contents: impl AsRef<[u8]>) -> io::Result<()> {
     fs::create_dir_all(file.parent().expect("a file goes in a directory"))?;
     fs::write(file, contents)
@@ -173,11 +172,10 @@ fn date() -> String {
     time.date().to_string()
 }
 
-/// Renders the scdoc `source` into the manual page `page` with scdoc, which
-/// dates it as [`date`] does.  The source reaches scdoc through a file, so
-/// that the build need not feed scdoc while it reads what scdoc writes, and
-/// the page is written only once scdoc has rendered all of it, so that a
-/// failure leaves no page behind.
+/// scdoc dates the page as [`date`] does.  The source reaches scdoc through
+/// a file, so that the build need not feed scdoc while it reads what scdoc
+/// writes, and the page is written only once scdoc has rendered all of it,
+/// so that a failure leaves no page behind.
 fn scdoc(source: &str, page: &Path) -> io::Result<()> {
     let input = out_dir()
         .join(page.file_name().expect("a page is a file"))

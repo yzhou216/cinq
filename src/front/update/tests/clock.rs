@@ -19,7 +19,6 @@ const SOUND: Media = Media::Loaded {
     sound: Some(10.0),
 };
 
-/// Returns the record of what loading the sound file of the cue `id` found
 fn loaded(id: u32, media: Media) -> Command {
     Command::Loaded {
         cue: CueId(id),

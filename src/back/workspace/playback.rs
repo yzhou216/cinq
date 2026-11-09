@@ -76,9 +76,6 @@ impl Workspace {
         Self { active, ..self }.started().without_finished()
     }
 
-    /// Fades out every playing audio, video, and picture cue and stops
-    /// everything else.  A panic while an earlier one is still fading stops
-    /// everything at once.
     pub(super) fn panic(self) -> Self {
         let fading = self
             .active

@@ -109,9 +109,6 @@ impl Workspace {
         workspace.recorded(Change::Deleted { cues, standby })
     }
 
-    /// Moves a cue within its list by `by` places, downwards when positive,
-    /// as far as the ends of the list allow, and records the move unless
-    /// the cue stays where it was
     pub(super) fn moved(self, id: CueId, by: isize) -> Self {
         let place = self
             .lists
@@ -153,8 +150,6 @@ impl Workspace {
         }
     }
 
-    /// Puts cue lists kept from before in place of those of the show, and
-    /// records the lists before and after as one change
     pub(super) fn restored(self, lists: Vec<CueList>) -> Self {
         let before = self.lists.clone();
         self.with_lists(lists.clone()).recorded(Change::Restored {

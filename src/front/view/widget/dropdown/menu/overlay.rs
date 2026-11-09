@@ -2,8 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Menu as an iced overlay, which opens next to its list, takes the keys
-//! and the clicks beside it, and scrolls the highlight into view
+//! Menu as an iced overlay
 
 use iced::{
     Element, Event, Point, Rectangle, Renderer, Size, Theme, Vector,

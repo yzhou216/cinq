@@ -10,7 +10,6 @@ use std::iter;
 
 use super::*;
 
-/// Manual page of the configuration file, in scdoc
 const MANUAL: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/man/cinq.5.scd"));
 
 /// Tells whether a line of scdoc opens a row of a table: `[`, `|`, or `]`,
@@ -46,7 +45,6 @@ fn table() -> Vec<Vec<String>> {
         })
 }
 
-/// Returns a row of the table of keymaps: its name, then its cells
 fn row(name: &str, cells: impl IntoIterator<Item = String>) -> Vec<String> {
     iter::chain([name.to_owned()], cells).collect()
 }

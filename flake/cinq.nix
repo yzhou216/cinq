@@ -23,10 +23,8 @@
 }:
 let
   inherit (stdenvNoCC.hostPlatform) isDarwin isFreeBSD isLinux;
-  # ALSA, which cpal plays sound through on GNU/Linux and FreeBSD, and
-  # which on FreeBSD takes the monotonic clock in place of Linux's raw
-  # one, as FreeBSD's own port of it does, until NixOS/nixpkgs#584781
-  # does so in Nixpkgs
+  # Monotonic clock in place of Linux's raw one, as in FreeBSD's own
+  # port of ALSA, until NixOS/nixpkgs#584781 does so in Nixpkgs
   alsa =
     if isFreeBSD then
       alsa-lib.overrideAttrs (old: {
@@ -76,8 +74,6 @@ rustPlatform.buildRustPackage {
 
   env.SOURCE_DATE_EPOCH = sourceDateEpoch;
 
-  # Share directory that the build lays out, whose desktop entry is
-  # checked against its specification, and on Darwin the app bundle
   postInstall = ''
     cp -r target/share "$out"
     desktop-file-validate "$out/share/applications/cinq.desktop"

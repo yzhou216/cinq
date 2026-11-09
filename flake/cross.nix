@@ -26,10 +26,8 @@
           "x86_64-pc-windows-gnullvm"
         ];
       };
-      # cinq that cargo cross-builds for `platform`, a platform of Nixpkgs,
-      # with the variables of `env`, and that `install` lays out from the
-      # directory that the build leaves the program in, named after the
-      # system that it runs on
+      # cinq that cargo cross-builds for `platform`, which `install` lays
+      # out from the directory that the build leaves the program in
       crossBuilt =
         {
           platform,
@@ -88,8 +86,7 @@
           install = release: ''install -D ${release}/cinq.exe "$out/bin/cinq.exe"'';
         };
       # cinq that `cross`, the Nixpkgs of a system that Nixpkgs builds
-      # Rust's standard library for, cross-builds from the package of the
-      # flake itself, whose name Nixpkgs marks with the system's target
+      # Rust's standard library for, cross-builds from the flake's package
       nixpkgsCross = cross: cross.callPackage ./cinq.nix { inherit crate sourceDateEpoch installBundle; };
       # Nixpkgs of FreeBSD on the processor `cpu`.  FreeBSD's libraries
       # write their symbol maps with clang's cpp, which Nixpkgs runs for
@@ -131,16 +128,11 @@
               })
             ];
           };
-      # cinq for other systems, each named after the system that it runs on,
-      # while the system of the flake is the one that builds it
       builds = {
-        # cinq for Apple silicon, laid out as the package for Darwin is,
-        # which cargo cross-builds against the SDK that Nixpkgs fetches
-        # from Apple, linked by lld from the toolchain
         aarch64-darwin = crossBuilt {
           platform = lib.systems.elaborate "aarch64-darwin";
           env = {
-            SDKROOT = "${pkgs.apple-sdk.src}";
+            SDKROOT = "${pkgs.apple-sdk.src}"; # Its package evaluates on Darwin alone
             CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER = "rust-lld";
           };
           install = release: ''

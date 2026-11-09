@@ -42,8 +42,6 @@ use crate::{
     front::{App, Message, STAGE_SIZE, window_settings},
 };
 
-/// Stage window, with the newest picture of each picture and video cue
-/// that runs
 #[derive(Default)]
 pub struct Stage {
     window: Option<window::Id>,
@@ -97,9 +95,6 @@ impl Stage {
         self.pictures.get(&cue)
     }
 
-    /// Returns the stage with `pictures`, which have come due, in place of
-    /// the earlier pictures of their cues, and without the pictures of the
-    /// cues that `workspace` no longer runs
     pub(in crate::front) fn with_pictures(
         self,
         workspace: &Workspace,
@@ -118,9 +113,6 @@ impl Stage {
         Self { pictures, ..self }
     }
 
-    /// Returns the stage once GO has fired a picture or video cue, which
-    /// opens the window again if the operator has closed it, and makes it
-    /// fullscreen
     pub(super) fn cued(self) -> Self {
         Self {
             closed: false,
@@ -129,9 +121,6 @@ impl Stage {
         }
     }
 
-    /// Returns the settings that the window opens with: at its first size,
-    /// or fullscreen when it opens for a picture or video cue that GO has
-    /// fired
     fn settings(&self) -> window::Settings {
         window::Settings {
             fullscreen: self.cued,
@@ -141,15 +130,9 @@ impl Stage {
 }
 
 impl App {
-    /// Opens the stage window once the show holds a picture or video cue,
-    /// unless it is open already or the operator has closed it, and makes
-    /// it fullscreen once GO has fired such a cue.  A window that opens
-    /// fullscreen keeps the keyboard, while the main window asks for it
-    /// back from one that opens as a window, which the window manager may
-    /// refuse, as those of Wayland do.  While the stage window has the
-    /// keyboard, the keys typed there act on the cue list, apart from those
-    /// that would give a field of the main window the keyboard, which do
-    /// nothing until the main window has it again.
+    /// A window that opens fullscreen keeps the keyboard, while the main
+    /// window asks for it back from one that opens as a window, which the
+    /// window manager may refuse, as those of Wayland do.
     pub(in crate::front) fn staged(self) -> (Self, Task<Message>) {
         if let Some(window) = self.stage.window {
             let raising = if self.stage.cued {
@@ -178,8 +161,6 @@ impl App {
         (Self { stage, ..self }, opening)
     }
 
-    /// Keeps the stage window closed once it has closed, until a picture or
-    /// video cue fires, and quits once the main window has closed
     pub(super) fn closed(self, window: window::Id) -> (Self, Task<Message>) {
         if self.stage.is_window(window) {
             let stage = Stage {
@@ -197,8 +178,6 @@ impl App {
         }
     }
 
-    /// Toggles the stage window, if it is open, between fullscreen and a
-    /// window, from whichever of the two it is in now
     pub(super) fn toggle_fullscreen(&self) -> Task<Message> {
         self.stage.window.map_or_else(Task::none, |window| {
             window::mode(window).then(move |mode| {
@@ -213,8 +192,6 @@ impl App {
     }
 }
 
-/// Makes the stage window `window` fullscreen, on the display that it is
-/// on, unless it is already, and brings it before the other windows
 fn raised(window: window::Id) -> Task<Message> {
     window::mode(window)
         .then(move |mode| {

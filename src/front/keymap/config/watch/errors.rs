@@ -50,12 +50,10 @@ const RESIZE: Duration = Duration::from_millis(250);
 /// shows, while it does
 static SHOWN: Mutex<Option<Config>> = Mutex::new(None);
 
-/// Where the watch writes out the problems of each reading of the file
 pub enum Errors {
-    /// Terminal on standard error, which shows the problems on a screen of
-    /// their own while any are left
+    /// Terminal on standard error
     Screen,
-    /// File or pipe, which takes the problems of each reading in turn
+    /// File or pipe
     Log(Box<dyn Write + Send>),
 }
 
@@ -175,8 +173,6 @@ fn written(config: &Config) -> String {
         .collect()
 }
 
-/// Switches standard error back from the problems screen that `shown`
-/// holds, if any, writes out its problems, and leaves `shown` empty
 fn restored(shown: &mut Option<Config>) {
     if let Some(config) = shown.take() {
         let _ = io::stderr().write_all(left(&config).as_bytes());

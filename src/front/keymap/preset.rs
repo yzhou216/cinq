@@ -5,16 +5,13 @@
 //! Keymaps that cinq ships, which the configuration file chooses from or
 //! builds on
 //!
-//! [`Preset::Vi`] binds keys in the manner of vi, and [`Preset::Cua`] as
-//! IBM's Common User Access does, which most desktop programs follow.  Every
-//! action lists its keys in each keymap, which the compiler checks, so that
-//! no keymap forgets an action added later.
+//! Every action lists its keys in each keymap, which the compiler checks, so
+//! that no keymap forgets an action added later.
 
 use strum::{EnumString, IntoStaticStr, VariantArray};
 
 use super::Action;
 
-/// Keymap that cinq ships, which the configuration file names in lower case
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, EnumString, IntoStaticStr, VariantArray)]
 #[strum(serialize_all = "lowercase")]
 pub enum Preset {
@@ -22,9 +19,9 @@ pub enum Preset {
     /// two keys, and the arrows and Control with `n` and `p` move as well
     #[default]
     Vi,
-    /// Keys of IBM's Common User Access: the arrows, Home, and End move,
-    /// Control with a letter edits, and F1 helps.  Space and Escape keep GO
-    /// and Panic, as in QLab.
+    /// Keys of IBM's Common User Access, which most desktop programs follow:
+    /// the arrows, Home, and End move, Control with a letter edits, and F1
+    /// helps.  Space and Escape keep GO and Panic, as in QLab.
     Cua,
 }
 
@@ -33,8 +30,6 @@ impl Preset {
         self.into()
     }
 
-    /// Returns the key sequences that the keymap binds to an action, as the
-    /// configuration file writes them
     pub(super) fn keys(self, action: Action) -> &'static [&'static str] {
         // Keys of vi, then of CUA, as the table of cinq(5) lists them
         let [vi, cua]: [&[&str]; 2] = match action {

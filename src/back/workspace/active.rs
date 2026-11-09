@@ -133,7 +133,6 @@ impl Active {
         (self.elapsed - self.pre_wait).max(0.0)
     }
 
-    /// Returns whether the cue still waits for an earlier cue of its chain
     pub(super) fn waiting(&self) -> bool {
         self.elapsed < 0.0
     }
@@ -170,8 +169,6 @@ impl Active {
         }
     }
 
-    /// Returns the cue with `fade` on its level, whose picture fades from as
-    /// opaque as it is now
     pub(super) fn under(self, fade: Fade) -> Self {
         Self {
             fade: Some(Fade {

@@ -85,11 +85,9 @@ pub enum Message {
     /// Deletes a number of cues from the selection down
     Delete(usize),
     Edit(CueId, Edit),
-    /// Text typed into the level field of a cue
     LevelTyped(CueId, String),
     /// Asks which file an audio, video, or picture cue plays or shows
     ChooseFile(CueId),
-    /// File chosen for an audio, video, or picture cue
     FileChosen(CueId, PathBuf),
     Undo,
     Redo,

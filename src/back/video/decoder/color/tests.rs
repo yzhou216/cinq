@@ -9,8 +9,6 @@ use rust_h264::decoder::{ChromaFormat, Frame};
 
 use super::{BT601, BT709, Chroma, HIGH_DEFINITION, Matrix, converted, rgba};
 
-/// Returns a picture `width` pixels wide of `lines` lines of `luma`, which
-/// share the differences of color `blue` and `red`
 fn picture(width: u32, lines: u32, luma: u8, blue: u8, red: u8) -> Frame {
     let pixels = (width * lines) as usize;
     Frame {
@@ -25,8 +23,6 @@ fn picture(width: u32, lines: u32, luma: u8, blue: u8, red: u8) -> Frame {
     }
 }
 
-/// Returns the RGBA of a picture of four pixels of `luma`, which share the
-/// differences of color `blue` and `red`, with `matrix`
 fn converted_with(matrix: Matrix, luma: u8, blue: u8, red: u8) -> Vec<u8> {
     converted(&picture(2, 2, luma, blue, red), matrix)
 }

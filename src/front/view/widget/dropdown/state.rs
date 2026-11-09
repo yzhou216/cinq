@@ -2,9 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! State that iced keeps for a drop-down list from one frame to the next,
-//! which keeps the labels that set the width of the list, and through
-//! which the keys that move between fields focus the list
+//! State that iced keeps for a drop-down list from one frame to the next
 
 use iced::{
     Renderer,

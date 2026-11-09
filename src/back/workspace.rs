@@ -38,8 +38,6 @@ use history::History;
 
 /// Show as a whole, with its cue lists, running cues, and editing lock
 ///
-/// Front ends read a workspace freely but change it only through
-/// [`Workspace::apply`], which keeps every rule about changes in one place.
 /// A show always holds at least one cue list, which the front end shows.
 #[derive(Debug, Clone)]
 pub struct Workspace {
@@ -205,7 +203,6 @@ impl Workspace {
         }
     }
 
-    /// Changes the list at index `list`, or nothing when there is none
     fn with_list(self, list: usize, change: impl FnOnce(CueList) -> CueList) -> Self {
         Self {
             lists: replaced(self.lists, list, change),
@@ -213,7 +210,6 @@ impl Workspace {
         }
     }
 
-    /// Changes the list that holds a cue, or nothing when no list holds it
     fn with_list_of(self, id: CueId, change: impl FnOnce(CueList) -> CueList) -> Self {
         match self.list_of(id) {
             Some(list) => self.with_list(list, change),
@@ -221,7 +217,6 @@ impl Workspace {
         }
     }
 
-    /// Changes a cue that GO has fired, or nothing when it is not running
     fn with_active(self, id: CueId, change: impl FnOnce(Active) -> Active) -> Self {
         Self {
             active: replaced_where(self.active, |active| active.id == id, change),

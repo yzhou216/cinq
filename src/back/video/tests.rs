@@ -31,8 +31,6 @@ use movie::{RATE, broken_movie, movie, picture_number};
 /// Longest that a test waits for a thread to decode a picture
 const PATIENCE: Duration = Duration::from_secs(10);
 
-/// Returns a workspace in the directory of the file at `path`, with one
-/// list of `cue`, whose file has loaded
 fn showing_cue(path: &Path, cue: Cue) -> Workspace {
     let directory = path.parent().expect("the file is in a directory");
     let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])]).directory(directory);
@@ -98,14 +96,10 @@ fn decoded(path: &Path, clip: Clip, pass: u32) -> Vec<(usize, f64)> {
         .collect()
 }
 
-/// Returns whether a picture decoded is the one expected, due at the time
-/// expected but for rounding
 fn same((number, at): (usize, f64), (expected, due): (usize, f64)) -> bool {
     number == expected && (at - due).abs() < 1e-6
 }
 
-/// Asserts that the pictures decoded are those expected, each with the
-/// time it is due at in pictures since the start of its clip
 fn assert_pictures(decoded: &[(usize, f64)], expected: &[(usize, f64)]) {
     let matching =
         decoded.len() == expected.len() && decoded.iter().zip(expected).all(|(&a, &b)| same(a, b));

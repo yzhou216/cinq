@@ -6,7 +6,6 @@
 
 use super::*;
 
-/// Returns an audio cue named `name` that plays `file`
 fn audio(name: &str, file: &str) -> Cue {
     Cue::new(CueId(1), "1", Kind::Audio, name)
         .file(file)
@@ -51,7 +50,6 @@ fn chosen_sound_file_names_a_cue_until_the_operator_names_it() {
     );
 }
 
-/// Returns an audio cue whose file has loaded as ten seconds of sound
 fn loaded(cue: Cue) -> Cue {
     Cue {
         media: Media::Loaded {
@@ -139,8 +137,6 @@ fn silence_is_where_kira_stops_making_sound() {
     assert_eq!(SILENCE, kira::Decibels::SILENCE.0);
 }
 
-/// Returns a video cue whose file has loaded as ten seconds of picture
-/// with nine and a half of sound, from `start`, looping or not
 fn video(start: f32, looping: bool) -> Cue {
     Cue {
         media: Media::Loaded {

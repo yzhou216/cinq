@@ -4,15 +4,10 @@
 
 //! Widgets that iced lacks
 //!
-//! [`button`](mod@button) acts on the press rather than the release,
-//! [`dropdown`](mod@dropdown) lets keys move through its menu,
-//! [`keep_keys`](mod@keep_keys) keeps the keys typed into its text fields
-//! from reaching the key bindings, [`marked_row`](mod@marked_row) marks the
-//! selected row of a table, and [`pictures`](mod@pictures) draws the
-//! pictures of video cues, each in the first frame that shows it.  All but
-//! the drop-down and the pictures work around an iced widget with [`wrap`],
-//! while the drop-down draws itself in the look of iced's pick list, and the
-//! pictures draw through a shader of their own.
+//! All but [`dropdown`](mod@dropdown) and [`pictures`](mod@pictures) work
+//! around an iced widget with [`wrap`], while the drop-down draws itself in
+//! the look of iced's pick list, and the pictures draw through a shader of
+//! their own.
 
 mod button;
 mod dropdown;

@@ -18,8 +18,6 @@ pub(super) fn replaced<T>(items: Vec<T>, index: usize, change: impl FnOnce(T) ->
         .collect()
 }
 
-/// Returns the items with the first one that `matches` accepts changed, or
-/// unchanged when none does
 pub(super) fn replaced_where<T>(
     items: Vec<T>,
     matches: impl Fn(&T) -> bool,

@@ -28,8 +28,6 @@ pub(super) struct Wanted {
     pub(super) clip: Clip,
 }
 
-/// Sound made ready, which waits at the start of its clip with its first
-/// moments decoded, and which the audio manager only has to start
 pub(super) struct Preloaded {
     sound: Box<dyn Sound>,
     handle: StreamingSoundHandle<FromFileError>,
@@ -51,10 +49,8 @@ pub(super) struct Ask {
     pub(super) level: f32,
 }
 
-/// What the thread made of an ask: the sound, or why it could not
 type Made = (CueId, Wanted, Result<Preloaded, String>);
 
-/// Thread that makes sounds ready, with the sounds that it has made
 pub(super) struct Preloader {
     asks: mpsc::Sender<Ask>,
     made: mpsc::Receiver<Made>,
@@ -130,8 +126,6 @@ impl Preloader {
     }
 }
 
-/// Opens the sound of `wanted` at `level`, and begins decoding it from the
-/// start of its clip
 fn preloaded(wanted: &Wanted, level: f32) -> Result<Preloaded, String> {
     let data = StreamingSoundData::from_file(&wanted.path).map_err(super::reason)?;
     let (sound, handle) = voice::clipped(data, wanted.clip, wanted.clip.start, level)

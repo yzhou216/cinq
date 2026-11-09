@@ -27,10 +27,8 @@ use crate::front::{App, Message, reveal, view};
 const MARGIN_ROWS: f32 = 3.0;
 
 impl App {
-    /// Returns the state along with the operation that scrolls the cue list
-    /// as little as it takes to show the selected cue.  The first cue snaps
-    /// the list back to its start, as the window opened it, since the row
-    /// itself begins a separator below the start.
+    /// The first cue snaps the list back to its start, as the window opened
+    /// it, since the row itself begins a separator below the start.
     pub(super) fn revealed(self) -> (Self, Task<Message>) {
         let task = match self.selected_row() {
             Some(0) => operation::snap_to(view::CUES, RelativeOffset::START),
@@ -41,14 +39,11 @@ impl App {
     }
 }
 
-/// Operation that finds the selected cue in the cue list, then scrolls the
-/// list to show it, if it is out of view
 #[derive(Default)]
 struct Measure {
     /// Top of the list content, how far the list has scrolled, and the
     /// height of the part in view
     list: Option<(f32, f32, f32)>,
-    /// Area of the selected row, which the cue list reports
     row: Option<Rectangle>,
 }
 

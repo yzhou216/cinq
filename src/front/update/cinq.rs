@@ -16,9 +16,8 @@ use crate::{
 };
 
 impl Cinq {
-    /// Opens the main window and the audio device, reads the key bindings
-    /// from `config`, and starts opening the show in `show`, or a new show
-    /// without one, which the window opens without waiting for
+    /// Starts opening the show in `show`, or a new show without one, which
+    /// the window opens without waiting for
     pub(in crate::front) fn new(
         config: Option<&Path>,
         show: Option<PathBuf>,

@@ -24,8 +24,6 @@ mod undo;
 
 pub use change::{Change, Placed, Standby, Turn};
 
-/// Changes that undo can take back, and the changes it took back that redo
-/// can make again
 #[derive(Debug, Clone, Default)]
 pub(super) struct History {
     undo: Vec<Change>,
@@ -53,8 +51,6 @@ impl History {
         }
     }
 
-    /// Returns the way the latest change went, with the change that undo
-    /// or redo acts on now
     fn latest(&self) -> Option<(Turn, &Change)> {
         match self.turn? {
             Turn::Undone => self.redo.last().map(|change| (Turn::Undone, change)),
@@ -74,8 +70,6 @@ impl History {
         (Self { undo, redo, turn }, change)
     }
 
-    /// Forgets the moves of a list's standby, which GO has moved on from,
-    /// including those that adding a cue made
     fn without_moves_of(self, list: usize) -> Self {
         let turn = match self.latest() {
             Some((_, change)) if change.moves_standby_of(list) => None,
@@ -96,8 +90,6 @@ impl History {
     }
 }
 
-/// Moves the last change of `from` to the end of `to`, returning both lists
-/// along with the change
 fn moved(mut from: Vec<Change>, to: Vec<Change>) -> (Vec<Change>, Vec<Change>, Option<Change>) {
     let change = from.pop();
     let to = to.into_iter().chain(change.clone()).collect();

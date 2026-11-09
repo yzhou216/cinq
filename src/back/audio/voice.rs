@@ -109,8 +109,7 @@ impl Voice {
 }
 
 /// Returns `data` set to play `clip`, from `position` in the file and at
-/// `level`.  The sound ends at the end of the clip, or goes back to the
-/// start of the clip there when the clip loops.
+/// `level`.
 pub(super) fn clipped(
     data: StreamingSoundData<FromFileError>,
     clip: Clip,

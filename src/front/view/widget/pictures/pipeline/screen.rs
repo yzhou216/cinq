@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Texture of the pictures of one cue, which each new picture fills again
+//! Texture of the pictures of one cue
 
 use iced::{Size, advanced::image, wgpu};
 

@@ -10,7 +10,6 @@ use std::path::Path;
 
 use super::*;
 
-/// Returns a picture cue that shows `slide.png`
 fn picture(id: u32) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Picture, "Slide")
         .file("slide.png")

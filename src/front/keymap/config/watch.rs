@@ -11,8 +11,9 @@
 //! missing, it watches the nearest one above that exists, so that making
 //! the directories and then the file comes through as well.  Each burst of
 //! changes reads the file once, after it settles, and formats it first, as
-//! [`format`] tells, and each reading writes out the problems with the
-//! file, which go to standard error in the program, as [`errors`] tells.
+//! [`format`](mod@format) tells, and each reading writes out the problems
+//! with the file, which go to standard error in the program, as [`errors`]
+//! tells.
 //!
 //! The watch waits for changes on iced's executor, whose workers keep the
 //! clock ticking, and leaves reading and writing to threads: each reading
@@ -77,9 +78,6 @@ pub fn watch(file: PathBuf, errors: Errors) -> impl Stream<Item = Config> {
     })
 }
 
-/// Returns the configuration that `file` holds, read on a thread of its
-/// own after formatting the file, when it has `changed`, or nothing when
-/// the thread ends without an answer
 async fn loaded(file: &Path, changed: bool) -> Option<Config> {
     let (sender, receiver) = oneshot::channel();
     let file = file.to_owned();
@@ -93,9 +91,6 @@ async fn loaded(file: &Path, changed: bool) -> Option<Config> {
     receiver.await.ok()
 }
 
-/// Sends the configuration that `file` holds to `output` once the watch is
-/// in place and again after each change to the file, or returns why the
-/// file cannot be watched
 async fn follow(file: &Path, output: &mut mpsc::Sender<Config>) -> notify::Result<()> {
     let (sender, mut events) = mpsc::unbounded();
     let mut watcher = new_debouncer(SETTLE, None, move |result| {
@@ -188,8 +183,6 @@ fn rewatch(
     Ok(directory)
 }
 
-/// Returns the directory to watch for `file`: the nearest one on the way to
-/// it that exists, which is the one that holds it once that is there
 fn directory(file: &Path) -> Option<PathBuf> {
     file.ancestors()
         .skip(1)

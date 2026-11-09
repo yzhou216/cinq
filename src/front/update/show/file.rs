@@ -70,7 +70,6 @@ fn created_in(directory: &Path) -> io::Result<tempfile::NamedTempFile> {
     tempfile::NamedTempFile::new_in(directory)
 }
 
-/// Removes a file, which is no failure when it is gone already
 pub(super) fn remove(file: &Path) -> io::Result<()> {
     match fs::remove_file(file) {
         Err(error) if error.kind() != io::ErrorKind::NotFound => Err(error),

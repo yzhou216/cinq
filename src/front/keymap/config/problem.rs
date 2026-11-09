@@ -40,8 +40,7 @@ impl Problem {
 }
 
 impl Config {
-    /// Returns each problem as the sidebar lists it: after the name of the
-    /// file, and the line that it lies on when it lies in the text
+    /// Returns each problem as the sidebar lists it
     pub fn warnings(&self) -> impl Iterator<Item = String> + '_ {
         let text = self.text.as_deref().unwrap_or_default();
         self.problems
@@ -52,9 +51,7 @@ impl Config {
             })
     }
 
-    /// Returns a report of each problem for miette to draw: a warning, since
-    /// the rest of the file applies, with the text of the file that the
-    /// problem lies in
+    /// Each report is a warning, since the rest of the file applies.
     pub fn reports(&self) -> impl Iterator<Item = Report> + '_ {
         let file = self.source.file().unwrap_or(Path::new("config.toml"));
         let text = self.text.as_deref().unwrap_or_default();

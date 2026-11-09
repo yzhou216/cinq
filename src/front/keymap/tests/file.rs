@@ -14,7 +14,6 @@ use tempfile::TempDir;
 
 use super::*;
 
-/// Returns what each problem says
 fn messages(problems: &[config::Problem]) -> Vec<&str> {
     problems
         .iter()
