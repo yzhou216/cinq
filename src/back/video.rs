@@ -28,11 +28,11 @@ mod still;
 pub(super) mod tests;
 mod track;
 
-use std::{collections::HashMap, io, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
 use itertools::{Either, Itertools};
 
-use super::{Active, Command, CueId, Media, Problem, Shown, Workspace};
+use super::{Active, CueId, Problem, Shown, Workspace, load::unplayable};
 pub use decoder::Picture;
 use player::{Advanced, Player};
 pub(super) use still::probe as probe_still;
@@ -94,11 +94,7 @@ impl Video {
                     (cue.id, (run, player)),
                     picture.map(|picture| (cue.id, picture)),
                 )),
-                Err(reason) => Either::Right(Command::Loaded {
-                    cue: cue.id,
-                    file: cue.file.clone(),
-                    media: Media::Failed(reason),
-                }),
+                Err(reason) => Either::Right(unplayable(cue, reason)),
             });
         self.runs = runs;
         self.ready = workspace
@@ -132,10 +128,9 @@ impl Video {
         self.runs
             .iter()
             .filter_map(|(&cue, (run, player))| {
-                let active = workspace
-                    .active_of(cue)
-                    .filter(|active| active.run == *run && !active.paused)
-                    .filter(|active| active.shows_picture())?;
+                let active = workspace.active_of(cue).filter(|active| {
+                    active.run == *run && !active.paused && active.shows_picture()
+                })?;
                 Some(player.next_due()? - active.played())
             })
             .min_by(f64::total_cmp)
@@ -154,14 +149,5 @@ fn moved_on(showing: Option<Showing>, active: &Active, player: Option<Player>) -
         player.advanced(active.played())
     } else {
         Ok((player, None))
-    }
-}
-
-/// Tells why a video or picture file cannot be read, in the words that the
-/// sound output uses for a sound file
-fn unreadable(error: io::Error) -> String {
-    match error.kind() {
-        io::ErrorKind::NotFound => "file not found".to_owned(),
-        _ => error.to_string(),
     }
 }

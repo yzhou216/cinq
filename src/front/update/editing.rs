@@ -61,7 +61,7 @@ impl App {
         let Some(first) = self.selected_row() else {
             return self;
         };
-        let ids: Vec<CueId> = self.current().cues[first..]
+        let ids = self.current().cues[first..]
             .iter()
             .take(count)
             .map(|cue| cue.id)

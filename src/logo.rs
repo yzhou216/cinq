@@ -16,7 +16,7 @@ mod layer;
 #[cfg(test)]
 mod tests;
 
-use kurbo::{Affine, BezPath, Circle, Ellipse, ParamCurve, PathEl, Point, QuadBez, Shape};
+use kurbo::{Affine, BezPath, Circle, Ellipse, ParamCurve, PathEl, QuadBez, Shape};
 
 use geometry::{arch, around, at, curve_to, line_to, move_to, scallop};
 use layer::Layer;
@@ -147,15 +147,11 @@ fn cord() -> Layer {
 fn valance() -> Layer {
     let top = top_arch();
     let lower = Affine::translate((0.0, 14.0)) * top;
-    // Ends of the scallops, five of them, from the right of the lower edge
-    // to its left
-    let ends: Vec<Point> = (0..=5)
+    // Five scallops, from the right of the lower edge to its left
+    let end = |step: u8| lower.eval(f64::from(step) / 5.0);
+    let scallops = (0..5)
         .rev()
-        .map(|step| lower.eval(f64::from(step) / 5.0))
-        .collect();
-    let scallops = ends
-        .windows(2)
-        .flat_map(|pair| scallop(pair[0], pair[1], 6.0).append_iter(TOLERANCE));
+        .flat_map(|step| scallop(end(step + 1), end(step), 6.0).append_iter(TOLERANCE));
     let valance = top
         .path_elements(TOLERANCE)
         .chain([line_to(lower.p2)])

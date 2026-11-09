@@ -74,9 +74,7 @@ impl Cue {
     /// ends
     fn sound(&self) -> Option<f32> {
         match self.media {
-            Media::Loaded {
-                sound: Some(sound), ..
-            } => Some(sound).filter(|&sound| self.start.value() < sound),
+            Media::Loaded { sound, .. } => sound.filter(|&sound| self.start.value() < sound),
             _ => None,
         }
     }
