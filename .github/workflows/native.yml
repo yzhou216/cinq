@@ -15,12 +15,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            system: x86_64-linux
-          - os: ubuntu-24.04-arm
-            system: aarch64-linux
-          - os: macos-latest
-            system: aarch64-darwin
+          - {system: x86_64-linux, os: ubuntu-latest}
+          - {system: aarch64-linux, os: ubuntu-24.04-arm}
+          - {system: aarch64-darwin, os: macos-latest}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@main
