@@ -21,29 +21,20 @@ impl Workspace {
                 })
             })
             .map(|stopped| (stopped.chain, stopped.run));
-        let active = self
-            .active
-            .into_iter()
-            .filter(|active| {
-                !rest.is_some_and(|(chain, run)| active.chain == chain && active.run > run)
-            })
-            .collect();
-        Self { active, ..self }.skipped(id)
+        self.without_active_where(|active| {
+            rest.is_some_and(|(chain, run)| active.chain == chain && active.run > run)
+        })
+        .skipped(id)
     }
 
     /// Ends the run of a cue and leaves the rest of its chain to play, as GO
     /// skips a cue that cannot play.  Fades the cue was making stop where
     /// they are.
     pub(super) fn skipped(self, id: CueId) -> Self {
-        let active = self
-            .active
-            .into_iter()
-            .filter(|active| active.id != id)
-            .map(|active| Active {
+        self.without_active_where(|active| active.id == id)
+            .with_each_active(|active| Active {
                 fade: active.fade.filter(|fade| fade.by != Some(id)),
                 ..active
             })
-            .collect();
-        Self { active, ..self }
     }
 }

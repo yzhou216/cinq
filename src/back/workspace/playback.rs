@@ -68,12 +68,9 @@ impl Workspace {
     }
 
     pub(super) fn tick(self, seconds: f64) -> Self {
-        let active = self
-            .active
-            .into_iter()
-            .map(|active| active.advanced(seconds))
-            .collect();
-        Self { active, ..self }.started().without_finished()
+        self.with_each_active(|active| active.advanced(seconds))
+            .started()
+            .without_finished()
     }
 
     pub(super) fn panic(self) -> Self {
@@ -89,22 +86,12 @@ impl Workspace {
             then_stop: true,
             opacity: 1.0,
         };
-        let active = self
-            .active
-            .into_iter()
-            .filter(|active| !fading && !active.paused && active.playing())
-            .map(|active| active.under(fade))
-            .collect();
-        Self { active, ..self }
+        self.without_active_where(|active| fading || active.paused || !active.playing())
+            .with_each_active(|active| active.under(fade))
     }
 
     pub(super) fn paused(self, paused: bool) -> Self {
-        let active = self
-            .active
-            .into_iter()
-            .map(|active| Active { paused, ..active })
-            .collect();
-        Self { active, ..self }
+        self.with_each_active(|active| Active { paused, ..active })
     }
 
     /// Begins the action of every cue whose pre-wait is over.  Audio, video,
@@ -112,9 +99,8 @@ impl Workspace {
     /// is the job of the audio and video output.
     fn started(self) -> Self {
         let due = self.active_where(Active::due);
-        let active = self.active.into_iter().map(Active::begun).collect();
         due.into_iter()
-            .fold(Self { active, ..self }, Self::with_effect_of)
+            .fold(self.with_each_active(Active::begun), Self::with_effect_of)
     }
 
     /// Carries out the effect of a fade or stop cue on its target, unless
@@ -144,15 +130,9 @@ impl Workspace {
     /// chain that it has yet to start.
     fn without_finished(self) -> Self {
         let faded_out = self.active_where(Active::faded_out);
-        let workspace = faded_out.into_iter().fold(self, Self::stopped);
-        let active = workspace
-            .active
+        faded_out
             .into_iter()
-            .filter(|active| !active.finished())
-            .collect();
-        Self {
-            active,
-            ..workspace
-        }
+            .fold(self, Self::stopped)
+            .without_active_where(Active::finished)
     }
 }

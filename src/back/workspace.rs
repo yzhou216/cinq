@@ -178,6 +178,24 @@ impl Workspace {
             .collect()
     }
 
+    fn without_active_where(self, test: impl Fn(&Active) -> bool) -> Self {
+        Self {
+            active: self
+                .active
+                .into_iter()
+                .filter(|active| !test(active))
+                .collect(),
+            ..self
+        }
+    }
+
+    fn with_each_active(self, change: impl FnMut(Active) -> Active) -> Self {
+        Self {
+            active: self.active.into_iter().map(change).collect(),
+            ..self
+        }
+    }
+
     /// Returns the workspace with a command applied.  Commands that change
     /// cues do nothing in show mode, which only allows playback and moves
     /// of standby, and undo and redo there take back and make again only
