@@ -27,8 +27,7 @@ impl Workspace {
     }
 
     /// Returns the cues that the next GO of each list may start that name a
-    /// file, each with its file, which the sound and the video output make
-    /// ready ahead
+    /// file, each with its file, which the video output makes ready ahead
     pub(in crate::back) fn upcoming(&self) -> impl Iterator<Item = (&Cue, PathBuf)> {
         self.lists
             .iter()

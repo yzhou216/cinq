@@ -28,6 +28,13 @@ impl Active {
         self.effect.sound().filter(|_| !self.under_way())
     }
 
+    /// Returns how many seconds pass before the action begins, counting the
+    /// wait for its turn in a chain and its pre-wait, which is none once the
+    /// action is under way
+    pub(in crate::back) fn starts_in(&self) -> f64 {
+        (self.pre_wait - self.elapsed).max(0.0)
+    }
+
     /// Returns what the stage window shows of the file of a video or
     /// picture cue from the moment GO fires it, even before its picture
     /// shows, so that the video output can make the picture ready

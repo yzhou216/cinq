@@ -46,6 +46,9 @@ pub const SOUND_FILES: [&str; 5] = ["flac", "m4a", "mp3", "ogg", "wav"];
 /// than any show plays at once.
 const SOUNDS: usize = 1024;
 
+/// Seconds before a sound starts that it is made ready
+const READY_AHEAD: f64 = 10.0;
+
 pub struct Audio {
     output: Result<AudioManager, String>,
     voices: HashMap<CueId, Voice>,
@@ -73,13 +76,13 @@ impl Audio {
 
     /// Makes the sound match the workspace, and returns the workspace with
     /// the files whose sound could not start.  The sounds that runs may
-    /// start next are made ready once those that start now have taken
+    /// start soon are made ready once those that start now have taken
     /// theirs, unless there is no audio device to hear them on.
     pub fn sync(&mut self, workspace: Workspace) -> Workspace {
         self.preloader.collect();
         let failures = self.play(&workspace);
         if self.output.is_ok() {
-            self.preloader.want(upcoming(&workspace));
+            self.preloader.want(upcoming(&workspace, READY_AHEAD));
         }
         failures.into_iter().fold(workspace, Workspace::apply)
     }
@@ -141,12 +144,14 @@ fn started(
     }
 }
 
-/// Returns the sounds that runs may start next: first those of the runs
-/// that GO has fired and that have yet to sound, which start soonest, then
-/// those of the next GO of each list
-fn upcoming(workspace: &Workspace) -> Vec<Ask> {
+/// Returns the sounds that runs may start within `ahead` seconds: first
+/// those of the runs that GO has fired and that have yet to sound, which
+/// start soonest, then those of the next GO of each list.  Each sound is
+/// judged by its own start, so that sounds that start together are never
+/// split, and those that start at the instant of GO are always among them.
+fn upcoming(workspace: &Workspace, ahead: f64) -> Vec<Ask> {
     let fired = workspace.active().iter().filter_map(|active| {
-        let clip = active.pending()?;
+        let clip = active.pending().filter(|_| active.starts_in() <= ahead)?;
         let path = workspace.path(workspace.cue(active.id)?)?;
         Some(Ask {
             cue: active.id,
@@ -154,12 +159,18 @@ fn upcoming(workspace: &Workspace) -> Vec<Ask> {
             level: active.level,
         })
     });
-    let next = workspace.upcoming().filter_map(|(cue, path)| {
-        let clip = cue.clip().filter(|_| cue.sounds())?;
-        Some(Ask {
-            cue: cue.id,
-            wanted: Wanted { path, clip },
-            level: cue.level,
+    let next = workspace.lists().iter().flat_map(|list| {
+        workspace.next_go(list).filter_map(|(cue, delay)| {
+            let starts = f64::from(delay) + f64::from(cue.pre_wait.value());
+            let clip = cue.clip().filter(|_| cue.sounds() && starts <= ahead)?;
+            Some(Ask {
+                cue: cue.id,
+                wanted: Wanted {
+                    path: workspace.path(cue)?,
+                    clip,
+                },
+                level: cue.level,
+            })
         })
     });
     fired.chain(next).unique_by(|ask| ask.cue).collect()

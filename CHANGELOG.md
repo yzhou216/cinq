@@ -42,6 +42,10 @@ Major changes and improvements in each release of cinq, newest first.
 - On the stage window, the pictures of earlier cues show around a picture
   of another shape than the window, as in QLab.  The space around it was
   black until the picture began to fade, when they appeared there at once.
+- cinq makes ready the sounds that start within ten seconds, instead of those
+  of every cue that one GO fires, so that a long chain of auto-continue cues no
+  longer opens all its sound files at once.  Sounds that start together are
+  always made ready together.
 
 ## v0.1.2
 
