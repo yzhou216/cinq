@@ -36,6 +36,9 @@ Major changes and improvements in each release of cinq, newest first.
 - Opening a show right after switching away from it, while cinq is still
   keeping its unsaved changes, brings back the newest of them and no longer
   older ones.
+- A failure to keep unsaved changes now shows on a line of its own among the
+  warnings, and no longer replaces the problem of opening or saving a show.
+  It also takes back the status note that changes were kept.
 
 ## v0.1.2
 

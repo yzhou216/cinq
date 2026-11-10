@@ -154,5 +154,6 @@ fn warnings(app: &App) -> usize {
     app.workspace.problems().count()
         + usize::from(app.audio_error.is_some())
         + usize::from(app.file_problem.is_some())
+        + usize::from(app.keep_problem.is_some())
         + app.config.problems.len()
 }

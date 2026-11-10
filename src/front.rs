@@ -123,6 +123,10 @@ struct App {
     /// What went wrong with show files last, until opening or saving one
     /// succeeds
     file_problem: Option<String>,
+    /// Why the keeper failed to keep unsaved changes last, until opening or
+    /// saving a show succeeds.  It arrives late and about an earlier change,
+    /// so it has a slot of its own.
+    keep_problem: Option<String>,
     /// What the latest opening or saving told, which the status bar shows
     /// until the show changes
     told: Option<String>,

@@ -61,6 +61,7 @@ impl App {
                 Self {
                     told: Some(format!("Saved {}", show.name())),
                     file_problem: None,
+                    keep_problem: None,
                     show,
                     ..self
                 }

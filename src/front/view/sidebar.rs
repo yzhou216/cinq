@@ -39,9 +39,9 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             .style(text::danger)
             .into()
     });
-    let file = app
-        .file_problem
-        .as_deref()
+    let files = [&app.file_problem, &app.keep_problem]
+        .into_iter()
+        .flatten()
         .map(|problem| text(problem).style(text::warning).into());
     let settings = app
         .config
@@ -71,7 +71,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             column(
                 device
                     .into_iter()
-                    .chain(file)
+                    .chain(files)
                     .chain(settings)
                     .chain(problems)
             )

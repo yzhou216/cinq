@@ -84,3 +84,25 @@ fn show_read_back_holds_what_was_written_along_with_its_kept_changes() {
     assert_eq!(read.text, Ok(Some(SHOW.to_owned())));
     assert_eq!(read.kept, Ok(Some("kept".to_owned())));
 }
+
+#[test]
+fn failure_to_keep_outlasts_a_problem_of_opening_until_a_show_opens_or_saves() {
+    let failed = || storm().with_keep_problem(Some("Cannot keep the unsaved changes".to_owned()));
+    let broken = found(Some("/shows/broken.cinq.toml"), Some("[[list"), None);
+    let app = failed().opened(broken);
+    assert!(app.file_problem.is_some() && app.keep_problem.is_some());
+    let opened = app.opened(found(Some(CALM), Some(SHOW), None));
+    assert!(opened.file_problem.is_none() && opened.keep_problem.is_none());
+    let app = failed();
+    let save = saving(&app, STORM);
+    assert!(app.saved(save).keep_problem.is_none());
+}
+
+#[test]
+fn failure_to_keep_takes_back_the_note_that_changes_were_kept() {
+    let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
+    assert!(app.told.is_some());
+    assert!(app.with_keep_problem(None).told.is_some());
+    let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
+    assert_eq!(app.with_keep_problem(Some("late".to_owned())).told, None);
+}

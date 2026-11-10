@@ -16,6 +16,17 @@ use crate::{
 };
 
 impl App {
+    /// Takes in why the keeper failed to keep changes, if it did, which
+    /// replaces an older reason.  A failure also takes back the note that
+    /// changes were kept, which it contradicts.
+    pub(in crate::front::update) fn with_keep_problem(self, failed: Option<String>) -> Self {
+        Self {
+            told: self.told.filter(|_| failed.is_none()),
+            keep_problem: failed.or(self.keep_problem),
+            ..self
+        }
+    }
+
     pub(in crate::front::update) fn choose_show(&self) -> Task<Message> {
         let chooser = chooser(self.show.directory()).set_title("Open show");
         let reader = self.reader.clone();
@@ -73,6 +84,7 @@ impl App {
                 version: self.show.version + 1,
             },
             file_problem: None,
+            keep_problem: None,
             ..self
         };
         let opened = match kept {

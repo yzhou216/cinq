@@ -54,12 +54,13 @@ impl Cinq {
         let (workspace, pictures) = self.video.sync(app.workspace);
         let due = self.video.next_due(&workspace);
         let workspace = self.audio.sync(workspace);
+        let kept = self.keeper.keep(&app.show);
         let app = App {
             stage: app.stage.with_pictures(&workspace, pictures).with_due(due),
-            file_problem: self.keeper.keep(&app.show).or(app.file_problem),
             workspace,
             ..app
         }
+        .with_keep_problem(kept)
         .clocked();
         let (app, load) = app.load();
         let (app, stage) = app.staged();
