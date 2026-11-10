@@ -69,6 +69,9 @@ rfd = "0.17"
 rust_h264 = "0.6" # Decoder of H.264 that needs no C++ compiler
 serde = { version = "1.0", features = ["derive"] }
 strum = { version = "0.28", features = ["derive"] }
+supports-color = "3.0" # Colors of miette's reports, asked while standard error is still the terminal
+supports-hyperlinks = "3.2" # Links of miette's reports, asked the same way
+supports-unicode = "3.0" # Characters of miette's reports, asked the same way
 taplo = { version = "0.14", default-features = false } # Formatting of config.toml once saved
 tempfile = "3.27"
 terminal_size = "0.4" # Problems redrawn at a new size, which miette brings
@@ -82,6 +85,13 @@ toml = { version = "1.1", default-features = false, features = [
   "std",
 ] }
 unicode-width = "0.2" # Columns of a character on screen, which iced brings
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1", features = [ # Standard output and error pointed at a pipe while the problems screen shows
+  "event",
+  "pipe",
+  "stdio",
+] }
 
 [build-dependencies] # Manual pages, completions, the icon with resvg's kurbo, the app bundle for Darwin, and the manifest for Windows
 clap = { version = "4.6", features = ["derive"] }

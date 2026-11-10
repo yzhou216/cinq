@@ -11,9 +11,13 @@
 //! Problems left when the program ends come back to that screen once, so
 //! that they stay in sight.  A file or a pipe takes the problems of each
 //! reading in turn, as a log.  A thread of the watch's own writes them out,
-//! in the order of the readings.  The warnings of [`warn`] wait for the main
-//! screen while the problems show.
+//! in the order of the readings.  Whatever else is written to standard
+//! output and error while the problems show, by cinq and by the libraries
+//! it uses, waits in [`held`] for the main screen and comes out there once
+//! the problems clear, or before those left at the end.  The problems
+//! screen itself draws on the terminal that [`held`] keeps apart.
 
+mod look;
 #[cfg(test)]
 mod tests;
 
@@ -31,7 +35,7 @@ use std::{
 
 use terminal_size::terminal_size_of;
 
-use crate::{front::keymap::config::Config, warn};
+use crate::{front::keymap::config::Config, held};
 
 /// Escape sequence that switches a terminal to its alternate screen
 const ENTER: &str = "\x1b[?1049h";
@@ -61,6 +65,7 @@ pub enum Errors {
 impl Errors {
     pub fn standard() -> Self {
         if switchable() {
+            look::install();
             Self::Screen
         } else {
             Self::Log(Box::new(io::stderr()))
@@ -122,7 +127,11 @@ pub(super) fn warner(errors: Errors) -> mpsc::Sender<Config> {
 /// screen of standard error, and draws them again when the terminal changes
 /// size while they show
 fn screen(configs: &mpsc::Receiver<Config>) {
-    let size = || terminal_size_of(io::stderr());
+    let size = || {
+        held::terminal()
+            .ok()
+            .and_then(|terminal| terminal_size_of(&terminal))
+    };
     // Readings, and while the problems show, a pause now and then without one
     let readings = iter::from_fn(|| {
         let reading = if shown().is_some() {
@@ -142,12 +151,14 @@ fn screen(configs: &mpsc::Receiver<Config>) {
         if let Some(config) = reading.or(resized) {
             let problems = !config.problems.is_empty();
             if problems {
-                warn::hold();
+                held::hold();
             }
-            let _ = io::stderr().write_all(switched(shown.is_some(), &config).as_bytes());
+            let _ = held::terminal().and_then(|mut terminal| {
+                terminal.write_all(switched(shown.is_some(), &config).as_bytes())
+            });
             *shown = problems.then_some(config);
             if !problems {
-                warn::release();
+                held::release();
             }
         }
         now
@@ -167,12 +178,6 @@ fn switched(showing: bool, config: &Config) -> String {
     }
 }
 
-/// Returns what takes a terminal back from the problems screen that shows
-/// those of `config`, followed by the problems, so that they stay in sight
-fn left(config: &Config) -> String {
-    format!("{LEAVE}{}", written(config))
-}
-
 /// Returns the problems of `config` as miette draws them
 fn written(config: &Config) -> String {
     config
@@ -181,10 +186,14 @@ fn written(config: &Config) -> String {
         .collect()
 }
 
+/// Switches the terminal back from the problems screen that shows those of
+/// `config`, then writes what was held meanwhile on the main screen, and
+/// last the problems, so that they stay in sight
 fn restored(shown: &mut Option<Config>) {
     if let Some(config) = shown.take() {
-        let _ = io::stderr().write_all(left(&config).as_bytes());
-        warn::release();
+        let _ = held::terminal().and_then(|mut terminal| terminal.write_all(LEAVE.as_bytes()));
+        held::release();
+        let _ = io::stderr().write_all(written(&config).as_bytes());
     }
 }
 
@@ -194,7 +203,7 @@ fn switchable() -> bool {
     // Windows consoles set no TERM, but take escape sequences once asked
     let escapes = anstyle_query::windows::enable_ansi_colors() == Some(true)
         || env::var_os("TERM").is_some_and(|term| term != "dumb");
-    io::stderr().is_terminal() && escapes
+    held::terminal().is_ok_and(|terminal| terminal.is_terminal()) && escapes
 }
 
 /// Locks [`SHOWN`], which a thread that panicked while it held the lock

@@ -452,6 +452,13 @@ On a terminal, the problems take a screen of their own while any are left, as
 a pager's text does, and those of each reading take the place of those before.
 Once none are left, the terminal shows again what it showed before, and
 problems still left when *cinq* ends stay on it.
+What *cinq* and the libraries that it uses print meanwhile to standard error,
+or to standard output when that is a terminal, waits, and comes out on that
+screen once the problems clear, or before the problems still left when *cinq*
+ends.
+Only the newest megabyte is kept, and a line says how many bytes before it
+were dropped.
+On Windows, only what *cinq* itself prints waits.
 A file or a pipe takes the problems of each reading in turn, as does a
 terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
 
