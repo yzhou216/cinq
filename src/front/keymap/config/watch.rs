@@ -43,7 +43,7 @@ use iced::{
 };
 use notify_debouncer_full::{
     DebounceEventResult, Debouncer, RecommendedCache, new_debouncer,
-    notify::{self, RecommendedWatcher, RecursiveMode},
+    notify::{self, RecommendedWatcher, RecursiveMode, Watcher as _, WatcherKind},
 };
 
 use super::{Config, Problem, load};
@@ -142,16 +142,6 @@ fn touches(result: &DebounceEventResult, names: &[PathBuf]) -> bool {
     }
 }
 
-/// Whether the watcher is kqueue's, which tells of a directory only the
-/// entries that come and go, and not of a file in it written in place
-const KQUEUE: bool = cfg!(any(
-    target_os = "dragonfly",
-    target_os = "freebsd",
-    target_os = "ios",
-    target_os = "netbsd",
-    target_os = "openbsd",
-));
-
 /// Watches the nearest directory on the way to `file` in place of the
 /// directory `watched`, and with kqueue the file itself as well, which an
 /// editor may write in place, and returns the directory now watched, or why
@@ -170,9 +160,11 @@ fn rewatch(
     let directory = watch_nearest(file, |directory| {
         watcher.watch(directory, RecursiveMode::NonRecursive)
     })?;
-    if KQUEUE {
-        // File that is missing, or that another has replaced, comes and
-        // goes through the watch on its directory, so a failure is moot
+    if RecommendedWatcher::kind() == WatcherKind::Kqueue {
+        // kqueue tells of a directory only the entries that come and go, and
+        // not of a file in it written in place.  A file that is missing, or
+        // that another has replaced, comes and goes through the watch on its
+        // directory, so a failure is moot.
         let _ = watcher.unwatch(file);
         let _ = watcher.watch(file, RecursiveMode::NonRecursive);
     }
