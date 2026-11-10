@@ -85,6 +85,7 @@ toml = { version = "1.1", default-features = false, features = [
   "std",
 ] }
 unicode-width = "0.2" # Columns of a character on screen, which iced brings
+yuv = "0.8" # Colors of the pictures of video cues, in RGBA
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1", features = [ # Standard output and error pointed at a pipe while the problems screen shows
