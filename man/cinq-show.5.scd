@@ -132,6 +132,9 @@ AAC track, in mono or stereo.
 A file without a sound track plays its picture alone.
 The clock of a video cue follows its sound, so that its picture, its fades, and
 its end stay with the sound over a long video.
+cinq reads no tags or cover art, and skips a track other than the picture's
+that cannot be read, such as one of chapters, which it says once on standard
+error.
 A video cue takes as long as the picture of its file, and its *start*, *end*,
 *loop*, *level*, and waits work as those of an audio cue do.
 
