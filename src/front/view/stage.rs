@@ -5,10 +5,11 @@
 //! Stage window, which shows the pictures of the picture and video cues
 //! that run
 //!
-//! The cue that fired last shows on top, and hides those that fired before
-//! it only while its picture is wholly opaque, so that a picture fading out
-//! as its cue stops fades to whatever shows once it has gone.  The pointer
-//! stays hidden over the stage, out of the audience's sight.
+//! The cue that fired last shows on top.  As in QLab, those that fired
+//! before it show around a picture of another shape than the window, and
+//! through one that fades, so that a picture fading out as its cue stops
+//! fades to whatever shows once it has gone.  The pointer stays hidden over
+//! the stage, out of the audience's sight.
 
 use iced::{Element, mouse, widget::mouse_area};
 
@@ -16,7 +17,7 @@ use super::widget::{Layer, pictures};
 use crate::front::{App, Message};
 
 pub fn view(app: &App) -> Element<'_, Message> {
-    let layers: Vec<Layer> = app
+    let layers = app
         .workspace
         .active()
         .iter()
@@ -29,12 +30,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
             })
         })
         .collect();
-    let hidden = layers
-        .iter()
-        .rposition(|layer| layer.opacity >= 1.0)
-        .unwrap_or(0);
-    let shown = layers.into_iter().skip(hidden).collect();
-    mouse_area(pictures(shown))
+    mouse_area(pictures(layers))
         .interaction(mouse::Interaction::Hidden)
         .into()
 }

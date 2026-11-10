@@ -39,6 +39,9 @@ Major changes and improvements in each release of cinq, newest first.
 - A failure to keep unsaved changes now shows on a line of its own among the
   warnings, and no longer replaces the problem of opening or saving a show.
   It also takes back the status note that changes were kept.
+- On the stage window, the pictures of earlier cues show around a picture
+  of another shape than the window, as in QLab.  The space around it was
+  black until the picture began to fade, when they appeared there at once.
 
 ## v0.1.2
 

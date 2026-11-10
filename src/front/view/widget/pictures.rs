@@ -85,7 +85,7 @@ impl Widget<Message, Theme, Renderer> for Pictures {
             shader::<Message, _>(self).draw(tree, renderer, theme, style, layout, cursor, viewport);
         } else {
             let bounds = layout.bounds();
-            self.0.iter().for_each(|layer| {
+            uncovered(bounds, &self.0).iter().for_each(|layer| {
                 if let Some((size, _)) = rgba(&layer.picture) {
                     let picture = drawing::Image {
                         opacity: layer.opacity,
@@ -103,9 +103,25 @@ impl shader::Program<Message> for Pictures {
     type State = ();
     type Primitive = pipeline::Pictures;
 
-    fn draw(&self, _state: &(), _cursor: mouse::Cursor, _bounds: Rectangle) -> Self::Primitive {
-        pipeline::Pictures(self.0.clone())
+    fn draw(&self, _state: &(), _cursor: mouse::Cursor, bounds: Rectangle) -> Self::Primitive {
+        pipeline::Pictures(uncovered(bounds, &self.0).to_vec())
     }
+}
+
+/// Returns the layers to draw, from the topmost one that covers the whole
+/// region up, as that one hides every layer below it.  A layer covers the
+/// region when it is wholly opaque and fills it to within a pixel, since a
+/// picture of the region's shape falls a little short of it at some sizes.
+/// Layers below a picture of another shape show around it.
+fn uncovered(bounds: Rectangle, layers: &[Layer]) -> &[Layer] {
+    let covers = |layer: &Layer| {
+        layer.opacity >= 1.0
+            && rgba(&layer.picture).is_some_and(|(size, _)| {
+                let fitted = fitted(bounds, size);
+                bounds.width - fitted.width < 1.0 && bounds.height - fitted.height < 1.0
+            })
+    };
+    &layers[layers.iter().rposition(covers).unwrap_or(0)..]
 }
 
 /// Returns the size and the pixels of a picture, which the stage makes from

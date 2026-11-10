@@ -143,14 +143,17 @@ The pictures of picture and video cues show in a stage window of their own,
 which opens beside the main window once the show holds a picture or video
 cue, as a window that the operator can move to the display of the audience.
 It shows black while no picture shows, and otherwise the picture of the cue
-that fired last, whole and as large as the window allows, with black around
-it where its shape differs from that of the window.
+that fired last, whole and as large as the window allows.
 Each GO that fires a picture or video cue makes the stage window fullscreen,
 on the display that it is on, and brings it before the other windows, so
 that the picture fills the screen as it comes up.
-A picture that comes up hides those of the cues that fired before it, which
-show again once it has gone, as that of a picture cue does once a video that
-fired after it ends, unless something has stopped the picture cue.
+A picture that comes up hides those of the cues that fired before it where
+it lies over them, which show again once it has gone, as that of a picture
+cue does once a video that fired after it ends, unless something has stopped
+the picture cue.
+Where its shape differs from that of the window, the pictures of the cues
+that fired before it show around it, as in QLab, and black where there are
+none.
 A fade cue that stops a picture or video cue fades its picture out, along
 with the sound of a video, as a panic does: to black, or to the picture of
 an earlier cue that shows on.

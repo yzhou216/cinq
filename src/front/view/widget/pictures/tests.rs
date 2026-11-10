@@ -11,8 +11,8 @@ use iced::{
     widget::{image, space},
 };
 
-use super::{fitted, pictures, rgba};
-use crate::front::Message;
+use super::{Layer, fitted, pictures, rgba, uncovered};
+use crate::{back::CueId, front::Message};
 
 #[test]
 fn wide_picture_spans_the_width_in_the_middle_of_the_height() {
@@ -49,4 +49,47 @@ fn pictures_drawn_where_a_stateless_widget_was_have_the_state_that_the_shader_re
     let mut tree = Tree::new(space.as_widget());
     tree.diff(pictures(Vec::new()).as_widget());
     assert!(matches!(tree.state, tree::State::Some(_)));
+}
+
+fn layer(cue: u32, (width, height): (u32, u32), opacity: f32) -> Layer {
+    Layer {
+        cue: CueId(cue),
+        picture: image::Handle::from_rgba(width, height, vec![0; 4 * (width * height) as usize]),
+        opacity,
+    }
+}
+
+/// Returns the cues of the layers that show in a region of 1600 by 900,
+/// from the bottom up
+fn showing(layers: &[Layer]) -> Vec<u32> {
+    let bounds = Rectangle::with_size(Size::new(1600.0, 900.0));
+    uncovered(bounds, layers)
+        .iter()
+        .map(|layer| layer.cue.0)
+        .collect()
+}
+
+#[test]
+fn opaque_picture_that_covers_the_region_hides_those_below_it() {
+    let layers = [layer(1, (16, 9), 1.0), layer(2, (1920, 1080), 1.0)];
+    assert_eq!(showing(&layers), [2]);
+}
+
+#[test]
+fn opaque_picture_with_bars_hides_nothing_below_it() {
+    let layers = [layer(1, (16, 9), 1.0), layer(2, (4, 3), 1.0)];
+    assert_eq!(showing(&layers), [1, 2]);
+}
+
+#[test]
+fn picture_fading_out_hides_nothing_below_it() {
+    let layers = [layer(1, (16, 9), 1.0), layer(2, (16, 9), 0.5)];
+    assert_eq!(showing(&layers), [1, 2]);
+}
+
+#[test]
+fn picture_short_of_the_region_by_under_a_pixel_covers_it() {
+    let bounds = Rectangle::with_size(Size::new(1366.0, 768.0));
+    let layers = [layer(1, (16, 9), 1.0), layer(2, (1920, 1080), 1.0)];
+    assert_eq!(uncovered(bounds, &layers).len(), 1);
 }
