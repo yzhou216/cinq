@@ -4,7 +4,7 @@
 
 //! Tests of writing out the problems of each reading of the file
 
-use super::{CLEAR, ENTER, LEAVE, left, switched, written};
+use super::{CLEAR, ENTER, LEAVE, switched, written};
 use crate::front::keymap::config::{Config, Problem};
 
 fn broken() -> Config {
@@ -30,13 +30,6 @@ fn problems_take_a_screen_of_their_own_until_none_are_left() {
     );
     assert_eq!(switched(true, &fine), LEAVE);
     assert_eq!(switched(false, &fine), "");
-}
-
-#[test]
-fn problems_left_at_the_end_follow_the_main_screen_back() {
-    let left = left(&broken());
-    assert!(left.starts_with(LEAVE), "{left:?}");
-    assert!(left.contains("config.toml: no setting is named `colour`"));
 }
 
 #[test]

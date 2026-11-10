@@ -10,6 +10,13 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- While the problems of `config.toml` take a screen of their own on a
+  terminal, what cinq and its libraries print meanwhile, such as the
+  messages of the sound system, waits and comes out on the main screen once
+  the problems clear, or before the problems left when cinq ends, in place
+  of being lost when the terminal switches back.  On Windows, only cinq's
+  own messages wait.
+
 ## v0.1.3
 
 - On Windows, the unsaved changes of shows with the same path on different
