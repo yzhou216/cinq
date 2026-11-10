@@ -9,28 +9,14 @@ use std::time::{Duration, Instant};
 
 use super::show;
 use crate::{
-    back::{Active, Command, CueId, Media, Phase, Workspace},
+    back::{Active, CueId, Media, Phase, Workspace, loaded, sound},
     front::{App, Message},
 };
-
-/// Ten seconds of sound, as the sound file of each cue holds
-const SOUND: Media = Media::Loaded {
-    duration: 10.0,
-    sound: Some(10.0),
-};
-
-fn loaded(id: u32, media: Media) -> Command {
-    Command::Loaded {
-        cue: CueId(id),
-        file: "sound.ogg".to_owned(),
-        media,
-    }
-}
 
 #[test]
 fn ticks_out_of_order_count_each_moment_once_and_never_turn_the_clock_back() {
     let app = show(Some(CueId(1)));
-    let workspace = app.workspace.apply(loaded(1, SOUND));
+    let workspace = app.workspace.apply(loaded(1, "sound.ogg", sound(10.0)));
     let (playing, _) = App { workspace, ..app }.handled(Message::Go);
     let start = Instant::now();
     let at = |milliseconds| start + Duration::from_millis(milliseconds);
@@ -56,15 +42,22 @@ fn ticks_out_of_order_count_each_moment_once_and_never_turn_the_clock_back() {
 #[test]
 fn clock_stops_once_the_output_cannot_play_the_last_running_cue() {
     let app = show(Some(CueId(1)));
-    let workspace = [loaded(1, SOUND), loaded(2, SOUND)]
-        .into_iter()
-        .fold(app.workspace, Workspace::apply);
+    let workspace = [
+        loaded(1, "sound.ogg", sound(10.0)),
+        loaded(2, "sound.ogg", sound(10.0)),
+    ]
+    .into_iter()
+    .fold(app.workspace, Workspace::apply);
     let (playing, _) = App { workspace, ..app }.next(Message::Go);
     let playing = playing.clocked();
     assert!(playing.last_tick.is_some());
     // Run that the sound output cannot start, which it stops in the same
     // update
-    let failed = loaded(1, Media::Failed("the device has gone".to_owned()));
+    let failed = loaded(
+        1,
+        "sound.ogg",
+        Media::Failed("the device has gone".to_owned()),
+    );
     let stopped = App {
         workspace: playing.workspace.apply(failed),
         ..playing

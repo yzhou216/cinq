@@ -16,7 +16,7 @@ use iced::{
 
 use super::Stage;
 use crate::{
-    back::{Command, Cue, CueId, CueList, Kind, Media, Picture, Workspace},
+    back::{Cue, CueId, CueList, Kind, Picture, Workspace, loaded, silent},
     front::{
         App, Focus, MAIN_SIZE, Message, STAGE_SIZE,
         update::tests::{field_keys, press},
@@ -30,14 +30,7 @@ fn show(kind: Kind) -> App {
     let cue = Cue::new(CueId(1), "1", kind, "Cue")
         .file("movie.mp4")
         .build();
-    let loaded = Command::Loaded {
-        cue: CueId(1),
-        file: "movie.mp4".to_owned(),
-        media: Media::Loaded {
-            duration: 10.0,
-            sound: None,
-        },
-    };
+    let loaded = loaded(1, "movie.mp4", silent(10.0));
     let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])]).apply(loaded);
     App {
         workspace,

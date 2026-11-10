@@ -39,7 +39,7 @@ pub(in crate::back) fn workspace(cues: Vec<Cue>) -> Workspace {
     loads.into_iter().fold(workspace, Workspace::apply)
 }
 
-fn sound(seconds: f32) -> Media {
+pub(crate) fn sound(seconds: f32) -> Media {
     Media::Loaded {
         duration: seconds,
         sound: Some(seconds),
@@ -47,14 +47,14 @@ fn sound(seconds: f32) -> Media {
 }
 
 /// Returns the media of a file that plays `seconds` of picture alone
-pub(in crate::back) fn silent(seconds: f32) -> Media {
+pub(crate) fn silent(seconds: f32) -> Media {
     Media::Loaded {
         duration: seconds,
         sound: None,
     }
 }
 
-pub(in crate::back) fn loaded(id: u32, file: &str, media: Media) -> Command {
+pub(crate) fn loaded(id: u32, file: &str, media: Media) -> Command {
     Command::Loaded {
         cue: CueId(id),
         file: file.to_owned(),
@@ -111,7 +111,7 @@ fn running(workspace: &Workspace) -> Vec<u32> {
         .collect()
 }
 
-pub(in crate::back) fn audio(id: u32) -> Cue {
+pub(crate) fn audio(id: u32) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Audio, "Sound")
         .file("sound.ogg")
         .build()

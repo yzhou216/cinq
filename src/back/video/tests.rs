@@ -19,7 +19,7 @@ mod skipped;
 mod still;
 
 use std::{
-    fs, iter,
+    iter,
     ops::ControlFlow,
     path::Path,
     sync::Arc,
@@ -32,13 +32,22 @@ use super::{
     probe,
 };
 use crate::back::{
-    Clip, Cue, CueId, CueList, Load, Picture, Video, Workspace, load_files, workspace::tests::GO,
+    Clip, Cue, CueId, CueList, Kind, Load, Picture, Video, Workspace, load_files,
+    workspace::tests::GO,
 };
 use boxes::reworked;
-use movie::{RATE, broken_movie, movie, picture_number};
+use movie::{RATE, broken_movie, movie, movie_bytes, picture_number, saved};
 
 /// Longest that a test waits for a thread to decode a picture
 const PATIENCE: Duration = Duration::from_secs(10);
+
+/// Returns a workspace of one cue of `kind` that plays the file at `path`
+/// and has loaded it
+fn showing(path: &Path, kind: Kind) -> Workspace {
+    let file = path.file_name().and_then(|name| name.to_str());
+    let cue = Cue::new(CueId(1), "1", kind, "Cue").file(file.expect("the file has a name"));
+    showing_cue(path, cue.build())
+}
 
 fn showing_cue(path: &Path, cue: Cue) -> Workspace {
     let directory = path.parent().expect("the file is in a directory");
@@ -131,9 +140,7 @@ fn probe_reads_how_long_the_picture_lasts_and_whether_the_file_has_sound() {
 fn file_that_is_missing_or_holds_no_h264_video_cannot_play() {
     let failed = |path: &Path| probe(path).expect_err("the file cannot play");
     assert_eq!(failed(Path::new("/nowhere/movie.mp4")), "file not found");
-    let (directory, _) = movie(1, 1);
-    let notes = directory.path().join("notes.mp4");
-    fs::write(&notes, "not a video").expect("the file can be written");
+    let (_directory, notes) = saved(b"not a video");
     assert_eq!(failed(&notes), "holds no H.264 video");
 }
 
@@ -152,14 +159,12 @@ fn tabled(bytes: &[u8], kind: &[u8; 4], words: &[u32]) -> Vec<u8> {
 
 #[test]
 fn track_that_counts_more_samples_than_its_file_holds_bytes_cannot_play() {
-    let (directory, path) = movie(5, 5);
-    let bytes = fs::read(&path).expect("the video can be read");
+    let bytes = movie_bytes(5, 5, &[]);
     // Samples of one byte each, more of them than the file holds bytes,
     // and as many for the times to decode them
     let sizes = tabled(&bytes, b"stsz", &[1, u32::MAX]);
     let times = tabled(&sizes, b"stts", &[1, u32::MAX, 20]);
-    let damaged = directory.path().join("damaged.mp4");
-    fs::write(&damaged, times).expect("the video can be written");
+    let (_directory, damaged) = saved(&times);
     assert_eq!(
         probe(&damaged),
         Err("holds a damaged H.264 track".to_owned())

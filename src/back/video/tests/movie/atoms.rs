@@ -8,8 +8,6 @@
 //! The media data comes first and the tables after it, as an encoder that
 //! cannot know them before it has written every sample leaves them.
 
-use std::{fs, path::Path};
-
 use itertools::Itertools;
 use mp4_atom::{
     Avc1, Avcc, Codec, Dinf, Dref, DrefEntry, Encode, FourCC, Ftyp, Hdlr, Mdat, Mdhd, Mdia, Minf,
@@ -29,10 +27,10 @@ const PER_CHUNK: usize = 4;
 /// Units of time a second in the whole movie
 const MOVIE_TIMESCALE: u32 = 1000;
 
-/// Writes the MP4 file at `path` whose one track of H.264 holds `samples`,
-/// each after the length of its NAL unit, and that decoding can start at
-/// every `sync_every` of them
-pub(super) fn write(path: &Path, samples: &[Vec<u8>], sync_every: usize) {
+/// Returns the bytes of the MP4 file whose one track of H.264 holds
+/// `samples`, each after the length of its NAL unit, and that decoding can
+/// start at every `sync_every` of them
+pub(super) fn file(samples: &[Vec<u8>], sync_every: usize) -> Vec<u8> {
     let count = u32::try_from(samples.len()).expect("test videos are short");
     let delta = TIMESCALE / RATE;
     let ftyp = encoded(&Ftyp {
@@ -144,7 +142,7 @@ pub(super) fn write(path: &Path, samples: &[Vec<u8>], sync_every: usize) {
         }],
         ..Moov::default()
     });
-    fs::write(path, [ftyp, mdat, moov].concat()).expect("the video file can be written");
+    [ftyp, mdat, moov].concat()
 }
 
 /// Returns the bytes of `atom` with its header
