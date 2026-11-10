@@ -49,6 +49,11 @@ Major changes and improvements in each release of cinq, newest first.
   otherwise, so that owners of small systems can open fewer files at once.
   A change applies as soon as the file is saved.  Sounds that start together
   are always made ready together.
+- The clock of a video cue follows how far its sound has played, in place of
+  the clock of the show, so that its picture and sound no longer drift apart
+  over a long video, as they did by the difference between the clock of the
+  audio device and that of the show.  A video without sound, or one whose
+  sound has ended, still follows the clock of the show.
 
 ## v0.1.2
 
