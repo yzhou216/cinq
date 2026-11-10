@@ -102,6 +102,7 @@ impl<T: Clone> Choice<'_, T> {
             }
             Reply::Pick => self.pick(self.shared.highlight.get(), shell),
             Reply::Close => self.shared.open.set(false),
+            Reply::Pass => {}
             Reply::Keep => shell.capture_event(),
         }
         shell.request_redraw();
@@ -134,6 +135,9 @@ enum Reply {
     Pick,
     /// Lets the key act and closes the menu, as the keys of GO and Panic do
     Close,
+    /// Lets the key act and leaves the menu open, as the key of Help does:
+    /// the page hides the menu, which is open still when the page closes
+    Pass,
     /// Keeps the key from acting on anything behind the menu
     Keep,
 }
@@ -145,6 +149,7 @@ fn reply(keymap: &Keymap, key: &Key, press: Option<Press>) -> Reply {
         (Some(Action::Next), _) => Reply::Step(1),
         (Some(Action::Previous), _) => Reply::Step(-1),
         (Some(action), _) if action.acts_at_once() => Reply::Close,
+        (Some(Action::Help), _) => Reply::Pass,
         (_, Key::Named(Named::Enter)) => Reply::Pick,
         _ => Reply::Keep,
     }

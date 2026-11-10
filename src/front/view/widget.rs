@@ -11,6 +11,7 @@
 
 mod button;
 mod dropdown;
+mod hide;
 mod keep_keys;
 mod marked_row;
 mod pictures;
@@ -21,6 +22,7 @@ use iced::{Event, Rectangle, mouse, touch};
 use crate::front::keymap::KeyPress;
 pub use button::button;
 pub use dropdown::dropdown;
+pub use hide::hide;
 pub use keep_keys::keep_keys;
 pub use marked_row::marked_row;
 pub use pictures::{Layer, pictures};

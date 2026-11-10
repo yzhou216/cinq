@@ -110,6 +110,9 @@ impl Action {
             )
     }
 
+    /// Returns whether a key of the action acts while the help page is
+    /// open.  The keys that scroll the page are the page's own, which
+    /// `typed` handles before it asks.
     pub fn acts_over_help(self) -> bool {
         self.acts_at_once() || matches!(self, Action::Help | Action::CloseHelp)
     }

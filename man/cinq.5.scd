@@ -273,11 +273,18 @@ A text field of the inspector, or a drop-down list
 	takes the keyboard from there.
 
 The help page
-	The keys of *next* and *previous* scroll the page, a line for each one
-	and as many lines as a count, and those of *first* and *last* go to its
-	top and its bottom.  Of the rest, only the keys of *go*, *panic*, *help*,
-	and *close_help* act.  The keys of *go* and *panic* close the page as
-	well, so that the show is in view.
+	The page fills the main window, while the stage window keeps showing the
+	stage.  Closing it gives the main window back as it was, with the cue
+	list scrolled where it was and the keyboard in the same field.  The keys
+	of *next* and *previous* scroll the page, a line for each one and as many
+	lines as a count, and those of *first* and *last* go to its top and its
+	bottom.  Of the rest, only the keys of *go*, *panic*, *help*, and
+	*close_help* act, whichever window has the keyboard, so that no field
+	takes a key meanwhile.  The keys of *go* and *panic* close the page as
+	well, so that the show is in view.  The key of *help* opens the page
+	from the main window only, since the stage window may cover that window
+	when it is fullscreen, and does nothing while the stage window has the
+	keyboard, where the key of *close_help* closes the page.
 
 The menu of a drop-down list
 	The keys bound by themselves to *next* and *previous* move the highlight
@@ -286,6 +293,9 @@ The menu of a drop-down list
 	Enter picks the highlighted option.
 	The keys of *go* and *panic* act as they do everywhere and close the menu
 	as well.
+	The key of *help* opens the help page and leaves the menu open, hidden
+	beneath the page, so that it is open on the same highlighted option once
+	the page closes.
 	The menu keeps every other key until it closes.
 
 While the stage window has the keyboard, as the window manager may leave it
@@ -405,7 +415,8 @@ page.
 ; end
 
 *help*
-	Show the help page, or hide it.
+	Show the help page, or hide it.  It does nothing while the stage window
+	has the keyboard.
 
 *close_help*
 	Hide the help page.

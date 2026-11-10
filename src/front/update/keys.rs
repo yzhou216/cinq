@@ -33,6 +33,9 @@ impl App {
         };
         match outcome.action {
             Some((action, _)) if repeat && action.acts_once_a_press() => (app, Task::none()),
+            // The page opens in the main window, which the fullscreen stage
+            // window may cover, so that the page would open out of sight
+            Some((Action::Help, _)) if app.stage.has_keyboard() => (app, Task::none()),
             Some((action @ (Action::Next | Action::Previous), count)) if app.help => {
                 let down = if action == Action::Next { 1.0 } else { -1.0 };
                 let lines = count.map_or(1.0, |count| count as f32);

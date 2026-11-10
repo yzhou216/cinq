@@ -35,7 +35,7 @@ use super::{
     App, Message,
     keymap::{Action, Keymap},
 };
-use widget::{button, dropdown, keep_keys, marked_row};
+use widget::{button, dropdown, hide, keep_keys, marked_row};
 
 /// Identity of the cue list, through which the selection scrolls into view
 pub const CUES: &str = "cues";
@@ -83,6 +83,9 @@ pub fn answered(told: String, keymap: &Keymap, action: Action) -> String {
 /// missing layer out of its stack and matches the state of each widget to
 /// the widget in the same place, so that the cue list stays scrolled where
 /// it was, and the fields keep what they hold, as the layers come and go.
+/// The help page takes the whole window, and the window beneath it is
+/// hidden rather than left out, so that it comes back as it was, with the
+/// keyboard focus where it was.
 pub fn view(app: &App) -> Element<'_, Message> {
     let parts = column![
         transport::view(app),
@@ -109,7 +112,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
         rule::horizontal(1),
         status_bar::view(app),
     ];
-    stack![window, app.help.then(|| help::view(app))].into()
+    stack![hide(window, app.help), app.help.then(|| help::view(app))].into()
 }
 
 /// Returns what `shown` makes of the items of `yielding` that have given

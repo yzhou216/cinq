@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Help page, which lists every key binding over the rest of the window
+//! Help page, which lists every key binding and fills the window
 //!
 //! The keys of the next and previous cue scroll it, and those of the first
 //! and last cue go to its top and its bottom.
@@ -12,7 +12,7 @@ use std::ffi::OsString;
 use iced::{
     Element, Fill,
     widget::{
-        center, column, container, mouse_area, opaque, rich_text, scrollable, span, table, text,
+        column, container, rich_text, scrollable, span, table, text,
         text::{IntoFragment, Span},
     },
 };
@@ -24,7 +24,8 @@ use crate::front::{
     keymap::{Action, config::Source},
 };
 
-/// Widest that the page grows, so that its lines stay easy to read
+/// Widest that the text of the page grows, so that its lines stay easy to
+/// read in a window that the page fills
 const WIDTH: f32 = 960.0;
 
 /// Space above and below the text of each row of the table, closer than in
@@ -76,13 +77,15 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     .extend(app.link_problem.as_deref().map(|why| text(why).into()))
     .extend(notice())
     .push(button("Close").on_press(Message::CloseHelp))
-    .spacing(SPACING);
-    let page = container(scrollable(page).id(HELP).spacing(0))
-        .style(container::bordered_box)
-        .padding(SPACING)
-        .max_width(WIDTH);
-    // Clicks beside the page close it, and the page keeps its own clicks
-    opaque(mouse_area(center(opaque(page))).on_press(Message::CloseHelp))
+    .spacing(SPACING)
+    .width(Fill)
+    .max_width(WIDTH);
+    let scrolling = scrollable(page)
+        .id(HELP)
+        .spacing(0)
+        .width(Fill)
+        .height(Fill);
+    container(scrolling).padding(SPACING).into()
 }
 
 fn source(source: &Source) -> Element<'_, Message> {

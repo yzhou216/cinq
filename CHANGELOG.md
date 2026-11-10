@@ -23,6 +23,16 @@ Major changes and improvements in each release of cinq, newest first.
 - GO on a cue that is already running restarts it and cancels the cues that
   its earlier run had yet to start, as QLab does, in place of leaving them
   to play on.
+- The help page fills the main window in place of a box over it, and closing
+  it gives the window back as it was, with the cue list scrolled where it
+  was and the keyboard in the same field.  A field of the main window no
+  longer takes the keys typed while it shows.  Besides the keys of the page,
+  only those of GO and Panic act.  The text stays in a column at most 960
+  pixels wide.  The key of Help opens the page from the main window only,
+  since a fullscreen stage window may cover the main window, and does
+  nothing while the stage window has the keyboard.  The key of Help also
+  opens the page while the menu of a drop-down list is open, and the menu is
+  open on the same option when the page closes.
 
 ## v0.1.2
 

@@ -4,7 +4,8 @@
 
 //! Widget that lays out and draws its content unchanged, around which an
 //! [`Intercept`] handles events before and after the content sees them,
-//! draws under the content, and tells operations about it
+//! draws under the content, tells operations about it, and can take it out
+//! of sight and reach while it stays in the widget tree
 
 use iced::{
     Element, Event, Length, Rectangle, Renderer, Size, Theme, Vector,
@@ -50,6 +51,13 @@ pub trait Intercept {
     /// Tells an operation about the content, before the content tells it
     /// about itself
     fn operate(&self, _layout: Layout<'_>, _operation: &mut dyn Operation) {}
+
+    /// Returns whether the content takes part: draws, sees events, and
+    /// shows its overlays.  Content that does not take part still lays
+    /// out, answers operations, and keeps the state that its widgets hold.
+    fn shown(&self) -> bool {
+        true
+    }
 }
 
 struct Wrap<'a, I> {
@@ -111,6 +119,9 @@ impl<I: Intercept> Widget<Message, Theme, Renderer> for Wrap<'_, I> {
         cursor: mouse::Cursor,
         viewport: &Rectangle,
     ) {
+        if !self.intercept.shown() {
+            return;
+        }
         self.intercept.under(layout, renderer);
         self.content
             .as_widget()
@@ -141,7 +152,7 @@ impl<I: Intercept> Widget<Message, Theme, Renderer> for Wrap<'_, I> {
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
-        if self.intercept.before(event, layout, cursor, shell) {
+        if self.intercept.shown() && self.intercept.before(event, layout, cursor, shell) {
             self.content.as_widget_mut().update(
                 tree, event, layout, cursor, renderer, clipboard, shell, viewport,
             );
@@ -158,6 +169,9 @@ impl<I: Intercept> Widget<Message, Theme, Renderer> for Wrap<'_, I> {
         viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
+        if !self.intercept.shown() {
+            return mouse::Interaction::None;
+        }
         self.content
             .as_widget()
             .mouse_interaction(tree, layout, cursor, viewport, renderer)
@@ -171,8 +185,13 @@ impl<I: Intercept> Widget<Message, Theme, Renderer> for Wrap<'_, I> {
         viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
-        self.content
-            .as_widget_mut()
-            .overlay(tree, layout, renderer, viewport, translation)
+        self.intercept
+            .shown()
+            .then(|| {
+                self.content
+                    .as_widget_mut()
+                    .overlay(tree, layout, renderer, viewport, translation)
+            })
+            .flatten()
     }
 }
