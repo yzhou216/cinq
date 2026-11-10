@@ -14,7 +14,7 @@
 //! it into view does.
 
 use iced::{
-    Element, Rectangle, Renderer,
+    Element, Rectangle, Renderer, Theme,
     advanced::{
         layout::Layout,
         renderer::{self, Renderer as _},
@@ -62,7 +62,7 @@ impl Mark {
 }
 
 impl Intercept for Mark {
-    fn under(&self, layout: Layout<'_>, renderer: &mut Renderer) {
+    fn under(&self, layout: Layout<'_>, renderer: &mut Renderer, _theme: &Theme) {
         if let Some(bounds) = self.bounds(layout) {
             renderer.fill_quad(
                 renderer::Quad {

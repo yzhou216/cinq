@@ -22,75 +22,57 @@
 //! [`Action::Next`]: crate::front::keymap::Action::Next
 //! [`Action::Previous`]: crate::front::keymap::Action::Previous
 
-mod label;
 mod menu;
 mod state;
 mod widget;
 
-use iced::{Element, Padding, advanced::Shell, widget::button};
+use iced::{Element, Padding, widget::button};
 
 use crate::front::{Message, keymap::Keymap};
-use menu::{Choice, Shared};
 
 /// Padding of the list and of each option of its menu, as iced's pick list
 /// pads them
 const PADDING: Padding = button::DEFAULT_PADDING;
 
-pub struct Dropdown<'a, T> {
-    options: Vec<T>,
-    selected: Option<T>,
-    on_select: Box<dyn Fn(T) -> Message + 'a>,
+pub struct Dropdown<'a> {
+    names: Vec<String>,
+    /// Index of the selected option
+    chosen: Option<usize>,
+    /// Makes the message of the option at an index, if there is one
+    pick: Box<dyn Fn(usize) -> Option<Message> + 'a>,
     placeholder: Option<String>,
     keymap: &'a Keymap,
 }
 
-pub fn dropdown<'a, T>(
+pub fn dropdown<'a, T: ToString + PartialEq + Clone + 'a>(
     options: impl Into<Vec<T>>,
     selected: Option<T>,
     on_select: impl Fn(T) -> Message + 'a,
     keymap: &'a Keymap,
-) -> Dropdown<'a, T> {
+) -> Dropdown<'a> {
+    let options = options.into();
     Dropdown {
-        options: options.into(),
-        selected,
-        on_select: Box::new(on_select),
+        names: options.iter().map(T::to_string).collect(),
+        chosen: options
+            .iter()
+            .position(|option| Some(option) == selected.as_ref()),
+        pick: Box::new(move |row| options.get(row).cloned().map(&on_select)),
         placeholder: None,
         keymap,
     }
 }
 
-impl<T: PartialEq> Dropdown<'_, T> {
+impl Dropdown<'_> {
     pub fn placeholder(self, placeholder: impl Into<String>) -> Self {
         Self {
             placeholder: Some(placeholder.into()),
             ..self
         }
     }
-
-    fn open(&self, choice: Choice<'_, T>, shell: &mut Shell<'_, Message>)
-    where
-        T: Clone,
-    {
-        if !self.options.is_empty() {
-            choice.open(self.chosen());
-        }
-        shell.capture_event();
-        shell.request_redraw();
-    }
-
-    fn chosen(&self) -> Option<usize> {
-        self.options
-            .iter()
-            .position(|option| Some(option) == self.selected.as_ref())
-    }
-
-    fn choice<'b>(&'b self, shared: &'b Shared) -> Choice<'b, T> {
-        Choice::new(&self.options, &*self.on_select, self.keymap, shared)
-    }
 }
 
-impl<'a, T: ToString + PartialEq + Clone + 'a> From<Dropdown<'a, T>> for Element<'a, Message> {
-    fn from(dropdown: Dropdown<'a, T>) -> Self {
+impl<'a> From<Dropdown<'a>> for Element<'a, Message> {
+    fn from(dropdown: Dropdown<'a>) -> Self {
         Element::new(dropdown)
     }
 }

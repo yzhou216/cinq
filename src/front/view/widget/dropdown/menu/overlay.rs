@@ -7,56 +7,65 @@
 use iced::{
     Element, Event, Point, Rectangle, Renderer, Size, Theme, Vector,
     advanced::{
-        Clipboard, Overlay, Renderer as _, Shell,
+        Clipboard, Overlay, Shell,
         layout::{self, Layout},
         mouse, renderer,
         widget::{
-            Id, Tree, Widget,
+            Id, Tree,
             operation::{self, Operation},
         },
     },
     overlay,
-    widget::{Scrollable, operation::AbsoluteOffset},
+    widget::{container, operation::AbsoluteOffset, scrollable},
 };
 
-use super::{
-    Choice,
-    rows::{Rows, row_height},
-};
+use super::{Choice, rows::rows};
 use crate::front::{
     Message,
     keymap::KeyPress,
     reveal,
-    view::widget::{key_pressed, pressed},
+    view::{
+        line_height,
+        widget::{dropdown::PADDING, key_pressed, pressed},
+    },
 };
 
-pub(in crate::front::view::widget::dropdown) struct Menu<'b, T> {
-    choice: Choice<'b, T>,
-    /// State of the scrollable, kept in the state of the list
+pub(in crate::front::view::widget::dropdown) struct Menu<'b> {
+    choice: Choice<'b>,
+    /// State of the widgets of the menu, kept in the state of the list
     tree: &'b mut Tree,
-    scrollable: Scrollable<'b, Message>,
+    content: Element<'b, Message>,
     /// Bounds of the drop-down list, which the menu opens next to
     target: Rectangle,
 }
 
-impl<'b, T: ToString + Clone + 'b> Menu<'b, T> {
+impl<'b> Menu<'b> {
     pub(in crate::front::view::widget::dropdown) fn new(
-        choice: Choice<'b, T>,
+        choice: Choice<'b>,
         tree: &'b mut Tree,
         target: Rectangle,
     ) -> Self {
-        let scrollable = Scrollable::new(Element::new(Rows { choice }));
-        tree.diff(&scrollable as &dyn Widget<Message, Theme, Renderer>);
+        let content = Element::from(container(scrollable(rows(choice))).style(|theme| {
+            let look = overlay::menu::default(theme);
+            container::Style {
+                text_color: Some(look.text_color),
+                background: Some(look.background),
+                border: look.border,
+                shadow: look.shadow,
+                ..container::Style::default()
+            }
+        }));
+        tree.diff(content.as_widget());
         Self {
             choice,
             tree,
-            scrollable,
+            content,
             target,
         }
     }
 }
 
-impl<T: ToString + Clone> Overlay<Message, Theme, Renderer> for Menu<'_, T> {
+impl Overlay<Message, Theme, Renderer> for Menu<'_> {
     fn layout(&mut self, renderer: &Renderer, bounds: Size) -> layout::Node {
         let below = bounds.height - self.target.y - self.target.height;
         let above = self.target.y;
@@ -65,7 +74,10 @@ impl<T: ToString + Clone> Overlay<Message, Theme, Renderer> for Menu<'_, T> {
             Size::new(bounds.width - self.target.x, below.max(above)),
         )
         .width(self.target.width);
-        let node = self.scrollable.layout(self.tree, renderer, &limits);
+        let node = self
+            .content
+            .as_widget_mut()
+            .layout(self.tree, renderer, &limits);
         let top = if below > above {
             self.target.y + self.target.height
         } else {
@@ -83,17 +95,8 @@ impl<T: ToString + Clone> Overlay<Message, Theme, Renderer> for Menu<'_, T> {
         cursor: mouse::Cursor,
     ) {
         let bounds = layout.bounds();
-        let look = overlay::menu::default(theme);
-        renderer.fill_quad(
-            renderer::Quad {
-                bounds,
-                border: look.border,
-                shadow: look.shadow,
-                ..renderer::Quad::default()
-            },
-            look.background,
-        );
-        self.scrollable
+        self.content
+            .as_widget()
             .draw(self.tree, renderer, theme, style, layout, cursor, &bounds);
     }
 
@@ -117,7 +120,7 @@ impl<T: ToString + Clone> Overlay<Message, Theme, Renderer> for Menu<'_, T> {
             }
             None => {
                 let bounds = layout.bounds();
-                self.scrollable.update(
+                self.content.as_widget_mut().update(
                     self.tree, event, layout, cursor, renderer, clipboard, shell, &bounds,
                 );
             }
@@ -125,13 +128,15 @@ impl<T: ToString + Clone> Overlay<Message, Theme, Renderer> for Menu<'_, T> {
         if shared.reveal.replace(false)
             && let Some(row) = shared.highlight.get()
         {
-            let height = row_height(renderer);
+            let height = line_height() + PADDING.y();
             let top = height * row as f32;
             let reveal = &mut Reveal {
                 top,
                 bottom: top + height,
             };
-            self.scrollable.operate(self.tree, layout, renderer, reveal);
+            self.content
+                .as_widget_mut()
+                .operate(self.tree, layout, renderer, reveal);
             shell.request_redraw();
         }
     }
@@ -142,8 +147,13 @@ impl<T: ToString + Clone> Overlay<Message, Theme, Renderer> for Menu<'_, T> {
         cursor: mouse::Cursor,
         renderer: &Renderer,
     ) -> mouse::Interaction {
-        self.scrollable
-            .mouse_interaction(self.tree, layout, cursor, &layout.bounds(), renderer)
+        self.content.as_widget().mouse_interaction(
+            self.tree,
+            layout,
+            cursor,
+            &layout.bounds(),
+            renderer,
+        )
     }
 }
 
