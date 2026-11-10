@@ -16,12 +16,31 @@ impl Workspace {
     /// other cues that have yet to start.  Cues that wait for another cue
     /// that has started stay, since that cue starts them.
     pub(super) fn stopped(self, id: CueId) -> Self {
+        self.without_followers_of(id).skipped(id)
+    }
+
+    /// Ends the run of a cue that GO fires again.  As in QLab, a run that
+    /// has started ends completely, so the cues that it had yet to start
+    /// are cancelled and the new run starts its own by the current
+    /// settings of the cue.  A run that has yet to start is not a cue
+    /// playing, so the cues that wait for it wait for whatever would have
+    /// started it instead.
+    pub(super) fn restarted(self, id: CueId) -> Self {
+        match self.active_of(id) {
+            Some(old) if !old.waiting() => self.without_followers_of(id),
+            _ => self,
+        }
+        .without_run_of(id)
+    }
+
+    /// Cancels the cues that the run of a cue would start, directly or
+    /// through other cues that have yet to start
+    fn without_followers_of(self, id: CueId) -> Self {
         let cancelled = self
             .active_of(id)
-            .map(|stopped| self.followers(stopped.run))
+            .map(|run| self.followers(run.run))
             .unwrap_or_default();
         self.without_active_where(|active| cancelled.contains(&active.run))
-            .skipped(id)
     }
 
     /// Returns the runs that the run `run` would start, directly or
@@ -49,7 +68,7 @@ impl Workspace {
     /// started it, so that stopping that cue still cancels them.  When it
     /// has started, they keep waiting for a run that is gone, so that no
     /// stop cancels them, as that run is what starts them.
-    pub(super) fn without_run_of(self, id: CueId) -> Self {
+    fn without_run_of(self, id: CueId) -> Self {
         let handover = self
             .active_of(id)
             .filter(|gone| gone.waiting())

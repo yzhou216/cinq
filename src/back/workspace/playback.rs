@@ -38,7 +38,8 @@ impl Workspace {
 
     /// Fires the standby cue of `list` together with its chain, then moves
     /// standby to the first cue after the chain.  Cues in the chain that
-    /// cannot play are skipped, and cues that are already running restart.
+    /// cannot play are skipped, and cues that are already running restart,
+    /// which cancels the cues that their old runs had yet to start.
     pub(super) fn go(self, list: usize) -> Self {
         let Some((fired, standby)) = self.lists.get(list).and_then(|cues| {
             let end = cues.chain(cues.standby?).last()?.0.id;
@@ -57,7 +58,7 @@ impl Workspace {
         let next_run = fired.last().map_or(self.next_run, |active| active.run + 1);
         let workspace = fired.iter().fold(
             self.with_standby(list, standby).played_from(list),
-            |workspace, cue| workspace.without_run_of(cue.id),
+            |workspace, cue| workspace.restarted(cue.id),
         );
         Self {
             active: workspace.active.into_iter().chain(fired).collect(),

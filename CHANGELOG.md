@@ -20,6 +20,9 @@ Major changes and improvements in each release of cinq, newest first.
 - Stopping a cue also cancels the cues of its chain that it would have
   started, even when a cue between them had been fired again or could not
   play.
+- GO on a cue that is already running restarts it and cancels the cues that
+  its earlier run had yet to start, as QLab does, in place of leaving them
+  to play on.
 
 ## v0.1.2
 
