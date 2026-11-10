@@ -21,7 +21,7 @@ use iced::{
 };
 
 use crate::{
-    back::{Cue, CueId, CueList, Kind, Load, Place, Workspace, load_files},
+    back::{CueId, CueList, Load, Place, Workspace, audio, load_files},
     front::{App, MAIN_SIZE, Message, Tab, keymap::Press},
 };
 
@@ -29,14 +29,7 @@ use crate::{
 /// two lists of audio cues, numbered as they are identified: twelve in
 /// Main, and two from twenty in Preshow
 fn show(selected: Option<CueId>) -> App {
-    let cues = |ids: RangeInclusive<u32>| {
-        ids.map(|id| {
-            Cue::new(CueId(id), id.to_string(), Kind::Audio, "Sound")
-                .file("sound.ogg")
-                .build()
-        })
-        .collect()
-    };
+    let cues = |ids: RangeInclusive<u32>| ids.map(audio).collect();
     App {
         workspace: Workspace::new(vec![
             CueList::new("Main", cues(1..=12)),

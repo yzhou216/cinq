@@ -12,7 +12,7 @@
 mod atoms;
 mod stream;
 
-use std::path::{Path, PathBuf};
+use std::{fs, path::PathBuf};
 
 use tempfile::TempDir;
 
@@ -45,9 +45,15 @@ pub(in crate::back) fn broken_movie(
     sync_every: usize,
     broken: &[usize],
 ) -> (TempDir, PathBuf) {
+    saved(&movie_bytes(count, sync_every, broken))
+}
+
+/// Returns a temporary directory holding `movie.mp4`, a file of `bytes`,
+/// with the path of the file
+pub(super) fn saved(bytes: &[u8]) -> (TempDir, PathBuf) {
     let directory = TempDir::new().expect("a temporary directory can be made");
     let path = directory.path().join("movie.mp4");
-    write_movie(&path, count, sync_every, broken);
+    fs::write(&path, bytes).expect("the video can be written");
     (directory, path)
 }
 
@@ -59,7 +65,8 @@ pub(in crate::back) fn picture_number(pixels: &[u8]) -> usize {
     ((luma - first as f64) / step as f64).round().max(0.0) as usize
 }
 
-fn write_movie(path: &Path, count: usize, sync_every: usize, broken: &[usize]) {
+/// Returns the bytes of the file of [`broken_movie`]
+pub(super) fn movie_bytes(count: usize, sync_every: usize, broken: &[usize]) -> Vec<u8> {
     let (first, step) = SHADES;
     let samples: Vec<Vec<u8>> = (0..count)
         .map(|number| {
@@ -71,7 +78,7 @@ fn write_movie(path: &Path, count: usize, sync_every: usize, broken: &[usize]) {
             })
         })
         .collect();
-    atoms::write(path, &samples, sync_every);
+    atoms::file(&samples, sync_every)
 }
 
 /// Returns a NAL unit with all but its header replaced by bytes that read

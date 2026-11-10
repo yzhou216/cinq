@@ -31,6 +31,11 @@ pub use load::{Load, load_files};
 pub use video::{PICTURE_FILES, Picture, VIDEO_FILES, Video};
 pub use workspace::{Active, Change, Command, Phase, Place, Turn, Workspace};
 
+/// Cues and workspaces that the tests of the front end build as those of
+/// the back end do
+#[cfg(test)]
+pub(crate) use workspace::tests::{audio, loaded, silent, sound};
+
 /// Interval of the playback clock while any cue is running, which the front
 /// end keeps and the sound output glides by
 pub const TICK: Duration = Duration::from_millis(25);

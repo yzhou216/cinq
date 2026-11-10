@@ -5,23 +5,19 @@
 //! Tests that a video file whose tags or tracks other than its picture
 //! cannot be read plays, and that one whose picture cannot be read does not
 
-use std::fs;
-
 use super::{
     boxes::{ilst_udta, narrow, reworked, split},
     damaged::{DAMAGED_INDEX, bytes, with_udta},
+    movie::saved,
 };
 use crate::back::video::track::probe;
-use tempfile::TempDir;
 
 /// How long the test video plays, and that it holds no sound
 const PLAYS: (f32, bool) = (5.0 / 30.0, false);
 
 /// Probes the video that `bytes` make
 fn probed(bytes: Vec<u8>) -> Result<(f32, bool), String> {
-    let directory = TempDir::new().expect("a temporary directory can be made");
-    let path = directory.path().join("skipped.mp4");
-    fs::write(&path, bytes).expect("the video can be written");
+    let (_directory, path) = saved(&bytes);
     probe(&path)
 }
 

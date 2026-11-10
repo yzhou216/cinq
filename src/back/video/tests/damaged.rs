@@ -10,7 +10,7 @@ use std::{fs, path::Path, sync::mpsc, thread};
 use super::{
     PATIENCE,
     boxes::{narrow, reworked, shifted},
-    movie::movie,
+    movie::{movie_bytes, saved},
     tabled,
 };
 use crate::back::video::track::Track;
@@ -20,8 +20,7 @@ pub(super) const DAMAGED_INDEX: &str = "holds a damaged index";
 
 /// Returns the bytes of a test video of five pictures
 pub(super) fn bytes() -> Vec<u8> {
-    let (_directory, path) = movie(5, 5);
-    fs::read(&path).expect("the video can be read")
+    movie_bytes(5, 5, &[])
 }
 
 /// Returns `bytes` with a udta box holding `udta` after the tables of the
@@ -50,8 +49,7 @@ fn ends(path: &Path) -> bool {
 #[test]
 fn video_with_a_field_of_its_tables_damaged_or_cut_short_ends_in_time() {
     let bytes = bytes();
-    let (directory, _) = movie(1, 1);
-    let path = directory.path().join("damaged.mp4");
+    let (_directory, path) = saved(&[]);
     let moov = bytes
         .windows(4)
         .position(|window| window == b"moov")
@@ -81,13 +79,11 @@ fn video_with_a_field_of_its_tables_damaged_or_cut_short_ends_in_time() {
 
 #[test]
 fn samples_that_lie_past_the_end_of_the_file_or_claim_more_than_it_holds_fail_to_read() {
-    let (directory, _) = movie(5, 5);
-    let path = directory.path().join("past.mp4");
     let past = reworked(&bytes(), &[b"moov"], &|body| shifted(&body, 1 << 20));
     // Sizes of the five samples, the first of them four gigabytes
     let huge = tabled(&bytes(), b"stsz", &[0, 5, u32::MAX, 1, 1, 1, 1]);
     [past, huge].into_iter().for_each(|bytes| {
-        fs::write(&path, bytes).expect("the video can be written");
+        let (_directory, path) = saved(&bytes);
         let mut track = Track::open(&path).expect("the tables are right");
         assert_eq!(
             track.sample(0),
