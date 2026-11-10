@@ -15,6 +15,8 @@ Major changes and improvements in each release of cinq, newest first.
   take each other's place.  The drive or share now leads the kept file's
   path, so changes that an earlier version kept for a show on Windows do
   not come back.  Other systems keep their kept files as they were.
+- cinq plays up to 1024 sounds at once, where it took the 129th for a
+  broken file and kept checking that file again.
 
 ## v0.1.2
 

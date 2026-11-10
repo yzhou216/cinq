@@ -27,6 +27,7 @@ use itertools::Itertools;
 use kira::{
     AudioManager, AudioManagerSettings, DefaultBackend,
     sound::{FromFileError, streaming::StreamingSoundData},
+    track::MainTrackBuilder,
 };
 
 use super::{
@@ -40,6 +41,11 @@ use voice::Voice;
 /// which the features of kira in `Cargo.toml` decide
 pub const SOUND_FILES: [&str; 5] = ["flac", "m4a", "mp3", "ogg", "wav"];
 
+/// Sounds that can play at once.  kira refuses a sound past them, which
+/// cinq takes for a broken file, so there are far more than kira's 128 and
+/// than any show plays at once.
+const SOUNDS: usize = 1024;
+
 pub struct Audio {
     output: Result<AudioManager, String>,
     voices: HashMap<CueId, Voice>,
@@ -51,8 +57,11 @@ impl Audio {
     /// runs and files still load, but nothing is heard.
     pub fn open() -> Self {
         Self {
-            output: AudioManager::<DefaultBackend>::new(AudioManagerSettings::default())
-                .map_err(|error| error.to_string()),
+            output: AudioManager::<DefaultBackend>::new(AudioManagerSettings {
+                main_track_builder: MainTrackBuilder::new().sound_capacity(SOUNDS),
+                ..AudioManagerSettings::default()
+            })
+            .map_err(|error| error.to_string()),
             voices: HashMap::new(),
             preloader: Preloader::new(),
         }
