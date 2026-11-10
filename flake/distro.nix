@@ -93,10 +93,8 @@
           '';
     in
     {
-      packages = lib.optionalAttrs pkgs.stdenvNoCC.hostPlatform.isLinux {
-        deb = nfpm "deb";
-        rpm = nfpm "rpm";
-        archlinux = nfpm "archlinux";
-      };
+      packages = lib.optionalAttrs pkgs.stdenvNoCC.hostPlatform.isLinux (
+        lib.genAttrs [ "deb" "rpm" "archlinux" ] nfpm
+      );
     };
 }
