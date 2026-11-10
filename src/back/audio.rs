@@ -46,8 +46,9 @@ pub const SOUND_FILES: [&str; 5] = ["flac", "m4a", "mp3", "ogg", "wav"];
 /// than any show plays at once.
 const SOUNDS: usize = 1024;
 
-/// Seconds before a sound starts that it is made ready
-const READY_AHEAD: f64 = 10.0;
+/// Seconds before a sound starts that it is made ready, unless the
+/// configuration file sets another number
+pub const READY_AHEAD: f64 = 10.0;
 
 pub struct Audio {
     output: Result<AudioManager, String>,
@@ -78,11 +79,11 @@ impl Audio {
     /// the files whose sound could not start.  The sounds that runs may
     /// start soon are made ready once those that start now have taken
     /// theirs, unless there is no audio device to hear them on.
-    pub fn sync(&mut self, workspace: Workspace) -> Workspace {
+    pub fn sync(&mut self, workspace: Workspace, ahead: f64) -> Workspace {
         self.preloader.collect();
         let failures = self.play(&workspace);
         if self.output.is_ok() {
-            self.preloader.want(upcoming(&workspace, READY_AHEAD));
+            self.preloader.want(upcoming(&workspace, ahead));
         }
         failures.into_iter().fold(workspace, Workspace::apply)
     }

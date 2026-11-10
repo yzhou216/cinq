@@ -8,7 +8,7 @@ cinq(5) "cinq" "File Formats Manual"
 
 # NAME
 
-cinq - configuration file for the keys of cinq
+cinq - configuration file of cinq
 
 # SYNOPSIS
 
@@ -26,10 +26,11 @@ _%APPDATA%\\cinq\\config.toml_
 runs most of it.
 It ships two keymaps, each of which binds keys to every action, and a
 configuration file in TOML chooses one of them, or builds keymaps of its own,
-and binds actions to other keys.
+and binds actions to other keys, and it sets how far ahead *cinq* makes sounds
+ready.
 *cinq* reads the file when it starts and again whenever it changes, so that the
-keys, and the help page that lists them, follow each change as soon as it is
-saved.
+keys, the help page that lists them, and the other settings follow each change
+as soon as it is saved.
 After each change, *cinq* first formats the file in place, as taplo formats
 TOML by default: it evens out spaces and blank lines, lines up the comments at
 the ends of lines, and folds each array onto one line or unfolds it over
@@ -69,7 +70,7 @@ _%APPDATA%\\cinq\\config.toml_
 ; end
 
 Making or deleting the file applies while *cinq* runs as well, so that
-deleting it brings back the keys of vi.
+deleting it brings back the keys of vi and the other defaults.
 
 Started with *--config-dir*=_directory_, *cinq* reads _directory/config.toml_
 in its place, and follows it as it changes in the same way.
@@ -99,6 +100,24 @@ in its place, and follows it as it changes in the same way.
 	An action that the table names loses the keys that the keymap gives it,
 	so that an empty array leaves it with no keys at all, and the actions
 	that the table leaves out keep the keys of the keymap.
+
+*ready_ahead*
+	Number of seconds, 0 or more and whole or fractional, before a sound starts
+	that *cinq* makes it ready, so that GO opens no sound file itself.
+	*cinq* makes ready the sounds that start within that time, of the runs
+	that GO has fired and have yet to sound, and of what the next GO of each
+	list would fire, counting each sound from its delay in a chain and its
+	pre-wait.
+	The sounds that start together are made ready together, and those that
+	start at the instant of GO always are, even at 0.
+	As time passes the sounds of a long chain follow, so that a chain of any
+	length keeps ahead of its sounds.
+	A sound that is not ready when it starts opens as it starts, and a slow
+	disk can make it late.
+	Each sound made ready holds its file open and a decoder thread that wakes
+	about every millisecond, so a small system may do better with fewer
+	seconds.
+	It is 10 unless the file sets another number.
 
 # KEYMAPS
 
@@ -437,14 +456,17 @@ A file or a pipe takes the problems of each reading in turn, as does a
 terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
 
 - A file that cannot be read, or that is not TOML, leaves the keys of the vi
-  keymap.
+  keymap and the default *ready_ahead*.
 - A *keymap* that names no keymap leaves the keys of vi, and a *keys* that is
   not a table leaves those of the keymap.
   A keymap of the file's own whose *from* names no keymap starts from no keys,
   as does the one whose *from* closes a loop of *from*s followed from the
   keymap in use, and one named after a shipped keymap goes unused.
-- A setting other than *keymap*, *keymaps*, and *keys*, and an entry of a
-  table that names no action, are ignored, and the rest of the file applies.
+- A *ready_ahead* that is not a number, or is below 0, such as a negative
+  number or a string, leaves the default of 10 seconds.
+- A setting other than *keymap*, *keymaps*, *keys*, and *ready_ahead*, and an
+  entry of a table that names no action, are ignored, and the rest of the file
+  applies.
 - An empty string, a key that names no key or that *KEYS* rules out, a
   sequence that starts with a digit, and a value that is not a string are left
   out, and the action keeps the other keys listed for it, which may be none.
@@ -491,6 +513,12 @@ go = "Space"
 panic = "Escape"
 next = "ArrowDown"
 previous = "ArrowUp"
+```
+
+Make ready the sounds that start within 2.5 seconds, on a small system:
+
+```
+ready_ahead = 2.5
 ```
 
 # SEE ALSO

@@ -44,8 +44,11 @@ Major changes and improvements in each release of cinq, newest first.
   black until the picture began to fade, when they appeared there at once.
 - cinq makes ready the sounds that start within ten seconds, instead of those
   of every cue that one GO fires, so that a long chain of auto-continue cues no
-  longer opens all its sound files at once.  Sounds that start together are
-  always made ready together.
+  longer opens all its sound files at once.  `ready_ahead` in `config.toml`
+  sets that number of seconds, 0 or more and 10 unless the file says
+  otherwise, so that owners of small systems can open fewer files at once.
+  A change applies as soon as the file is saved.  Sounds that start together
+  are always made ready together.
 
 ## v0.1.2
 

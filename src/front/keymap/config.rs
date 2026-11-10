@@ -2,17 +2,20 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Configuration file, which chooses a keymap and binds actions to keys
+//! Configuration file, which chooses a keymap, binds actions to keys, and
+//! sets how far ahead sounds are made ready
 //!
 //! `keymap` names the keymap that the keys start from, which is vi unless
 //! the file names another: a shipped one, or one of the `[keymaps]` table,
 //! which starts from the keymap that its `from` names, or from no keys at
 //! all without one.  A keymap of the file's own and the `[keys]` table bind
 //! each action they name to a key sequence or a list of them, in place of
-//! the keys that the keymap they build on gives it:
+//! the keys that the keymap they build on gives it.  `ready_ahead` counts
+//! the seconds before a sound starts that it is made ready:
 //!
 //! ```toml
 //! keymap = "booth"
+//! ready_ahead = 5
 //!
 //! [keymaps.booth]
 //! from = "cua"
@@ -33,14 +36,15 @@ use std::{
 };
 
 use super::Keymap;
-use crate::front::read;
+use crate::{back::READY_AHEAD, front::read};
 pub(super) use parse::parse;
 pub use problem::Problem;
 pub use watch::{Errors, guard, restore, watch};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub keymap: Keymap,
+    pub ready_ahead: f64,
     pub source: Source,
     /// Text of the file, when it could be read, which the problems point
     /// into
@@ -48,6 +52,18 @@ pub struct Config {
     /// Problems with the file, each of which leaves the keys of the keymap
     /// in place
     pub problems: Vec<Problem>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            keymap: Keymap::default(),
+            ready_ahead: READY_AHEAD,
+            source: Source::default(),
+            text: None,
+            problems: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -80,7 +96,7 @@ pub fn file(directory: Option<&Path>) -> Option<PathBuf> {
         .map(|directory| directory.join("config.toml"))
 }
 
-const MADE: &str = "# Key bindings of cinq, which the manual page cinq(5) describes\n";
+const MADE: &str = "# Settings of cinq, which the manual page cinq(5) describes\n";
 
 pub fn make(file: &Path) -> io::Result<()> {
     if let Some(directory) = file.parent() {
@@ -99,9 +115,10 @@ pub fn load(file: Option<&Path>) -> Config {
     };
     match read(file) {
         Ok(Some(text)) => {
-            let (keymap, problems) = parse(&text);
+            let (keymap, ready_ahead, problems) = parse(&text);
             Config {
                 keymap,
+                ready_ahead,
                 source: Source::File(file.to_owned()),
                 text: Some(text),
                 problems,

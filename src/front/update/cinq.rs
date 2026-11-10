@@ -53,7 +53,7 @@ impl Cinq {
         let (app, task) = std::mem::take(&mut self.app).next(message);
         let (workspace, pictures) = self.video.sync(app.workspace);
         let due = self.video.next_due(&workspace);
-        let workspace = self.audio.sync(workspace);
+        let workspace = self.audio.sync(workspace, app.config.ready_ahead);
         let kept = self.keeper.keep(&app.show);
         let app = App {
             stage: app.stage.with_pictures(&workspace, pictures).with_due(due),

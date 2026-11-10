@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Reading the text of the configuration file into key bindings, along with
-//! the problems that leave parts of it unused, each in the part of the text
-//! that it lies in
+//! Reading the text of the configuration file into key bindings and the
+//! seconds ahead to make sounds ready, along with the problems that leave
+//! parts of it unused, each in the part of the text that it lies in
 
 use std::{ops::Range, slice};
 
@@ -15,16 +15,19 @@ use toml::{
 };
 
 use super::Problem;
-use crate::front::keymap::{Action, Keymap, Preset, binding};
+use crate::{
+    back::READY_AHEAD,
+    front::keymap::{Action, Keymap, Preset, binding},
+};
 
-const SETTINGS: [&str; 3] = ["keymap", "keymaps", "keys"];
+const SETTINGS: [&str; 4] = ["keymap", "keymaps", "keys", "ready_ahead"];
 
-pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, Vec<Problem>) {
+pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, f64, Vec<Problem>) {
     let table = match DeTable::parse(text) {
         Ok(table) => table.into_inner(),
         Err(error) => {
             let problem = Problem::at(error.span(), format!("is not TOML: {}", error.message()));
-            return (Keymap::default(), vec![problem]);
+            return (Keymap::default(), READY_AHEAD, vec![problem]);
         }
     };
     let unknown = table
@@ -60,15 +63,39 @@ pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, Vec<Problem>) {
         Some((_, span)) => (chosen, vec![Problem::at(span, "keys should be a table")]),
         None => (chosen, Vec::new()),
     };
+    let (ready_ahead, unready) = ready_ahead(&table);
     let problems = unknown
         .chain(malformed)
         .chain(shadowed)
         .chain(unnamed)
         .chain(built)
         .chain(unbound)
+        .chain(unready)
         .chain(keymap.conflicts().into_iter().map(Problem::new))
         .collect();
-    (keymap, problems)
+    (keymap, ready_ahead, problems)
+}
+
+/// Returns the seconds that `ready_ahead` sets, or the default with a
+/// problem when the setting is not a number, 0 or more
+fn ready_ahead(table: &DeTable) -> (f64, Option<Problem>) {
+    let Some((value, span)) = table.get("ready_ahead").map(spanned) else {
+        return (READY_AHEAD, None);
+    };
+    let seconds = match value {
+        DeValue::Integer(whole) => i64::from_str_radix(whole.as_str(), whole.radix())
+            .ok()
+            .map(|whole| whole as f64),
+        DeValue::Float(fraction) => fraction.as_str().parse().ok(),
+        _ => None,
+    };
+    match seconds.filter(|seconds| (0.0..=f64::MAX).contains(seconds)) {
+        Some(seconds) => (seconds, None),
+        None => {
+            let bad = "ready_ahead should be a number of seconds, 0 or more";
+            (READY_AHEAD, Some(Problem::at(span, bad)))
+        }
+    }
 }
 
 /// `named_at` is the part of the text that names the keymap, if any, where a

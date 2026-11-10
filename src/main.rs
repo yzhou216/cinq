@@ -17,8 +17,8 @@
 //! the audio and video output, and it does not depend on iced.  The front
 //! end in [`front`] draws the show and the stage with iced and turns
 //! operator input into back-end commands.  The command line in [`cli`]
-//! names the show to open, and can name the directory that the key bindings
-//! come from.
+//! names the show to open, and can name the directory that config.toml
+//! comes from.
 
 mod back;
 mod cli;

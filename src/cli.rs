@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Command line, which names the show to open and can name the directory
-//! that the key bindings come from
+//! that config.toml comes from
 
 #[cfg(test)]
 mod tests;
