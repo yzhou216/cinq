@@ -2,12 +2,8 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
-permissions:
-  contents: read
+on: [push, pull_request, workflow_dispatch]
+permissions: {contents: read}
 jobs:
   packages: # For other distributions of GNU/Linux
     name: packages built on ${{ matrix.system }}
