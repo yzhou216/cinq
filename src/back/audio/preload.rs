@@ -9,9 +9,12 @@
 //! its own opens, ahead of time, the sounds that runs may start next, and
 //! begins decoding each from the start of its clip.  Starting one of them
 //! then waits on nothing.  A sound made ready that no run wants any more is
-//! let go, which ends its decoding.
+//! let go, which ends its decoding.  Edits to a clip replace its ask faster
+//! than files open, so the thread opens only the newest ask of each cue.
 
-use std::{collections::HashMap, convert::Infallible, path::PathBuf, sync::mpsc, thread};
+use std::{collections::HashMap, convert::Infallible, iter, path::PathBuf, sync::mpsc, thread};
+
+use itertools::Itertools;
 
 use kira::sound::{
     FromFileError, Sound, SoundData,
@@ -64,12 +67,7 @@ impl Preloader {
     pub(super) fn new() -> Self {
         let (asks, waiting) = mpsc::channel::<Ask>();
         let (done, made) = mpsc::channel();
-        thread::spawn(move || {
-            waiting.into_iter().for_each(|ask| {
-                let sound = preloaded(&ask.wanted, ask.level);
-                let _ = done.send((ask.cue, ask.wanted, sound));
-            });
-        });
+        thread::spawn(move || serve(&waiting, &done));
         Self {
             asks,
             made,
@@ -129,4 +127,18 @@ fn preloaded(wanted: &Wanted, level: f32) -> Result<Preloaded, String> {
         .into_sound()
         .map_err(super::reason)?;
     Ok(Preloaded { sound, handle })
+}
+
+/// Makes ready the sounds that `waiting` brings and sends them to `done`.
+/// Edits replace asks faster than files open, so each round takes all that
+/// wait and opens only the last ask of each cue.
+pub(super) fn serve(waiting: &mpsc::Receiver<Ask>, done: &mpsc::Sender<Made>) {
+    iter::from_fn(|| waiting.recv().ok()).for_each(|first| {
+        let round: Vec<Ask> = iter::once(first).chain(waiting.try_iter()).collect();
+        let latest: Vec<Ask> = round.into_iter().rev().unique_by(|ask| ask.cue).collect();
+        latest.into_iter().rev().for_each(|ask| {
+            let sound = preloaded(&ask.wanted, ask.level);
+            let _ = done.send((ask.cue, ask.wanted, sound));
+        });
+    });
 }

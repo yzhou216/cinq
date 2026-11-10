@@ -8,6 +8,7 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::mpsc,
     thread,
     time::Duration,
 };
@@ -15,7 +16,7 @@ use std::{
 use tempfile::TempDir;
 
 use super::{
-    preload::{Ask, Preloaded, Preloader, Wanted},
+    preload::{Ask, Preloaded, Preloader, Wanted, serve},
     upcoming,
 };
 use crate::back::{
@@ -160,4 +161,24 @@ fn sound_no_longer_wanted_is_let_go() {
     // come back once the second has
     assert!(made(&mut preloader, CueId(2), &wanted).is_some());
     assert!(preloader.take(CueId(1), &wanted).is_none());
+}
+
+#[test]
+fn a_run_of_asks_for_one_cue_opens_only_the_last() {
+    let (_directory, wanted) = silent_file();
+    // A file that is not there makes a result of its own if the thread
+    // opens it, which is how an open shows
+    let replaced = whole(Path::new("/nowhere/gone.wav"));
+    let (asks, waiting) = mpsc::channel();
+    [&replaced, &replaced, &wanted]
+        .into_iter()
+        .for_each(|sound| asks.send(ask(sound)).expect("the receiver is held"));
+    drop(asks);
+    let (done, made) = mpsc::channel();
+    serve(&waiting, &done);
+    let made: Vec<_> = made.try_iter().collect();
+    assert!(matches!(
+        made.as_slice(),
+        [(CueId(1), made, Ok(_))] if *made == wanted
+    ));
 }
