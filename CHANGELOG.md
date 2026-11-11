@@ -18,6 +18,9 @@ Major changes and improvements in each release of cinq, newest first.
   own messages wait.
 - A drop-down list too narrow for its options cuts the chosen one short
   with an ellipsis, and its menu grows as wide as the longest option.
+- `nix build .#demo` builds the demo shows with the sounds, picture, and
+  film that they play, which `doc/demo/build.sh` generates with ffmpeg, in
+  place of the `demo` branch and its files in Git LFS.
 
 ## v0.1.3
 
