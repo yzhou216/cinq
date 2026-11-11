@@ -10,6 +10,8 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+## v0.1.3
+
 - On Windows, the unsaved changes of shows with the same path on different
   drives, or on different network shares, no longer share one kept file and
   take each other's place.  The drive or share now leads the kept file's
