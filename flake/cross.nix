@@ -128,18 +128,27 @@
             ];
           };
       builds = {
-        aarch64-darwin = crossBuilt {
-          platform = lib.systems.elaborate "aarch64-darwin";
-          env = {
-            SDKROOT = "${pkgs.apple-sdk.src}"; # Its package evaluates on Darwin alone
-            CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER = "rust-lld";
-          };
-          install = release: ''
-            install -D ${release}/cinq "$out/bin/cinq"
-            cp -r target/share "$out"
-            ${installBundle}
-          '';
-        };
+        aarch64-darwin =
+          (crossBuilt {
+            platform = lib.systems.elaborate "aarch64-darwin";
+            env = {
+              SDKROOT = "${pkgs.apple-sdk.src}"; # Its package evaluates on Darwin alone
+              CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER = "rust-lld";
+            };
+            install = release: ''
+              install -D ${release}/cinq "$out/bin/cinq"
+              cp -r target/share "$out"
+              ${installBundle}
+            '';
+          }).overrideAttrs
+            # Apple's SDK again once the setup hooks have run on Darwin,
+            # where the hook of Nixpkgs' SDK sets an SDK whose libiconv is
+            # Nixpkgs', which a Mac without Nix lacks
+            (
+              lib.optionalAttrs pkgs.stdenv.buildPlatform.isDarwin {
+                preBuild = "export SDKROOT=${pkgs.apple-sdk.src}";
+              }
+            );
         x86_64-windows = windows pkgs.pkgsCross.mingw-ucrt-x86_64-llvm;
         aarch64-windows = windows pkgs.pkgsCross.mingw-ucrt-aarch64;
         x86_64-linux = nixpkgsCross pkgs.pkgsCross.gnu64;
@@ -158,5 +167,7 @@
     {
       # All but the system's own, whose name stays with its native build
       packages = lib.optionalAttrs pkgs.stdenvNoCC.hostPlatform.isLinux (removeAttrs builds [ system ]);
+      # Program of the Darwin package, which links only what every Mac has
+      _module.args.darwinBuild = builds.aarch64-darwin;
     };
 }
