@@ -16,6 +16,9 @@ Major changes and improvements in each release of cinq, newest first.
   the problems clear, or before the problems left when cinq ends, in place
   of being lost when the terminal switches back.  On Windows, only cinq's
   own messages wait.
+- `nix build .#demo` builds the demo shows with the sounds, picture, and
+  film that they play, which `doc/demo/build.sh` generates with ffmpeg, in
+  place of the `demo` branch and its files in Git LFS.
 
 ## v0.1.3
 
