@@ -9,3 +9,11 @@
 
 # Manual pages, which are build artifacts
 /man/*.[1-9]
+
+# Typeset tutorial, its screenshots, and what TeX writes beside them, which
+# are build artifacts
+/doc/tutorial/*.aux
+/doc/tutorial/*.log
+/doc/tutorial/*.pdf
+/doc/tutorial/*.toc
+/doc/tutorial/screenshots/
