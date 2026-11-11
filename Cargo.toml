@@ -117,3 +117,6 @@ resvg = { version = "0.49", default-features = false }
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[patch.crates-io]
+rust_h264 = { git = "https://github.com/roticv/rust_h264", rev = "bee13bbb9dd0a6095a326c4663a3ee6938fc5455" }

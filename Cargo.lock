@@ -3391,8 +3391,7 @@ checksum = "5974e397833d890f2f74963408e0d4a6cd8eda2f6a445ae06750291b5d7a997e"
 [[package]]
 name = "rust_h264"
 version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49a852e1544c48fba7d072620420c602f195092e3774655584ef5e4e6fd056a9"
+source = "git+https://github.com/roticv/rust_h264?rev=bee13bbb9dd0a6095a326c4663a3ee6938fc5455#bee13bbb9dd0a6095a326c4663a3ee6938fc5455"
 
 [[package]]
 name = "rustc-hash"

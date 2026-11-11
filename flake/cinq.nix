@@ -62,7 +62,10 @@ rustPlatform.buildRustPackage {
     ];
   };
 
-  cargoLock.lockFile = ../Cargo.lock;
+  cargoLock = {
+    lockFile = ../Cargo.lock;
+    outputHashes."rust_h264-0.6.1" = "sha256-otXslUfxB7C8K61ucQFJNrUDyJSxCbxFfqav+E8wDIo="; # Trunk that carries the threaded decoder's metadata, until a release takes it
+  };
 
   nativeBuildInputs = [
     pkg-config
