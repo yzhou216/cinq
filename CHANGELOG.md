@@ -10,6 +10,9 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- `nix build .#demo` builds the demo shows with the sounds, picture, and
+  film that they play, which `doc/demo/build.sh` generates with ffmpeg, in
+  place of the `demo` branch and its files in Git LFS.
 - While the problems of `config.toml` take a screen of their own on a
   terminal, what cinq and its libraries print meanwhile, such as the
   messages of the sound system, waits and comes out on the main screen once
