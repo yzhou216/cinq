@@ -19,6 +19,11 @@ Major changes and improvements in each release of cinq, newest first.
 - `nix build .#demo` builds the demo shows with the sounds, picture, and
   film that they play, which `doc/demo/build.sh` generates with ffmpeg, in
   place of the `demo` branch and its files in Git LFS.
+- A tutorial in eight chapters runs the storm show of the demo.
+  `nix build .#doc` builds it on GNU/Linux into
+  `share/doc/cinq/tutorial.pdf`, with screenshots that it takes of cinq in
+  a headless sway session, and puts the demo beside it in
+  `share/doc/cinq/demo`.  The deb, rpm, and Arch packages carry both.
 
 ## v0.1.3
 

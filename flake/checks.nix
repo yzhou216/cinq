@@ -9,6 +9,7 @@
   perSystem =
     {
       config,
+      lib,
       pkgs,
       crate,
       rustfmt,
@@ -21,7 +22,8 @@
           reuse --root ${../.} lint
           touch "$out"
         '';
-      };
+      }
+      // lib.optionalAttrs (config.packages ? doc) { inherit (config.packages) doc; };
 
       treefmt = {
         projectRootFile = "flake.nix";
