@@ -24,6 +24,11 @@ Major changes and improvements in each release of cinq, newest first.
   `share/doc/cinq/tutorial.pdf`, with screenshots that it takes of cinq in
   a headless sway session, and puts the demo beside it in
   `share/doc/cinq/demo`.  The deb, rpm, and Arch packages carry both.
+- On GNU/Linux and on Apple silicon, `nix build .#darwin-pkg` builds an
+  installer package for Darwin on Apple silicon, which puts `cinq.app` in
+  `/Applications` and the `cinq` command, its manual pages, its
+  completions, and, when built on GNU/Linux, the tutorial with its demo in
+  `/usr/local`.  The package is unsigned.
 
 ## v0.1.3
 
