@@ -59,6 +59,11 @@ Each cue is a table in the array *cue* of its list:
 	*memo*.
 	An audio cue plays a sound file, a video cue plays a video file, and a
 	picture cue shows a picture file, as *STAGE* describes.
+	The clock of an audio or video cue follows its sound as the audio device
+	plays it.
+	Its fades, its end, and the cues that follow it therefore stay with what
+	is heard, even when the device waits before it plays, as a device just
+	chosen can.
 
 *name*
 	Name of the cue.
@@ -130,8 +135,8 @@ A video cue plays H.264 video of the Baseline, Main, or High profile in MP4, as
 files ending in _.mp4_, _.m4v_, or _.mov_ hold it, along with the sound of its
 AAC track, in mono or stereo.
 A file without a sound track plays its picture alone.
-The clock of a video cue follows its sound, so that its picture, its fades, and
-its end stay with the sound over a long video.
+The picture of a video cue follows the clock of the cue, so that it stays with
+the sound over a long video.
 cinq reads no tags or cover art, and skips a track other than the picture's
 that cannot be read, such as one of chapters, which it says once on standard
 error.
