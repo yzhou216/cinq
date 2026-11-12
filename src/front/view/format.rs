@@ -11,7 +11,9 @@ use std::path::Path;
 
 use itertools::Itertools;
 
-use crate::back::{Active, Advance, Change, Cue, CueList, Edit, Kind, Media, Phase, Workspace};
+use crate::back::{
+    Active, Advance, Change, Cue, CueList, Edit, Kind, Media, Output, Phase, Workspace,
+};
 
 /// Formats seconds as `m:ss.s`
 fn clock(seconds: f64) -> String {
@@ -160,6 +162,7 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
                 Edit::Advance(_) => format!("changed what follows cue {cue}"),
                 Edit::Level(_) => format!("changed the level of cue {cue}"),
                 Edit::StopTarget(_) => format!("changed whether cue {cue} stops its target"),
+                Edit::Sends(_) => format!("changed where cue {cue} plays"),
             }
         }
         Change::Standby(standby) => match standby.after.and_then(|id| workspace.cue(id)) {
@@ -167,7 +170,51 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
             None => "moved standby past the end".to_owned(),
         },
         Change::Restored { .. } => "brought back the unsaved changes".to_owned(),
+        Change::Outputs { before, after, .. } => outputs(before, after),
     }
+}
+
+/// Describes a change to the outputs by what differs between them before
+/// and after it
+fn outputs(before: &[Output], after: &[Output]) -> String {
+    let missing = |from: &[Output], of: &[Output]| {
+        from.iter()
+            .find(|output| of.iter().all(|other| other.id != output.id))
+            .map(|output| output.name.clone())
+    };
+    let pairs = || {
+        before.iter().filter_map(|was| {
+            let now = after.iter().find(|now| now.id == was.id)?;
+            Some((was, now))
+        })
+    };
+    let edited = pairs().find_map(|(was, now)| {
+        let name = &now.name;
+        if was.name != now.name {
+            Some(format!("renamed the output {} to {name}", was.name))
+        } else if was.device != now.device {
+            Some(format!("changed the device of the output {name}"))
+        } else if was.channels != now.channels {
+            Some(format!("changed the channels of the output {name}"))
+        } else if was.new_cues != now.new_cues {
+            Some(format!("changed what new cues send to the output {name}"))
+        } else {
+            None
+        }
+    });
+    let moved = || {
+        before
+            .iter()
+            .zip(after)
+            .find(|(was, now)| was.id != now.id)
+            .map(|(_, now)| format!("moved the output {}", now.name))
+    };
+    missing(after, before)
+        .map(|name| format!("added the output {name}"))
+        .or_else(|| missing(before, after).map(|name| format!("deleted the output {name}")))
+        .or(edited)
+        .or_else(moved)
+        .unwrap_or_else(|| "changed the outputs".to_owned())
 }
 
 fn number(cue: &Cue) -> String {

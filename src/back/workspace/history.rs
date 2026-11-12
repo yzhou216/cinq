@@ -22,7 +22,7 @@
 mod change;
 mod undo;
 
-pub use change::{Change, Placed, Standby, Turn};
+pub use change::{Change, Kept, Placed, Standby, Turn};
 
 #[derive(Debug, Clone, Default)]
 pub(super) struct History {

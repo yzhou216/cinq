@@ -19,6 +19,7 @@ mod command;
 mod editing;
 mod files;
 mod history;
+mod outputs;
 mod playback;
 mod problems;
 mod show;
@@ -33,17 +34,22 @@ pub use command::{Command, Place};
 pub use history::{Change, Turn};
 
 use crate::back::{
-    Cue, CueId, CueList,
+    Cue, CueId, CueList, Output, OutputId,
     items::{replaced, replaced_where},
 };
 use history::History;
 
-/// Show as a whole, with its cue lists, running cues, and editing lock
+/// Show as a whole, with its cue lists, outputs, running cues, and editing
+/// lock
 ///
-/// A show always holds at least one cue list, which the front end shows.
+/// A show always holds at least one cue list, which the front end shows,
+/// and at least one output.
 #[derive(Debug, Clone)]
 pub struct Workspace {
     lists: Vec<CueList>,
+    outputs: Vec<Output>,
+    /// Identity that the next added output receives
+    next_output: u32,
     active: Vec<Active>,
     /// Lock on editing during a performance, which leaves playback alone
     show_mode: bool,
@@ -86,6 +92,8 @@ impl Workspace {
         Self {
             next_id: next_id(&lists),
             lists,
+            outputs: vec![Output::main(OutputId(1))],
+            next_output: 2,
             active: Vec::new(),
             show_mode: false,
             next_run: 0,
@@ -184,7 +192,11 @@ impl Workspace {
             Command::Delete(ids) => self.deleted(&ids),
             Command::Move { cue, by } => self.moved(cue, by),
             Command::Edit(id, edit) => self.edited(id, edit),
-            Command::Restore(lists) => self.restored(lists),
+            Command::Restore(lists, outputs) => self.restored(lists, outputs),
+            Command::AddOutput { at } => self.added_output(at),
+            Command::DeleteOutput(id) => self.deleted_output(id),
+            Command::MoveOutput { output, by } => self.moved_output(output, by),
+            Command::EditOutput(id, edit) => self.edited_output(id, edit),
         }
     }
 

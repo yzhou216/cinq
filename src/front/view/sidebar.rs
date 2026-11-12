@@ -37,8 +37,11 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         .active()
         .iter()
         .filter_map(|active| workspace.cue(active.id).map(|cue| active_cue(active, cue)));
-    let device = app.audio_error.as_deref().map(|error| {
-        text(format!("No audio output: {error}"))
+    let device = app.audio_problems.iter().map(|(output, problem)| {
+        let name = workspace
+            .output(*output)
+            .map_or("Output", |output| &output.name);
+        text(format!("{name}: {problem}"))
             .style(text::danger)
             .into()
     });

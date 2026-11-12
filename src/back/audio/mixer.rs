@@ -69,11 +69,16 @@ pub(super) struct Mixer {
 }
 
 impl Mixer {
-    /// Opens the device whose ID is `device`, or the default device without
-    /// one, with `channels` channels or more
-    pub(super) fn open(device: Option<&str>, channels: u16) -> Result<Self, String> {
+    /// Opens the device whose ID is `device`, or the only one named `name`
+    /// on a machine that gives it another ID, or the default device without
+    /// an ID, with `channels` channels or more
+    pub(super) fn open(
+        device: Option<&str>,
+        name: Option<&str>,
+        channels: u16,
+    ) -> Result<Self, String> {
         let found = match device {
-            Some(id) => device::find(id)?,
+            Some(id) => device::find(id, name)?,
             None => cpal::default_host()
                 .default_output_device()
                 .ok_or("there is no default audio device")?,
@@ -139,6 +144,11 @@ impl Mixer {
         self.send(Command::add(id, renderer, gains))?;
         self.next += 1;
         Ok(id)
+    }
+
+    /// Ramps the sound of `id` to `gains`
+    pub(super) fn route(&mut self, id: u64, gains: Gains) {
+        let _ = self.send(Command::Route(id, gains));
     }
 
     /// Fades out the sound of `id`, which then goes

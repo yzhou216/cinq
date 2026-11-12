@@ -7,8 +7,8 @@
 //! The thread must never wait, so it takes no lock and frees no memory.
 //! The main thread sends it sounds and their gains over one ring, and it
 //! hands back over another what it no longer needs, for the main thread to
-//! free.  A sound that goes fades out over [`RAMP`] frames, so that it
-//! does not click.
+//! free.  A change of gains ramps over [`RAMP`] frames, and a sound that
+//! goes fades out over as many, so that neither clicks.
 
 use kira::backend::Renderer;
 use rtrb::{Consumer, Producer};
@@ -40,6 +40,7 @@ pub(super) struct Slot {
 
 pub(super) enum Command {
     Add(Box<Slot>),
+    Route(u64, Gains),
     Remove(u64),
 }
 
@@ -56,8 +57,11 @@ impl Command {
     }
 }
 
-/// Sound that the stream no longer needs, which the main thread frees
-pub(super) struct Gone(#[allow(dead_code)] Box<Slot>);
+/// What the stream no longer needs, which the main thread frees
+pub(super) enum Gone {
+    Slot(#[allow(dead_code)] Box<Slot>),
+    Gains(#[allow(dead_code)] Gains),
+}
 
 pub(super) struct Mix {
     channels: usize,
@@ -110,6 +114,16 @@ impl Mix {
         while let Ok(command) = self.commands.pop() {
             match command {
                 Command::Add(slot) => self.slots.push(slot),
+                Command::Route(id, gains) => {
+                    let old = match self.slot(id) {
+                        Some(slot) if !slot.leaving => {
+                            slot.ramp = RAMP;
+                            std::mem::replace(&mut slot.target, gains)
+                        }
+                        _ => gains,
+                    };
+                    let _ = self.gone.push(Gone::Gains(old));
+                }
                 Command::Remove(id) => {
                     if let Some(slot) = self.slot(id) {
                         slot.target.fill([0.0; 2]);
@@ -136,7 +150,7 @@ impl Mix {
             .iter()
             .position(|slot| slot.leaving && slot.ramp == 0)
         {
-            let _ = self.gone.push(Gone(self.slots.swap_remove(index)));
+            let _ = self.gone.push(Gone::Slot(self.slots.swap_remove(index)));
         }
     }
 }

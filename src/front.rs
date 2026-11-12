@@ -25,7 +25,7 @@ use std::{
 
 use iced::{Size, window};
 
-use crate::back::{Audio, CueId, CueList, Kind, Video, Workspace};
+use crate::back::{Audio, CueId, CueList, Kind, OutputId, Video, Workspace};
 use keymap::{Press, config::Config};
 use message::{Focus, Message, Tab};
 use update::{Keeper, Reader, Show, Stage};
@@ -133,7 +133,8 @@ struct App {
     /// Way to read the unsaved changes kept for shows, if the platform has
     /// a directory to keep them in
     reader: Option<Reader>,
-    audio_error: Option<String>,
+    /// Why each output that cannot play cannot, by its identity
+    audio_problems: Vec<(OutputId, String)>,
     /// ID and name of each audio device, as they were listed last
     audio_devices: Vec<(String, String)>,
     /// Why the configuration file did not keep the audio device chosen
