@@ -27,6 +27,9 @@ Major changes and improvements in each release of cinq, newest first.
   one.  The Audio device list of the sidebar is now Default device, since it
   chooses the device of the outputs that name none, and its first option
   reads System default.
+- The Levels tab of an audio or video cue sets the level at which the cue
+  sends to each output of the show, and a field left empty sends nothing
+  there.
 
 ## v0.1.4
 

@@ -11,7 +11,7 @@
 //! an output takes the keys of a cue.
 
 use crate::{
-    back::{Channels, Command, OutputEdit, OutputId, parse_level},
+    back::{Channels, Command, Edit, OutputEdit, OutputId, parse_level},
     front::{App, Setting, step},
 };
 
@@ -96,6 +96,15 @@ impl App {
             typed => parse_level(typed).map(Some),
         };
         let command = match setting {
+            Setting::Send(cue, output) => level().and_then(|level| {
+                let sends = self.workspace.sends(self.workspace.cue(cue)?);
+                let sends = sends
+                    .into_iter()
+                    .filter(|(id, _)| *id != output)
+                    .chain(level.map(|level| (output, level)))
+                    .collect();
+                Some(Command::Edit(cue, Edit::Sends(Some(sends))))
+            }),
             Setting::OutputName(id) => Some(edit_output(id, OutputEdit::Name(text.clone()))),
             Setting::Channels(id) => Channels::parse(&text)
                 .map(|channels| edit_output(id, OutputEdit::Channels(channels))),

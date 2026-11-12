@@ -21,6 +21,9 @@ use crate::back::{Command, CueId, Device, Edit, Kind, OutputId, Place};
 /// reads as a value
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Setting {
+    /// Level at which a cue sends to an output, which an empty field takes
+    /// away
+    Send(CueId, OutputId),
     OutputName(OutputId),
     Channels(OutputId),
     /// Level at which new cues send to an output, which an empty field
