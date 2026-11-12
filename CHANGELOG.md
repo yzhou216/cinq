@@ -200,6 +200,10 @@ Major changes and improvements in each release of cinq, newest first.
 - The list of cue types beside Add cue carries the label `New cue:`, since it
   only sets the type of the next cue that Add cue makes, and a newcomer took it
   for the type of the selected cue.
+- Sounds play through a mixer of cinq's own, which opens each audio device
+  itself, so that a sound can reach any channel of a device.  A device whose
+  stream stops says so among the warnings, where the sound once moved to the
+  default device.
 
 ## v0.1.4
 
