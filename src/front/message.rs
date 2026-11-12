@@ -7,6 +7,7 @@
 //! file's watch, and of the work done on threads of its own
 
 mod line;
+mod rows;
 mod scrolling;
 mod tab;
 
@@ -18,10 +19,21 @@ use super::{
     keymap::{Action, Press, config::Config},
     update::{Measured, Read, Saved},
 };
-use crate::back::{Command, CueId, Edit, Kind, Place};
+use crate::back::{Command, CueId, Device, Edit, Kind, OutputId, Place};
 pub use line::LineKey;
 pub use scrolling::{Height, Page};
 pub use tab::Tab;
+
+/// Setting whose field shows the text typed into it, which applies once it
+/// reads as a value
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Setting {
+    OutputName(OutputId),
+    Channels(OutputId),
+    /// Level at which new cues send to an output, which an empty field
+    /// takes away
+    NewCues(OutputId),
+}
 
 /// Where the caret lands in a field that a key focuses, and what it selects
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -209,6 +221,18 @@ pub enum Message {
     ChooseAudioDevice(Option<String>),
     /// Whether the configuration file kept the audio device chosen last
     AudioDeviceKept(Result<(), String>),
+    /// Shows the outputs of the show in place of a cue list
+    ShowOutputs,
+    /// Selects an output, which the inspector then shows
+    SelectOutput(OutputId),
+    /// Text typed into the field of a setting, which applies once it reads
+    /// as a value
+    SettingTyped(Setting, String),
+    /// Enter in the field of a setting, which applies the channels typed
+    /// there
+    SettingSubmitted,
+    /// Plays an output on a device
+    OutputDevice(OutputId, Device),
     /// Asks which show to open
     Open,
     /// Show read from its file, with the unsaved changes kept for it

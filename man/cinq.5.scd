@@ -83,8 +83,8 @@ in its place, and follows it as it changes in the same way.
 	the system.
 	*cinq --audio-devices* lists the ID and the name of each device, apart by a
 	tab, one device to a line.
-	The *Audio device* list in the sidebar of the main window chooses a device
-	as well, and *cinq* writes the choice here.
+	The *Default device* list in the sidebar of the main window chooses a
+	device as well, and *cinq* writes the choice here.
 	It changes only the line of this setting, or adds the line before the
 	first setting of the file, and leaves the rest as it is.
 	A change moves those outputs as soon as the file is saved, and the sounds
@@ -576,6 +576,16 @@ and forth.
 Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
 read-only buffer.
 
+The outputs of the show, which *Outputs* below the cue lists in the sidebar
+shows in place of the cue list, take some actions of cues: *next*,
+*previous*, *first*, and *last* select an output, which the inspector then
+edits, *edit* edits its name, *add_below* and *add_above* add an output,
+*move_down* and *move_up* move it, and *delete* deletes the selected output only,
+whatever the count.
+Every other action that moves through, scrolls, searches, or changes the rows
+of a cue list, such as *standby*, *half_page_down*, *search*, *cut*, *copy*,
+and *paste_below*, does nothing there, since the cue list is out of sight.
+
 # ACTIONS
 
 The actions go by their names in the *keys* table, in the order of the help
@@ -718,10 +728,10 @@ page.
 	A count selects its row first, as for *row_to_middle*.
 
 *next_list*
-	Show the next cue list.
+	Show the next cue list, or the outputs of the show after the last one.
 
 *previous_list*
-	Show the previous cue list.
+	Show the previous cue list, or the last one from the outputs of the show.
 
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,

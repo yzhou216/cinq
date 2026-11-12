@@ -23,6 +23,18 @@ Major changes and improvements in each release of cinq, newest first.
   of each cue, as cinq-show(5) describes.  A show without outputs plays on
   the first two channels of the default device, as before.  An output that
   cannot play says why among the warnings, and the cues play on the others.
+- The Outputs entry below the cue lists in the sidebar shows the outputs of
+  the show in place of the cue list, each with its device, its channels, and
+  why it cannot play where it cannot, and the inspector edits the one
+  selected.  A name or a level applies as it is typed, and channels once
+  Enter is pressed or the field is left, since a device opens again for
+  them.  The keys that select, add, move, and delete cues do the same to
+  outputs there, and the key of the next cue list reaches them past the last
+  one.  The other keys of the rows of the cue list, such as paging, searching,
+  cutting, and pasting, do nothing there, so that none of them changes a cue
+  list out of sight.  The Audio device list of the sidebar is now Default
+  device, since it chooses the device of the outputs that name none, and its
+  first option reads System default.
 - In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
   rename does in desktop file managers, and no key puts the caret at the end
   of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and

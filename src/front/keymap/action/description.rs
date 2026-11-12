@@ -43,8 +43,8 @@ impl Action {
             Action::RowToBottom => {
                 "Scroll the cue list to put the selected row, or the row counted, at the bottom"
             }
-            Action::NextList => "Show the next cue list",
-            Action::PreviousList => "Show the previous cue list",
+            Action::NextList => "Show the next cue list, then the outputs",
+            Action::PreviousList => "Show the previous cue list, or the last from the outputs",
             Action::NextTab => "Show the next inspector tab, or the tab counted",
             Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
             Action::Back => "Go back to the place that the last jump left",

@@ -46,8 +46,10 @@ impl App {
     /// Anything the operator does other than typing drops a command typed
     /// halfway, so that a stray `d` cannot wait through a click and an edit
     /// to delete a cue.  A level typed so far gives way to the level of its
-    /// cue as well, apart from a click, which can land in its own field.  A
-    /// link that failed to open is forgotten once the help page that holds
+    /// cue as well, apart from a click, which can land in its own field.  The
+    /// channels typed into the field of an output apply once it is left, or at
+    /// any click, so that no key after a click, GO included, opens a device.
+    /// A link that failed to open is forgotten once the help page that holds
     /// it closes.
     pub(super) fn next(self, message: Message) -> (Self, Task<Message>) {
         let passive = matches!(
@@ -71,12 +73,25 @@ impl App {
         );
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);
+        // Typing into a field, or pressing Enter in it, keeps its text,
+        // which the operator leaves with anything else
+        let in_field = matches!(
+            message,
+            Message::SettingTyped(..) | Message::SettingSubmitted
+        );
+        let kept = passive || clicked || in_field;
+        let app = if passive || in_field {
+            self
+        } else {
+            self.settled()
+        };
         let app = Self {
-            keys: if typing { self.keys } else { Vec::new() },
-            clipped: self.clipped.filter(|_| typing),
-            remark: self.remark.filter(|_| typing),
-            typed_level: self.typed_level.filter(|_| passive || clicked),
-            ..self
+            keys: if typing { app.keys } else { Vec::new() },
+            clipped: app.clipped.filter(|_| typing),
+            remark: app.remark.filter(|_| typing),
+            typed_level: app.typed_level.filter(|_| passive || clicked),
+            typed: app.typed.filter(|_| kept),
+            ..app
         };
         let (app, task) = app.handled(message);
         let app = Self {

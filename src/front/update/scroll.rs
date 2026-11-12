@@ -27,27 +27,53 @@ use crate::front::{App, Message, reveal, view};
 const MARGIN_ROWS: f32 = 3.0;
 
 impl App {
-    /// The first cue snaps the list back to its start, as the window opened
-    /// it, since the row itself begins a separator below the start.
+    /// Scrolls the selected output into view while the outputs show, and
+    /// the selected cue otherwise.  The first row snaps the list back to
+    /// its start, as the window opened it, since the row itself begins a
+    /// separator below the start.
     pub(super) fn revealed(self) -> (Self, Task<Message>) {
+        if self.outputs_shown {
+            let task = reveal_row(self.output_row(), view::OUTPUTS, view::SELECTED_OUTPUT);
+            return (self, task);
+        }
         // Scrolling moves the list away from the shape kept
         let app = self.remeasured();
-        let task = match app.selected_row() {
-            Some(0) => operation::snap_to(view::CUES, RelativeOffset::START),
-            Some(_) => operate(Measure::default()).discard(),
-            None => Task::none(),
-        };
+        let task = reveal_row(app.selected_row(), view::CUES, view::SELECTED);
         let measure = app.measure_cues();
         (app, task.chain(measure))
     }
 }
 
-#[derive(Default)]
+/// Returns the task that scrolls the list of the identity `list` to show the
+/// row `row`, whose container has the identity `selected`, with the first row
+/// at the very start, since the row itself begins a separator below it
+fn reveal_row(row: Option<usize>, list: &'static str, selected: &'static str) -> Task<Message> {
+    match row {
+        Some(0) => operation::snap_to(list, RelativeOffset::START),
+        Some(_) => operate(Measure::of(list, selected)).discard(),
+        None => Task::none(),
+    }
+}
+
 struct Measure {
+    /// Identity of the list, and of the container of its selected row
+    list_id: &'static str,
+    row_id: &'static str,
     /// Top of the list content, how far the list has scrolled, and the
     /// height of the part in view
     list: Option<(f32, f32, f32)>,
     row: Option<Rectangle>,
+}
+
+impl Measure {
+    fn of(list_id: &'static str, row_id: &'static str) -> Self {
+        Self {
+            list_id,
+            row_id,
+            list: None,
+            row: None,
+        }
+    }
 }
 
 impl Operation for Measure {
@@ -63,13 +89,13 @@ impl Operation for Measure {
         translation: Vector,
         _state: &mut dyn Scrollable,
     ) {
-        if id == Some(&Id::new(view::CUES)) {
+        if id == Some(&Id::new(self.list_id)) {
             self.list = Some((content_bounds.y, translation.y, bounds.height));
         }
     }
 
     fn container(&mut self, id: Option<&Id>, bounds: Rectangle) {
-        if id == Some(&Id::new(view::SELECTED)) {
+        if id == Some(&Id::new(self.row_id)) {
             self.row = Some(bounds);
         }
     }
@@ -91,7 +117,10 @@ impl Operation for Measure {
             x: None,
             y: Some(offset.max(0.0)),
         };
-        Outcome::Chain(Box::new(scrollable::scroll_to(Id::new(view::CUES), offset)))
+        Outcome::Chain(Box::new(scrollable::scroll_to(
+            Id::new(self.list_id),
+            offset,
+        )))
     }
 }
 
