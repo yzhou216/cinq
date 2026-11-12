@@ -14,6 +14,15 @@ Major changes and improvements in each release of cinq, newest first.
   itself, so that a sound can reach any channel of a device.  A device whose
   stream stops, as one unplugged, says so among the warnings, where the sound
   once moved to the default device.
+- A show has outputs, the named places that its cues send their sound to,
+  each on one channel or two of an audio device, such as the house speakers
+  on the first two channels of a desk and the subwoofer on its third.  Each
+  audio and video cue sends to the outputs it names, each at a level of its
+  own, and moving an output to other channels or another device moves every
+  cue that sends to it.  Show files hold them in `output` and in the `sends`
+  of each cue, as cinq-show(5) describes.  A show without outputs plays on
+  the first two channels of the default device, as before.  An output that
+  cannot play says why among the warnings, and the cues play on the others.
 - In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
   rename does in desktop file managers, and no key puts the caret at the end
   of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and

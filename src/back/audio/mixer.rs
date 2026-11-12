@@ -34,8 +34,8 @@ use kira::backend::{
 use rtrb::{Consumer, Producer, RingBuffer};
 
 use super::device;
-pub(super) use mix::Gains;
-use mix::{Command, Gone, Mix};
+use mix::{Command, Gone};
+pub(super) use mix::{Gains, Mix};
 
 /// Commands that can wait for the stream at once, far more than one
 /// update of the workspace sends
@@ -56,7 +56,8 @@ const STARTING: Duration = Duration::from_secs(10);
 
 pub(super) struct Mixer {
     /// Stream of the device, which plays as long as the mixer is kept
-    _stream: Stream,
+    /// Absent only in a test, which plays through a mix that it renders
+    _stream: Option<Stream>,
     commands: Producer<Command>,
     gone: Consumer<Gone>,
     sample_rate: u32,
@@ -73,11 +74,16 @@ pub(super) struct Mixer {
 }
 
 impl Mixer {
-    /// Opens the device whose ID is `device`, or the default device without
-    /// one, with `channels` channels or more
-    pub(super) fn open(device: Option<&str>, channels: u16) -> Result<Self, String> {
+    /// Opens the device whose ID is `device`, or the only one named `name`
+    /// on a machine that gives it another ID, or the default device without
+    /// an ID, with `channels` channels or more
+    pub(super) fn open(
+        device: Option<&str>,
+        name: Option<&str>,
+        channels: u16,
+    ) -> Result<Self, String> {
         let found = match device {
-            Some(id) => device::find(id)?,
+            Some(id) => device::find(id, name)?,
             None => cpal::default_host()
                 .default_output_device()
                 .ok_or("there is no default audio device")?,
@@ -122,7 +128,7 @@ impl Mixer {
             .map_err(|error| error.to_string())?;
         stream.play().map_err(|error| error.to_string())?;
         Ok(Self {
-            _stream: stream,
+            _stream: Some(stream),
             commands,
             gone,
             sample_rate: config.sample_rate,
@@ -149,6 +155,11 @@ impl Mixer {
         self.send(Command::add(id, renderer, gains))?;
         self.next += 1;
         Ok(id)
+    }
+
+    /// Ramps the sound of `id` to `gains`
+    pub(super) fn route(&mut self, id: u64, gains: Gains) {
+        let _ = self.send(Command::Route(id, gains));
     }
 
     /// Fades out the sound of `id`, which then goes
@@ -223,4 +234,27 @@ fn config(device: &Device, channels: u16) -> Result<StreamConfig, String> {
         sample_rate: rate,
         buffer_size: BufferSize::Default,
     })
+}
+
+#[cfg(test)]
+impl Mixer {
+    /// Returns a mixer without a device, whose ring of commands holds
+    /// `capacity`, and the mix that the stream of a device would run
+    pub(super) fn bench(channels: u16, sample_rate: u32, capacity: usize) -> (Self, Mix) {
+        let (commands, taken) = RingBuffer::new(capacity);
+        let (handed, gone) = RingBuffer::new(COMMANDS);
+        let mix = Mix::new(usize::from(channels), sample_rate, 8, taken, handed);
+        let mixer = Self {
+            _stream: None,
+            commands,
+            gone,
+            sample_rate,
+            channels,
+            error: Arc::default(),
+            started: Instant::now(),
+            called: Arc::default(),
+            next: 0,
+        };
+        (mixer, mix)
+    }
 }
