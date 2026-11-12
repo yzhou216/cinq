@@ -24,11 +24,11 @@ use iced::{
     },
     window,
 };
-use unicode_width::UnicodeWidthStr;
 
 use super::{
     Dropdown, PADDING,
     menu::{Choice, Menu},
+    shorten::shortened,
     state::State,
 };
 use crate::front::{
@@ -39,6 +39,9 @@ use crate::front::{
         widget::{key_pressed, pointer_over, pressed},
     },
 };
+
+/// Room for the arrow, which is about as wide as the text is high
+const ARROW: f32 = TEXT_SIZE.0 + PADDING.left;
 
 /// Returns a label on one line in the default font and size.  It goes by
 /// its top left corner, where iced's own pick list goes by its middle,
@@ -72,21 +75,15 @@ impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
     }
 
     /// Makes the list as wide as its widest label, as iced's pick list is,
-    /// so that its width stays put whichever option is chosen
+    /// so that its width stays put whichever option is chosen, or as wide
+    /// as its room, where a longer label is cut short
     fn layout(
         &mut self,
         _tree: &mut Tree,
         _renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let widest = (self.names.iter().map(String::as_str))
-            .chain(self.placeholder.as_deref())
-            .map(UnicodeWidthStr::width)
-            .max()
-            .unwrap_or(0);
-        // Room for the arrow, which is about as wide as the text is high
-        let room = widest as f32 * char_width() + TEXT_SIZE.0 + PADDING.left;
-        let intrinsic = Size::new(room, line_height());
+        let intrinsic = Size::new(self.widest() + ARROW, line_height());
         layout::Node::new(
             limits
                 .shrink(PADDING)
@@ -148,7 +145,8 @@ impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
                 look.placeholder_color,
             ),
         };
-        let name = label(name, bounds.width - PADDING.x());
+        let room = bounds.width - PADDING.x() - ARROW;
+        let name = label(shortened(&name, (room / char_width()) as usize), room);
         let start = Point::new(
             bounds.x + PADDING.left,
             bounds.center_y() - line_height() / 2.0,

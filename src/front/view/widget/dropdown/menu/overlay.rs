@@ -66,14 +66,20 @@ impl<'b> Menu<'b> {
 }
 
 impl Overlay<Message, Theme, Renderer> for Menu<'_> {
+    /// A menu wider than its list, as the menu of a list that cuts its
+    /// label short is, moves left as far as it has to for the window to
+    /// hold it, as it does under a list at the right edge.
     fn layout(&mut self, renderer: &Renderer, bounds: Size) -> layout::Node {
         let below = bounds.height - self.target.y - self.target.height;
         let above = self.target.y;
-        let limits = layout::Limits::new(
-            Size::ZERO,
-            Size::new(bounds.width - self.target.x, below.max(above)),
-        )
-        .width(self.target.width);
+        let width = self
+            .target
+            .width
+            .max(self.choice.dropdown.widest() + PADDING.x());
+        let left = self.target.x.min(bounds.width - width).max(0.0);
+        let limits =
+            layout::Limits::new(Size::ZERO, Size::new(bounds.width - left, below.max(above)))
+                .width(width);
         let node = self
             .content
             .as_widget_mut()
@@ -83,7 +89,7 @@ impl Overlay<Message, Theme, Renderer> for Menu<'_> {
         } else {
             self.target.y - node.size().height
         };
-        node.move_to(Point::new(self.target.x, top))
+        node.move_to(Point::new(left, top))
     }
 
     fn draw(

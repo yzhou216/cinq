@@ -19,16 +19,22 @@
 //! opens, so that the keys act on the cue list again once the menu closes,
 //! as they do after Enter leaves a text field.
 //!
+//! A list with less room than its longest name cuts the name it shows
+//! short, and its menu grows as wide as that name, so that a list in a
+//! narrow place can hold long names.
+//!
 //! [`Action::Next`]: crate::front::keymap::Action::Next
 //! [`Action::Previous`]: crate::front::keymap::Action::Previous
 
 mod menu;
+mod shorten;
 mod state;
 mod widget;
 
 use iced::{Element, Padding, widget::button};
+use unicode_width::UnicodeWidthStr;
 
-use crate::front::{Message, keymap::Keymap};
+use crate::front::{Message, keymap::Keymap, view::char_width};
 
 /// Padding of the list and of each option of its menu, as iced's pick list
 /// pads them
@@ -68,6 +74,17 @@ impl Dropdown<'_> {
             placeholder: Some(placeholder.into()),
             ..self
         }
+    }
+
+    /// Returns the width of the longest name, the placeholder among them,
+    /// by the columns of the font, which is monospace
+    fn widest(&self) -> f32 {
+        let columns = (self.names.iter().map(String::as_str))
+            .chain(self.placeholder.as_deref())
+            .map(UnicodeWidthStr::width)
+            .max()
+            .unwrap_or(0);
+        columns as f32 * char_width()
     }
 }
 

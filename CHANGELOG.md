@@ -34,6 +34,8 @@ Major changes and improvements in each release of cinq, newest first.
   it stay with what is heard.  A sound that drifts from the clock of the
   show, or a device that waits before it plays, no longer leaves the cue to
   end before its sound and cut off its last moments.
+- A drop-down list too narrow for its options cuts the chosen one short
+  with an ellipsis, and its menu grows as wide as the longest option.
 
 ## v0.1.3
 
