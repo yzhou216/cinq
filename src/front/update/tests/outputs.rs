@@ -214,3 +214,32 @@ fn channels_apply_when_the_operator_goes_on_to_anything_else() {
     assert_eq!(channels(&tick), "1-2", "a tick is not the operator");
     assert_eq!(channels(&next(typing("3-"), Message::Step(1))), "1-2");
 }
+
+#[test]
+fn typed_sends_apply_and_an_empty_field_takes_the_send_away() {
+    let main = OutputId(1);
+    let cue = CueId(1);
+    let sends = |app: &App| {
+        let cue = app.workspace.cue(cue).expect("the cue is there");
+        app.workspace.sends(cue).get(&main).copied()
+    };
+    let app = typed(show(None), Setting::Send(cue, main), "-6");
+    assert_eq!(sends(&app), Some(-6.0));
+    let app = typed(app, Setting::Send(cue, main), "");
+    assert_eq!(sends(&app), None);
+}
+
+#[test]
+fn editing_a_send_keeps_the_sends_to_outputs_that_have_gone() {
+    let (main, sub, cue) = (OutputId(1), OutputId(2), CueId(1));
+    let app = after(
+        show(None),
+        [Message::ShowOutputs, Message::Add(Place::After, 1)],
+    );
+    let app = typed(app, Setting::Send(cue, sub), "-3");
+    let app = after(app, [Message::Delete(1)]);
+    assert_eq!(names(&app), ["Main"]);
+    let app = typed(app, Setting::Send(cue, main), "-6");
+    let kept = app.workspace.cue(cue).and_then(|cue| cue.sends.clone());
+    assert_eq!(kept.and_then(|sends| sends.get(&sub).copied()), Some(-3.0));
+}

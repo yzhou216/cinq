@@ -13,7 +13,7 @@
 use iced::Task;
 
 use crate::{
-    back::{Channels, Command, CueId, OutputEdit, OutputId, Place, parse_level},
+    back::{Channels, Command, CueId, Edit, OutputEdit, OutputId, Place, parse_level},
     front::{App, Message, Setting, step},
 };
 
@@ -159,6 +159,20 @@ impl App {
             typed => parse_level(typed).map(Some),
         };
         let command = match setting {
+            Setting::Send(cue, output) => level().and_then(|level| {
+                // Start from the sends as the cue holds them, which keep the
+                // sends to outputs that have gone for an undo to bring back
+                let cue = self.workspace.cue(cue)?;
+                let sends = cue
+                    .sends
+                    .clone()
+                    .unwrap_or_else(|| self.workspace.sends(cue))
+                    .into_iter()
+                    .filter(|(id, _)| *id != output)
+                    .chain(level.map(|level| (output, level)))
+                    .collect();
+                Some(Command::Edit(cue.id, Edit::Sends(Some(sends))))
+            }),
             Setting::OutputName(id) => Some(edit_output(id, OutputEdit::Name(text.clone()))),
             Setting::Channels(_) => None,
             Setting::NewCues(id) => {

@@ -35,6 +35,9 @@ Major changes and improvements in each release of cinq, newest first.
   list out of sight.  The Audio device list of the sidebar is now Default
   device, since it chooses the device of the outputs that name none, and its
   first option reads System default.
+- The Levels tab of an audio or video cue sets the level at which the cue
+  sends to each output of the show, and a field left empty sends nothing
+  there.
 - In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
   rename does in desktop file managers, and no key puts the caret at the end
   of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and

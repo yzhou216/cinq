@@ -7,6 +7,7 @@
 
 mod field;
 mod output;
+mod sends;
 
 use iced::{
     Center, Element, Fill,
@@ -155,6 +156,7 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
             .spacing(SPACING)
             .align_y(Center),
         stop,
+        cue.kind.plays_file().then(|| sends::view(app, cue)),
     ]
     .spacing(SPACING)
     .into()
