@@ -28,6 +28,7 @@ use iced::{
     keyboard::{Key, key::Named},
 };
 
+use super::Dropdown;
 use crate::front::{
     Message,
     keymap::{Action, Keymap, Press},
@@ -52,50 +53,39 @@ impl Shared {
     }
 }
 
-/// Options of a drop-down list with the highlight of its menu, through
-/// which the list and the menu act on the menu
-pub(super) struct Choice<'b, T> {
-    options: &'b [T],
-    on_select: &'b dyn Fn(T) -> Message,
-    keymap: &'b Keymap,
+/// A drop-down list with the state of its menu, through which the list and
+/// the menu act on the menu
+#[derive(Clone, Copy)]
+pub(super) struct Choice<'b> {
+    dropdown: &'b Dropdown<'b>,
     shared: &'b Shared,
 }
 
-impl<T> Clone for Choice<'_, T> {
-    fn clone(&self) -> Self {
-        *self
+impl<'b> Choice<'b> {
+    pub(super) fn new(dropdown: &'b Dropdown<'b>, shared: &'b Shared) -> Self {
+        Self { dropdown, shared }
     }
-}
 
-impl<T> Copy for Choice<'_, T> {}
-
-impl<'b, T> Choice<'b, T> {
-    pub(super) fn new(
-        options: &'b [T],
-        on_select: &'b dyn Fn(T) -> Message,
-        keymap: &'b Keymap,
-        shared: &'b Shared,
-    ) -> Self {
-        Self {
-            options,
-            on_select,
-            keymap,
-            shared,
+    /// Opens the menu with the highlight on the selected option, unless
+    /// there is no option to choose
+    pub(super) fn open(&self, shell: &mut Shell<'_, Message>) {
+        if !self.dropdown.names.is_empty() {
+            self.shared.open.set(true);
+            self.shared.highlight.set(self.dropdown.chosen);
+            self.shared.reveal.set(true);
         }
-    }
-}
-
-impl<T: Clone> Choice<'_, T> {
-    pub(super) fn open(&self, row: Option<usize>) {
-        self.shared.open.set(true);
-        self.shared.highlight.set(row);
-        self.shared.reveal.set(true);
+        shell.capture_event();
+        shell.request_redraw();
     }
 
     pub(super) fn press(&self, key: &Key, press: Option<Press>, shell: &mut Shell<'_, Message>) {
-        match reply(self.keymap, key, press) {
+        match reply(self.dropdown.keymap, key, press) {
             Reply::Step(offset) => {
-                let row = step(self.shared.highlight.get(), offset, self.options.len());
+                let row = step(
+                    self.shared.highlight.get(),
+                    offset,
+                    self.dropdown.names.len(),
+                );
                 self.shared.highlight.set(row);
                 self.shared.reveal.set(true);
                 shell.capture_event();
@@ -119,8 +109,8 @@ impl<T: Clone> Choice<'_, T> {
     }
 
     fn pick(&self, row: Option<usize>, shell: &mut Shell<'_, Message>) {
-        if let Some(option) = row.and_then(|row| self.options.get(row)) {
-            shell.publish((self.on_select)(option.clone()));
+        if let Some(message) = row.and_then(|row| (self.dropdown.pick)(row)) {
+            shell.publish(message);
         }
         self.shared.open.set(false);
         shell.capture_event();

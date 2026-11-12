@@ -46,7 +46,7 @@ pub trait Intercept {
     ) {
     }
 
-    fn under(&self, _layout: Layout<'_>, _renderer: &mut Renderer) {}
+    fn under(&self, _layout: Layout<'_>, _renderer: &mut Renderer, _theme: &Theme) {}
 
     /// Tells an operation about the content, before the content tells it
     /// about itself
@@ -122,7 +122,7 @@ impl<I: Intercept> Widget<Message, Theme, Renderer> for Wrap<'_, I> {
         if !self.intercept.shown() {
             return;
         }
-        self.intercept.under(layout, renderer);
+        self.intercept.under(layout, renderer, theme);
         self.content
             .as_widget()
             .draw(tree, renderer, theme, style, layout, cursor, viewport);

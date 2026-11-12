@@ -6,15 +6,21 @@
 //! its highlight, and of what keys and clicks leave to the widgets under it
 
 use iced::{
-    advanced::Shell,
+    Event, Point, Size,
+    advanced::{
+        Shell,
+        layout::{Layout, Node},
+    },
     keyboard::{Key, Modifiers, key::Named},
+    mouse,
 };
 
-use super::{Choice, Reply, Shared, reply};
+use super::{Choice, Reply, Shared, reply, rows::Rows};
 use crate::front::{
     Message,
     keymap::{Keymap, Preset, Press},
     step,
+    view::widget::{dropdown::dropdown, wrap::Intercept},
 };
 
 /// Options of the menus in the tests, each picked as the step it makes
@@ -31,12 +37,12 @@ struct Outcome {
 
 /// Opens a menu of [`OPTIONS`] with the highlight on the first, lets `act`
 /// hand it events, and returns what they amount to
-fn outcome(act: impl Fn(Choice<'_, isize>, &mut Shell<'_, Message>)) -> Outcome {
+fn outcome(act: impl Fn(Choice<'_>, &mut Shell<'_, Message>)) -> Outcome {
     let keymap = Keymap::default();
     let shared = Shared::default();
-    let on_select = Message::Step;
-    let choice = Choice::new(&OPTIONS, &on_select, &keymap, &shared);
-    choice.open(Some(0));
+    let list = dropdown(OPTIONS, Some(OPTIONS[0]), Message::Step, &keymap);
+    let choice = Choice::new(&list, &shared);
+    choice.open(&mut Shell::new(&mut Vec::new()));
     let mut messages = Vec::new();
     let mut shell = Shell::new(&mut messages);
     act(choice, &mut shell);
@@ -163,5 +169,39 @@ fn click_beside_the_menu_closes_it_and_acts_unless_it_lands_on_the_list() {
     assert_eq!(
         outcome(|choice, shell| choice.click_beside(true, shell)),
         closed(true)
+    );
+}
+
+#[test]
+fn mouse_highlights_the_row_under_it_and_picks_the_row_it_presses() {
+    let rows = Node::with_children(
+        Size::new(100.0, 90.0),
+        (0..3)
+            .map(|row| {
+                Node::new(Size::new(100.0, 30.0)).move_to(Point::new(0.0, 30.0 * row as f32))
+            })
+            .collect(),
+    );
+    let at = |y| mouse::Cursor::Available(Point::new(10.0, y));
+    let moved = Event::Mouse(mouse::Event::CursorMoved {
+        position: Point::new(10.0, 40.0),
+    });
+    let press = Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left));
+    let picked = outcome(|choice, shell| {
+        let list = Rows(choice);
+        list.before(&moved, Layout::new(&rows), at(40.0), shell);
+        assert_eq!(choice.shared.highlight.get(), Some(1));
+        assert!(!shell.is_event_captured());
+        list.before(&press, Layout::new(&rows), at(100.0), shell);
+        assert_eq!(choice.shared.highlight.get(), Some(1));
+        list.before(&press, Layout::new(&rows), at(70.0), shell);
+    });
+    assert_eq!(
+        picked,
+        Outcome {
+            open: false,
+            captured: true,
+            picked: Some(3),
+        }
     );
 }

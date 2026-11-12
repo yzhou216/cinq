@@ -10,7 +10,7 @@ use iced::{
         Clipboard, Renderer as _, Shell,
         layout::{self, Layout},
         mouse, overlay, renderer,
-        text::{self, Renderer as _, Text, paragraph},
+        text::{self, Renderer as _, Text},
         widget::{
             Operation, Widget,
             tree::{self, Tree},
@@ -27,32 +27,47 @@ use iced::{
 
 use super::{
     Dropdown, PADDING,
-    label::{label, line_height, start},
-    menu::{Menu, Shared},
+    menu::{Choice, Menu},
+    shorten::shortened,
     state::State,
 };
 use crate::front::{
     Message,
     keymap::KeyPress,
-    view::widget::{key_pressed, pointer_over, pressed},
+    view::{
+        FONT, TEXT_SIZE, char_width, line_height,
+        widget::{key_pressed, pointer_over, pressed},
+    },
 };
 
-impl<'a, T: ToString + PartialEq + Clone + 'a> Widget<Message, Theme, Renderer>
-    for Dropdown<'a, T>
-{
+/// Room for the arrow, which is about as wide as the text is high
+const ARROW: f32 = TEXT_SIZE.0 + PADDING.left;
+
+/// Returns a label on one line in the default font and size.  It goes by
+/// its top left corner, where iced's own pick list goes by its middle,
+/// since iced's software renderer redraws a changed text only below and to
+/// the right of the point it is drawn at.
+fn label<C>(content: C, width: f32) -> Text<C> {
+    Text {
+        content,
+        bounds: Size::new(width, line_height()),
+        size: TEXT_SIZE,
+        line_height: text::LineHeight::default(),
+        font: FONT,
+        align_x: text::Alignment::Default,
+        align_y: alignment::Vertical::Top,
+        shaping: text::Shaping::default(),
+        wrapping: text::Wrapping::None,
+    }
+}
+
+impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
     fn tag(&self) -> tree::Tag {
         tree::Tag::of::<State>()
     }
 
     fn state(&self) -> tree::State {
-        tree::State::new(State {
-            shared: Shared::default(),
-            focused: false,
-            over: false,
-            labels: Vec::new(),
-            placeholder: paragraph::Plain::default(),
-            menu: Tree::empty(),
-        })
+        tree::State::new(State::new())
     }
 
     fn size(&self) -> Size<Length> {
@@ -60,18 +75,15 @@ impl<'a, T: ToString + PartialEq + Clone + 'a> Widget<Message, Theme, Renderer>
     }
 
     /// Makes the list as wide as its widest label, as iced's pick list is,
-    /// so that its width stays put whichever option is chosen
+    /// so that its width stays put whichever option is chosen, or as wide
+    /// as its room, where a longer label is cut short
     fn layout(
         &mut self,
-        tree: &mut Tree,
-        renderer: &Renderer,
+        _tree: &mut Tree,
+        _renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let state = tree.state.downcast_mut::<State>();
-        let widest = state.widest(renderer, &self.options, self.placeholder.as_deref());
-        // Room for the arrow, which is about as wide as the text is high
-        let arrow = renderer.default_size().0 + PADDING.left;
-        let intrinsic = Size::new(widest + arrow, line_height(renderer));
+        let intrinsic = Size::new(self.widest() + ARROW, line_height());
         layout::Node::new(
             limits
                 .shrink(PADDING)
@@ -122,23 +134,24 @@ impl<'a, T: ToString + PartialEq + Clone + 'a> Widget<Message, Theme, Renderer>
             align_x: text::Alignment::Right,
             align_y: alignment::Vertical::Center,
             shaping: text::Shaping::Basic,
-            ..label(
-                renderer,
-                Renderer::ARROW_DOWN_ICON.to_string(),
-                bounds.width,
-            )
+            ..label(Renderer::ARROW_DOWN_ICON.to_string(), bounds.width)
         };
         let end = Point::new(bounds.x + bounds.width - PADDING.right, bounds.center_y());
         renderer.fill_text(arrow, end, look.handle_color, *viewport);
-        let (name, color) = match &self.selected {
-            Some(option) => (option.to_string(), look.text_color),
+        let (name, color) = match self.chosen {
+            Some(row) => (self.names[row].clone(), look.text_color),
             None => (
                 self.placeholder.clone().unwrap_or_default(),
                 look.placeholder_color,
             ),
         };
-        let name = label(renderer, name, bounds.width - PADDING.x());
-        renderer.fill_text(name, start(renderer, bounds), color, *viewport);
+        let room = bounds.width - PADDING.x() - ARROW;
+        let name = label(shortened(&name, (room / char_width()) as usize), room);
+        let start = Point::new(
+            bounds.x + PADDING.left,
+            bounds.center_y() - line_height() / 2.0,
+        );
+        renderer.fill_text(name, start, color, *viewport);
     }
 
     /// Opens the menu on a click, or on Enter while the list has the
@@ -147,8 +160,6 @@ impl<'a, T: ToString + PartialEq + Clone + 'a> Widget<Message, Theme, Renderer>
     /// rest of the batch of events in which it opens, since iced hands that
     /// out before it has the menu, and the list acts on the menu's
     /// [`Choice`] for those.
-    ///
-    /// [`Choice`]: super::menu::Choice
     fn update(
         &mut self,
         tree: &mut Tree,
@@ -166,7 +177,7 @@ impl<'a, T: ToString + PartialEq + Clone + 'a> Widget<Message, Theme, Renderer>
             state.focused = false;
             shell.request_redraw();
         }
-        let choice = self.choice(&state.shared);
+        let choice = Choice::new(self, &state.shared);
         match key_pressed(event) {
             Some(KeyPress { key, press, .. }) if state.shared.is_open() => {
                 choice.press(key, press, shell);
@@ -177,10 +188,10 @@ impl<'a, T: ToString + PartialEq + Clone + 'a> Widget<Message, Theme, Renderer>
                 ..
             }) if state.focused && !press.is_some_and(|press| self.keymap.acts_at_once(press)) => {
                 state.focused = false;
-                self.open(choice, shell);
+                choice.open(shell);
             }
             _ if pressed(event) && state.shared.is_open() => choice.click_beside(over, shell),
-            _ if pressed(event) && over => self.open(choice, shell),
+            _ if pressed(event) && over => choice.open(shell),
             _ if matches!(event, Event::Window(window::Event::RedrawRequested(_))) => {
                 state.over = over;
             }
@@ -224,7 +235,7 @@ impl<'a, T: ToString + PartialEq + Clone + 'a> Widget<Message, Theme, Renderer>
             return None;
         }
         let target = Rectangle::new(layout.position() + translation, layout.bounds().size());
-        let menu = Menu::new(self.choice(shared), menu, target);
+        let menu = Menu::new(Choice::new(self, shared), menu, target);
         Some(overlay::Element::new(Box::new(menu)))
     }
 }

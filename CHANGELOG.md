@@ -16,6 +16,8 @@ Major changes and improvements in each release of cinq, newest first.
   the problems clear, or before the problems left when cinq ends, in place
   of being lost when the terminal switches back.  On Windows, only cinq's
   own messages wait.
+- A drop-down list too narrow for its options cuts the chosen one short
+  with an ellipsis, and its menu grows as wide as the longest option.
 
 ## v0.1.3
 
