@@ -76,3 +76,17 @@ fn typed_settings_apply_once_they_read_and_show_as_typed_meanwhile() {
     let app = typed(app, Setting::NewCues(main), "");
     assert_eq!(app.workspace.outputs()[0].new_cues, None);
 }
+
+#[test]
+fn typed_sends_apply_and_an_empty_field_takes_the_send_away() {
+    let main = OutputId(1);
+    let cue = CueId(1);
+    let sends = |app: &App| {
+        let cue = app.workspace.cue(cue).expect("the cue is there");
+        app.workspace.sends(cue).get(&main).copied()
+    };
+    let app = typed(show(None), Setting::Send(cue, main), "-6");
+    assert_eq!(sends(&app), Some(-6.0));
+    let app = typed(app, Setting::Send(cue, main), "");
+    assert_eq!(sends(&app), None);
+}
