@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Command line, which names the show to open and can name the directory
-//! that config.toml comes from
+//! that config.toml comes from, or lists the audio devices
 
 #[cfg(test)]
 mod tests;
@@ -50,4 +50,8 @@ pub struct Cli {
     /// directory
     #[arg(long, value_name = "DIRECTORY", value_hint = ValueHint::DirPath)]
     pub config_dir: Option<PathBuf>,
+    /// List the ID and the name of each audio device, apart by a tab, for
+    /// audio_device in config.toml to name, and exit
+    #[arg(long, exclusive = true)]
+    pub audio_devices: bool,
 }

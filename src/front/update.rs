@@ -8,6 +8,7 @@
 
 mod cinq;
 mod clock;
+mod device;
 mod editing;
 mod keys;
 mod link;
@@ -66,6 +67,8 @@ impl App {
             Message::EditConfig(file) => return self.opening(move || edit_config(&file)),
             Message::ToggleFullscreen => return self.with_task(Self::toggle_fullscreen),
             Message::Closed(window) => return self.closed(window),
+            Message::ListAudioDevices => return self.with_task(|_| device::listing()),
+            Message::ChooseAudioDevice(device) => return self.chose_audio_device(device),
             // GO and Panic close the help page, so that the show is in view
             // as it runs or stops, and a selection that GO moves scrolls
             // into view, while the list stays put otherwise
@@ -103,6 +106,11 @@ impl App {
             Message::Reconfigured(config) => Self { config, ..self },
             Message::LinkOpened(result) => Self {
                 link_problem: result.err(),
+                ..self
+            },
+            Message::AudioDevicesListed(listed) => self.with_audio_devices(listed),
+            Message::AudioDeviceKept(kept) => Self {
+                device_problem: kept.err(),
                 ..self
             },
             Message::Clicked => self,
@@ -177,6 +185,8 @@ impl App {
                 | Message::Recheck
                 | Message::Rechecked(..)
                 | Message::LinkOpened(_)
+                | Message::AudioDevicesListed(_)
+                | Message::AudioDeviceKept(_)
                 | Message::Saved(_)
                 | Message::Resized(..)
                 | Message::WindowFocused(_)

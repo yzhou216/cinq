@@ -205,3 +205,25 @@ fn mouse_highlights_the_row_under_it_and_picks_the_row_it_presses() {
         }
     );
 }
+
+#[test]
+fn highlight_follows_the_selected_option_until_a_key_moves_it() {
+    let keymap = Keymap::default();
+    let shared = Shared::default();
+    let mut messages = Vec::new();
+    let list =
+        dropdown(OPTIONS, Some(OPTIONS[0]), Message::Step, &keymap).on_open(Message::Clicked);
+    Choice::new(&list, &shared).open(&mut Shell::new(&mut messages));
+    assert!(matches!(messages[..], [Message::Clicked]));
+    // Options listed afresh under the open menu put the selected one last
+    let relisted = dropdown([3, 2, 1], Some(OPTIONS[0]), Message::Step, &keymap);
+    let choice = Choice::new(&relisted, &shared);
+    assert_eq!(choice.highlighted(), Some(2));
+    let up = Key::Named(Named::ArrowUp);
+    choice.press(
+        &up,
+        Press::from_key(&up, Modifiers::empty()),
+        &mut Shell::new(&mut messages),
+    );
+    assert_eq!(choice.highlighted(), Some(1));
+}

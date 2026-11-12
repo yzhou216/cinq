@@ -132,7 +132,7 @@ impl Overlay<Message, Theme, Renderer> for Menu<'_> {
             }
         }
         if shared.reveal.replace(false)
-            && let Some(row) = shared.highlight.get()
+            && let Some(row) = self.choice.highlighted()
         {
             let height = line_height() + PADDING.y();
             let top = height * row as f32;
