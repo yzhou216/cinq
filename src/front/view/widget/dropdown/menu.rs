@@ -41,7 +41,10 @@ pub(super) use overlay::Menu;
 #[derive(Default)]
 pub(super) struct Shared {
     open: Cell<bool>,
-    /// Option under the highlight, which the mouse moves as well as the keys
+    /// Option under the highlight, which the mouse moves as well as the keys,
+    /// or none while it stays on the selected option.  The list finds the
+    /// selected option afresh each time it is built, so that a highlight
+    /// left on it follows it when the options change under the open menu.
     highlight: Cell<Option<usize>>,
     /// Whether the menu has yet to scroll the highlight into view
     reveal: Cell<bool>,
@@ -66,13 +69,20 @@ impl<'b> Choice<'b> {
         Self { dropdown, shared }
     }
 
+    pub(super) fn highlighted(&self) -> Option<usize> {
+        self.shared.highlight.get().or(self.dropdown.chosen)
+    }
+
     /// Opens the menu with the highlight on the selected option, unless
     /// there is no option to choose
     pub(super) fn open(&self, shell: &mut Shell<'_, Message>) {
         if !self.dropdown.names.is_empty() {
             self.shared.open.set(true);
-            self.shared.highlight.set(self.dropdown.chosen);
+            self.shared.highlight.set(None);
             self.shared.reveal.set(true);
+        }
+        if let Some(message) = &self.dropdown.on_open {
+            shell.publish(message.clone());
         }
         shell.capture_event();
         shell.request_redraw();
@@ -81,16 +91,12 @@ impl<'b> Choice<'b> {
     pub(super) fn press(&self, key: &Key, press: Option<Press>, shell: &mut Shell<'_, Message>) {
         match reply(self.dropdown.keymap, key, press) {
             Reply::Step(offset) => {
-                let row = step(
-                    self.shared.highlight.get(),
-                    offset,
-                    self.dropdown.names.len(),
-                );
+                let row = step(self.highlighted(), offset, self.dropdown.names.len());
                 self.shared.highlight.set(row);
                 self.shared.reveal.set(true);
                 shell.capture_event();
             }
-            Reply::Pick => self.pick(self.shared.highlight.get(), shell),
+            Reply::Pick => self.pick(self.highlighted(), shell),
             Reply::Close => self.shared.open.set(false),
             Reply::Pass => {}
             Reply::Keep => shell.capture_event(),

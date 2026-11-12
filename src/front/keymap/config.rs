@@ -3,18 +3,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Configuration file, which chooses a keymap, binds actions to keys, and
-//! sets how far ahead sounds are made ready
+//! sets the audio device that sound plays on and how far ahead sounds are
+//! made ready
 //!
 //! `keymap` names the keymap that the keys start from, which is vi unless
 //! the file names another: a shipped one, or one of the `[keymaps]` table,
 //! which starts from the keymap that its `from` names, or from no keys at
 //! all without one.  A keymap of the file's own and the `[keys]` table bind
 //! each action they name to a key sequence or a list of them, in place of
-//! the keys that the keymap they build on gives it.  `ready_ahead` counts
-//! the seconds before a sound starts that it is made ready:
+//! the keys that the keymap they build on gives it.  `audio_device` gives
+//! the ID of an audio device in place of the default one, and
+//! `ready_ahead` counts the seconds before a sound starts that it is made
+//! ready:
 //!
 //! ```toml
 //! keymap = "booth"
+//! audio_device = "alsa:plughw:CARD=1,DEV=0"
 //! ready_ahead = 5
 //!
 //! [keymaps.booth]
@@ -25,6 +29,7 @@
 //! delete = []
 //! ```
 
+mod edit;
 mod parse;
 mod problem;
 mod watch;
@@ -37,14 +42,15 @@ use std::{
 
 use super::Keymap;
 use crate::{back::READY_AHEAD, front::read};
+pub use edit::keep_audio_device;
 pub(super) use parse::parse;
 pub use problem::Problem;
 pub use watch::{Errors, guard, restore, watch};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Config {
     pub keymap: Keymap,
-    pub ready_ahead: f64,
+    pub sound: Sound,
     pub source: Source,
     /// Text of the file, when it could be read, which the problems point
     /// into
@@ -54,14 +60,36 @@ pub struct Config {
     pub problems: Vec<Problem>,
 }
 
-impl Default for Config {
+impl Config {
+    /// Returns the configuration with the sound on the audio device whose
+    /// ID is `device`, or on the default device without one, as the file
+    /// will once it keeps the choice
+    pub fn with_audio_device(self, device: Option<String>) -> Self {
+        Self {
+            sound: Sound {
+                device,
+                ..self.sound
+            },
+            ..self
+        }
+    }
+}
+
+/// Settings of the sound output
+#[derive(Debug, Clone)]
+pub struct Sound {
+    /// ID of the audio device that sound plays on, or none for the default
+    /// device
+    pub device: Option<String>,
+    /// Seconds before a sound starts that it is made ready
+    pub ready_ahead: f64,
+}
+
+impl Default for Sound {
     fn default() -> Self {
         Self {
-            keymap: Keymap::default(),
+            device: None,
             ready_ahead: READY_AHEAD,
-            source: Source::default(),
-            text: None,
-            problems: Vec::new(),
         }
     }
 }
@@ -115,10 +143,10 @@ pub fn load(file: Option<&Path>) -> Config {
     };
     match read(file) {
         Ok(Some(text)) => {
-            let (keymap, ready_ahead, problems) = parse(&text);
+            let (keymap, sound, problems) = parse(&text);
             Config {
                 keymap,
-                ready_ahead,
+                sound,
                 source: Source::File(file.to_owned()),
                 text: Some(text),
                 problems,

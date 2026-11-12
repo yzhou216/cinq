@@ -26,8 +26,8 @@ _%APPDATA%\\cinq\\config.toml_
 runs most of it.
 It ships two keymaps, each of which binds keys to every action, and a
 configuration file in TOML chooses one of them, or builds keymaps of its own,
-and binds actions to other keys, and it sets how far ahead *cinq* makes sounds
-ready.
+and binds actions to other keys, and it sets the audio device that sound plays
+on and how far ahead *cinq* makes sounds ready.
 *cinq* reads the file when it starts and again whenever it changes, so that the
 keys, the help page that lists them, and the other settings follow each change
 as soon as it is saved.
@@ -76,6 +76,30 @@ Started with *--config-dir*=_directory_, *cinq* reads _directory/config.toml_
 in its place, and follows it as it changes in the same way.
 
 # SETTINGS
+
+*audio_device*
+	ID of the audio device that the sound of audio and video cues plays on, in
+	place of the default device of the system.
+	*cinq --audio-devices* lists the ID and the name of each device, apart by a
+	tab, one device to a line.
+	The *Audio device* list in the sidebar of the main window chooses a device
+	as well, and *cinq* writes the choice here.
+	It changes only the line of this setting, or adds the line before the
+	first setting of the file, and leaves the rest as it is.
+	A change moves the sound as soon as the file is saved, and the sounds that
+	play go on from where they are on the new device.
+	A device can take a moment to start, during which nothing is heard and
+	the cues that play wait for it.
+	While the device is not there, or cannot be opened, nothing is heard and
+	the warnings in the sidebar tell why, and saving the file tries again.
+; if xdg
+	On ALSA, *cinq* plays on most sound cards only through a plug that
+	converts its samples, as the devices whose IDs begin with _alsa:plughw:_
+	or _alsa:sysdefault:_ do, and _alsa:default_ and _alsa:pipewire_.
+	The _alsa:hw:_, _alsa:front:_, and _alsa:hdmi:_ devices of most cards take
+	samples only in a format of their own, and cannot be opened.
+; end
+	It is the default device unless the file names another.
 
 *keymap*
 	Name of the keymap that the keys start from: one that *cinq* ships, *vi*
@@ -463,7 +487,9 @@ A file or a pipe takes the problems of each reading in turn, as does a
 terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
 
 - A file that cannot be read, or that is not TOML, leaves the keys of the vi
-  keymap and the default *ready_ahead*.
+  keymap, the default audio device, and the default *ready_ahead*.
+- An *audio_device* that is not a string, or is an empty one, leaves the
+  default device.
 - A *keymap* that names no keymap leaves the keys of vi, and a *keys* that is
   not a table leaves those of the keymap.
   A keymap of the file's own whose *from* names no keymap starts from no keys,
@@ -471,9 +497,9 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   keymap in use, and one named after a shipped keymap goes unused.
 - A *ready_ahead* that is not a number, or is below 0, such as a negative
   number or a string, leaves the default of 10 seconds.
-- A setting other than *keymap*, *keymaps*, *keys*, and *ready_ahead*, and an
-  entry of a table that names no action, are ignored, and the rest of the file
-  applies.
+- A setting other than *audio_device*, *keymap*, *keymaps*, *keys*, and
+  *ready_ahead*, and an entry of a table that names no action, are ignored, and
+  the rest of the file applies.
 - An empty string, a key that names no key or that *KEYS* rules out, a
   sequence that starts with a digit, and a value that is not a string are left
   out, and the action keeps the other keys listed for it, which may be none.
@@ -527,6 +553,15 @@ Make ready the sounds that start within 2.5 seconds, on a small system:
 ```
 ready_ahead = 2.5
 ```
+
+; if xdg
+Play the sound on the second sound card, such as a USB audio interface beside
+the card built in, through the plug that converts samples for it:
+
+```
+audio_device = "alsa:plughw:CARD=1,DEV=0"
+```
+; end
 
 # SEE ALSO
 

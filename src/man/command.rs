@@ -76,7 +76,9 @@ fn synopsis(command: &Command) -> Roff {
 }
 
 /// Returns `argument` as the synopsis gives it, after a space: its flags
-/// apart by bars, then its value, in brackets unless it is required
+/// apart by bars, then its value, if it takes one, in brackets unless it is
+/// required.  The derive of clap names a value even for a flag that takes
+/// none.
 fn usage(argument: &Arg) -> Vec<Inline> {
     let flags: Vec<Inline> = [
         argument.get_short().map(|short| format!("-{short}")),
@@ -89,6 +91,7 @@ fn usage(argument: &Arg) -> Vec<Inline> {
     .collect();
     let value = argument
         .get_value_names()
+        .filter(|_| argument.get_action().takes_values())
         .map(|names| italic(names.join(" ")));
     let space = (!flags.is_empty() && value.is_some()).then(|| roman(" "));
     let (open, close) = if argument.is_required_set() {

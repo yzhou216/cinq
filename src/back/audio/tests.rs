@@ -6,6 +6,7 @@
 //! of the time that the sounds of audio and video cues have reached, which
 //! need no audio device
 
+mod device;
 mod voice;
 
 use std::{

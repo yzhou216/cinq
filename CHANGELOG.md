@@ -34,6 +34,15 @@ Major changes and improvements in each release of cinq, newest first.
   it stay with what is heard.  A sound that drifts from the clock of the
   show, or a device that waits before it plays, no longer leaves the cue to
   end before its sound and cut off its last moments.
+- The sound of audio and video cues can play on another audio device than
+  the default device of the system.  The Audio device list in the sidebar
+  chooses one, and `config.toml` keeps the choice in `audio_device`, by an
+  ID that `cinq --audio-devices` lists along with the name of each device.
+  A choice applies at once, and the sounds that play go on from where they
+  are on the new device once it starts.  The list asks for the devices each
+  time it opens, so that a device plugged in since shows.
+- A drop-down list too narrow for its options cuts the chosen one short
+  with an ellipsis, and its menu grows as wide as the longest option.
 
 ## v0.1.3
 

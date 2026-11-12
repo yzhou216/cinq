@@ -24,6 +24,17 @@ fn command_line_is_well_formed() {
 }
 
 #[test]
+fn audio_devices_are_listed_only_by_themselves() {
+    let listing = Cli::try_parse_from(["cinq", "--audio-devices"]).map(|cli| cli.audio_devices);
+    assert!(matches!(listing, Ok(true)));
+    let mixed = [
+        ["cinq", "--audio-devices", "show.cinq"],
+        ["cinq", "--audio-devices", "--config-dir=."],
+    ];
+    assert!(mixed.iter().all(|args| Cli::try_parse_from(args).is_err()));
+}
+
+#[test]
 fn completions_of_every_shell_offer_the_options() {
     let lacking: Vec<&str> = [
         ("bash", script(Shell::Bash)),
