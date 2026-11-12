@@ -38,6 +38,10 @@ Major changes and improvements in each release of cinq, newest first.
 - The Levels tab of an audio or video cue sets the level at which the cue
   sends to each output of the show, and a field left empty sends nothing
   there.
+- The tutorial has a chapter on outputs, in which the reader sends the
+  sound of a cue to each speaker of the computer in turn, and its first
+  chapter names the outputs and the default device among what the sidebar
+  shows.
 - In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
   rename does in desktop file managers, and no key puts the caret at the end
   of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and
