@@ -437,6 +437,7 @@ dependencies = [
  "rayon",
  "resvg",
  "rfd",
+ "rtrb",
  "rust_h264",
  "rustix 1.1.6",
  "serde",

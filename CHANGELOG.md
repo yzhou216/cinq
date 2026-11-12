@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Sounds play through a mixer of cinq's own, which opens each audio device
+  itself, so that a sound can reach any channel of a device.  A device whose
+  stream stops, as one unplugged, says so among the warnings, where the sound
+  once moved to the default device.
 - In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
   rename does in desktop file managers, and no key puts the caret at the end
   of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and
