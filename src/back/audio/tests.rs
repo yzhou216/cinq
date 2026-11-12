@@ -7,6 +7,7 @@
 //! need no audio device
 
 mod device;
+mod patch;
 mod voice;
 
 use std::{

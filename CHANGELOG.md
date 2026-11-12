@@ -10,6 +10,16 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A show has outputs, the named places that its cues send their sound to,
+  each on one channel or two of an audio device, such as the house speakers
+  on the first two channels of a desk and the subwoofer on its third.  Each
+  audio and video cue sends to the outputs it names, each at a level of its
+  own, and moving an output to other channels or another device moves every
+  cue that sends to it.  Show files hold them in `output` and in the `sends`
+  of each cue, as cinq-show(5) describes.  A show without outputs plays on
+  the first two channels of the default device, as before.  An output that
+  cannot play says why among the warnings, and the cues play on the others.
+
 ## v0.1.4
 
 - While the problems of `config.toml` take a screen of their own on a

@@ -86,7 +86,8 @@ impl Workspace {
             Change::Moved { cue, from, .. } => self.with_cue_moved(cue, from),
             Change::Edited { cue, undo, .. } => self.changed(cue, undo),
             Change::Standby(standby) => self.with_standby_moved(standby.reversed()),
-            Change::Restored { before, .. } => self.with_lists(before),
+            Change::Restored { before, .. } => self.with_kept(before),
+            Change::Outputs { before, .. } => self.with_outputs(before),
         }
     }
 
@@ -99,7 +100,8 @@ impl Workspace {
             Change::Moved { cue, to, .. } => self.with_cue_moved(cue, to),
             Change::Edited { cue, redo, .. } => self.changed(cue, redo),
             Change::Standby(standby) => self.with_standby_moved(standby),
-            Change::Restored { after, .. } => self.with_lists(after),
+            Change::Restored { after, .. } => self.with_kept(after),
+            Change::Outputs { after, .. } => self.with_outputs(after),
         }
     }
 

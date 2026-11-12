@@ -6,7 +6,7 @@
 
 use std::mem;
 
-use crate::back::{Cue, CueId, CueList, Edit};
+use crate::back::{Cue, CueId, CueList, Edit, Output, OutputEdit, OutputId};
 
 #[derive(Debug, Clone)]
 pub enum Change {
@@ -30,12 +30,24 @@ pub enum Change {
     Edited { cue: CueId, undo: Edit, redo: Edit },
     /// Standby of a list moved by the operator
     Standby(Standby),
-    /// Cue lists kept from before put in place of those of the show, with
-    /// the lists before and after
-    Restored {
-        before: Vec<CueList>,
-        after: Vec<CueList>,
+    /// Cue lists and outputs kept from before put in place of those of the
+    /// show, with those before and after
+    Restored { before: Kept, after: Kept },
+    /// Outputs added, deleted, moved, or edited, with all of them before
+    /// and after, and the output and the setting that an edit changed, by
+    /// which edits of one setting in a row make one change
+    Outputs {
+        before: Vec<Output>,
+        after: Vec<Output>,
+        setting: Option<(OutputId, mem::Discriminant<OutputEdit>)>,
     },
+}
+
+/// Cue lists and outputs of a show as they were or became
+#[derive(Debug, Clone)]
+pub struct Kept {
+    pub lists: Vec<CueList>,
+    pub outputs: Vec<Output>,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +87,7 @@ impl Change {
             Change::Added { placed, .. } => Some(placed.cue.id),
             Change::Deleted { cues, .. } => cues.first().map(|placed| placed.cue.id),
             Change::Moved { cue, .. } | Change::Edited { cue, .. } => Some(*cue),
-            Change::Standby(_) | Change::Restored { .. } => None,
+            Change::Standby(_) | Change::Restored { .. } | Change::Outputs { .. } => None,
         }
     }
 
@@ -92,6 +104,16 @@ impl Change {
                     ..
                 },
             ) => cue == next && mem::discriminant(redo) == mem::discriminant(again),
+            (
+                Change::Outputs {
+                    setting: Some(setting),
+                    ..
+                },
+                Change::Outputs {
+                    setting: Some(again),
+                    ..
+                },
+            ) => setting == again,
             _ => false,
         }
     }
@@ -106,6 +128,11 @@ impl Change {
             (Self::Moved { cue, from, .. }, Self::Moved { to, .. }) => {
                 Self::Moved { cue, from, to }
             }
+            (Self::Outputs { before, .. }, Self::Outputs { after, setting, .. }) => Self::Outputs {
+                before,
+                after,
+                setting,
+            },
             (_, next) => next,
         }
     }
@@ -116,6 +143,7 @@ impl Change {
         match self {
             Self::Edited { undo, redo, .. } => undo == redo,
             Self::Moved { from, to, .. } => from == to,
+            Self::Outputs { before, after, .. } => before == after,
             _ => false,
         }
     }

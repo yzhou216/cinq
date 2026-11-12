@@ -30,8 +30,23 @@ pub fn devices() -> Result<Vec<(String, String)>, String> {
         .collect())
 }
 
-/// Returns the audio device whose ID is `id`, or why there is none
-pub(super) fn find(id: &str) -> Result<Device, String> {
+/// Returns the audio device whose ID is `id`, or else the only device
+/// named `name`, as on a machine that gives the device another ID, or why
+/// there is none.  Two devices of one name are told apart by ID alone.
+pub(super) fn find(id: &str, name: Option<&str>) -> Result<Device, String> {
+    let named = || {
+        let name = name.filter(|name| !name.is_empty())?;
+        let mut alike = cpal::default_host()
+            .output_devices()
+            .ok()?
+            .filter(|device| {
+                device
+                    .description()
+                    .is_ok_and(|description| description.name() == name)
+            });
+        let found = alike.next()?;
+        alike.next().is_none().then_some(found)
+    };
     DeviceId::from_str(id)
         .ok()
         .and_then(|parsed| {
@@ -39,5 +54,9 @@ pub(super) fn find(id: &str) -> Result<Device, String> {
                 .ok()?
                 .device_by_id(&parsed)
         })
-        .ok_or_else(|| format!("there is no audio device {id}"))
+        .or_else(named)
+        .ok_or_else(|| {
+            let named = name.filter(|name| !name.is_empty()).unwrap_or(id);
+            format!("there is no audio device {named}")
+        })
 }

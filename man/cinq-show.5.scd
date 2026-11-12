@@ -18,8 +18,8 @@ _show_.cinq.toml
 
 A show of *cinq* lives in a file in TOML, which *cinq* opens from its command
 line or from the file chooser of the desktop, and which saving writes.
-The file lists the cue lists of the show in order, each with its cues, and
-each cue with the settings that its kind uses.
+The file lists the outputs of the show, the cue lists of the show in order,
+each with its cues, and each cue with the settings that its kind uses.
 What belongs to a session rather than to the show stays out of the file: the
 cue on standby, which is the first of each list once the show opens, the cues
 that run, and how long each sound or video file plays.
@@ -30,6 +30,48 @@ which it writes for every cue whose kind uses them.
 A file can leave out any setting but the *name* of a list and the *id* and the
 *kind* of a cue.
 *cinq* passes over settings that it does not know.
+
+# OUTPUTS
+
+An output is a named place that cues send their sound to, such as the house
+speakers, a subwoofer, or the monitors on stage.
+It plays on one channel of an audio device, or on two, left first.
+Cues name outputs and never devices or channels, so that moving an output to
+other channels, or to another device at another venue, moves every cue that
+sends to it.
+Each output is a table in the array *output*, in order:
+
+*name*
+	Name of the output, which no other output of the show has.
+
+*device*
+	ID of the audio device that the output plays on, as
+	*cinq --audio-devices* lists it.
+	An output without one plays on the default device, which *cinq*(5) can
+	choose for each machine.
+
+*device_name*
+	Name of the device, which finds the device on a machine that gives it
+	another ID, as long as no other device there has the name.
+
+*channels*
+	Channels of the device that the output plays on, counted from 1: _3_ for
+	one channel, and _1-2_ or _1,3_ for two, the left first.
+	A stereo file plays its left and right on the two channels of a stereo
+	output, and its sum on the channel of a mono one.
+	A mono file plays on every channel of the output at its own level.
+
+*new_cues*
+	Level in dB at which new audio and video cues send to the output, which
+	they do not without one.
+
+A file without outputs has one, Main, on the first two channels of the default
+device, at which new cues send at 0 dB, and a show that has Main alone, as it
+was made, writes no outputs.
+An output that cannot play, as one whose device is not there, shows among the
+warnings, and the cues play on the others.
+A file in which two outputs share a name, or whose channels are neither one
+nor two, cannot be opened.
 
 # LISTS
 
@@ -123,11 +165,18 @@ Each cue is a table in the array *cue* of its list:
 	Whether a fade cue stops its target once the fade is over, which it does
 	by default.
 
+*sends*
+	Table of the levels in dB at which an audio or video cue sends to
+	outputs, each entry named after an output, between -60 and 12.
+	The cue plays on those outputs alone, after its *level*, which fade cues
+	move.
+	A cue without one sends to the first output at 0 dB.
+
 *notes*
 	Notes of the cue, for the operator.
 
-A file in which two cues share an identity, or a level lies outside its range,
-cannot be opened.
+A file in which two cues share an identity, a level lies outside its range, or
+a cue sends to an output that the show does not have, cannot be opened.
 
 # STAGE
 
@@ -320,6 +369,47 @@ target = 1
 duration = 1.0
 level = -60.0
 stop_target = true
+```
+
+A show whose house speakers play on the first two channels of a desk, its
+subwoofer on the third, and its monitors on the fifth and sixth, and a storm
+that plays in the house and the subwoofer, but not in the monitors:
+
+```
+[[output]]
+name = "House"
+device = "alsa:plughw:CARD=X32,DEV=0"
+device_name = "X32, USB Audio"
+channels = "1-2"
+new_cues = 0.0
+
+[[output]]
+name = "Sub"
+device = "alsa:plughw:CARD=X32,DEV=0"
+device_name = "X32, USB Audio"
+channels = "3"
+new_cues = -6.0
+
+[[output]]
+name = "Monitors"
+device = "alsa:plughw:CARD=X32,DEV=0"
+device_name = "X32, USB Audio"
+channels = "5-6"
+
+[[list]]
+name = "Main"
+
+[[list.cue]]
+id = 1
+number = "1"
+kind = "audio"
+name = "Storm"
+file = "sounds/storm.ogg"
+level = -4.0
+
+[list.cue.sends]
+House = 0.0
+Sub = -6.0
 ```
 
 # SEE ALSO

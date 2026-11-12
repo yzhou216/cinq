@@ -26,8 +26,8 @@ _%APPDATA%\\cinq\\config.toml_
 runs most of it.
 It ships two keymaps, each of which binds keys to every action, and a
 configuration file in TOML chooses one of them, or builds keymaps of its own,
-and binds actions to other keys, and it sets the audio device that sound plays
-on and how far ahead *cinq* makes sounds ready.
+and binds actions to other keys, and it sets the audio device that outputs play
+on by default and how far ahead *cinq* makes sounds ready.
 *cinq* reads the file when it starts and again whenever it changes, so that the
 keys, the help page that lists them, and the other settings follow each change
 as soon as it is saved.
@@ -78,20 +78,22 @@ in its place, and follows it as it changes in the same way.
 # SETTINGS
 
 *audio_device*
-	ID of the audio device that the sound of audio and video cues plays on, in
-	place of the default device of the system.
+	ID of the audio device that the outputs of a show play on where they name
+	no device, as *cinq-show*(5) describes, in place of the default device of
+	the system.
 	*cinq --audio-devices* lists the ID and the name of each device, apart by a
 	tab, one device to a line.
 	The *Audio device* list in the sidebar of the main window chooses a device
 	as well, and *cinq* writes the choice here.
 	It changes only the line of this setting, or adds the line before the
 	first setting of the file, and leaves the rest as it is.
-	A change moves the sound as soon as the file is saved, and the sounds that
-	play go on from where they are on the new device.
+	A change moves those outputs as soon as the file is saved, and the sounds
+	that play go on from where they are on the new device.
 	A device can take a moment to start, during which nothing is heard and
 	the cues that play wait for it.
-	While the device is not there, or cannot be opened, nothing is heard and
-	the warnings in the sidebar tell why, and saving the file tries again.
+	While the device is not there, or cannot be opened, those outputs are
+	silent, the warnings in the sidebar tell why, and saving the file tries
+	again.
 ; if xdg
 	On ALSA, *cinq* plays on most sound cards only through a plug that
 	converts its samples, as the devices whose IDs begin with _alsa:plughw:_

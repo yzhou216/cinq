@@ -30,7 +30,7 @@ impl Cinq {
         let cinq = Self {
             app: App {
                 main: Some(main),
-                audio_error: audio.error(),
+                audio_problems: audio.problems(),
                 config,
                 reader: reader.clone(),
                 ..App::default()
@@ -71,7 +71,7 @@ impl Cinq {
         let kept = self.keeper.keep(&app.show);
         let app = App {
             stage: app.stage.with_pictures(&workspace, pictures).with_due(due),
-            audio_error: self.audio.error(),
+            audio_problems: self.audio.problems(),
             workspace,
             ..app
         }
