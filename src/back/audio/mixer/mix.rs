@@ -7,8 +7,8 @@
 //! The thread must never wait, so it takes no lock and frees no memory.
 //! The main thread sends it sounds and their gains over one ring, and it
 //! hands back over another what it no longer needs, for the main thread to
-//! free.  A sound that goes fades out over ten milliseconds, so that it
-//! does not click.
+//! free.  A change of gains ramps over ten milliseconds, and a sound that
+//! goes fades out over as many, so that neither clicks.
 
 use kira::backend::Renderer;
 use rtrb::{Consumer, Producer};
@@ -36,6 +36,7 @@ pub(super) struct Slot {
 
 pub(super) enum Command {
     Add(Box<Slot>),
+    Route(u64, Gains),
     Remove(u64),
 }
 
@@ -52,10 +53,13 @@ impl Command {
     }
 }
 
-/// Sound that the stream no longer needs, which the main thread frees
-pub(super) struct Gone(#[allow(dead_code)] Box<Slot>);
+/// What the stream no longer needs, which the main thread frees
+pub(super) enum Gone {
+    Slot(#[allow(dead_code)] Box<Slot>),
+    Gains(#[allow(dead_code)] Gains),
+}
 
-pub(super) struct Mix {
+pub(in crate::back::audio) struct Mix {
     channels: usize,
     /// Frames over which a sound fades out, as long as the default fade of kira
     ramp: usize,
@@ -91,7 +95,7 @@ impl Mix {
     }
 
     /// Fills `out`, frames of interleaved channels, with every sound
-    pub(super) fn render(&mut self, out: &mut [f32]) {
+    pub(in crate::back::audio) fn render(&mut self, out: &mut [f32]) {
         self.obey();
         out.fill(0.0);
         let channels = self.channels;
@@ -112,6 +116,16 @@ impl Mix {
         while let Ok(command) = self.commands.pop() {
             match command {
                 Command::Add(slot) => self.slots.push(slot),
+                Command::Route(id, gains) => {
+                    let old = match self.slot(id) {
+                        Some(slot) if !slot.leaving => {
+                            slot.ramp = ramp;
+                            std::mem::replace(&mut slot.target, gains)
+                        }
+                        _ => gains,
+                    };
+                    let _ = self.gone.push(Gone::Gains(old));
+                }
                 Command::Remove(id) => {
                     if let Some(slot) = self.slot(id) {
                         slot.target.fill([0.0; 2]);
@@ -138,7 +152,7 @@ impl Mix {
             .iter()
             .position(|slot| slot.leaving && slot.ramp == 0)
         {
-            let _ = self.gone.push(Gone(self.slots.swap_remove(index)));
+            let _ = self.gone.push(Gone::Slot(self.slots.swap_remove(index)));
         }
     }
 }
@@ -188,5 +202,13 @@ impl Slot {
                 };
             });
         self.ramp -= span;
+    }
+}
+
+#[cfg(test)]
+impl Mix {
+    /// Returns how many sounds the mix holds, those that fade out included
+    pub(in crate::back::audio) fn sounds(&self) -> usize {
+        self.slots.len()
     }
 }

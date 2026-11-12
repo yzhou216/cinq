@@ -25,9 +25,9 @@ use std::{
 
 use iced::{Size, window};
 
-use crate::back::{Audio, CueId, CueList, Kind, Video, Workspace};
+use crate::back::{Audio, CueId, CueList, Kind, OutputId, Video, Workspace};
 use keymap::{Press, config::Config};
-use message::{Caret, Focus, Message, Tab};
+use message::{Caret, Focus, Message, Setting, Tab};
 use update::{
     Clipboard, Clipped, History, Keeper, Measures, Reader, Search, Searched, Show, Stage,
 };
@@ -135,7 +135,8 @@ struct App {
     /// Way to read the unsaved changes kept for shows, if the platform has
     /// a directory to keep them in
     reader: Option<Reader>,
-    audio_error: Option<String>,
+    /// Why each output that cannot play cannot, by its identity
+    audio_problems: Vec<(OutputId, String)>,
     /// ID and name of each audio device, as they were listed last
     audio_devices: Vec<(String, String)>,
     /// Why the configuration file did not keep the audio device chosen
@@ -153,6 +154,13 @@ struct App {
     /// Level of a cue as the operator types it, which its field shows in
     /// place of the level until the operator does anything else
     typed_level: Option<(CueId, String)>,
+    /// Text of a setting as the operator types it, which its field shows in
+    /// place of the setting until the operator does anything else
+    typed: Option<(Setting, String)>,
+    /// Whether the outputs of the show show in place of the cue list
+    outputs_shown: bool,
+    /// Output that the inspector shows while the outputs show
+    output: Option<OutputId>,
     tab: Tab,
     /// Cues copied or cut, which pasting adds
     clipboard: Clipboard,

@@ -2,9 +2,12 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Inspector, which shows every setting of the selected cue on three tabs
+//! Inspector, which shows every setting of the selected cue on three tabs,
+//! or those of the selected output, without tabs, while the outputs show
 
 mod field;
+mod output;
+mod sends;
 
 use iced::{
     Center, Element, Fill,
@@ -45,10 +48,12 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         .extend(
             Tab::VARIANTS
                 .iter()
+                .filter(|_| !app.outputs_shown)
                 .map(|&tab| radio(tab.to_string(), tab, Some(app.tab), Message::Tab).into()),
         )
         .spacing(SPACING);
     let body = match app.selected.and_then(|id| app.workspace.cue(id)) {
+        _ if app.outputs_shown => output::view(app),
         Some(cue) => inspected(app, cue),
         None if app.current().cues.is_empty() => text("This list has no cues to inspect").into(),
         None => text("Select a cue to inspect it").into(),
@@ -157,6 +162,7 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
             .spacing(SPACING)
             .align_y(Center),
         stop,
+        cue.kind.plays_file().then(|| sends::view(app, cue)),
     ]
     .spacing(SPACING)
     .into()

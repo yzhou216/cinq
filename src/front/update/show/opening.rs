@@ -88,9 +88,11 @@ impl App {
             ..self
         };
         let opened = match kept {
-            Ok(Some(kept)) if kept.show(opened.show.directory()) != opened.show.saved => {
-                opened.send(Command::Restore(kept.lists().to_vec()))
-            }
+            Ok(Some(kept)) if kept.show(opened.show.directory()) != opened.show.saved => opened
+                .send(Command::Restore(
+                    kept.lists().to_vec(),
+                    kept.outputs().to_vec(),
+                )),
             Ok(_) => opened,
             Err(problem) => Self {
                 file_problem: Some(format!(
@@ -101,14 +103,21 @@ impl App {
         };
         // Selection and message once the kept changes are back, since
         // bringing them back replaces the cues and clears what was told
-        Self {
+        let opened = Self {
             told,
-            // Cue identities restart from one in each show
+            // Cue and output identities restart from one in each show
             history: History::default(),
             scroll: None,
+            output: None,
             ..opened
         }
         .switched_to(0)
-        .without_search()
+        .without_search();
+        // Outputs that stay in view select the first of the new show
+        if opened.outputs_shown {
+            opened.showing_outputs()
+        } else {
+            opened
+        }
     }
 }

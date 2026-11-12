@@ -10,6 +10,7 @@ mod adding;
 mod editing;
 mod files;
 mod history;
+mod outputs;
 mod pasting;
 mod picture;
 mod playback;

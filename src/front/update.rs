@@ -20,6 +20,7 @@ mod link;
 mod loading;
 mod navigation;
 mod operators;
+mod outputs;
 mod paging;
 mod reveal_focused;
 mod scroll;
@@ -56,11 +57,15 @@ impl App {
             // A key that moves the keyboard to another field ends the run of
             // edits to the field that it leaves, as a click there does
             Message::Focus(focus) => self.send(Command::EndRun).focused(focus),
+            // While the outputs show, the keys that move through and change
+            // cue rows act on outputs or on nothing, so that none of them
+            // reaches the cue list out of sight
+            message if self.outputs_shown && message.acts_on_rows() => self.in_outputs(message),
             // Selection scrolls into view as it or the rows around it move,
             // and as the main window changes size
             Message::Select(id) => self
                 .without_search()
-                .crossing(|app| app.with_selection(id))
+                .crossing(|app| app.showing_cues().with_selection(id))
                 .revealed(),
             Message::Step(offset) => self.stepped(offset).revealed(),
             Message::Row(row) => self.jumping(|app| app.at_row(row)).revealed(),
@@ -79,7 +84,7 @@ impl App {
             Message::Place(height, count) => self.placed(height, count),
             Message::SwitchList(list) => self
                 .without_search()
-                .jumping(|app| app.switched_to(list))
+                .jumping(|app| app.showing_cues().switched_to(list))
                 .revealed(),
             Message::StepList(offset) => self.jumping(|app| app.stepped_list(offset)).revealed(),
             Message::Back(count) => self.walking(|app| app.went_back(count)),
@@ -143,6 +148,7 @@ impl App {
             }
             // Keys typed so far went already, as for any message
             Message::Cancel => self.cancelled(),
+            Message::ShowOutputs => self.showing_outputs().revealed(),
             // Buttons of the mouse go back and forward from the main window, as
             // the keys do, apart from the help page, which the keys leave be
             Message::SidePressed(window, mouse::Button::Back)
@@ -181,6 +187,9 @@ impl App {
             | Message::LinkOpened(_)
             | Message::AudioDevicesListed(_)
             | Message::AudioDeviceKept(_)
+            | Message::SelectOutput(_)
+            | Message::SettingTyped(..)
+            | Message::OutputDevice(..)
             | Message::Clicked
             | Message::WindowFocused(_)
             | Message::Edit(..)

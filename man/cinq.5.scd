@@ -24,10 +24,10 @@ _%APPDATA%\\cinq\\config.toml_
 
 *cinq* is a cue-based show controller in the spirit of QLab, and the keyboard
 runs most of it.
-It ships two keymaps, each of which binds keys to every action, and a
-configuration file in TOML chooses one of them, or builds keymaps of its own,
-and binds actions to other keys, and it sets the audio device that sound plays
-on and how far ahead *cinq* makes sounds ready.
+It ships two keymaps, *vi* and *cua*, as *KEYMAPS* describes them.
+A configuration file in TOML chooses one of them or builds keymaps of its own,
+binds actions to other keys, and sets the audio device that outputs play on by
+default and how far ahead *cinq* makes sounds ready.
 *cinq* reads the file when it starts and again whenever it changes, so that the
 keys, the help page that lists them, and the other settings follow each change
 as soon as it is saved.
@@ -103,21 +103,23 @@ _tutorial.pdf_
 # SETTINGS
 
 *audio_device*
-	ID of the audio device that the sound of audio and video cues plays on, in
-	place of the default device of the system.
-	*cinq --audio-devices* lists the ID and the name of each device, apart by a
-	tab, one device to a line.
-	The *Audio device* list in the sidebar of the main window chooses a device
-	as well, and *cinq* writes the choice here.
+	ID of the audio device that the outputs of a show play on where they name
+	no device, as *cinq-show*(5) describes, in place of the default device of
+	the system.
+	*cinq --audio-devices* lists the ID and the name of each device, separated
+	by a tab, one device to a line.
+	The *Default device* list in the sidebar of the main window chooses a
+	device as well, and *cinq* writes the choice here.
 	It changes only the line of this setting, adds the line before the first
 	setting of the file, or takes the line out for the system default, and
 	leaves the rest as it is.
-	A change moves the sound as soon as the file is saved, and the sounds that
-	play go on from where they are on the new device.
+	A change moves those outputs as soon as the file is saved, and the sounds
+	that play go on from where they are on the new device.
 	A device can take a moment to start, during which nothing is heard and
 	the cues that play wait for it.
-	While the device is not there, or cannot be opened, nothing is heard and
-	the warnings in the sidebar tell why, and saving the file tries again.
+	While the device is not there, or cannot be opened, those outputs are
+	silent, the warnings in the sidebar tell why, and saving the file tries
+	again.
 ; if xdg
 	On ALSA, *cinq* plays on most sound cards only through a plug that
 	converts its samples, as the devices whose IDs begin with _alsa:plughw:_
@@ -544,9 +546,9 @@ A text field of the inspector, or a drop-down list
 	next, which shows a border in the color of focus.
 	A text field that these keys reach has its text selected, so that typing
 	replaces it, whereas a click puts the caret where it fell.
-	From the cue list, *next_field* goes first to the first field of the
-	inspector, so that the settings of what is selected are one key away, and
-	then on through the rest of the inspector, the toolbar, and the sidebar,
+	From the cue list, or the outputs, *next_field* goes first to the first field
+	of the inspector, so that the settings of what is selected are one key away,
+	and then on through the rest of the inspector, the toolbar, and the sidebar,
 	and round again, which *previous_field* does the other way.
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
 	*panic*, *cancel*, *next_field*, *previous_field*, *back*, *forward*, *open*,
@@ -621,6 +623,16 @@ Show mode locks editing: *edit*, *edit_start*, *change_name*, *add_below*,
 and forth.
 Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
 read-only buffer.
+
+The outputs of the show, which *Outputs* below the cue lists in the sidebar
+shows in place of the cue list, take some actions of cues: *next*,
+*previous*, *first*, and *last* select an output, which the inspector then
+edits, *edit* edits its name, *add_below* and *add_above* add an output,
+*move_down* and *move_up* move it, and *delete* deletes the selected output only,
+whatever the count.
+Every other action that moves through, scrolls, searches, or changes the rows
+of a cue list, such as *standby*, *half_page_down*, *search*, *cut*, *copy*,
+and *paste_below*, does nothing there, since the cue list is out of sight.
 
 # ACTIONS
 
@@ -771,10 +783,10 @@ page.
 	A count selects its row first, as for *row_to_middle*.
 
 *next_list*
-	Show the next cue list.
+	Show the next cue list, or the outputs of the show after the last one.
 
 *previous_list*
-	Show the previous cue list.
+	Show the previous cue list, or the last one from the outputs of the show.
 
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,

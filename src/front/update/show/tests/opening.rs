@@ -6,6 +6,7 @@
 //! and of reading them from their files
 
 use super::*;
+use crate::front::Message;
 
 #[test]
 fn opening_brings_back_kept_changes_as_one_change_that_undo_takes_back() {
@@ -179,4 +180,13 @@ fn opening_a_show_closes_the_search_line() {
     assert!(searching.search.is_some());
     let app = searching.opened(found(Some(CALM), Some(SHOW), None));
     assert!(app.search.is_none());
+}
+
+#[test]
+fn opening_a_show_over_the_outputs_selects_one_of_its_outputs() {
+    let app = storm().handled(Message::ShowOutputs).0;
+    let added = (0..2).fold(app, |app, _| app.handled(Message::Add(Place::After, 1)).0);
+    let opened = added.opened(found(Some(CALM), Some(SHOW), None));
+    assert!(opened.outputs_shown);
+    assert!(opened.output_row().is_some());
 }

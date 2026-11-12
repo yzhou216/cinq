@@ -24,6 +24,7 @@ mod matches;
 mod naming;
 mod operators;
 mod operators_pasting;
+mod outputs;
 mod paging;
 mod scrolling;
 mod search;

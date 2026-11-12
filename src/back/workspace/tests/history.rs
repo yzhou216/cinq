@@ -5,7 +5,7 @@
 //! Tests of undo and redo, which take back and make again the changes to
 //! the show and leave playback alone
 
-use super::*;
+use super::{outputs::rename_output, *};
 use crate::back::{Change, Turn};
 
 fn name(workspace: &Workspace, id: u32) -> Option<&str> {
@@ -207,4 +207,17 @@ fn an_ended_run_of_edits_leaves_the_next_edit_of_the_setting_a_change_of_its_own
         .apply(rename(1, "S"))
         .apply(rename(1, "St"));
     assert_eq!(name(&calm.apply(Command::Undo), 1), Some("Sound"));
+}
+
+#[test]
+fn edits_of_one_setting_of_an_output_end_their_run_as_well() {
+    let two = workspace(vec![audio(1)])
+        .apply(rename_output(1, "S"))
+        .apply(rename_output(1, "St"))
+        .apply(Command::EndRun)
+        .apply(rename_output(1, "Sta"))
+        .apply(rename_output(1, "Stage"));
+    let first = two.apply(Command::Undo);
+    assert_eq!(first.outputs()[0].name, "St");
+    assert_eq!(first.apply(Command::Undo).outputs()[0].name, "Main");
 }

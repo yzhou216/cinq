@@ -74,13 +74,18 @@ impl App {
     /// operator left half done.  A command typed halfway goes, so that a stray
     /// `d` cannot wait through a click and an edit to delete a cue.  A level
     /// typed so far goes too, apart from at a click, which can land in its own
-    /// field.  A link that failed to open is forgotten once its help page
-    /// closes.
+    /// field.  The channels typed into the field of an output apply once it is
+    /// left or at any click, so that no key after a click opens a device.  A
+    /// link that failed to open is forgotten once its help page closes.
     pub(super) fn next(self, message: Message) -> (Self, Task<Message>) {
         let passive = passive(&message);
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);
-        // A field that the keyboard enters or leaves ends the run of edits to its
+        // Typing into a field keeps its text, which the operator leaves with
+        // anything else, Enter included
+        let in_field = matches!(message, Message::SettingTyped(..));
+        let kept = passive || clicked || in_field;
+        // Field that the keyboard enters or leaves ends the run of edits to its
         // text, so that each visit makes a change of its own to undo, as each
         // stay in insert mode does in Vim
         let ends = matches!(message, Message::Focus(_) | Message::Clicked)
@@ -90,12 +95,18 @@ impl App {
         } else {
             self
         };
+        let app = if passive || in_field {
+            this
+        } else {
+            this.settled()
+        };
         let app = Self {
-            keys: if typing { this.keys } else { Vec::new() },
-            clipped: this.clipped.filter(|_| typing),
-            remark: this.remark.filter(|_| typing),
-            typed_level: this.typed_level.filter(|_| passive || clicked),
-            ..this
+            keys: if typing { app.keys } else { Vec::new() },
+            clipped: app.clipped.filter(|_| typing),
+            remark: app.remark.filter(|_| typing),
+            typed_level: app.typed_level.filter(|_| passive || clicked),
+            typed: app.typed.filter(|_| kept),
+            ..app
         };
         let (app, task) = app.handled(message);
         let app = Self {

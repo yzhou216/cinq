@@ -69,12 +69,20 @@ impl App {
         }
     }
 
+    /// Steps through the cue lists and, past the last of them, to the
+    /// outputs, as the sidebar lists them
     pub(super) fn stepped_list(self, offset: isize) -> Self {
-        let list = step(Some(self.list), offset, self.workspace.lists().len()).unwrap_or(self.list);
-        if list == self.list {
-            self
-        } else {
-            self.switched_to(list)
+        let lists = self.workspace.lists().len();
+        let from = if self.outputs_shown { lists } else { self.list };
+        let to = step(Some(from), offset, lists + 1).unwrap_or(from);
+        match to {
+            _ if to == from => self,
+            _ if to == lists => self.showing_outputs(),
+            list => Self {
+                outputs_shown: false,
+                ..self
+            }
+            .switched_to(list),
         }
     }
 }

@@ -28,7 +28,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         radio(
             format!("{} ({})", list.name, list.cues.len()),
             index,
-            Some(app.list),
+            (!app.outputs_shown).then_some(app.list),
             Message::SwitchList,
         )
         .into()
@@ -37,8 +37,11 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         .active()
         .iter()
         .filter_map(|active| workspace.cue(active.id).map(|cue| active_cue(active, cue)));
-    let device = app.audio_error.as_deref().map(|error| {
-        text(format!("No audio output: {error}"))
+    let device = app.audio_problems.iter().map(|(output, problem)| {
+        let name = workspace
+            .output(*output)
+            .map_or("Output", |output| &output.name);
+        text(format!("{name}: {problem}"))
             .style(text::danger)
             .into()
     });
@@ -67,10 +70,17 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             text("Cue lists"),
             column(lists).spacing(SPACING),
             rule::horizontal(1),
+            radio(
+                format!("Outputs ({})", workspace.outputs().len()),
+                (),
+                app.outputs_shown.then_some(()),
+                |()| Message::ShowOutputs,
+            ),
+            rule::horizontal(1),
             text(format!("Active ({})", workspace.active().len())),
             column(active).spacing(SPACING),
             rule::horizontal(1),
-            text("Audio device"),
+            text("Default device"),
             devices::view(app),
             rule::horizontal(1),
             warned,

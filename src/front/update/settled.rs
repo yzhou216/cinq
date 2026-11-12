@@ -6,7 +6,7 @@
 
 use super::{App, Measured, Message};
 use crate::{
-    back::{Command, Edit, parse_level},
+    back::{Command, Edit, OutputEdit, parse_level},
     front::Tab,
 };
 
@@ -64,6 +64,16 @@ impl App {
                 device_problem: kept.err(),
                 ..self
             },
+            Message::SelectOutput(output) => Self {
+                output: Some(output),
+                ..self
+            },
+            Message::SettingTyped(setting, text) => {
+                self.settled_but(setting).typed_setting(setting, text)
+            }
+            Message::OutputDevice(output, device) => {
+                self.send(Command::EditOutput(output, OutputEdit::Device(device)))
+            }
             // Click on blank space would leave the search line open with no
             // way to close it but Panic
             Message::Clicked => self.without_search(),

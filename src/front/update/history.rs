@@ -29,17 +29,19 @@ impl App {
 
     fn at(self, spot: Spot) -> Self {
         match spot {
-            Spot::Cue(id) => self.with_selection(id),
+            Spot::Cue(id) => self.showing_cues().with_selection(id),
             Spot::List(list) => Self {
                 list,
                 selected: None,
-                ..self
+                ..self.showing_cues()
             },
         }
     }
 
     /// Runs `go`, a command that moves to another place by what it is, and
-    /// remembers the place that it left unless it stayed
+    /// remembers the place that it left unless it stayed.  The place is read
+    /// before `go` runs, so that a `go` which shows the cue list in place of
+    /// the outputs still remembers where it came from.
     pub(super) fn jumping(self, go: impl FnOnce(Self) -> Self) -> Self {
         let from = self.spot();
         go(self).jumped_from(from)
@@ -59,12 +61,13 @@ impl App {
     }
 
     /// Runs `go` as [`App::jumping`] does, but remembers the place only when
-    /// the cue list changed, since a click on a cue of the list on screen
-    /// points at what is in view
+    /// the view changed, to another cue list or to the cue list in place of
+    /// the outputs, since a click on a cue of the list on screen points at
+    /// what is in view
     pub(super) fn crossing(self, go: impl FnOnce(Self) -> Self) -> Self {
-        let (from, list) = (self.spot(), self.list);
+        let (from, view) = (self.spot(), (self.outputs_shown, self.list));
         let app = go(self);
-        if app.list == list {
+        if (app.outputs_shown, app.list) == view {
             app
         } else {
             Self {

@@ -145,19 +145,19 @@ Major changes and improvements in each release of cinq, newest first.
   puts the caret where it fell.  The new `edit_start` action has no key in the
   cua keymap, `change_name` has `F2`, and `c` is no operator, so only `cc`
   begins a change.
-- `Tab` from the cue list goes first to the first field of the inspector, so
-  that the settings of the selected cue are one key away.  It then goes on
-  through the rest of the inspector, the toolbar, and the sidebar, and round
-  again, and `Shift+Tab` goes the other way.
+- `Tab` from the cue list or the outputs goes first to the first field of the
+  inspector, so that the settings of the selected cue are one key away.  It then
+  goes on through the rest of the inspector, the toolbar, and the sidebar, and
+  round again, and `Shift+Tab` goes the other way.
 - `Tab` onto a list of the sidebar scrolls it into view, with its title, where
-  a warning in a low window pushed the Audio device list out of sight.
+  a warning in a low window pushed the Default device list out of sight.
 - Enter in the empty File field of an audio, video, or picture cue opens the
   dialog that chooses the file, which Tab never reaches since it skips the
   Choose button, and the status bar hints `Enter: choose a file` while the
   empty field has the keyboard.
-- Each visit to a field, such as the name of a cue, is one step of undo, where
-  two visits in a row, each ended by leaving the field, undid as one.  A click,
-  or a move to a field, ends a visit as well.
+- Each visit to a field, such as the name of a cue or of an output, is one step
+  of undo, where two visits in a row, each ended by leaving the field, undid as
+  one.  A click, or a move to a field, ends a visit as well.
 - In an open drop-down list in the vi keymap, `Control+y` picks the highlighted
   option and `Control+e` closes the list without picking, as in Vim's popup
   menu, and `F4` closes it in the cua keymap, through the new `pick` and
@@ -204,6 +204,31 @@ Major changes and improvements in each release of cinq, newest first.
   itself, so that a sound can reach any channel of a device.  A device whose
   stream stops says so among the warnings, where the sound once moved to the
   default device.
+- A show has outputs, the named places that its cues send their sound to, each
+  on one channel or two of an audio device, such as the house speakers on the
+  first two channels of a desk and the subwoofer on its third.  Each audio and
+  video cue sends to the outputs it names, each at a level of its own, and
+  moving an output to other channels or another device moves every cue that
+  sends to it.  Show files hold them in `output` and in the `sends` of each
+  cue, as cinq-show(5) describes.  cinq 0.1.4 and older open such a show
+  without them, and drop them when they save it.
+- A show without outputs plays on the first two channels of the default device.
+  An output that cannot play says why among the warnings, and the cues play on
+  the others.
+- The Outputs entry below the cue lists in the sidebar shows the outputs of the
+  show in place of the cue list, each with its device, its channels, and why it
+  cannot play where it cannot.
+- The inspector edits the selected output.  A name or a level applies as it is
+  typed, and channels once Enter, which leaves the field as in every other, is
+  pressed or the field is left, since a device opens again for them.
+- The Audio device list of the sidebar is now Default device, since it chooses
+  the device of the outputs that name none, and its first option reads System
+  default.
+- The Levels tab of an audio or video cue sets the level at which the cue sends
+  to each output of the show, and a field left empty sends nothing there.
+- The tutorial has a chapter on outputs, in which the reader sends the sound of
+  a cue to each speaker of the computer in turn, and its first chapter names the
+  outputs and the default device among what the sidebar shows.
 
 ## v0.1.4
 

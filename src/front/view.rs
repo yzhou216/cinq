@@ -6,11 +6,13 @@
 //! exceptions that [`theme`] lists, and only space the controls apart
 
 mod cue_table;
+mod devices;
 pub(super) mod format;
 mod help;
 mod inspector;
 pub(in crate::front) use cue_table::searchable as cue_texts;
 mod next_keys;
+mod outputs;
 mod sidebar;
 pub(super) mod stage;
 mod status_bar;
@@ -45,6 +47,14 @@ pub const CUES: &str = "cues";
 /// scroll
 pub const SELECTED: &str = "selected";
 
+/// Identity of the outputs, through which the selected output scrolls into
+/// view
+pub const OUTPUTS: &str = "outputs";
+
+/// Identity of the selected output, through which the outputs find where
+/// to scroll
+pub const SELECTED_OUTPUT: &str = "selected output";
+
 /// Identity of the sidebar, through which the list that Tab reached scrolls
 /// into view
 pub const SIDEBAR_SCROLL: &str = "sidebar";
@@ -72,6 +82,10 @@ pub const SEARCH: &str = "search";
 /// What the search line and the status bar tell when no cue matches the text
 /// of a search
 pub const NO_MATCH: &str = "No cue matches";
+
+/// Identity of the Name field of an output, which the key of the edit
+/// action gives the keyboard focus while the outputs show
+pub const OUTPUT_NAME: &str = "output name";
 
 /// Monospace, so that columns of text line up
 pub const FONT: Font = Font::MONOSPACE;
@@ -119,7 +133,12 @@ pub fn view(app: &App) -> Element<'_, Message> {
             // room
             let sidebar = (size.width / 4.0).min(SIDEBAR);
             row![
-                container(cue_table::view(app)).clip(true),
+                container(if app.outputs_shown {
+                    outputs::view(app)
+                } else {
+                    cue_table::view(app)
+                })
+                .clip(true),
                 rule::vertical(1),
                 sidebar::view(app, sidebar),
             ]
@@ -173,7 +192,7 @@ fn char_width() -> f32 {
 /// Counts the warnings that the sidebar lists
 fn warnings(app: &App) -> usize {
     app.workspace.problems().count()
-        + usize::from(app.audio_error.is_some())
+        + app.audio_problems.len()
         + usize::from(app.file_problem.is_some())
         + usize::from(app.keep_problem.is_some())
         + usize::from(app.device_problem.is_some())
