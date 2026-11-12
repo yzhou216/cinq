@@ -29,6 +29,11 @@ Major changes and improvements in each release of cinq, newest first.
   `/Applications` and the `cinq` command, its manual pages, its
   completions, and, when built on GNU/Linux, the tutorial with its demo in
   `/usr/local`.  The package is unsigned.
+- The clock of an audio cue follows how far its sound has played, as that
+  of a video cue does, so that its fades, its end, and the cues that follow
+  it stay with what is heard.  A sound that drifts from the clock of the
+  show, or a device that waits before it plays, no longer leaves the cue to
+  end before its sound and cut off its last moments.
 
 ## v0.1.3
 
