@@ -101,12 +101,12 @@ impl Voice {
         }
     }
 
-    /// Returns the command that tells the workspace how far the sound of a
-    /// video cue has played, as long as the sound is still playing.  The
+    /// Returns the command that tells the workspace how far the sound of the
+    /// run has played, as long as the sound is still playing.  The
     /// position of the sound is where the audio device took it at the start
     /// of its last buffer, which kira shares without waiting on the device.
     pub(super) fn heard(&self, active: &Active) -> Option<Command> {
-        let clip = active.sound().filter(|_| active.shows_video())?;
+        let clip = active.sound()?;
         (self.sound.state() != PlaybackState::Stopped).then(|| Command::Heard {
             cue: active.id,
             run: active.run,

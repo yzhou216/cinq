@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Tests of making the sounds of audio cues ready ahead, and, in [`heard`],
-//! of the time that the sounds of video cues have reached, which need no
-//! audio device
+//! of the time that the sounds of audio and video cues have reached, which
+//! need no audio device
 
 mod voice;
 
