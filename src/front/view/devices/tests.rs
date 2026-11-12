@@ -4,7 +4,7 @@
 
 //! Tests of the labels of the audio devices
 
-use super::options;
+use super::choices;
 
 #[test]
 fn devices_go_by_name_and_by_id_where_they_share_a_name() {
@@ -15,14 +15,14 @@ fn devices_go_by_name_and_by_id_where_they_share_a_name() {
         device("alsa:plughw:CARD=1,DEV=0", "USB Audio"),
         device("alsa:house", ""),
     ];
-    let labels: Vec<String> = options(&devices)
+    let labels: Vec<String> = choices(&devices, "System default")
         .into_iter()
         .map(|option| option.label)
         .collect();
     assert_eq!(
         labels,
         [
-            "Default device",
+            "System default",
             "PipeWire Sound Server",
             "USB Audio (alsa:hw:CARD=1,DEV=0)",
             "USB Audio (alsa:plughw:CARD=1,DEV=0)",

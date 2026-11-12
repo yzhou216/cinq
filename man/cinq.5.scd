@@ -83,8 +83,8 @@ in its place, and follows it as it changes in the same way.
 	the system.
 	*cinq --audio-devices* lists the ID and the name of each device, apart by a
 	tab, one device to a line.
-	The *Audio device* list in the sidebar of the main window chooses a device
-	as well, and *cinq* writes the choice here.
+	The *Default device* list in the sidebar of the main window chooses a
+	device as well, and *cinq* writes the choice here.
 	It changes only the line of this setting, or adds the line before the
 	first setting of the file, and leaves the rest as it is.
 	A change moves those outputs as soon as the file is saved, and the sounds
@@ -353,6 +353,14 @@ Show mode locks editing: *edit*, *add_below*, *add_above*, *move_down*,
 *move_up*, and *delete* do nothing in it, and *undo* and *redo* only move
 standby back and forth.
 
+The outputs of the show, which *Outputs* below the cue lists in the sidebar
+shows in place of the cue list, take the actions of cues: *next*,
+*previous*, *first*, and *last* select an output, which the inspector then
+edits, *edit* edits its name, *add_below* and *add_above* add an output,
+*move_down* and *move_up* move it, and *delete* deletes it, one whatever the
+count.
+*standby* does nothing there.
+
 # ACTIONS
 
 The actions go by their names in the *keys* table, in the order of the help
@@ -375,7 +383,7 @@ page.
 	scroll the help page up.
 
 *next_list*
-	Show the next cue list.
+	Show the next cue list, or the outputs of the show after the last one.
 
 *previous_list*
 	Show the previous cue list.

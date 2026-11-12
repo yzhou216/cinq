@@ -35,7 +35,7 @@ use columns::{Column, state};
 const SCROLL_BAR: f32 = 10.0;
 
 /// iced's own vertical padding of table cells
-const ROW_PADDING: f32 = 5.0;
+pub(super) const ROW_PADDING: f32 = 5.0;
 
 /// iced's own horizontal padding of table cells, which both tables set,
 /// since the widths of the columns count it
@@ -46,7 +46,7 @@ const SEPARATOR: f32 = 1.0;
 
 const CELL_SPACE: f32 = 2.0 * CELL_PADDING + SEPARATOR;
 
-const RADIO: f32 = Radio::<Message>::DEFAULT_SIZE + Radio::<Message>::DEFAULT_SPACING;
+pub(super) const RADIO: f32 = Radio::<Message>::DEFAULT_SIZE + Radio::<Message>::DEFAULT_SPACING;
 
 /// Fewest columns of the font that the list keeps for a name before any
 /// column gives way

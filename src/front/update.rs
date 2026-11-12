@@ -14,6 +14,7 @@ mod keys;
 mod link;
 mod loading;
 mod navigation;
+mod outputs;
 mod scroll;
 mod show;
 mod stage;
@@ -26,7 +27,7 @@ use std::thread;
 use iced::{Task, futures::channel::oneshot};
 
 use super::{App, Message};
-use crate::back::{Command, Edit, parse_level};
+use crate::back::{Command, CueId, Edit, OutputEdit, Place, parse_level};
 use link::{edit_config, open_link};
 pub(super) use show::{Keeper, Read, Reader, Saved, Show};
 pub(super) use stage::Stage;
@@ -41,12 +42,43 @@ impl App {
         let app = match message {
             Message::Typed { press, repeat } => return self.typed(press, repeat),
             Message::Focus(focus) => return self.focused(focus),
+            // While the outputs show, the keys of cues act on outputs, apart
+            // from putting a cue on standby
+            Message::Step(offset) if self.outputs_shown => {
+                return (self.stepped_output(offset), Task::none());
+            }
+            Message::Row(row) if self.outputs_shown => {
+                return (self.output_at_row(row), Task::none());
+            }
+            Message::Add(place) if self.outputs_shown => {
+                let above = matches!(place(CueId(0)), Place::Before(_));
+                return (self.with_new_output(above), Task::none());
+            }
+            Message::Move(by) if self.outputs_shown => {
+                return (self.with_output_moved(by), Task::none());
+            }
+            Message::Delete(_) if self.outputs_shown => {
+                return (self.without_output(), Task::none());
+            }
+            Message::StandbySelected if self.outputs_shown => return (self, Task::none()),
             // Selection scrolls into view as it or the rows around it move,
             // and as the main window changes size
-            Message::Select(id) => return self.with_selection(id).revealed(),
+            Message::Select(id) => {
+                let cues = Self {
+                    outputs_shown: false,
+                    ..self
+                };
+                return cues.with_selection(id).revealed();
+            }
             Message::Step(offset) => return self.stepped(offset).revealed(),
             Message::Row(row) => return self.at_row(row).revealed(),
-            Message::SwitchList(list) => return self.switched_to(list).revealed(),
+            Message::SwitchList(list) => {
+                let cues = Self {
+                    outputs_shown: false,
+                    ..self
+                };
+                return cues.switched_to(list).revealed();
+            }
             Message::StepList(offset) => return self.stepped_list(offset).revealed(),
             Message::Add(place) => return self.with_new_cue(place).revealed(),
             Message::Move(by) => return self.with_selected_moved(by).revealed(),
@@ -113,6 +145,15 @@ impl App {
                 device_problem: kept.err(),
                 ..self
             },
+            Message::ShowOutputs => self.showing_outputs(),
+            Message::SelectOutput(output) => Self {
+                output: Some(output),
+                ..self
+            },
+            Message::SettingTyped(setting, text) => self.typed_setting(setting, text),
+            Message::OutputDevice(output, device) => {
+                self.send(Command::EditOutput(output, OutputEdit::Device(device)))
+            }
             Message::Clicked => self,
             // Stage window holds no cue list to keep in view
             Message::Resized(window, size) => self.resized(window, size),
@@ -196,6 +237,7 @@ impl App {
         let app = Self {
             keys: if typing { self.keys } else { Vec::new() },
             typed_level: self.typed_level.filter(|_| passive || clicked),
+            typed: self.typed.filter(|_| passive || clicked),
             ..self
         };
         let (app, task) = app.handled(message);

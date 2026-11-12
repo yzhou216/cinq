@@ -27,7 +27,7 @@ use iced::{Size, window};
 
 use crate::back::{Audio, CueId, CueList, Kind, OutputId, Video, Workspace};
 use keymap::{Press, config::Config};
-use message::{Focus, Message, Tab};
+use message::{Focus, Message, Setting, Tab};
 use update::{Keeper, Reader, Show, Stage};
 
 /// Opens the main window with the show in `show`, or a new show without
@@ -146,6 +146,13 @@ struct App {
     /// Level of a cue as the operator types it, which its field shows in
     /// place of the level until the operator does anything else
     typed_level: Option<(CueId, String)>,
+    /// Text of a setting as the operator types it, which its field shows in
+    /// place of the setting until the operator does anything else
+    typed: Option<(Setting, String)>,
+    /// Whether the outputs of the show show in place of the cue list
+    outputs_shown: bool,
+    /// Output that the inspector shows while the outputs show
+    output: Option<OutputId>,
     tab: Tab,
     /// Kind of cue that Add cue creates
     new_kind: Kind,

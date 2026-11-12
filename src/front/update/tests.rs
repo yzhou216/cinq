@@ -11,6 +11,7 @@
 //! has opened
 
 mod clock;
+mod outputs;
 
 use std::ops::RangeInclusive;
 
