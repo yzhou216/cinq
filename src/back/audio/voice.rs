@@ -3,18 +3,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Sound of one run of an audio or video cue
+//!
+//! The sound plays in a kira manager of its own, whose renderer the mixer
+//! of the device drives, as [`super::feed`] tells.
 
 use std::{path::Path, time::Duration};
 
 use kira::{
-    AudioManager, Tween,
+    AudioManager, AudioManagerSettings, Capacities, Tween,
     sound::{
-        FromFileError, PlaybackState, Region,
+        FromFileError, PlaybackState, Region, SoundData,
         streaming::{StreamingSoundData, StreamingSoundHandle},
     },
+    track::MainTrackBuilder,
 };
 
-use super::preload::Preloaded;
+use super::{
+    feed::Feed,
+    mixer::{Gains, Mixer},
+    preload::Preloaded,
+};
 use crate::back::{Active, Clip, Command, TICK};
 
 /// Time a sound takes to reach a level the workspace asks for, which
@@ -24,10 +32,20 @@ const GLIDE: Duration = TICK.saturating_mul(2);
 pub(super) struct Voice {
     pub(super) run: u32,
     sound: StreamingSoundHandle<FromFileError>,
+    /// Place of the sound in the mixer, which a test that plays the sound
+    /// in a manager of its own has none of
+    place: Option<Place>,
     /// Level last sent to the sound
     level: f32,
     /// Pause state last sent to the sound
     paused: bool,
+}
+
+struct Place {
+    /// Identity of the sound in the mixer
+    id: u64,
+    /// Manager of the sound alone, which hands the sound its commands
+    _manager: AudioManager<Feed>,
 }
 
 impl Voice {
@@ -37,17 +55,18 @@ impl Voice {
     /// file, so long files start as quickly as short ones, but opening the
     /// file can wait on the disk, which [`Voice::start`] avoids.  Returns
     /// why the sound cannot start, as when its file has gone since it
-    /// loaded or the output plays as many sounds as it can.
+    /// loaded or the mixer has more to do than it can take.
     pub(super) fn open(
-        manager: &mut AudioManager,
+        mixer: &mut Mixer,
+        gains: Gains,
         file: &Path,
         active: &Active,
         clip: Clip,
     ) -> Result<Self, String> {
         let data = StreamingSoundData::from_file(file).map_err(super::reason)?;
         let data = clipped(data, clip, clip.position(active.played()), active.level);
-        let sound = manager.play(data).map_err(|error| error.to_string())?;
-        Ok(Self::of(sound, active))
+        let (sound, place) = placed(mixer, gains, data)?;
+        Ok(Self::with(sound, Some(place), active))
     }
 
     /// Starts a sound made ready ahead, which waits at the start of its
@@ -56,25 +75,36 @@ impl Voice {
     /// part of a tick already, and its sound starts late by that part:
     /// kira keeps what it has decoded ahead when a playing sound seeks, so
     /// seeking would play the start twice.  Returns why the sound cannot
-    /// start, as when the output plays as many sounds as it can.
+    /// start, as when the mixer has more to do than it can take.
     pub(super) fn start(
-        manager: &mut AudioManager,
+        mixer: &mut Mixer,
+        gains: Gains,
         preloaded: Preloaded,
         active: &Active,
     ) -> Result<Self, String> {
-        let mut sound = manager.play(preloaded).map_err(|error| error.to_string())?;
+        let (mut sound, place) = placed(mixer, gains, preloaded)?;
         let now = Tween {
             duration: Duration::ZERO,
             ..Tween::default()
         };
         sound.set_volume(active.level, now);
-        Ok(Self::of(sound, active))
+        Ok(Self::with(sound, Some(place), active))
     }
 
+    #[cfg(test)]
     pub(super) fn of(sound: StreamingSoundHandle<FromFileError>, active: &Active) -> Self {
+        Self::with(sound, None, active)
+    }
+
+    fn with(
+        sound: StreamingSoundHandle<FromFileError>,
+        place: Option<Place>,
+        active: &Active,
+    ) -> Self {
         Self {
             run: active.run,
             sound,
+            place,
             level: active.level,
             paused: false,
         }
@@ -114,11 +144,52 @@ impl Voice {
         })
     }
 
-    /// Stops the sound with kira's default ramp, which is short enough to
-    /// sound immediate and long enough to avoid a click
-    pub(super) fn stop(mut self) {
-        self.sound.stop(Tween::default());
+    /// Stops the sound, which the mixer fades out as quickly as kira's
+    /// default fade, short enough to sound immediate and long enough to
+    /// avoid a click
+    pub(super) fn stop(self, mixer: &mut Mixer) {
+        if let Some(place) = self.place {
+            mixer.remove(place.id);
+        }
     }
+}
+
+/// Plays `data` in a manager of its own, whose renderer `mixer` takes and
+/// mixes at `gains`
+fn placed<D>(
+    mixer: &mut Mixer,
+    gains: Gains,
+    data: D,
+) -> Result<(StreamingSoundHandle<FromFileError>, Place), String>
+where
+    D: SoundData<Handle = StreamingSoundHandle<FromFileError>>,
+    D::Error: std::fmt::Display,
+{
+    let Ok(mut manager) = AudioManager::<Feed>::new(AudioManagerSettings {
+        capacities: Capacities {
+            sub_track_capacity: 1,
+            send_track_capacity: 1,
+            clock_capacity: 1,
+            modulator_capacity: 1,
+            listener_capacity: 1,
+        },
+        main_track_builder: MainTrackBuilder::new().sound_capacity(1),
+        backend_settings: mixer.sample_rate(),
+        ..AudioManagerSettings::default()
+    });
+    let sound = manager.play(data).map_err(|error| error.to_string())?;
+    let renderer = manager
+        .backend_mut()
+        .take()
+        .expect("kira hands its renderer to the backend as the manager opens");
+    let id = mixer.add(renderer, gains)?;
+    Ok((
+        sound,
+        Place {
+            id,
+            _manager: manager,
+        },
+    ))
 }
 
 /// Returns `data` set to play `clip`, from `position` in the file and at
