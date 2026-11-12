@@ -21,6 +21,22 @@ use crate::{
 
 pub(super) fn view(app: &App) -> Element<'_, Message> {
     let keymap = &app.config.keymap;
+    if app.outputs_shown {
+        // Add output takes the place of Add cue, as the keys of adding and
+        // deleting a cue add and delete outputs here
+        let several = app.workspace.outputs().len() > 1;
+        let outputs = row![
+            space::horizontal(),
+            button("Add output")
+                .on_press_maybe(app.editable().then_some(Message::Add(Place::After))),
+            button("Delete output").on_press_maybe(
+                (app.editable() && several && app.output.is_some()).then_some(Message::Delete(1)),
+            ),
+        ]
+        .spacing(SPACING)
+        .padding(SPACING);
+        return outputs.into();
+    }
     let selected_here = app.selected_here().is_some();
     // Selected cue on standby already leaves nothing to put there
     let movable = selected_here && app.current().standby != app.selected;

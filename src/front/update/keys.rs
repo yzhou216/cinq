@@ -66,6 +66,10 @@ impl App {
             Focus::Name | Focus::Next | Focus::Previous if self.stage.has_keyboard() => {
                 (self, Task::none())
             }
+            Focus::Name if self.outputs_shown && self.editable() && self.output.is_some() => {
+                (self, operation::focus(view::OUTPUT_NAME))
+            }
+            Focus::Name if self.outputs_shown => (self, Task::none()),
             Focus::Name if self.editable() && self.selected.is_some() => (
                 Self {
                     tab: Tab::Basics,

@@ -19,6 +19,14 @@ Major changes and improvements in each release of cinq, newest first.
   of each cue, as cinq-show(5) describes.  A show without outputs plays on
   the first two channels of the default device, as before.  An output that
   cannot play says why among the warnings, and the cues play on the others.
+- The Outputs entry below the cue lists in the sidebar shows the outputs of
+  the show in place of the cue list, each with its device, its channels, and
+  why it cannot play where it cannot, and the inspector edits the one
+  selected.  The keys that select, add, move, and delete cues do the same to
+  outputs there, and the key of the next cue list reaches them past the last
+  one.  The Audio device list of the sidebar is now Default device, since it
+  chooses the device of the outputs that name none, and its first option
+  reads System default.
 
 ## v0.1.4
 
