@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Reading the text of the configuration file into key bindings and the
-//! seconds ahead to make sounds ready, along with the problems that leave
-//! parts of it unused, each in the part of the text that it lies in
+//! settings of the sound output, along with the problems that leave parts
+//! of it unused, each in the part of the text that it lies in
 
 use std::{ops::Range, slice};
 
@@ -14,20 +14,20 @@ use toml::{
     de::{DeString, DeTable, DeValue},
 };
 
-use super::Problem;
+use super::{Problem, Sound};
 use crate::{
     back::READY_AHEAD,
     front::keymap::{Action, Keymap, Preset, binding},
 };
 
-const SETTINGS: [&str; 4] = ["keymap", "keymaps", "keys", "ready_ahead"];
+const SETTINGS: [&str; 5] = ["audio_device", "keymap", "keymaps", "keys", "ready_ahead"];
 
-pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, f64, Vec<Problem>) {
+pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, Sound, Vec<Problem>) {
     let table = match DeTable::parse(text) {
         Ok(table) => table.into_inner(),
         Err(error) => {
             let problem = Problem::at(error.span(), format!("is not TOML: {}", error.message()));
-            return (Keymap::default(), READY_AHEAD, vec![problem]);
+            return (Keymap::default(), Sound::default(), vec![problem]);
         }
     };
     let unknown = table
@@ -63,6 +63,7 @@ pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, f64, Vec<Problem>)
         Some((_, span)) => (chosen, vec![Problem::at(span, "keys should be a table")]),
         None => (chosen, Vec::new()),
     };
+    let (device, unrouted) = audio_device(&table);
     let (ready_ahead, unready) = ready_ahead(&table);
     let problems = unknown
         .chain(malformed)
@@ -70,10 +71,32 @@ pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, f64, Vec<Problem>)
         .chain(unnamed)
         .chain(built)
         .chain(unbound)
+        .chain(unrouted)
         .chain(unready)
         .chain(keymap.conflicts().into_iter().map(Problem::new))
         .collect();
-    (keymap, ready_ahead, problems)
+    (
+        keymap,
+        Sound {
+            device,
+            ready_ahead,
+        },
+        problems,
+    )
+}
+
+/// Returns the ID that `audio_device` gives, or none for the default
+/// device, with a problem when the setting is not a string that could be
+/// an ID.  Whether a device has that ID shows only as the device opens.
+fn audio_device(table: &DeTable) -> (Option<String>, Option<Problem>) {
+    match table.get("audio_device").map(spanned) {
+        Some((DeValue::String(id), _)) if !id.is_empty() => (Some(id.to_string()), None),
+        Some((_, span)) => {
+            let bad = "audio_device should be an ID that cinq --audio-devices lists";
+            (None, Some(Problem::at(span, bad)))
+        }
+        None => (None, None),
+    }
 }
 
 /// Returns the seconds that `ready_ahead` sets, or the default with a

@@ -127,7 +127,7 @@ fn synopsis_gives_the_value_that_each_option_takes() {
         .skip_while(|line| *line != ".SH SYNOPSIS")
         .nth(1);
     let expected = concat!(
-        r"\fBcinq\fR [\fB\-\-config\-dir\fR \fIDIRECTORY\fR] ",
+        r"\fBcinq\fR [\fB\-\-config\-dir\fR \fIDIRECTORY\fR] [\fB\-\-audio\-devices\fR] ",
         r"[\fB\-h\fR|\fB\-\-help\fR] [\fB\-V\fR|\fB\-\-version\fR] [\fISHOW\fR]"
     );
     assert_eq!(synopsis, Some(expected));

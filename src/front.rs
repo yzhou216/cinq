@@ -134,6 +134,11 @@ struct App {
     /// a directory to keep them in
     reader: Option<Reader>,
     audio_error: Option<String>,
+    /// ID and name of each audio device, as they were listed last
+    audio_devices: Vec<(String, String)>,
+    /// Why the configuration file did not keep the audio device chosen
+    /// last, until it keeps another
+    device_problem: Option<String>,
     list: usize,
     /// Cue shown in the inspector
     selected: Option<CueId>,

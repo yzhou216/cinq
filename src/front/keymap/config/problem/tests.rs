@@ -12,10 +12,10 @@ use miette::{GraphicalReportHandler, GraphicalTheme};
 use crate::front::keymap::config::{Config, Source, parse};
 
 fn read(text: &str) -> Config {
-    let (keymap, ready_ahead, problems) = parse(text);
+    let (keymap, sound, problems) = parse(text);
     Config {
         keymap,
-        ready_ahead,
+        sound,
         source: Source::File(PathBuf::from("/home/operator/.config/cinq/config.toml")),
         text: Some(text.to_owned()),
         problems,

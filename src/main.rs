@@ -18,7 +18,7 @@
 //! end in [`front`] draws the show and the stage with iced and turns
 //! operator input into back-end commands.  The command line in [`cli`]
 //! names the show to open, and can name the directory that config.toml
-//! comes from.
+//! comes from, or asks for the list of audio devices instead.
 
 mod back;
 mod cli;
@@ -34,12 +34,18 @@ mod logo;
 #[cfg(test)]
 mod man;
 
-use std::process::ExitCode;
+use std::{
+    io::{self, Write},
+    process::ExitCode,
+};
 
 use clap::Parser;
 
 fn main() -> ExitCode {
     let cli = cli::Cli::parse();
+    if cli.audio_devices {
+        return audio_devices();
+    }
     match front::run(cli.config_dir, cli.show) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
@@ -50,6 +56,24 @@ fn main() -> ExitCode {
                 iced::Error::GraphicsCreationFailed(reason) => reason.to_string(),
             };
             eprintln!("cinq: {error}: {reason}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Lists the ID and the name of each audio device on standard output, one
+/// device to a line
+fn audio_devices() -> ExitCode {
+    let listed = back::audio_devices().and_then(|devices| {
+        devices
+            .iter()
+            .try_for_each(|(id, name)| writeln!(io::stdout(), "{id}\t{name}"))
+            .map_err(|error| error.to_string())
+    });
+    match listed {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("cinq: cannot list the audio devices: {error}");
             ExitCode::FAILURE
         }
     }

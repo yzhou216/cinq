@@ -20,8 +20,8 @@
 //! as they do after Enter leaves a text field.
 //!
 //! A list with less room than its longest name cuts the name it shows
-//! short, and its menu grows as wide as that name, so that a list in a
-//! narrow place can hold long names.
+//! short, and its menu grows as wide as that name, so that a list in the
+//! narrow sidebar can hold the long names of audio devices.
 //!
 //! [`Action::Next`]: crate::front::keymap::Action::Next
 //! [`Action::Previous`]: crate::front::keymap::Action::Previous
@@ -46,6 +46,9 @@ pub struct Dropdown<'a> {
     chosen: Option<usize>,
     /// Makes the message of the option at an index, if there is one
     pick: Box<dyn Fn(usize) -> Option<Message> + 'a>,
+    /// Message that each opening of the menu sends, such as one that asks
+    /// for the options afresh
+    on_open: Option<Message>,
     placeholder: Option<String>,
     keymap: &'a Keymap,
 }
@@ -63,6 +66,7 @@ pub fn dropdown<'a, T: ToString + PartialEq + Clone + 'a>(
             .iter()
             .position(|option| Some(option) == selected.as_ref()),
         pick: Box::new(move |row| options.get(row).cloned().map(&on_select)),
+        on_open: None,
         placeholder: None,
         keymap,
     }
@@ -72,6 +76,13 @@ impl Dropdown<'_> {
     pub fn placeholder(self, placeholder: impl Into<String>) -> Self {
         Self {
             placeholder: Some(placeholder.into()),
+            ..self
+        }
+    }
+
+    pub fn on_open(self, message: Message) -> Self {
+        Self {
+            on_open: Some(message),
             ..self
         }
     }

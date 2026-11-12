@@ -27,7 +27,7 @@ use crate::front::{
 };
 
 pub(super) fn rows<'b>(choice: Choice<'b>) -> Element<'b, Message> {
-    let highlight = choice.shared.highlight.get();
+    let highlight = choice.highlighted();
     let rows = choice.dropdown.names.iter().enumerate().map(|(row, name)| {
         container(text(name.as_str()).wrapping(text::Wrapping::None))
             .style(move |theme| {
@@ -64,7 +64,7 @@ impl Intercept for Rows<'_> {
         let highlight = &self.0.shared.highlight;
         match event {
             Event::Mouse(mouse::Event::CursorMoved { .. })
-                if row.is_some() && row != highlight.get() =>
+                if row.is_some() && row != self.0.highlighted() =>
             {
                 highlight.set(row);
                 shell.request_redraw();
@@ -77,7 +77,7 @@ impl Intercept for Rows<'_> {
 
     fn under(&self, layout: Layout<'_>, renderer: &mut Renderer, theme: &Theme) {
         let look = overlay::menu::default(theme);
-        let row = self.0.shared.highlight.get();
+        let row = self.0.highlighted();
         if let Some(row) = row.and_then(|row| layout.children().nth(row)) {
             renderer.fill_quad(
                 renderer::Quad {

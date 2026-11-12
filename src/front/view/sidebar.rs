@@ -2,7 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Cue lists, running cues, and warnings, all visible at the same time
+//! Cue lists, running cues, the audio device, and warnings, all visible at
+//! the same time
+
+mod devices;
 
 use iced::{
     Element, Fill,
@@ -39,7 +42,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             .style(text::danger)
             .into()
     });
-    let files = [&app.file_problem, &app.keep_problem]
+    let files = [&app.file_problem, &app.keep_problem, &app.device_problem]
         .into_iter()
         .flatten()
         .map(|problem| text(problem).style(text::warning).into());
@@ -66,6 +69,9 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             rule::horizontal(1),
             text(format!("Active ({})", workspace.active().len())),
             column(active).spacing(SPACING),
+            rule::horizontal(1),
+            text("Audio device"),
+            devices::view(app),
             rule::horizontal(1),
             warned,
             column(

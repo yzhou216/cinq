@@ -23,7 +23,7 @@ use std::time::Duration;
 
 use cue::{Clip, Shown};
 
-pub use audio::{Audio, READY_AHEAD, SOUND_FILES};
+pub use audio::{Audio, READY_AHEAD, SOUND_FILES, devices as audio_devices};
 pub use cue::{
     Advance, Cue, CueId, CueList, Edit, Kind, LEVELS, LOUDEST, Media, Problem, SILENCE, parse_level,
 };

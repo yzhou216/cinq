@@ -119,6 +119,16 @@ pub enum Message {
     /// it with, making it first when it is not there yet
     EditConfig(PathBuf),
     LinkOpened(Result<(), String>),
+    /// Asks for the audio devices afresh, as their list opens
+    ListAudioDevices,
+    /// ID and name of each audio device that sound can play on, or why they
+    /// could not be listed
+    AudioDevicesListed(Result<Vec<(String, String)>, String>),
+    /// Plays the sound on the audio device of an ID, or on the default
+    /// device without one, and keeps the choice in the configuration file
+    ChooseAudioDevice(Option<String>),
+    /// Whether the configuration file kept the audio device chosen last
+    AudioDeviceKept(Result<(), String>),
     /// Asks which show to open
     Open,
     /// Show read from its file, with the unsaved changes kept for it

@@ -129,9 +129,9 @@ fn file_reports_what_is_wrong_with_its_keymaps() {
 
 #[test]
 fn file_sets_the_seconds_ahead_to_make_sounds_ready() {
-    let (_, ahead, problems) = config::parse("");
+    let (_, sound, problems) = config::parse("");
     assert!(problems.is_empty(), "{problems:?}");
-    assert_eq!(ahead, READY_AHEAD);
+    assert_eq!(sound.ready_ahead, READY_AHEAD);
     let message = "ready_ahead should be a number of seconds, 0 or more";
     let cases = [
         ("10", 10.0, None),
@@ -141,8 +141,32 @@ fn file_sets_the_seconds_ahead_to_make_sounds_ready() {
         ("\"x\"", READY_AHEAD, Some(message)),
     ];
     cases.into_iter().for_each(|(value, seconds, problem)| {
-        let (_, ahead, problems) = config::parse(&format!("ready_ahead = {value}\n"));
-        assert_eq!(ahead, seconds, "{value}");
+        let (_, sound, problems) = config::parse(&format!("ready_ahead = {value}\n"));
+        assert_eq!(sound.ready_ahead, seconds, "{value}");
+        assert_eq!(messages(&problems), problem.as_slice(), "{value}");
+    });
+}
+
+#[test]
+fn file_names_the_audio_device_that_sound_plays_on() {
+    let (_, sound, problems) = config::parse("");
+    assert!(problems.is_empty(), "{problems:?}");
+    assert_eq!(sound.device, None);
+    let message = "audio_device should be an ID that cinq --audio-devices lists";
+    let cases = [
+        (
+            "\"alsa:plughw:CARD=1,DEV=0\"",
+            Some("alsa:plughw:CARD=1,DEV=0"),
+            None,
+        ),
+        // Unknown ID, which only opening the device finds
+        ("\"nothing\"", Some("nothing"), None),
+        ("\"\"", None, Some(message)),
+        ("3", None, Some(message)),
+    ];
+    cases.into_iter().for_each(|(value, device, problem)| {
+        let (_, sound, problems) = config::parse(&format!("audio_device = {value}\n"));
+        assert_eq!(sound.device.as_deref(), device, "{value}");
         assert_eq!(messages(&problems), problem.as_slice(), "{value}");
     });
 }

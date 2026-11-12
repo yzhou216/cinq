@@ -11,8 +11,10 @@
 //! no file.  The sound of a video file plays from the file's sound track,
 //! along with the silence that AAC encoders put around the sound, since the
 //! decoder reads no edit list, which marks that silence for players to
-//! skip.
+//! skip.  The sound plays on the default audio device, or on the one that
+//! the configuration file names.
 
+mod device;
 mod preload;
 #[cfg(test)]
 mod tests;
@@ -26,6 +28,7 @@ use std::{
 use itertools::Itertools;
 use kira::{
     AudioManager, AudioManagerSettings, DefaultBackend,
+    backend::cpal::CpalBackendSettings,
     sound::{FromFileError, streaming::StreamingSoundData},
     track::MainTrackBuilder,
 };
@@ -34,6 +37,7 @@ use super::{
     Active, Clip, Command, Cue, CueId, Problem, Workspace,
     load::{unplayable, unreadable},
 };
+pub use device::devices;
 use preload::{Ask, Preloader, Wanted};
 use voice::Voice;
 
@@ -52,22 +56,37 @@ pub const READY_AHEAD: f64 = 10.0;
 
 pub struct Audio {
     output: Result<AudioManager, String>,
+    /// ID of the audio device that the output was asked to open, or none
+    /// for the default device
+    device: Option<String>,
     voices: HashMap<CueId, Voice>,
     preloader: Preloader,
 }
 
 impl Audio {
-    /// Opens the default audio device.  Without one, the workspace still
+    /// Opens the audio device whose ID is `device`, or the default audio
+    /// device without one.  Without a device to open, the workspace still
     /// runs and files still load, but nothing is heard.
-    pub fn open() -> Self {
+    pub fn open(device: Option<&str>) -> Self {
         Self {
-            output: AudioManager::<DefaultBackend>::new(AudioManagerSettings {
-                main_track_builder: MainTrackBuilder::new().sound_capacity(SOUNDS),
-                ..AudioManagerSettings::default()
-            })
-            .map_err(|error| error.to_string()),
+            output: output(device),
+            device: device.map(str::to_owned),
             voices: HashMap::new(),
             preloader: Preloader::new(),
+        }
+    }
+
+    /// Opens the audio device whose ID is `device`, or the default one
+    /// without it, unless the sound plays on it already.  An output that
+    /// failed to open tries again, so that a device plugged in since can
+    /// be reached.  The sounds that play end with the old output, and the
+    /// next sync starts them on the new one from where they are.  The sounds
+    /// made ready ahead are made again, or a cue that plays and that the
+    /// next GO fires again would start over from the sound made ready for
+    /// that GO.
+    pub fn route(&mut self, device: Option<&str>) {
+        if self.output.is_err() || self.device.as_deref() != device {
+            *self = Self::open(device);
         }
     }
 
@@ -130,6 +149,22 @@ impl Audio {
             .filter_map(|(&id, voice)| voice.heard(workspace.active_of(id)?));
         failures.into_iter().chain(heard).collect()
     }
+}
+
+fn output(device: Option<&str>) -> Result<AudioManager, String> {
+    let found = device.map(device::find).transpose()?;
+    AudioManager::<DefaultBackend>::new(AudioManagerSettings {
+        backend_settings: CpalBackendSettings {
+            device: found,
+            ..CpalBackendSettings::default()
+        },
+        main_track_builder: MainTrackBuilder::new().sound_capacity(SOUNDS),
+        ..AudioManagerSettings::default()
+    })
+    .map_err(|error| match device {
+        Some(id) => format!("cannot play on {id}: {error}"),
+        None => error.to_string(),
+    })
 }
 
 fn started(
