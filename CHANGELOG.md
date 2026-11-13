@@ -40,6 +40,11 @@ Major changes and improvements in each release of cinq, newest first.
   from where they are.  Meanwhile they wait for it for three seconds at
   most, then go on by the clock of the show, so that the cues that follow
   them still fire on time.
+- On GNU/Linux and the BSDs, cinq also plays on the device of a running JACK
+  server, such as PipeWire's, as `jack:output`, whose channels each reach
+  the playback port of their number.  PulseAudio spreads a stream over every
+  channel of a device that has more, which JACK leaves alone.  Building on
+  GNU/Linux needs JACK, unless the build leaves out the default features.
 
 ## v0.1.4
 
