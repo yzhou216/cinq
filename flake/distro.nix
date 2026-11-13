@@ -25,17 +25,13 @@
           directory = if pkgs.stdenv.hostPlatform.isx86_64 then "lib64" else "lib";
           loader = "/${directory}/${baseNameOf pkgs.stdenv.cc.bintools.dynamicLinker}";
         in
-        pkgs.runCommand "${crate.name}-portable" { nativeBuildInputs = [ pkgs.patchelf ]; } (
-          ''
-            mkdir -p "$out/usr"
-            cp -r ${config.packages.cinq}/{bin,share} "$out/usr"
-            chmod -R u+w "$out/usr"
-            patchelf --set-interpreter ${loader} --remove-rpath "$out/usr/bin/cinq"
-          ''
-          + lib.optionalString (config.packages ? doc) ''
-            cp -r --no-preserve=mode ${config.packages.doc}/share "$out/usr"
-          ''
-        );
+        pkgs.runCommand "${crate.name}-portable" { nativeBuildInputs = [ pkgs.patchelf ]; } ''
+          mkdir -p "$out/usr"
+          cp -r ${config.packages.cinq}/{bin,share} "$out/usr"
+          chmod -R u+w "$out/usr"
+          patchelf --set-interpreter ${loader} --remove-rpath "$out/usr/bin/cinq"
+          cp -r --no-preserve=mode ${config.packages.doc}/share "$out/usr"
+        '';
       # Package that depends on the unwinder of GCC, which Rust's standard
       # library takes, but on no library of the GPU, without which cinq
       # draws in software
@@ -120,12 +116,6 @@
       # and owner of its directory on Darwin, and the package keeps the
       # permissions of directories that are already there.
       darwinPkg =
-        let
-          # Tutorial and demo, wherever doc evaluates
-          copyDoc = lib.optionalString (config.packages ? doc) ''
-            cp -r --no-preserve=mode ${config.packages.doc}/share/doc local/share
-          '';
-        in
         pkgs.runCommand "${crate.name}-darwin-pkg"
           {
             nativeBuildInputs = [
@@ -168,7 +158,7 @@
             cp -r ${darwinBuild}/share local
             chmod -R u+w app local
             chmod 775 app
-            ${copyDoc}
+            cp -r --no-preserve=mode ${config.packages.doc}/share/doc local/share
             # Files of freedesktop.org, which Darwin has no use for
             rm -r local/share/{applications,icons,mime}
             ln -s /Applications/cinq.app/Contents/MacOS/cinq local/bin
