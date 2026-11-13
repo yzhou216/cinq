@@ -6,13 +6,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Build matrix
 
-Where each build of cinq comes from, as of master `17eb477` (2026-11-12).
-Rows are what is built; columns are the machine that runs Nix.  The flake
-offers its outputs, native and cross, on every system that Nixpkgs lists.
-CI verifies x86_64-linux, aarch64-linux, and aarch64-darwin, builds every
-output there on every push, and keeps each for download.  Everything else
-that the flake offers is untested, and a build that fails there should come
-back as a report.
+Where each build of cinq comes from, as of master `fe73a0c`, v0.1.4
+(2026-11-13).  Rows are what is built; columns are the machine that runs
+Nix.  The flake offers its outputs, native and cross, on every system that
+Nixpkgs lists.  CI verifies x86_64-linux, aarch64-linux, and aarch64-darwin,
+builds every output there on every push, and keeps each for download.
+Everything else that the flake offers is untested, and a build that fails
+there should come back as a report.
 
 | Label | Meaning |
 |---|---|
