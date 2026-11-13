@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+{ inputs, ... }:
 {
   perSystem =
     {
@@ -40,10 +41,24 @@
       }
       # Demo wherever ffmpeg evaluates, which it does not on FreeBSD
       // lib.optionalAttrs (evaluates demo) { inherit demo; }
-      # Tutorial wherever it evaluates: on GNU/Linux, where sway runs, but
-      # not on armv6l, armv7l, or powerpc64le, where sway and TeX Live reach
-      # rdma-core, whose manual pages take pandoc and so GHC, which Nixpkgs
-      # cannot bootstrap there
-      // lib.optionalAttrs (evaluates doc) { inherit doc; };
+      # Tutorial for every system, built on GNU/Linux, where sway runs: here
+      # where it evaluates, else on GNU/Linux of the same processor, or on
+      # x86_64-linux for armv6l, armv7l, and powerpc64le, where sway and TeX
+      # Live reach rdma-core, whose manual pages take pandoc and so GHC,
+      # which Nixpkgs cannot bootstrap there.  Nix builds those on a builder
+      # for that system, such as the QEMU virtual machine of nix-darwin's
+      # linux-builder.
+      // {
+        doc =
+          if evaluates doc then
+            doc
+          else
+            inputs.self.packages.${
+              if pkgs.stdenv.hostPlatform.isLinux then
+                "x86_64-linux"
+              else
+                "${pkgs.stdenv.hostPlatform.parsed.cpu.name}-linux"
+            }.doc;
+      };
     };
 }
