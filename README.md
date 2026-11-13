@@ -28,8 +28,8 @@ Minimal cue-based show controller, the
   Both show on a stage window that each GO of one makes fullscreen.
   A fade that stops a picture or a video, and Panic, fade it out along with
   its sound, to black or to the picture that shows on under it.
-- **Light cues** that fade dimmers over Art-Net, each instrument keeping
-  its level until a later light cue names it.
+- **Light cues** that fade dimmers over Art-Net and sACN, each instrument
+  keeping its level until a later light cue names it.
 - **Fade, stop, wait, and memo cues**, chained by auto-continue and
   auto-follow, with pre-waits and post-waits.
 - **Panic** fades everything out in a second, and a second Panic stops at

@@ -221,10 +221,17 @@ leaves its instruments where the fade has brought them.
 Every instrument has no level until a light cue gives it one, each time
 that the show opens.
 
-*cinq* sends the levels of each universe that the patch uses as Art-Net, to
-the broadcast address of every IPv4 network that the computer is on, and to
-the computer itself, as soon as they change and again every second.
+*cinq* sends the levels of each universe that the patch uses both as
+Art-Net, to the broadcast address of every IPv4 network that the computer
+is on, and as sACN, to the multicast group of the universe on each of those
+networks, as soon as they change and again every second.
+It sends both to the computer itself as well.
+Its sACN has the priority 100, the default of sACN, so that a receiver that
+merges sources of one priority takes the higher level of each address from
+*cinq* and any other source, such as a lighting console.
 Instruments that share an address set it to the highest of their levels.
+When *cinq* ends, receivers of sACN hold its levels for as long as they
+hold those of any source that has gone quiet.
 
 # UNSAVED CHANGES
 
