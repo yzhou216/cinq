@@ -6,7 +6,7 @@ name: Packages
 on: [push, pull_request, workflow_dispatch]
 permissions: {contents: read}
 jobs:
-  packages: # The outputs besides the builds of cinq, which the other workflows upload
+  linux: # The outputs besides the builds of cinq, which the other workflows upload
     name: packages built on ${{ matrix.system }}
     strategy:
       fail-fast: false
@@ -14,20 +14,26 @@ jobs:
         include:
           - {system: x86_64-linux, os: ubuntu-latest, outputs: deb rpm archlinux darwin-pkg doc demo}
           - {system: aarch64-linux, os: ubuntu-24.04-arm, outputs: deb rpm archlinux darwin-pkg doc demo}
-          - {system: aarch64-darwin, os: macos-latest, outputs: darwin-pkg demo}
     runs-on: ${{ matrix.os }}
-    steps:
+    steps: &steps
       - uses: actions/checkout@main
       - uses: wimpysworld/nothing-but-nix@main
       - uses: cachix/install-nix-action@master
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: cachix/cachix-action@master
+        with:
+          name: yzhou216
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          pushFilter: -cinq- # cinq's own builds, which change with every commit
       - run: |
           mkdir packages
           for output in ${{ matrix.outputs }}; do
             nix build ".#$output"
             case $output in
-              doc) cp result/share/doc/cinq/tutorial.pdf packages ;;
+              # Pushed for the Darwin job, whose runner cannot start the
+              # virtual machine of a GNU/Linux builder
+              doc) cp result/share/doc/cinq/tutorial.pdf packages && cachix push yzhou216 result ;;
               demo) cp -R result/ packages/demo ;;
               *) cp result/* packages ;;
             esac
@@ -36,9 +42,19 @@ jobs:
         with:
           name: cinq-${{ matrix.system }}-packages
           path: packages
+  darwin:
+    name: packages built on ${{ matrix.system }}
+    needs: linux
+    if: ${{ !cancelled() }} # Needs the tutorial of aarch64-linux alone
+    strategy:
+      matrix:
+        include:
+          - {system: aarch64-darwin, os: macos-latest, outputs: darwin-pkg doc demo}
+    runs-on: ${{ matrix.os }}
+    steps: *steps
   install:
     name: Darwin package built on ${{ matrix.system }}, installed on aarch64-darwin
-    needs: packages
+    needs: [linux, darwin]
     if: ${{ !cancelled() }} # Packages that built still install when another failed
     strategy:
       fail-fast: false

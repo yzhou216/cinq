@@ -11,6 +11,7 @@
       config,
       lib,
       pkgs,
+      system,
       crate,
       rustfmt,
       ...
@@ -23,7 +24,8 @@
           touch "$out"
         '';
       }
-      // lib.optionalAttrs (config.packages ? doc) { inherit (config.packages) doc; };
+      # Tutorial where this system builds it itself, rather than a builder
+      // lib.optionalAttrs (config.packages.doc.system == system) { inherit (config.packages) doc; };
 
       treefmt = {
         projectRootFile = "flake.nix";

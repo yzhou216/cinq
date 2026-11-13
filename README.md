@@ -85,10 +85,13 @@ and `.#aarch64-windows`, which build `cinq.exe`, for Windows.  There
 which need a glibc as new as that of Nixpkgs.  On GNU/Linux and on Apple
 silicon, `.#darwin-pkg` builds an installer package for Darwin on Apple
 silicon.  It puts `cinq.app` in `/Applications` and the `cinq` command, the
-manual pages, the completions, and, when built on GNU/Linux, the tutorial
-with its demo in `/usr/local`.  The package is unsigned, so Darwin opens a
-copy that a browser downloaded only after Open Anyway in the Privacy &
-Security settings, while `sudo installer -pkg` installs it from a terminal.
+manual pages, the completions, and the tutorial with its demo in
+`/usr/local`.  The package is unsigned, so Darwin opens a copy that a
+browser downloaded only after Open Anyway in the Privacy & Security
+settings, while `sudo installer -pkg` installs it from a terminal.  The
+tutorial takes its screenshots in sway, which runs on GNU/Linux alone, so
+other systems build it on a GNU/Linux builder, such as the virtual machine
+of `nix.linux-builder` in nix-darwin.
 
 ## Configuration
 

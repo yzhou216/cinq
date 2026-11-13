@@ -20,15 +20,16 @@ Major changes and improvements in each release of cinq, newest first.
   film that they play, which `doc/demo/build.sh` generates with ffmpeg, in
   place of the `demo` branch and its files in Git LFS.
 - A tutorial in eight chapters runs the storm show of the demo.
-  `nix build .#doc` builds it on GNU/Linux into
-  `share/doc/cinq/tutorial.pdf`, with screenshots that it takes of cinq in
-  a headless sway session, and puts the demo beside it in
-  `share/doc/cinq/demo`.  The deb, rpm, and Arch packages carry both.
+  `nix build .#doc` builds it into `share/doc/cinq/tutorial.pdf`, with
+  screenshots that it takes of cinq in a headless sway session, and puts
+  the demo beside it in `share/doc/cinq/demo`.  Systems other than
+  GNU/Linux build it on a GNU/Linux builder, such as `nix.linux-builder` in
+  nix-darwin.  The deb, rpm, Arch, and Darwin packages carry both.
 - On GNU/Linux and on Apple silicon, `nix build .#darwin-pkg` builds an
   installer package for Darwin on Apple silicon, which puts `cinq.app` in
   `/Applications` and the `cinq` command, its manual pages, its
-  completions, and, when built on GNU/Linux, the tutorial with its demo in
-  `/usr/local`.  The package is unsigned.
+  completions, and the tutorial with its demo in `/usr/local`.  The
+  package is unsigned.
 - The clock of an audio cue follows how far its sound has played, as that
   of a video cue does, so that its fades, its end, and the cues that follow
   it stay with what is heard.  A sound that drifts from the clock of the
