@@ -79,6 +79,21 @@ they play on there from where they are.
 A file in which two outputs share a name, or whose channels are neither one
 nor two, cannot be opened.
 
+## Dante
+
+On a Dante network, outputs play on the channels of the Dante Virtual
+Soundcard, which Dante Controller routes on to the channels of a board or of
+any other Dante device: channel 3 of an output is transmit channel 3 of the
+soundcard.
+On Darwin, the soundcard is one Core Audio device with as many channels as its
+control panel sets.
+On Windows, *cinq* built with ASIO, as Nix builds it, reaches every channel of
+the soundcard as one ASIO driver, while the WDM mode of the soundcard offers
+each pair of its first 16 channels as a device of its own, so that an output
+on channel 3 there plays on channel 1 of _DVS Transmit 3-4_.
+*cinq* plays at the sample rate of the soundcard, which Dante Controller sets,
+whatever the rate of the files.
+
 # LISTS
 
 Each cue list is a table in the array *list*, in order:
