@@ -34,6 +34,12 @@ Major changes and improvements in each release of cinq, newest first.
   sound of a cue to each speaker of the computer in turn, and its first
   chapter names the outputs and the default device among what the sidebar
   shows.
+- A device that is not there, or that stops while it plays, as one unplugged
+  or a Dante Virtual Soundcard that restarts, opens again on its own within
+  two seconds of its return, and the cues that play on it pick up there
+  from where they are.  Meanwhile they wait for it for three seconds at
+  most, then go on by the clock of the show, so that the cues that follow
+  them still fire on time.
 
 ## v0.1.4
 
