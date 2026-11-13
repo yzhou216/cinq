@@ -10,6 +10,8 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+## v0.1.4
+
 - While the problems of `config.toml` take a screen of their own on a
   terminal, what cinq and its libraries print meanwhile, such as the
   messages of the sound system, waits and comes out on the main screen once
