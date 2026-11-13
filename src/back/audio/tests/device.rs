@@ -52,3 +52,11 @@ fn output_on_a_named_device_goes_by_its_name_where_the_id_finds_none() {
         [(MAIN, "there is no audio device Desk".to_owned())]
     );
 }
+
+#[test]
+fn devices_that_only_record_or_discard_are_not_listed() {
+    use crate::back::audio::device::plays;
+    assert!(plays("alsa:hw:CARD=1,DEV=0", false));
+    assert!(!plays("jack:input", true));
+    assert!(!plays("alsa:null", false));
+}

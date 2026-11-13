@@ -100,6 +100,16 @@ in its place, and follows it as it changes in the same way.
 	or _alsa:sysdefault:_ do, and _alsa:default_ and _alsa:pipewire_.
 	The _alsa:hw:_, _alsa:front:_, and _alsa:hdmi:_ devices of most cards take
 	samples only in a format of their own, and cannot be opened.
+
+	PulseAudio spreads a stream that has fewer channels than its device over
+	all of the channels of the device.
+	So through PulseAudio, as through _alsa:default_, a device of many
+	channels sounds on channels that no output names, unless an output names
+	the last channel of the device.
+	While a JACK server runs, as PipeWire's can, *cinq* also lists
+	_jack:output_, whose channels each connect to the playback port of the
+	server with their number, which keeps every channel where its output
+	puts it.
 ; end
 	It is the default device unless the file names another.
 
