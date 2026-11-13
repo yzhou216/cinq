@@ -59,6 +59,10 @@ Major changes and improvements in each release of cinq, newest first.
   such as the `hw` devices of most sound cards on ALSA, now play, where
   cinq played floating-point samples alone.  A mix past full scale clips there
   instead of wrapping into a crack.
+- On Windows, the build that Nix makes also plays on ASIO drivers, such as
+  that of the Dante Virtual Soundcard, which offers all of its channels as
+  one device where its WDM mode offers them in pairs.  The ASIO SDK of
+  Steinberg goes into that build under the GPL version 3.
 - In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
   rename does in desktop file managers, and no key puts the caret at the end
   of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and
