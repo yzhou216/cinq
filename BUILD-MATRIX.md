@@ -6,7 +6,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Build matrix
 
-Where each build of cinq comes from, as of master `9f1a90b` (2026-11-12).
+Where each build of cinq comes from, as of master `17eb477` (2026-11-12).
 Rows are what is built; columns are the machine that runs Nix.  The flake
 offers its outputs, native and cross, on every system that Nixpkgs lists.
 CI verifies x86_64-linux, aarch64-linux, and aarch64-darwin, builds every
@@ -48,8 +48,8 @@ native build.
 | Built (rows) by (columns) | x86_64-linux | aarch64-linux | aarch64-darwin | riscv64-linux | Other Linux [5] | x86_64-freebsd |
 |---|---|---|---|---|---|---|
 | deb, rpm, Arch, for the machine's own processor | **Artifact** | **Artifact** | none | Blocked [1] | Flake | none |
-| Darwin `.pkg` (`.#darwin-pkg`) | **Artifact, runs** | **Artifact, runs** | **Artifact, runs**, without the tutorial [4] | Blocked [1] | Flake | none |
-| Tutorial (`.#doc`) | **Artifact** | **Artifact** | none [4] | Blocked [1] | Flake on i686 only [5] | none |
+| Darwin `.pkg` (`.#darwin-pkg`) | **Artifact, runs** | **Artifact, runs** | **Artifact, runs** [4] | Blocked [1] | Flake | none |
+| Tutorial (`.#doc`) | **Artifact** | **Artifact** | **Artifact**, aarch64-linux's [4] | Blocked [1] | Flake [5] | Flake, x86_64-linux's [4] |
 | Demo shows (`.#demo`) | **Artifact** | **Artifact** | **Artifact** | Blocked [1] | Flake | none [8] |
 
 "Runs" means `cinq --version` on the system the build is for: on
@@ -61,14 +61,14 @@ they build.
 
 ## CI artifacts
 
-| Workflow | Built on | Artifacts | Count |
+| Workflow, as the Actions tab names it | Built on | Artifacts | Count |
 |---|---|---|---|
-| `native.yml` | x86_64-linux, aarch64-linux, aarch64-darwin | `cinq-<system>.tar` | 3 |
-| `cross-linux.yml` | x86_64-linux, aarch64-linux | `cinq-<host>-built-on-<system>.tar` for the other two of x86_64, aarch64, and riscv64 GNU/Linux | 4 |
-| `cross-freebsd.yml` | x86_64-linux, aarch64-linux | `cinq-{x86_64,aarch64}-freebsd-built-on-<system>.tar` | 4 |
-| `cross-darwin.yml` | x86_64-linux, aarch64-linux | `cinq-aarch64-darwin-built-on-<system>.tar` | 2 |
-| `cross-windows.yml` | x86_64-linux, aarch64-linux | `cinq-{x86_64,aarch64}-windows-built-on-<system>.exe` | 4 |
-| `packages.yml` | x86_64-linux, aarch64-linux, aarch64-darwin | `cinq-<system>-packages`: the deb, rpm, and Arch packages, the Darwin `.pkg`, `tutorial.pdf`, and `demo/`, as far as the system builds them | 3 |
+| Native builds (`native.yml`) | x86_64-linux, aarch64-linux, aarch64-darwin | `cinq-<system>.tar` | 3 |
+| Cross builds for GNU/Linux (`cross-linux.yml`) | x86_64-linux, aarch64-linux | `cinq-<host>-built-on-<system>.tar` for the other two of x86_64, aarch64, and riscv64 GNU/Linux | 4 |
+| Cross builds for FreeBSD (`cross-freebsd.yml`) | x86_64-linux, aarch64-linux | `cinq-{x86_64,aarch64}-freebsd-built-on-<system>.tar` | 4 |
+| Cross builds for Darwin (`cross-darwin.yml`) | x86_64-linux, aarch64-linux | `cinq-aarch64-darwin-built-on-<system>.tar` | 2 |
+| Cross builds for Windows (`cross-windows.yml`) | x86_64-linux, aarch64-linux | `cinq-{x86_64,aarch64}-windows-built-on-<system>.exe` | 4 |
+| Packages (`packages.yml`) | x86_64-linux, aarch64-linux, aarch64-darwin | `cinq-<system>-packages`: the deb, rpm, and Arch packages, the Darwin `.pkg`, `tutorial.pdf`, and `demo/`, as far as the system builds them | 3 |
 
 That makes 20 artifacts per push, which GitHub keeps for 90 days.
 `cinq-aarch64-darwin.tar` is Nixpkgs' native build, which links libiconv
@@ -86,11 +86,19 @@ builds cross-built on GNU/Linux and the `.pkg` run on any Mac.
    NixOS/nixpkgs#584781.
 3. riscv64-freebsd: Nixpkgs refuses the platform, and no FreeBSD package
    repository has Rust for it.
-4. The tutorial needs sway, which runs on GNU/Linux alone, so a `.pkg` built
-   on Darwin lacks it and its demo.
+4. The tutorial takes its screenshots in sway, which runs on GNU/Linux
+   alone.  Elsewhere `.#doc` is that of GNU/Linux on the same processor,
+   which Nix builds on a GNU/Linux builder, such as the QEMU virtual machine
+   of `nix.linux-builder` in nix-darwin, and every package carries it.
+   GitHub's Mac runners cannot start that virtual machine, so CI's Darwin
+   job waits for the aarch64-linux job, which pushes the tutorial to the
+   Cachix cache `yzhou216`, and takes it from there.  Pull requests from
+   forks get no Cachix token, so their GNU/Linux package jobs cannot push it
+   and fail.
 5. Other Linux: i686, armv6l, armv7l, and powerpc64le GNU/Linux.  No runner
    builds for them, so they stay untested.  The tutorial does not evaluate
-   on armv6l, armv7l, or powerpc64le, since its dependencies need GHC.
+   on armv6l, armv7l, or powerpc64le, since its dependencies need GHC, so
+   those take that of x86_64-linux through a builder, as in note 4.
 6. x86_64-darwin: this Nixpkgs no longer lists the system.  A cross build
    like aarch64-darwin's is untried.
 7. i686-windows: the ReactOS port on the scratch branch `reactos`, built as
