@@ -55,6 +55,10 @@ Major changes and improvements in each release of cinq, newest first.
   GNU/Linux needs JACK, unless the build leaves out the default features.
   The device lists leave out the null device of ALSA, which takes sound and
   plays none.
+- Audio devices that take samples only as integers of 32, 24, or 16 bits,
+  such as the `hw` devices of most sound cards on ALSA, now play, where
+  cinq played floating-point samples alone.  A mix past full scale clips there
+  instead of wrapping into a crack.
 - In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
   rename does in desktop file managers, and no key puts the caret at the end
   of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and
