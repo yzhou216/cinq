@@ -16,6 +16,11 @@ Major changes and improvements in each release of cinq, newest first.
   Patch, and cinq sends the levels as Art-Net and sACN to every network
   that the computer is on.  Universes count from 1, as in sACN.  Each
   instrument has one level, its intensity.
+- Network cues send an OSC message as they start, over TCP or UDP, as
+  QLab's do, so that a GO can fire a cue of a lighting console, or of any
+  other device or program that takes OSC, alongside sound and video.  The
+  inspector edits the destination and the message of a network cue on its
+  Basics tab.
 
 ## v0.1.4
 

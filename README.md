@@ -30,6 +30,8 @@ Minimal cue-based show controller, the
   its sound, to black or to the picture that shows on under it.
 - **Light cues** that fade dimmers over Art-Net and sACN, each instrument
   keeping its level until a later light cue names it.
+- **Network cues** that send OSC over TCP or UDP, such as to fire the cues
+  of a lighting console.
 - **Fade, stop, wait, and memo cues**, chained by auto-continue and
   auto-follow, with pre-waits and post-waits.
 - **Panic** fades everything out in a second, and a second Panic stops at

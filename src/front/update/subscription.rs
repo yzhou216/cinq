@@ -40,6 +40,9 @@ impl App {
             .map(|wait| pace::after(self.last_tick, wait, self.paced_windows()).map(Message::Tick));
         let rechecks = (!self.rechecking && self.workspace.failed().next().is_some())
             .then(|| time::every(RECHECK).map(|_| Message::Recheck));
+        let network = self
+            .network_checks
+            .map(|every| time::every(every).map(|_| Message::NetworkChecked));
         let always = [
             keyboard::listen().filter_map(keys::key_press),
             event::listen_with(clicked),
@@ -53,7 +56,7 @@ impl App {
             })
             .map(Message::Reconfigured)
         });
-        Subscription::batch(chain!(always, ticks, rechecks, reconfigured))
+        Subscription::batch(chain!(always, ticks, rechecks, network, reconfigured))
     }
 
     /// Returns the windows whose drawing the ticks of the clock wait for:

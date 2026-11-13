@@ -20,12 +20,12 @@ mod view;
 use std::{
     env, fs, io,
     path::{self, Path, PathBuf},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use iced::{Size, window};
 
-use crate::back::{Audio, CueId, CueList, Kind, Lights, Video, Workspace};
+use crate::back::{Audio, CueId, CueList, Kind, Lights, Network, Video, Workspace};
 use keymap::{Press, config::Config};
 use message::{Entry, Focus, Message, Tab};
 use update::{Keeper, Reader, Show, Stage};
@@ -109,6 +109,7 @@ struct Cinq {
     audio: Audio,
     video: Video,
     lights: Lights,
+    network: Network,
     keeper: Keeper,
 }
 
@@ -135,6 +136,12 @@ struct App {
     /// a directory to keep them in
     reader: Option<Reader>,
     audio_error: Option<String>,
+    /// Why messages of network cues to each destination failed, until one
+    /// gets there
+    network_problems: Vec<String>,
+    /// How often to look for news of the network output, while it has any
+    /// to give
+    network_checks: Option<Duration>,
     /// ID and name of each audio device, as they were listed last
     audio_devices: Vec<(String, String)>,
     /// Why the configuration file did not keep the audio device chosen
