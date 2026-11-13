@@ -109,6 +109,13 @@ in its place, and follows it as it changes in the same way.
 	_jack:output_, whose channels each connect to the playback port of the
 	server with their number, which keeps every channel where its output
 	puts it.
+; if windows
+	A build with the feature _asio_, as Nix builds *cinq* for Windows, also
+	lists the ASIO drivers, by IDs that begin with _asio:_, beside the devices
+	of WASAPI.
+	The Dante Virtual Soundcard offers all of its channels as one ASIO
+	driver, while in WDM mode it offers each pair of its first 16 channels as
+	a device of its own.
 ; end
 	It is the default device unless the file names another.
 

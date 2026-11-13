@@ -48,6 +48,11 @@ Major changes and improvements in each release of cinq, newest first.
 - Audio devices that take samples only as integers of 32, 24, or 16 bits,
   such as the `hw` devices of most sound cards on ALSA, now play, where
   cinq played floating-point samples alone.
+- On Windows, a build with the feature `asio`, as Nix builds cinq there,
+  also plays on ASIO drivers, such as that of the Dante Virtual Soundcard,
+  which offers all of its channels as one device where its WDM mode offers
+  them in pairs.  The ASIO SDK of Steinberg goes into such a build under
+  the GPL version 3.
 
 ## v0.1.4
 
