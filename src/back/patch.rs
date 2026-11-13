@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Light patch, which gives each instrument of a show the Art-Net universe
-//! and the DMX address of its intensity
+//! Light patch, which gives each instrument of a show the universe and the
+//! DMX address of its intensity
 
 use std::{fmt, ops::RangeInclusive};
 
@@ -11,10 +11,11 @@ use serde::{Deserialize, Serialize};
 
 use super::items::replaced_where;
 
-/// Port-Addresses of Art-Net, which counts universes from zero
-const UNIVERSES: RangeInclusive<u16> = 0..=32_767;
+/// Universes as sACN numbers them, from 1, which Art-Net sends as its
+/// Port-Addresses from 0
+pub(super) const UNIVERSES: RangeInclusive<u16> = 1..=32_768;
 
-const ADDRESSES: RangeInclusive<u16> = 1..=512;
+pub(super) const ADDRESSES: RangeInclusive<u16> = 1..=512;
 
 /// Identity of an instrument that stays stable when the operator renames
 /// it, by which light cues name it
@@ -28,7 +29,7 @@ pub struct Instrument {
     pub id: InstrumentId,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
-    #[serde(default, skip_serializing_if = "is_zero")]
+    #[serde(default = "first", skip_serializing_if = "is_first")]
     pub universe: u16,
     pub address: u16,
 }
@@ -58,11 +59,11 @@ impl fmt::Display for Instrument {
 
 impl Instrument {
     /// Returns the address as the patch shows it: the DMX address alone in
-    /// universe zero, and after its universe and a slash in the others, as
-    /// in `1/12`
+    /// universe 1, and after its universe and a slash in the others, as in
+    /// `2/12`
     pub fn address_text(&self) -> String {
         match self.universe {
-            0 => self.address.to_string(),
+            1 => self.address.to_string(),
             universe => format!("{universe}/{}", self.address),
         }
     }
@@ -71,7 +72,7 @@ impl Instrument {
 /// Returns the universe and the DMX address that `text` reads as, in the
 /// form that [`Instrument::address_text`] gives
 pub fn parse_address(text: &str) -> Option<(u16, u16)> {
-    let (universe, address) = text.split_once('/').unwrap_or(("0", text));
+    let (universe, address) = text.split_once('/').unwrap_or(("1", text));
     let number = |part: &str| part.trim().parse::<u16>().ok();
     Some((number(universe)?, number(address)?))
         .filter(|&(universe, address)| addressable(universe, address))
@@ -107,7 +108,7 @@ impl PatchEdit {
                 let Ok(id) = u32::try_from(next) else {
                     return patch;
                 };
-                let (universe, address) = patch.last().map_or((0, 1), |last| {
+                let (universe, address) = patch.last().map_or((first(), 1), |last| {
                     if last.address < *ADDRESSES.end() {
                         (last.universe, last.address + 1)
                     } else {
@@ -147,6 +148,10 @@ impl PatchEdit {
     }
 }
 
-fn is_zero(universe: &u16) -> bool {
-    *universe == 0
+fn first() -> u16 {
+    *UNIVERSES.start()
+}
+
+fn is_first(universe: &u16) -> bool {
+    *universe == first()
 }

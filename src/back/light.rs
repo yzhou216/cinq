@@ -12,6 +12,9 @@
 //! of a controller, so that a node that starts late or loses a packet
 //! catches up.  A show without instruments sends nothing.
 
+#[cfg(test)]
+mod tests;
+
 use std::{
     collections::BTreeMap,
     net::{Ipv4Addr, SocketAddr, UdpSocket},
@@ -85,9 +88,11 @@ fn send(levels: &mpsc::Receiver<Universes>) {
     }
 }
 
+/// Returns the ArtDmx packet of `universe`, which goes out as the
+/// Port-Address before it, as consoles send universe 1 as Port-Address 0
 fn packet(universe: u16, channels: &Universe) -> Option<Vec<u8>> {
     let output = Output {
-        port_address: universe.try_into().ok()?,
+        port_address: universe.checked_sub(1)?.try_into().ok()?,
         data: channels.to_vec().into(),
         ..Output::default()
     };

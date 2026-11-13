@@ -17,7 +17,7 @@ use std::collections::BTreeMap;
 use super::{Change, Workspace};
 use crate::back::{Active, CueId, Instrument, InstrumentId, PatchEdit};
 
-/// DMX channels of an Art-Net universe
+/// DMX channels of a universe
 pub type Universe = [u8; 512];
 
 /// Level of an instrument in percent, with the fade of the light cue that

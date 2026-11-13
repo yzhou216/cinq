@@ -197,15 +197,17 @@ order, and has one level, its intensity, which one DMX address sets:
 	Name of the instrument, as the inspector shows it.
 
 *universe*
-	Art-Net universe of the instrument, its Port-Address from 0 to 32767,
-	which is 0 by default.
+	Universe of the instrument, from 1 to 32768, which is 1 by default.
+	Universes count from 1, as in sACN, and Art-Net, which counts from 0,
+	carries universe 1 as its Port-Address 0 and each universe after it as
+	the next Port-Address, as most consoles do.
 
 *address*
 	DMX address of the instrument in its universe, from 1 to 512.
 
 The inspector edits the patch on its tab *Light Patch*, where an address
-reads as the DMX address alone in universe 0, and as the universe and the
-DMX address with a slash between them in the others, as in _1/12_.
+reads as the DMX address alone in universe 1, and as the universe and the
+DMX address with a slash between them in the others, as in _2/12_.
 A new instrument takes the address after that of the last.
 
 A light cue fades the instruments that it names from their levels as it

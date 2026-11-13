@@ -7,7 +7,10 @@
 
 use itertools::Itertools;
 
-use crate::back::{LEVELS, LOUDEST, PERCENT, SILENCE, Workspace, patch::addressable};
+use crate::back::{
+    LEVELS, LOUDEST, PERCENT, SILENCE, Workspace,
+    patch::{ADDRESSES, UNIVERSES, addressable},
+};
 
 /// Returns why the show read from a file cannot be opened, as
 /// [`Workspace::from_show`] tells, or none when it can
@@ -42,8 +45,14 @@ pub(super) fn problem(workspace: &Workspace) -> Option<String> {
         unaddressable.map(|instrument| {
             format!(
                 "the instrument with the id {} has the address {}/{}, which is not in a universe \
-                 from 0 to 32767 between 1 and 512",
-                instrument.id.0, instrument.universe, instrument.address
+                 from {} to {} between {} and {}",
+                instrument.id.0,
+                instrument.universe,
+                instrument.address,
+                UNIVERSES.start(),
+                UNIVERSES.end(),
+                ADDRESSES.start(),
+                ADDRESSES.end()
             )
         }),
         unlit.map(|cue| {

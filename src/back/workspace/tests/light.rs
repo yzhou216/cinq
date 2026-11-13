@@ -30,7 +30,7 @@ fn lit(cues: Vec<Cue>) -> Workspace {
     let instrument = |id, address| Instrument {
         id: InstrumentId(id),
         name: id.to_string(),
-        universe: 0,
+        universe: 1,
         address,
     };
     workspace(cues).with_patch(vec![instrument(1, 1), instrument(2, 2)])
@@ -60,7 +60,7 @@ fn light_cue_fades_its_instruments_and_leaves_them_where_it_ends() {
     assert!(done.active().is_empty());
     assert_eq!(level(&done, 1), 80.0);
     assert_eq!(level(&done, 2), 0.0);
-    assert_eq!(done.universes()[&0][..3], [204, 0, 0]);
+    assert_eq!(done.universes()[&1][..3], [204, 0, 0]);
 }
 
 #[test]
@@ -93,12 +93,12 @@ fn paused_or_stopped_light_cue_leaves_its_instruments_where_they_are() {
 
 #[test]
 fn instruments_on_one_address_set_it_to_the_highest_of_their_levels() {
-    let shared = Command::Patch(PatchEdit::Address(InstrumentId(2), 0, 1));
+    let shared = Command::Patch(PatchEdit::Address(InstrumentId(2), 1, 1));
     let workspace = lit(vec![light(1, &[(1, 20.0), (2, 100.0)])])
         .apply(shared)
         .apply(GO)
         .apply(tick(4.0));
-    assert_eq!(workspace.universes()[&0][..2], [255, 0]);
+    assert_eq!(workspace.universes()[&1][..2], [255, 0]);
 }
 
 #[test]
@@ -142,7 +142,7 @@ fn edits_of_the_levels_of_two_instruments_undo_one_at_a_time() {
 #[test]
 fn show_file_holds_the_patch_and_the_levels_of_light_cues() {
     let show = lit(vec![light(1, &[(2, 50.0)])])
-        .apply(Command::Patch(PatchEdit::Address(InstrumentId(2), 1, 12)))
+        .apply(Command::Patch(PatchEdit::Address(InstrumentId(2), 2, 12)))
         .show(Some(Path::new("/show")));
     assert_eq!(
         show,
@@ -154,7 +154,7 @@ address = 1
 [[instrument]]
 id = 2
 name = "2"
-universe = 1
+universe = 2
 address = 12
 
 [[list]]
@@ -206,9 +206,10 @@ fn addresses_and_light_levels_read_as_the_fields_show_them() {
         address: 101,
     };
     assert_eq!(parse_address(&instrument.address_text()), Some((2, 101)));
-    assert_eq!(parse_address(" 12 "), Some((0, 12)));
+    assert_eq!(parse_address(" 12 "), Some((1, 12)));
     assert_eq!(parse_address("513"), None);
-    assert_eq!(parse_address("32768/1"), None);
+    assert_eq!(parse_address("0/1"), None);
+    assert_eq!(parse_address("32769/1"), None);
     assert_eq!(instrument.to_string(), "1");
     assert_eq!(parse_percent("80%"), Some(Some(80.0)));
     assert_eq!(parse_percent(" "), Some(None));
