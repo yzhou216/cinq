@@ -2,12 +2,9 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
-permissions:
-  contents: read
+name: Packages
+on: [push, pull_request, workflow_dispatch]
+permissions: {contents: read}
 jobs:
   linux: # The outputs besides the builds of cinq, which the other workflows upload
     name: packages built on ${{ matrix.system }}

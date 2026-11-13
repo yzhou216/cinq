@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+name: Lock file updates
 on: {schedule: [{cron: '0 6 * * 1'}], workflow_dispatch: null}
 permissions: {actions: write, contents: write}
 concurrency: update

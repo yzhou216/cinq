@@ -2,12 +2,9 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
-permissions:
-  contents: read
+name: Cross builds for Darwin
+on: [push, pull_request, workflow_dispatch]
+permissions: {contents: read}
 jobs:
   build:
     name: cinq for aarch64-darwin built on ${{ matrix.system }}
