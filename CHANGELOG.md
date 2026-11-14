@@ -200,10 +200,13 @@ Major changes and improvements in each release of cinq, newest first.
 - The list of cue types beside Add cue carries the label `New cue:`, since it
   only sets the type of the next cue that Add cue makes, and a newcomer took it
   for the type of the selected cue.
-- Sounds play through a mixer of cinq's own, which opens each audio device
-  itself, so that a sound can reach any channel of a device.  A device whose
-  stream stops says so among the warnings, where the sound once moved to the
-  default device.
+- Sounds play through a mixer of cinq's own, which opens each audio device on a
+  thread of its own, so that a sound can reach any channel of a device and a
+  slow device, as a Dante Virtual Soundcard that restarts, holds up no window,
+  clock, GO, or other device.  An output shows no warning until its device has
+  answered, and tells that the device does not answer once five seconds have
+  passed without an answer.  A device whose stream stops says so among the
+  warnings, where the sound once moved to the default device.
 - A show has outputs, the named places that its cues send their sound to, each
   on one channel or two of an audio device, such as the house speakers on the
   first two channels of a desk and the subwoofer on its third.  Each audio and
@@ -229,6 +232,20 @@ Major changes and improvements in each release of cinq, newest first.
 - The tutorial has a chapter on outputs, in which the reader sends the sound of
   a cue to each speaker of the computer in turn, and its first chapter names the
   outputs and the default device among what the sidebar shows.
+- A device that is not there, or that stops while it plays, as one unplugged or
+  a Dante Virtual Soundcard that restarts, opens again on its own within two
+  seconds of its return, and so does a device whose sample rate changes, as
+  Dante Controller can change that of the soundcard.  The cues that play on it
+  pick up there from where they are, at the new rate where it changed.
+- While a device is away, the cues on it wait for it until it tells that it
+  stopped, or until it has asked for no sound for three seconds, then go on by
+  the clock of the show, so that the cues that follow them still fire on time.
+  A device that has just opened may take up to ten seconds for its first call
+  for sound, and the clocks of the cues on it wait at the start until then.
+- A device that has fewer channels than an output names opens again once it
+  offers them, and is looked at ever more seldom, up to every thirty seconds,
+  until what it offers changes.  Changing an output opens again only the
+  devices that the change touches, so that the sound on the others plays on.
 
 ## v0.1.4
 

@@ -1,0 +1,224 @@
+// SPDX-FileCopyrightText: 2026 Yiyu Zhou <yiyu@yiyuzhou.io>
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! Tests of the threads that open the devices, on devices that need no
+//! sound card: the order of opens and closes of one device, and a device
+//! that never answers
+
+use std::{
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicUsize, Ordering},
+        mpsc::{self, Receiver, Sender},
+    },
+    time::Duration,
+};
+
+use super::{
+    fakes::{Gate, MAIN, is_open, named, show},
+    settle, waiting,
+};
+use crate::back::{
+    Audio, Channels, Command, OutputEdit, READY_AHEAD, Workspace,
+    audio::{
+        mixer::Mixer,
+        opener::{Make, Opener},
+        patch::Need,
+    },
+};
+
+/// Stream that tells when it closes
+struct Stream {
+    id: usize,
+    events: Arc<Mutex<Vec<String>>>,
+}
+
+impl Drop for Stream {
+    fn drop(&mut self) {
+        note(&self.events, format!("close {}", self.id));
+    }
+}
+
+fn note(events: &Mutex<Vec<String>>, event: String) {
+    events
+        .lock()
+        .expect("no test panics with the lock")
+        .push(event);
+}
+
+/// Returns the events that the devices have noted so far
+fn logged(events: &Mutex<Vec<String>>) -> Vec<String> {
+    events.lock().expect("no test panics with the lock").clone()
+}
+
+/// Devices that open once `gate` lets them and record what happens to them
+#[derive(Default)]
+struct Recording {
+    gate: Gate,
+    events: Arc<Mutex<Vec<String>>>,
+    next: AtomicUsize,
+}
+
+impl Make for Recording {
+    type Stream = Stream;
+
+    fn open(&self, need: &Need) -> Result<(Mixer, Stream), String> {
+        let id = self.next.fetch_add(1, Ordering::SeqCst);
+        note(&self.events, format!("open {id}"));
+        self.gate.pass();
+        note(&self.events, format!("opened {id}"));
+        let (mixer, _) = Mixer::bench(need.channels, need.channels, 8000, 16);
+        let events = Arc::clone(&self.events);
+        Ok((mixer, Stream { id, events }))
+    }
+
+    fn offers(&self, _: &Need) -> Option<u16> {
+        None
+    }
+}
+
+/// Returns audio on recording devices that wait at the closed gate, which
+/// is returned too, and the events that they note
+fn recorded() -> (Audio, Gate, Arc<Mutex<Vec<String>>>) {
+    let gate = Gate::closed();
+    let recording = Recording {
+        gate: gate.clone(),
+        ..Recording::default()
+    };
+    let events = Arc::clone(&recording.events);
+    let mut audio = Audio::open(None);
+    audio.opener = Opener::with(recording);
+    (audio, gate, events)
+}
+
+fn on_a(channels: Channels) -> Workspace {
+    Workspace::default()
+        .apply(Command::EditOutput(MAIN, OutputEdit::Device(named("a"))))
+        .apply(Command::EditOutput(MAIN, OutputEdit::Channels(channels)))
+}
+
+/// Waits until `done` holds, taking in the answers as a sync does
+fn until(audio: &mut Audio, done: impl Fn(&Audio) -> bool) {
+    waiting(|| {
+        audio.arrived();
+        done(audio).then_some(())
+    });
+}
+
+/// Waits until a device has noted `event`
+fn noted(events: &Mutex<Vec<String>>, event: &str) {
+    waiting(|| {
+        logged(events)
+            .iter()
+            .any(|noted| noted == event)
+            .then_some(())
+    });
+}
+
+#[test]
+fn stream_that_an_open_made_stale_closes_before_the_next_open_of_its_device() {
+    let (mut audio, gate, events) = recorded();
+    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
+    noted(&events, "open 0");
+    audio.route(Some("elsewhere"));
+    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
+    gate.release();
+    until(&mut audio, |audio| is_open(audio, "a"));
+    assert_eq!(
+        logged(&events),
+        ["open 0", "opened 0", "close 0", "open 1", "opened 1"]
+    );
+}
+
+#[test]
+fn open_that_has_yet_to_start_when_the_devices_change_never_starts() {
+    let (mut audio, gate, events) = recorded();
+    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
+    noted(&events, "open 0");
+    // The open that follows the first route waits behind the first open,
+    // and the second route makes it stale before it starts
+    audio.route(Some("one"));
+    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
+    audio.route(Some("two"));
+    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
+    gate.release();
+    settle(&mut audio);
+    assert_eq!(
+        logged(&events),
+        ["open 0", "opened 0", "close 0", "open 1", "opened 1"],
+        "the open between them never starts"
+    );
+}
+
+/// Devices of which `a` never answers until it is let go, and `b` opens
+struct Hanging {
+    release: Mutex<Receiver<()>>,
+    asked: Arc<AtomicUsize>,
+}
+
+impl Make for Hanging {
+    type Stream = ();
+
+    fn open(&self, need: &Need) -> Result<(Mixer, ()), String> {
+        if need.key.as_deref() == Some("a") {
+            self.asked.fetch_add(1, Ordering::SeqCst);
+            let _ = self.release.lock().expect("no test panics").recv();
+            return Err("there is no audio device".to_owned());
+        }
+        let (mixer, _) = Mixer::bench(need.channels, need.channels, 8000, 16);
+        Ok((mixer, ()))
+    }
+
+    fn offers(&self, _: &Need) -> Option<u16> {
+        None
+    }
+}
+
+fn hanging() -> (Audio, Sender<()>, Arc<AtomicUsize>) {
+    let (release, waiting) = mpsc::channel();
+    let asked = Arc::new(AtomicUsize::new(0));
+    let hanging = Hanging {
+        release: Mutex::new(waiting),
+        asked: Arc::clone(&asked),
+    };
+    let mut audio = Audio::open(None);
+    audio.opener = Opener::with(hanging).patient(Duration::from_millis(500));
+    (audio, release, asked)
+}
+
+#[test]
+fn device_that_never_answers_holds_up_no_other_and_tells_so_after_a_while() {
+    let (mut audio, release, _) = hanging();
+    audio.sync(show(Channels::MAIN, Channels::Stereo(0, 1)), READY_AHEAD);
+    assert_eq!(audio.problems(), [], "nothing is told at first");
+    until(&mut audio, |audio| is_open(audio, "b"));
+    until(&mut audio, |audio| !audio.problems().is_empty());
+    assert_eq!(
+        audio.problems(),
+        [(MAIN, "the device does not answer".to_owned())]
+    );
+    // Syncs go on and ask for no second open of the device
+    audio.sync(show(Channels::MAIN, Channels::Stereo(0, 1)), READY_AHEAD);
+    release.send(()).expect("the device waits");
+    until(&mut audio, |audio| !audio.opener.busy());
+    assert_eq!(
+        audio.problems(),
+        [(MAIN, "there is no audio device".to_owned())]
+    );
+}
+
+#[test]
+fn device_that_never_answers_is_not_asked_a_second_time() {
+    let (mut audio, release, asked) = hanging();
+    let workspace = show(Channels::MAIN, Channels::Stereo(0, 1));
+    audio.sync(workspace.clone(), READY_AHEAD);
+    until(&mut audio, |audio| {
+        matches!(audio.mixers.get(&Some("b".to_owned())), Some(Ok(_)))
+    });
+    until(&mut audio, |audio| !audio.problems().is_empty());
+    audio.sync(workspace, READY_AHEAD);
+    release.send(()).expect("the device waits");
+    until(&mut audio, |audio| !audio.opener.busy());
+    assert_eq!(asked.load(Ordering::SeqCst), 1);
+}

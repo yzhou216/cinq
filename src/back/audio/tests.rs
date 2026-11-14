@@ -7,7 +7,11 @@
 //! need no audio device
 
 mod device;
+mod fakes;
+mod opener;
+mod opening;
 mod patch;
+mod retry;
 mod voice;
 
 use std::{
@@ -21,7 +25,7 @@ use std::{
 use tempfile::TempDir;
 
 use super::{
-    READY_AHEAD,
+    Audio, READY_AHEAD,
     preload::{Ask, Preloaded, Preloader, Wanted, serve},
     upcoming,
 };
@@ -93,20 +97,26 @@ fn silent_file() -> (TempDir, Wanted) {
     (directory, whole(&file))
 }
 
-/// Returns what `preloader` made for `cue`, once its thread has made it,
-/// waiting five seconds at most
+/// Calls `poll` every five milliseconds until it returns something, five
+/// seconds at most, since a thread of the test is to answer
+fn waiting<T>(mut poll: impl FnMut() -> Option<T>) -> Option<T> {
+    (0..1000).find_map(|_| {
+        poll().or_else(|| {
+            thread::sleep(Duration::from_millis(5));
+            None
+        })
+    })
+}
+
+/// Returns what `preloader` made for `cue`, once its thread has made it
 fn made(
     preloader: &mut Preloader,
     cue: CueId,
     wanted: &Wanted,
 ) -> Option<Result<Preloaded, String>> {
-    (0..500).find_map(|_| {
+    waiting(|| {
         preloader.collect();
-        let made = preloader.take(cue, wanted);
-        if made.is_none() {
-            thread::sleep(Duration::from_millis(10));
-        }
-        made
+        preloader.take(cue, wanted)
     })
 }
 
@@ -225,4 +235,13 @@ fn sounds_are_made_ready_only_when_they_start_within_the_window() {
         .for_each(|(name, workspace, ahead, cues)| {
             assert_eq!(cues_within(workspace, ahead), cues, "{name}");
         });
+}
+
+/// Waits until the threads of the devices have answered every job, taking in
+/// its answers as a sync does
+fn settle(audio: &mut Audio) {
+    waiting(|| {
+        audio.arrived();
+        (!audio.opener.busy()).then_some(())
+    });
 }

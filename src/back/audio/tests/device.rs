@@ -5,12 +5,14 @@
 //! Tests of opening audio devices by their IDs, which need no audio
 //! device, since no host of cpal is named cinq
 
+use super::settle;
 use crate::back::{Audio, Channels, Command, Device, OutputEdit, OutputId, READY_AHEAD, Workspace};
 
 const MAIN: OutputId = OutputId(1);
 
 fn problems(audio: &mut Audio, workspace: Workspace) -> Vec<(OutputId, String)> {
     audio.sync(workspace, READY_AHEAD);
+    settle(audio);
     audio.problems()
 }
 

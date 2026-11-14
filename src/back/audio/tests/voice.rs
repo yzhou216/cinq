@@ -43,6 +43,23 @@ fn audio() -> Cue {
         .build()
 }
 
+/// Returns a directory with a file of `seconds` of silence, and the
+/// workspace in which GO has fired `cue`, which plays that file
+fn fired(cue: Cue, seconds: f32) -> (TempDir, Workspace) {
+    let directory = TempDir::new().expect("a temporary directory can be made");
+    fs::write(directory.path().join("silence.wav"), silence(seconds))
+        .expect("the file can be written");
+    let media = Media::Loaded {
+        duration: 10.0,
+        sound: Some(seconds),
+    };
+    let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])])
+        .directory(directory.path())
+        .apply(loaded(1, "silence.wav", media))
+        .apply(GO);
+    (directory, workspace)
+}
+
 /// Plays the sound of the cue made by `cue` from a file of `seconds` of
 /// sound, and returns how many seconds the run has played after each of the
 /// `ticks` by which the clock moves on while the sound moves on ten
@@ -59,17 +76,7 @@ fn played_while(
     ticks: &[f64],
     plays: impl Fn(usize) -> bool,
 ) -> Vec<(f64, bool)> {
-    let directory = TempDir::new().expect("a temporary directory can be made");
-    fs::write(directory.path().join("silence.wav"), silence(seconds))
-        .expect("the file can be written");
-    let media = Media::Loaded {
-        duration: 10.0,
-        sound: Some(seconds),
-    };
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .directory(directory.path())
-        .apply(loaded(1, "silence.wav", media))
-        .apply(GO);
+    let (directory, workspace) = fired(cue, seconds);
     let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
         backend_settings: MockBackendSettings { sample_rate: 8000 },
         internal_buffer_size: 80,
@@ -95,7 +102,7 @@ fn played_while(
                 backend.on_start_processing();
                 backend.process();
             }
-            let heard = voice.heard(ticked.active_of(CueId(1)).expect("the cue runs"));
+            let heard = voice.heard(ticked.active_of(CueId(1)).expect("the cue runs"), |_| true);
             *workspace = heard.clone().into_iter().fold(ticked, Workspace::apply);
             let played = workspace
                 .active_of(CueId(1))
@@ -156,27 +163,17 @@ fn clock_of_run_waits_while_its_sound_stalls() {
     assert!((last - 0.49).abs() < 0.02, "{last}");
 }
 
-/// Opens the sound of the audio cue on the devices of `mixers` as
-/// [`Voice::open`] does, from a file of two seconds of sound
-fn opened(mixers: [&mut Mixer; 2]) -> Result<Voice, String> {
-    let directory = TempDir::new().expect("a temporary directory can be made");
+/// Opens the sound of the audio cue on the mixers of `devices`, by their
+/// keys, as [`Voice::open`] does, from a file of two seconds of sound
+pub(super) fn opened(devices: Vec<(&str, &mut Mixer)>) -> Result<Voice, String> {
+    let (directory, workspace) = fired(audio(), 2.0);
     let file = directory.path().join("silence.wav");
-    fs::write(&file, silence(2.0)).expect("the file can be written");
-    let media = Media::Loaded {
-        duration: 10.0,
-        sound: Some(2.0),
-    };
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![audio()])])
-        .directory(directory.path())
-        .apply(loaded(1, "silence.wav", media))
-        .apply(GO);
     let active = workspace.active_of(CueId(1)).expect("the cue runs");
     let clip = active.sound().expect("the cue has sound");
-    let targets = mixers
+    let targets = devices
         .into_iter()
-        .enumerate()
-        .map(|(index, mixer)| Target {
-            key: Some(index.to_string()),
+        .map(|(key, mixer)| Target {
+            key: Some(key.to_owned()),
             mixer,
             gains: Box::new([[1.0, 0.0]; 2]),
         })
@@ -186,13 +183,14 @@ fn opened(mixers: [&mut Mixer; 2]) -> Result<Voice, String> {
 
 #[test]
 fn run_that_cannot_start_on_a_later_device_stops_its_sound_on_the_earlier_one() {
-    let (mut first, mut mix) = Mixer::bench(2, 8000, 16);
-    let (mut full, _) = Mixer::bench(2, 8000, 0);
-    assert!(opened([&mut first, &mut full]).is_err());
+    let (mut first, mut mix) = Mixer::bench(2, 2, 8000, 16);
+    let (mut full, _) = Mixer::bench(2, 2, 8000, 0);
+    assert!(opened(vec![("a", &mut first), ("b", &mut full)]).is_err());
     mix.render(&mut [0.0_f32; 512]);
     assert_eq!(mix.sounds(), 0, "nothing keeps the sound on the first");
-    let (mut second, _) = Mixer::bench(2, 8000, 16);
-    let voice = opened([&mut first, &mut second]).expect("both devices take the sound");
+    let (mut second, _) = Mixer::bench(2, 2, 8000, 16);
+    let voice =
+        opened(vec![("a", &mut first), ("b", &mut second)]).expect("both devices take the sound");
     mix.render(&mut [0.0_f32; 512]);
     assert_eq!(mix.sounds(), 1);
     drop(voice);

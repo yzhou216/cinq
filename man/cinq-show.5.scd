@@ -71,6 +71,25 @@ device, at which new cues send at 0 dB, and a show that has Main alone, as it
 was made, writes no outputs.
 An output that cannot play, as one whose device is not there, shows among the
 warnings, and the cues play on the others.
+So does an output on channels past those of its device, while the other outputs
+of the device play.
+*cinq* tries such a device again every two seconds, so that a device plugged in,
+or a Dante Virtual Soundcard started, plays with nothing for the operator to do.
+A device that has fewer channels than an output names is looked at again as
+well, so that a Dante Virtual Soundcard whose channels are raised plays them,
+ever more seldom while it offers no more, up to every thirty seconds.
+A device that does not answer when it is opened is shown as not answering after
+five seconds, and it holds up no other device.
+Changing an output opens again only the devices that the change touches, so
+that the sound on the others plays on.
+A device that stops while cues play on it, as one unplugged or a Dante Virtual
+Soundcard that restarts, holds their clocks until it tells that it stopped, or
+until it has asked for no sound for three seconds, after which they go on by
+the clock of the show, and once the device opens again they play on there from
+where they are.
+A device that has just opened may take up to ten seconds for its first call for
+sound, as a Bluetooth sink that sleeps does, and until then the clocks of the
+cues on it wait at the start.
 A file in which an output has no name, two outputs share a name, or the channels
 of an output are neither one nor two, cannot be opened.
 

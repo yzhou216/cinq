@@ -9,6 +9,7 @@ use std::{sync::Arc, time::Duration};
 
 use kira::{
     AudioManager, AudioManagerSettings, Frame,
+    backend::cpal::cpal::ErrorKind,
     sound::static_sound::{StaticSoundData, StaticSoundSettings},
 };
 use rtrb::{Consumer, Producer, RingBuffer};
@@ -190,4 +191,28 @@ fn fade_out_lasts_ten_milliseconds_at_any_rate() {
     let bench = Bench::at(96000, 2).play(1, gains(2, &[(0, [1.0, 0.0])]));
     let (_, fading) = fade_out(bench, ramp);
     assert!(fading[ramp - 2] > 1e-4 && fading[ramp - 1].abs() < 1e-6);
+}
+
+#[test]
+fn stream_is_built_anew_after_its_device_goes_but_not_after_an_underrun() {
+    assert!(super::ends(ErrorKind::DeviceNotAvailable));
+    assert!(super::ends(ErrorKind::StreamInvalidated));
+    assert!(!super::ends(ErrorKind::Xrun));
+    assert!(!super::ends(ErrorKind::BackendError));
+}
+
+#[test]
+fn device_opens_with_the_fewest_channels_that_hold_the_outputs() {
+    assert_eq!(super::chosen(&[2, 16, 64], 3), Some(16));
+    assert_eq!(super::chosen(&[2, 16, 64], 2), Some(2));
+}
+
+#[test]
+fn device_of_too_few_channels_opens_with_all_it_has() {
+    assert_eq!(super::chosen(&[2, 16], 34), Some(16));
+}
+
+#[test]
+fn device_of_no_samples_that_cinq_plays_does_not_open() {
+    assert_eq!(super::chosen(&[], 2), None);
 }

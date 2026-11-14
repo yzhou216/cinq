@@ -116,10 +116,10 @@ _tutorial.pdf_
 	A change moves those outputs as soon as the file is saved, and the sounds
 	that play go on from where they are on the new device.
 	A device can take a moment to start, during which nothing is heard and
-	the cues that play wait for it.
+	the cues that play wait for it, while the rest of the window goes on.
 	While the device is not there, or cannot be opened, those outputs are
-	silent, the warnings in the sidebar tell why, and saving the file tries
-	again.
+	silent, the warnings in the sidebar tell why, and *cinq* tries the device
+	again every two seconds, as *cinq-show*(5) describes.
 ; if xdg
 	On ALSA, *cinq* plays on most sound cards only through a plug that
 	converts its samples, as the devices whose IDs begin with _alsa:plughw:_
