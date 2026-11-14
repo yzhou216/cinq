@@ -22,12 +22,13 @@ Major changes and improvements in each release of cinq, newest first.
   as on the other outputs of a device whose channels one output overruns.
 - The Outputs entry below the cue lists in the sidebar shows the outputs of
   the show in place of the cue list, each with its device, its channels, and
-  why it cannot play where it cannot, and the inspector edits the one
-  selected.  The keys that select, add, move, and delete cues do the same to
-  outputs there, and the key of the next cue list reaches them past the last
-  one.  The Audio device list of the sidebar is now Default device, since it
-  chooses the device of the outputs that name none, and its first option
-  reads System default.
+  in a few words why it cannot play where it cannot: in yellow where cinq
+  tries its device again by itself, and in red where the output must change.
+  The inspector edits the one selected.  The keys that select, add, move,
+  and delete cues do the same to outputs there, and the key of the next cue
+  list reaches them past the last one.  The Audio device list of the sidebar
+  is now Default device, since it chooses the device of the outputs that
+  name none, and its first option reads System default.
 - The Levels tab of an audio or video cue sets the level at which the cue
   sends to each output of the show, and a field left empty sends nothing
   there.

@@ -7,6 +7,7 @@
 
 mod cue_table;
 mod devices;
+mod faults;
 mod format;
 mod help;
 mod inspector;

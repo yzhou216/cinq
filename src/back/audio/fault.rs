@@ -20,6 +20,23 @@ pub enum Fault {
     Channels(u16),
 }
 
+impl Fault {
+    /// Returns whether cinq tries the device again by itself
+    pub fn retried(&self) -> bool {
+        !matches!(self, Fault::Channels(_))
+    }
+
+    /// Returns what the fault does to the output, in a few words
+    pub fn state(&self) -> String {
+        match self {
+            Fault::Missing(_) => "Not found, retrying".to_owned(),
+            Fault::Refused(_) => "Cannot open, retrying".to_owned(),
+            Fault::Stopped(_) => "Stopped, retrying".to_owned(),
+            Fault::Channels(count) => format!("Past its {count} channels"),
+        }
+    }
+}
+
 impl fmt::Display for Fault {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
