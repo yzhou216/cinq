@@ -19,8 +19,10 @@ pub(super) const FORMATS: [SampleFormat; 4] = [
 ];
 
 /// Returns the configuration of the stream of `device`: its default sample
-/// rate, and the fewest channels that hold `channels` in the first of
-/// [`FORMATS`] that it takes, with that format
+/// rate, and the fewest channels that hold `channels`, or else all that it
+/// has, in the first of [`FORMATS`] that it takes, with that format.  A
+/// device of fewer channels than an output needs still opens, so that the
+/// outputs within its channels play, and only that output tells.
 pub(super) fn config(
     device: &Device,
     channels: u16,
@@ -29,31 +31,59 @@ pub(super) fn config(
         .default_output_config()
         .map_err(|error| error.to_string())?
         .sample_rate();
-    let ranges: Vec<_> = device
+    let offered: Vec<_> = device
         .supported_output_configs()
         .map_err(|error| error.to_string())?
-        .filter(|range| {
-            (range.min_sample_rate()..=range.max_sample_rate()).contains(&rate)
-                && range.channels() >= channels
-        })
+        .filter(|range| (range.min_sample_rate()..=range.max_sample_rate()).contains(&rate))
+        .map(|range| (range.sample_format(), range.channels()))
         .collect();
-    let (format, fewest) = FORMATS
-        .into_iter()
-        .find_map(|format| {
-            let fewest = ranges
-                .iter()
-                .filter(|range| range.sample_format() == format)
-                .map(|range| range.channels())
-                .min()?;
-            Some((format, fewest))
-        })
-        .ok_or_else(|| {
-            format!("it takes no samples that cinq can play on {channels} channels at {rate} Hz")
-        })?;
+    let (format, count) = chosen(&offered, channels).ok_or_else(|| {
+        if offered.is_empty() {
+            format!("it offers no stream at {rate} Hz")
+        } else {
+            format!("it takes no samples that cinq can play at {rate} Hz")
+        }
+    })?;
     let config = StreamConfig {
-        channels: fewest,
+        channels: count,
         sample_rate: rate,
         buffer_size: BufferSize::Default,
     };
     Ok((config, format))
+}
+
+/// Returns the format and the count of channels to open from the formats
+/// and counts that a device `offered`: the first of [`FORMATS`] with the
+/// fewest channels that hold `channels`, or else the most channels that any
+/// of them offers, in the first that offers so many, or none where it offers
+/// none of them
+pub(super) fn chosen(
+    offered: &[(SampleFormat, u16)],
+    channels: u16,
+) -> Option<(SampleFormat, u16)> {
+    let counts = |format: SampleFormat| {
+        offered
+            .iter()
+            .filter(move |(offer, _)| *offer == format)
+            .map(|(_, count)| *count)
+    };
+    let holding = || {
+        FORMATS.into_iter().find_map(|format| {
+            counts(format)
+                .filter(|count| *count >= channels)
+                .min()
+                .map(|count| (format, count))
+        })
+    };
+    let most = || {
+        let widest = FORMATS
+            .into_iter()
+            .filter_map(|format| counts(format).max())
+            .max()?;
+        FORMATS
+            .into_iter()
+            .find(|format| counts(*format).any(|count| count == widest))
+            .map(|format| (format, widest))
+    };
+    holding().or_else(most)
 }

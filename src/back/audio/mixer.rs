@@ -8,8 +8,10 @@
 //! The device opens with the fewest channels that it offers at its default
 //! sample rate that hold the channels asked for, in the first samples of
 //! [`config::FORMATS`] that it takes.  Opening with the most it offers would ask 64
-//! channels of the plug devices of ALSA, which take any number.  The mix
-//! itself runs on the thread of the stream, as [`mix`] tells.
+//! channels of the plug devices of ALSA, which take any number.  A device
+//! with fewer channels than asked for opens with all that it has, so that
+//! a typo in the channels of one output silences that output alone.  The
+//! mix itself runs on the thread of the stream, as [`mix`] tells.
 
 mod config;
 mod mix;
@@ -66,6 +68,9 @@ pub(super) struct Mixer {
     gone: Consumer<Gone>,
     sample_rate: u32,
     channels: u16,
+    /// Channels that the outputs needed as the device opened, which can be
+    /// more than it has
+    asked: u16,
     /// Latest error of the stream, which it tells from its own thread
     error: Arc<Mutex<Option<String>>>,
     /// Whether the stream has told an error after which it must be built
@@ -99,6 +104,19 @@ impl Mixer {
             Some(id) => format!("cannot play on {id}: {error}"),
             None => error,
         })
+    }
+
+    /// Returns how many channels the device whose ID is `device`, or the
+    /// default device without one, would open with for `channels`, without
+    /// opening it, or none where it is not there or cannot play
+    pub(super) fn offers(device: Option<&str>, name: Option<&str>, channels: u16) -> Option<u16> {
+        let found = match device {
+            Some(id) => device::find(id, name).ok()?,
+            None => cpal::default_host().default_output_device()?,
+        };
+        config(&found, channels)
+            .ok()
+            .map(|(config, _)| config.channels)
     }
 
     fn start(found: &Device, channels: u16) -> Result<Self, String> {
@@ -135,6 +153,7 @@ impl Mixer {
             gone,
             sample_rate: config.sample_rate,
             channels: config.channels,
+            asked: channels,
             error,
             lost,
             started,
@@ -149,6 +168,10 @@ impl Mixer {
 
     pub(super) fn channels(&self) -> u16 {
         self.channels
+    }
+
+    pub(super) fn asked(&self) -> u16 {
+        self.asked
     }
 
     /// Mixes the sound that `renderer` makes at `gains`, and returns the
@@ -220,7 +243,12 @@ fn stalled(elapsed: Duration, called: Option<Duration>) -> bool {
 impl Mixer {
     /// Returns a mixer without a device, whose ring of commands holds
     /// `capacity`, and the mix that the stream of a device would run
-    pub(super) fn bench(channels: u16, sample_rate: u32, capacity: usize) -> (Self, Mix) {
+    pub(super) fn bench(
+        channels: u16,
+        asked: u16,
+        sample_rate: u32,
+        capacity: usize,
+    ) -> (Self, Mix) {
         let (commands, taken) = RingBuffer::new(capacity);
         let (handed, gone) = RingBuffer::new(COMMANDS);
         let mix = Mix::new(usize::from(channels), sample_rate, 8, taken, handed);
@@ -230,6 +258,7 @@ impl Mixer {
             gone,
             sample_rate,
             channels,
+            asked,
             error: Arc::default(),
             lost: Arc::default(),
             started: Instant::now(),

@@ -51,7 +51,10 @@ Major changes and improvements in each release of cinq, newest first.
   has asked for no sound for three seconds, then go on by the clock of the
   show, so that the cues that follow them still fire on time.  A device that
   has just opened may take up to ten seconds for its first call for sound,
-  and the clocks of the cues on it wait at the start until then.
+  and the clocks of the cues on it wait at the start until then.  A device
+  that has fewer channels than an output names opens again once it offers
+  them, and changing an output opens again only the devices that the change
+  touches, so that the sound on the others plays on.
 - On GNU/Linux and the BSDs, cinq also plays on the device of a running JACK
   server, such as PipeWire's, as `jack:output`, whose channels each reach
   the playback port of their number.  PulseAudio spreads a stream over every

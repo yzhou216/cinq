@@ -156,9 +156,9 @@ fn clock_of_run_waits_while_its_sound_stalls() {
     assert!((last - 0.49).abs() < 0.02, "{last}");
 }
 
-/// Opens the sound of the audio cue on the devices of `mixers` as
-/// [`Voice::open`] does, from a file of two seconds of sound
-fn opened(mixers: [&mut Mixer; 2]) -> Result<Voice, String> {
+/// Opens the sound of the audio cue on the mixers of `devices`, by their
+/// keys, as [`Voice::open`] does, from a file of two seconds of sound
+pub(super) fn opened(devices: Vec<(&str, &mut Mixer)>) -> Result<Voice, String> {
     let directory = TempDir::new().expect("a temporary directory can be made");
     let file = directory.path().join("silence.wav");
     fs::write(&file, silence(2.0)).expect("the file can be written");
@@ -172,11 +172,10 @@ fn opened(mixers: [&mut Mixer; 2]) -> Result<Voice, String> {
         .apply(GO);
     let active = workspace.active_of(CueId(1)).expect("the cue runs");
     let clip = active.sound().expect("the cue has sound");
-    let targets = mixers
+    let targets = devices
         .into_iter()
-        .enumerate()
-        .map(|(index, mixer)| Target {
-            key: Some(index.to_string()),
+        .map(|(key, mixer)| Target {
+            key: Some(key.to_owned()),
             mixer,
             gains: Box::new([[1.0, 0.0]; 2]),
         })
@@ -186,13 +185,14 @@ fn opened(mixers: [&mut Mixer; 2]) -> Result<Voice, String> {
 
 #[test]
 fn run_that_cannot_start_on_a_later_device_stops_its_sound_on_the_earlier_one() {
-    let (mut first, mut mix) = Mixer::bench(2, 8000, 16);
-    let (mut full, _) = Mixer::bench(2, 8000, 0);
-    assert!(opened([&mut first, &mut full]).is_err());
+    let (mut first, mut mix) = Mixer::bench(2, 2, 8000, 16);
+    let (mut full, _) = Mixer::bench(2, 2, 8000, 0);
+    assert!(opened(vec![("a", &mut first), ("b", &mut full)]).is_err());
     mix.render(&mut [0.0_f32; 512]);
     assert_eq!(mix.sounds(), 0, "nothing keeps the sound on the first");
-    let (mut second, _) = Mixer::bench(2, 8000, 16);
-    let voice = opened([&mut first, &mut second]).expect("both devices take the sound");
+    let (mut second, _) = Mixer::bench(2, 2, 8000, 16);
+    let voice =
+        opened(vec![("a", &mut first), ("b", &mut second)]).expect("both devices take the sound");
     mix.render(&mut [0.0_f32; 512]);
     assert_eq!(mix.sounds(), 1);
     drop(voice);
