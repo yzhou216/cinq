@@ -45,8 +45,10 @@ it plays on, such as a sound card or a desk with more channels.  Its default,
 \ui{Default device}, is the device that the \ui{Default device} list in the
 sidebar chooses for the whole computer, so a show made on one computer plays
 on another.  An output that cannot play, such as one whose device is
-unplugged, shows why in its \texttt{State} column and among the warnings,
-and cues play on the other outputs.
+unplugged, shows why in its \texttt{State} column: in yellow while cinq
+tries the device again by itself, and in red where the output must change.
+The outputs of one device share a warning in the sidebar, which shows them
+when clicked, and cues play on the other outputs.
 
 While the outputs show, the keys of cues act on them: \key{ArrowDown} and
 \key{ArrowUp} select an output, and the keys that add, move, and delete cues
