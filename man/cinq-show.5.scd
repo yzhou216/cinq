@@ -78,8 +78,9 @@ or a Dante Virtual Soundcard started, plays with nothing for the operator to do.
 A device that has fewer channels than an output names is looked at again as
 well, so that a Dante Virtual Soundcard whose channels are raised plays them,
 ever more seldom while it offers no more, up to every thirty seconds.
-A device that does not answer when it is opened is shown as not answering after
-five seconds, and it holds up no other device.
+A device that does not answer when it is opened, as an ASIO driver that waits
+for a dialog does not, is shown as not answering after five seconds, and it
+holds up no other device.
 Changing an output opens again only the devices that the change touches, so
 that the sound on the others plays on.
 A device that stops while cues play on it, as one unplugged or a Dante Virtual
@@ -92,6 +93,22 @@ sound, as a Bluetooth sink that sleeps does, and until then the clocks of the
 cues on it wait at the start.
 A file in which an output has no name, two outputs share a name, or the channels
 of an output are neither one nor two, cannot be opened.
+
+## Dante
+
+On a Dante network, outputs play on the channels of the Dante Virtual
+Soundcard, which Dante Controller routes on to the channels of a board or of
+any other Dante device: channel 3 of an output is transmit channel 3 of the
+soundcard.
+On Darwin, the soundcard is one Core Audio device with as many channels as its
+control panel sets.
+On Windows, *cinq* built with ASIO, as Nix builds it, reaches every channel of
+the soundcard as one ASIO driver, while the WDM mode of the soundcard offers
+each pair of its first 16 channels as a device of its own, so that an output
+on channel 3 there plays on channel 1 of _DVS Transmit 3-4_.
+*cinq* plays at the sample rate of the soundcard, which Dante Controller sets,
+whatever the rate of the files, and opens the soundcard again at once at a new
+rate set while cues play, as it opens a device that restarts.
 
 # LISTS
 
@@ -290,6 +307,12 @@ hundredths of a second after its picture.
 
 A picture wider or taller than the largest texture of the GPU, as a video in
 4K or a large photograph is on some older GPUs, does not show.
+
+A sound whose sample rate differs from that of its device, as one of 44.1 kHz
+on a Dante network of 48 kHz, plays through cubic interpolation, which dulls
+its highest frequencies and adds faint tones to them: a tone of 10 kHz loses
+0.4 dB and gains others 26 dB below it.
+A sound at the rate of its device plays unchanged.
 
 ; if windows
 Each tick of the show clock waits for both windows to draw, since Windows would

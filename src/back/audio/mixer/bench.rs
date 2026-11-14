@@ -5,11 +5,9 @@
 //! Mixer without a device, for tests that play through a mix that they
 //! render
 
-use std::time::Instant;
-
 use rtrb::RingBuffer;
 
-use super::{COMMANDS, Mix, Mixer};
+use super::{COMMANDS, Mix, Mixer, Tells};
 
 impl Mixer {
     /// Returns a mixer without a device, whose ring of commands holds
@@ -30,10 +28,7 @@ impl Mixer {
             sample_rate,
             channels,
             asked,
-            error: Default::default(),
-            lost: Default::default(),
-            started: Instant::now(),
-            called: Default::default(),
+            tells: Tells::new(),
             next: 0,
         };
         (mixer, mix)

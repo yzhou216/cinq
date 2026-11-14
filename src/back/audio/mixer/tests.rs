@@ -5,16 +5,24 @@
 //! Tests of mixing sounds into the channels of a device, which need no
 //! device: the mix renders into a buffer as the stream of a device would
 
-use std::{sync::Arc, time::Duration};
+mod devices;
+mod fading;
+mod routing;
+mod samples;
+
+use std::sync::Arc;
 
 use kira::{
     AudioManager, AudioManagerSettings, Frame,
-    backend::cpal::cpal::ErrorKind,
     sound::static_sound::{StaticSoundData, StaticSoundSettings},
 };
 use rtrb::{Consumer, Producer, RingBuffer};
 
-use super::mix::{Command, Gains, Gone, Mix};
+use super::{
+    config,
+    mix::{Command, Gains, Gone, Mix},
+    stalled, stream,
+};
 use crate::back::audio::feed::Feed;
 
 const RATE: u32 = 48000;
@@ -125,94 +133,4 @@ fn steady(channel: &[f32], value: f32) -> bool {
     channel[8..]
         .iter()
         .all(|sample| (sample - value).abs() < 1e-4)
-}
-
-#[test]
-fn sound_plays_on_the_channels_that_its_gains_name_and_nowhere_else() {
-    let mut bench = Bench::new(4).play(1, gains(4, &[(2, [1.0, 0.0]), (3, [0.0, 1.0])]));
-    let channels = bench.render();
-    assert!(
-        channels[0]
-            .iter()
-            .chain(&channels[1])
-            .all(|sample| *sample == 0.0)
-    );
-    assert!(steady(&channels[2], SOUND.left), "{:?}", &channels[2][..12]);
-    assert!(
-        steady(&channels[3], SOUND.right),
-        "{:?}",
-        &channels[3][..12]
-    );
-}
-
-#[test]
-fn sounds_on_one_channel_add_up_and_a_mono_channel_takes_both_halves() {
-    let mut bench = Bench::new(2)
-        .play(1, gains(2, &[(0, [1.0, 0.0])]))
-        .play(2, gains(2, &[(0, [1.0, 0.0]), (1, [0.5, 0.5])]));
-    let channels = bench.render();
-    assert!(steady(&channels[0], 2.0 * SOUND.left));
-    assert!(steady(&channels[1], (SOUND.left + SOUND.right) / 2.0));
-}
-
-/// Removes the sound of ID 1 from `bench`, which plays it on the first
-/// channel, and returns the bench with that channel as the sound fades out
-/// over `ramp` frames
-fn fade_out(mut bench: Bench, ramp: usize) -> (Bench, Vec<f32>) {
-    bench.render();
-    let mut bench = bench.remove(1);
-    let fading = (0..ramp.div_ceil(FRAMES))
-        .flat_map(|_| bench.render().swap_remove(0))
-        .collect();
-    (bench, fading)
-}
-
-#[test]
-fn sound_that_goes_fades_out_and_comes_back_to_be_freed() {
-    let (mut bench, fading) = fade_out(Bench::new(2).play(1, gains(2, &[(0, [1.0, 0.0])])), RAMP);
-    assert!(fading[..RAMP].windows(2).all(|pair| pair[1] <= pair[0]));
-    assert!(fading[0] > 0.9 * SOUND.left && fading[RAMP - 1].abs() < 1e-6);
-    assert!(bench.gone.pop().is_ok(), "the sound comes back to be freed");
-    assert!(bench.render()[0].iter().all(|sample| *sample == 0.0));
-}
-
-#[test]
-fn stream_that_has_yet_to_call_has_longer_than_one_that_has() {
-    let seconds = Duration::from_secs;
-    assert!(super::stalled(seconds(3), Some(Duration::ZERO)));
-    assert!(!super::stalled(seconds(3), None));
-    assert!(super::stalled(seconds(10), None));
-    assert!(!super::stalled(seconds(11), Some(seconds(9))));
-}
-
-#[test]
-fn fade_out_lasts_ten_milliseconds_at_any_rate() {
-    let ramp = 96000 / 100;
-    let bench = Bench::at(96000, 2).play(1, gains(2, &[(0, [1.0, 0.0])]));
-    let (_, fading) = fade_out(bench, ramp);
-    assert!(fading[ramp - 2] > 1e-4 && fading[ramp - 1].abs() < 1e-6);
-}
-
-#[test]
-fn stream_is_built_anew_after_its_device_goes_but_not_after_an_underrun() {
-    assert!(super::ends(ErrorKind::DeviceNotAvailable));
-    assert!(super::ends(ErrorKind::StreamInvalidated));
-    assert!(!super::ends(ErrorKind::Xrun));
-    assert!(!super::ends(ErrorKind::BackendError));
-}
-
-#[test]
-fn device_opens_with_the_fewest_channels_that_hold_the_outputs() {
-    assert_eq!(super::chosen(&[2, 16, 64], 3), Some(16));
-    assert_eq!(super::chosen(&[2, 16, 64], 2), Some(2));
-}
-
-#[test]
-fn device_of_too_few_channels_opens_with_all_it_has() {
-    assert_eq!(super::chosen(&[2, 16], 34), Some(16));
-}
-
-#[test]
-fn device_of_no_samples_that_cinq_plays_does_not_open() {
-    assert_eq!(super::chosen(&[], 2), None);
 }

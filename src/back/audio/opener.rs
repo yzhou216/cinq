@@ -9,7 +9,7 @@
 //! PulseAudio, and a device that fails is tried again every two seconds.
 //! A thread for each device does that work and answers over a channel,
 //! while the main thread goes on with the clock, the stage, and the keys,
-//! and a device that never answers, as a driver that waits for a
+//! and a device that never answers, as an ASIO driver that waits for a
 //! dialog, holds up its own thread alone.  A thread takes the jobs of its
 //! device in order, so that no two opens of one device run together, and it
 //! closes a stream that a newer open has made stale before it takes the

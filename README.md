@@ -34,7 +34,8 @@ Minimal cue-based show controller, the
   once.
 - **Show mode** locks editing during a performance.
 - **Several cue lists**, **outputs** that name the channels of audio devices,
-  and a warnings list that says why any cue or output cannot play.
+  including ASIO and JACK devices, and a warnings list that says why any cue
+  or output cannot play.
 - **Clipboard and search.**  Cut, copy, and paste cues, between shows as well,
   and search the rows of the list as in Vim.  cinq(5) lists the keys.
 - **Readable show files** in TOML, which `cinq SHOW` opens, easy to diff and
@@ -54,10 +55,17 @@ Minimal cue-based show controller, the
 
 - pkg-config
 - ALSA
+- JACK, on GNU/Linux and the BSDs, for a build with its default features
 - Wayland
 - libxkbcommon
 - D-Bus
 - XDG desktop portal with a file chooser
+
+#### Windows, with the feature `asio`
+
+- libclang, for bindgen
+- The ASIO SDK of Steinberg, which `CPAL_ASIO_DIR` names, under the GPL
+  version 3, one of its two licenses
 
 ### Installing
 

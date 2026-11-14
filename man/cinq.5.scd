@@ -121,11 +121,44 @@ _tutorial.pdf_
 	silent, the warnings in the sidebar tell why, and *cinq* tries the device
 	again every two seconds, as *cinq-show*(5) describes.
 ; if xdg
-	On ALSA, *cinq* plays on most sound cards only through a plug that
-	converts its samples, as the devices whose IDs begin with _alsa:plughw:_
-	or _alsa:sysdefault:_ do, and _alsa:default_ and _alsa:pipewire_.
-	The _alsa:hw:_, _alsa:front:_, and _alsa:hdmi:_ devices of most cards take
-	samples only in a format of their own, and cannot be opened.
+	On ALSA, *cinq* plays samples in 32-bit floating point, or in integers of
+	32, 24, or 16 bits, as the _alsa:hw:_, _alsa:front:_, and _alsa:hdmi:_
+	devices of most sound cards take them while no sound server holds the
+	card, and the devices whose IDs begin with _alsa:plughw:_ or
+	_alsa:sysdefault:_, _alsa:default_, and _alsa:pipewire_ convert them for
+	the card.
+	The _alsa:hw:_ device of a card that takes packed 24-bit samples alone,
+	as some USB interfaces do, cannot play, and its warning says to choose the
+	_alsa:plughw:_ device of the card instead, which converts them.
+
+	PulseAudio spreads a stream that has fewer channels than its device over
+	all of the channels of the device.
+	So through PulseAudio, as through _alsa:default_, a device of many
+	channels sounds on channels that no output names, unless an output names
+	the last channel of the device.
+	The ALSA plugin of PipeWire, as _alsa:pipewire_ and, where PipeWire
+	serves it, _alsa:default_, takes the channels of a stream past the
+	second for those of surround sound: on a device whose channels are not
+	surround channels, as a desk's are not, only the first two sound, and on
+	a surround device the third and fourth of four channels sound on its
+	fifth and sixth.
+	While a JACK server runs, as PipeWire's can, *cinq* also lists
+	_jack:output_, whose channels each connect to the playback port of the
+	server with their number, which keeps every channel where its output
+	puts it, and so suits a device of more than two channels under
+	PipeWire.
+	Channels past the last playback port of the server connect to none, so
+	that a patchbay of JACK can connect them elsewhere, and *cinq* shows no
+	warning for them.
+; if windows
+	The Windows build that Nix makes also lists the ASIO drivers, by IDs that
+	begin with _asio:_, beside the devices of WASAPI.
+	The Dante Virtual Soundcard offers all of its channels as one ASIO
+	driver, while in WDM mode it offers each pair of its first 16 channels as
+	a device of its own.
+	An ASIO driver that another program holds, as one in exclusive mode can,
+	fails to open with a warning that its hardware is malfunctioning, which
+	clears once that program lets it go.
 ; end
 	It is the default device unless the file names another.
 

@@ -246,6 +246,26 @@ Major changes and improvements in each release of cinq, newest first.
   offers them, and is looked at ever more seldom, up to every thirty seconds,
   until what it offers changes.  Changing an output opens again only the
   devices that the change touches, so that the sound on the others plays on.
+- On GNU/Linux and the BSDs, cinq also plays on the device of a running JACK
+  server, such as PipeWire's, as `jack:output`, whose channels each reach the
+  playback port of their number.  PulseAudio spreads a stream over every channel
+  of a device that has more, and the ALSA plugin of PipeWire takes the channels
+  past the second for those of surround sound, both of which JACK leaves alone.
+  Building on GNU/Linux needs JACK, unless the build leaves out the default
+  features, and the device lists leave out the null device of ALSA, which takes
+  sound and plays none.
+- Audio devices that take samples only as integers of 32, 24, or 16 bits, such
+  as the `hw` devices of most sound cards on ALSA, now play, where cinq played
+  floating-point samples alone.  A mix past full scale clips there instead of
+  wrapping into a crack.
+- On Windows, the build that Nix makes also plays on ASIO drivers, such as that
+  of the Dante Virtual Soundcard, which offers all of its channels as one device
+  where its WDM mode offers them in pairs.  The ASIO SDK of Steinberg goes into
+  that build under the GPL version 3.
+- On Windows, the thread that plays sound on WASAPI devices, as the WDM mode of
+  the Dante Virtual Soundcard offers, asks Windows to schedule it for audio, as
+  audio programs do there, so that a busy machine is less likely to break up the
+  sound.
 
 ## v0.1.4
 
