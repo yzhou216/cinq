@@ -5,7 +5,7 @@
 //! Sample formats and the configuration that a device opens with
 
 use kira::backend::cpal::cpal::{
-    BufferSize, Device, SampleFormat, StreamConfig, traits::DeviceTrait,
+    BufferSize, Device, ErrorKind, SampleFormat, StreamConfig, traits::DeviceTrait,
 };
 
 /// Samples that a device can take, those that kira renders first, then
@@ -27,9 +27,13 @@ pub(super) fn config(
     device: &Device,
     channels: u16,
 ) -> Result<(StreamConfig, SampleFormat), String> {
+    let id = device.id().map(|id| id.to_string()).unwrap_or_default();
     let rate = device
         .default_output_config()
-        .map_err(|error| error.to_string())?
+        .map_err(|error| match error.kind() {
+            ErrorKind::UnsupportedConfig => unplayable(&id),
+            _ => error.to_string(),
+        })?
         .sample_rate();
     let offered: Vec<_> = device
         .supported_output_configs()
@@ -41,7 +45,7 @@ pub(super) fn config(
         if offered.is_empty() {
             format!("it offers no stream at {rate} Hz")
         } else {
-            format!("it takes no samples that cinq can play at {rate} Hz")
+            unplayable(&id)
         }
     })?;
     let config = StreamConfig {
@@ -50,6 +54,18 @@ pub(super) fn config(
         buffer_size: BufferSize::Default,
     };
     Ok((config, format))
+}
+
+/// Returns why the device of `id` cannot play, as it takes no samples that
+/// cinq can play, such as the packed 24-bit samples that some USB
+/// interfaces alone take on ALSA, which cpal cannot write.  The hw device of
+/// a card names its plughw device, which converts them, to choose instead.
+pub(super) fn unplayable(id: &str) -> String {
+    let plug = id
+        .strip_prefix("alsa:hw:")
+        .map(|card| format!("; choose alsa:plughw:{card} instead"))
+        .unwrap_or_default();
+    format!("it takes no samples that cinq can play{plug}")
 }
 
 /// Returns the format and the count of channels to open from the formats

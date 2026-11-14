@@ -101,6 +101,9 @@ in its place, and follows it as it changes in the same way.
 	card, and the devices whose IDs begin with _alsa:plughw:_ or
 	_alsa:sysdefault:_, _alsa:default_, and _alsa:pipewire_ convert them for
 	the card.
+	The _alsa:hw:_ device of a card that takes packed 24-bit samples alone,
+	as some USB interfaces do, cannot play, and its warning says to choose the
+	_alsa:plughw:_ device of the card instead, which converts them.
 
 	PulseAudio spreads a stream that has fewer channels than its device over
 	all of the channels of the device.
