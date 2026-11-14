@@ -9,7 +9,7 @@ use std::{sync::Arc, time::Duration};
 
 use kira::{
     AudioManager, AudioManagerSettings, Frame,
-    backend::cpal::cpal::I24,
+    backend::cpal::cpal::{ErrorKind, I24},
     sound::static_sound::{StaticSoundData, StaticSoundSettings},
 };
 use rtrb::{Consumer, Producer, RingBuffer};
@@ -233,4 +233,12 @@ fn integer_samples_take_the_sound_at_its_level() {
         near(f64::from(frame[0]), SOUND.left, 2_f64.powi(15))
             && near(f64::from(frame[1]), SOUND.right, 2_f64.powi(15))
     }));
+}
+
+#[test]
+fn stream_is_built_anew_after_its_device_goes_but_not_after_an_underrun() {
+    assert!(super::stream::ends(ErrorKind::DeviceNotAvailable));
+    assert!(super::stream::ends(ErrorKind::StreamInvalidated));
+    assert!(!super::stream::ends(ErrorKind::Xrun));
+    assert!(!super::stream::ends(ErrorKind::BackendError));
 }

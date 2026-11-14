@@ -21,7 +21,7 @@ use std::{
     iter,
     sync::{
         Arc, Mutex,
-        atomic::{AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::{Duration, Instant},
 };
@@ -68,6 +68,9 @@ pub(super) struct Mixer {
     channels: u16,
     /// Latest error of the stream, which it tells from its own thread
     error: Arc<Mutex<Option<String>>>,
+    /// Whether the stream has told an error after which it must be built
+    /// anew
+    lost: Arc<AtomicBool>,
     /// Moment the stream started, from which `called` counts
     started: Instant,
     /// Nanoseconds after `started` of the latest call of the stream for
@@ -110,10 +113,12 @@ impl Mixer {
             handed,
         );
         let error = Arc::new(Mutex::new(None));
+        let lost = Arc::new(AtomicBool::new(false));
         let started = Instant::now();
         let called = Arc::new(AtomicU64::new(0));
         let tells = Tells {
             error: Arc::clone(&error),
+            lost: Arc::clone(&lost),
             started,
             called: Arc::clone(&called),
         };
@@ -131,6 +136,7 @@ impl Mixer {
             sample_rate: config.sample_rate,
             channels: config.channels,
             error,
+            lost,
             started,
             called,
             next: 0,
@@ -169,17 +175,22 @@ impl Mixer {
         iter::from_fn(|| self.gone.pop().ok()).for_each(drop);
     }
 
-    /// Returns why the stream stopped, if it has asked for no sound for
-    /// [`STALL`]: the latest error that it told, if any.  Its errors alone
-    /// do not tell, since ALSA plays on after an underrun or a failed look
-    /// at its buffer, where WASAPI ends the stream after any failed call.
+    /// Returns why the stream stopped, if it has told an error after which
+    /// it must be built anew, or has asked for no sound for [`STALL`]: the
+    /// latest error that it told, if any.  Errors of the first kind tell at
+    /// once, since an ASIO driver that asks to be reset may play on, and a
+    /// device that goes or takes another sample rate need not hold the
+    /// cues.  Other errors alone do not tell, since ALSA plays on after an
+    /// underrun or a failed look at its buffer, where WASAPI ends the
+    /// stream after any failed call.
     pub(super) fn failure(&self) -> Option<String> {
         // A stream that has called has done so after its start, so zero
         // nanoseconds mean that it has not
         let called = Some(self.called.load(Ordering::Relaxed))
             .filter(|nanos| *nanos > 0)
             .map(Duration::from_nanos);
-        stalled(self.started.elapsed(), called).then(|| {
+        let stalled = stalled(self.started.elapsed(), called);
+        (self.lost.load(Ordering::Relaxed) || stalled).then(|| {
             self.error
                 .lock()
                 .ok()
@@ -220,6 +231,7 @@ impl Mixer {
             sample_rate,
             channels,
             error: Arc::default(),
+            lost: Arc::default(),
             started: Instant::now(),
             called: Arc::default(),
             next: 0,
