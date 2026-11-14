@@ -6,8 +6,10 @@
 //! once the sidebar or the keys that step through the lists choose them
 //!
 //! Each row shows an output with the device and the channels it plays on,
-//! the level at which new cues send to it, and why it cannot play where it
-//! cannot.  A click selects the output, which the inspector then edits.
+//! the level at which new cues send to it, and, in a few words, why it
+//! cannot play where it cannot: in yellow where cinq tries its device again
+//! by itself, and in red where the output must change.  A click selects the
+//! output, which the inspector then edits.
 
 use iced::{
     Element, Fill, Length, padding,
@@ -22,9 +24,16 @@ use super::{
     marked_row,
 };
 use crate::{
-    back::{Device, Output},
-    front::{App, Message, view::format},
+    back::{Device, Fault, Output},
+    front::{
+        App, Message,
+        view::{faults, format},
+    },
 };
+
+/// Columns that the names of outputs take at most before they wrap, so
+/// that a long name leaves the device room
+const NAME_ROOM: f32 = 24.0;
 
 /// Identity of the selected output, as the selected cue has its own
 const SELECTED: &str = "selected output";
@@ -53,16 +62,13 @@ impl Column {
                 || "off".to_owned(),
                 |level| format!("{} dB", format::decibels(level)),
             ),
-            Column::State => app
-                .audio_problems
-                .iter()
-                .find(|(id, _)| *id == output.id)
-                .map_or_else(String::new, |(_, problem)| problem.to_string()),
+            Column::State => faults::fault(app, output.id).map_or_else(String::new, Fault::state),
         }
     }
 
-    /// Returns the width of the column.  Names, devices, and problems share
-    /// what the others leave, which fit their widest text.
+    /// Returns the width of the column.  Devices take what the others
+    /// leave, which fit their widest text, so that the state of an output
+    /// keeps to one line, and names wrap past [`NAME_ROOM`].
     fn width(self, app: &App) -> Length {
         let widest = || {
             app.workspace
@@ -74,9 +80,10 @@ impl Column {
                 * char_width()
         };
         match self {
-            Column::Name | Column::Device | Column::State => Fill,
+            Column::Device => Fill,
+            Column::Name => Length::Fixed(widest().min(NAME_ROOM * char_width())),
             Column::Number => Length::Fixed(widest() + RADIO),
-            Column::Channels | Column::NewCues => Length::Fixed(widest()),
+            Column::Channels | Column::NewCues | Column::State => Length::Fixed(widest()),
         }
     }
 }
@@ -96,6 +103,8 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         app.output_row(),
         SELECTED,
     ))
+    // Bar beside the table, rather than over the state of each output
+    .spacing(0)
     .height(Fill)
     .into()
 }
@@ -106,7 +115,12 @@ fn cell<'a>(app: &'a App, column: Column, row: usize, output: &'a Output) -> Ele
     let shown = column.text(app, row, output);
     let content: Element<'a, Message> = match column {
         Column::Number => radio(shown, output.id, app.output, Message::SelectOutput).into(),
-        Column::State => text(shown).style(text::danger).into(),
+        Column::State => {
+            let retried = faults::fault(app, output.id).is_some_and(Fault::retried);
+            text(shown)
+                .style(if retried { text::warning } else { text::danger })
+                .into()
+        }
         _ => text(shown).wrapping(Wrapping::WordOrGlyph).into(),
     };
     let cell = container(content)
