@@ -63,7 +63,15 @@ jobs:
       - uses: vmactions/freebsd-vm@main
         with:
           arch: ${{ matrix.arch }}
-          copyback: false
-          run: |
-            tar -xf closure.tar -C /
-            "$(cat path.txt)/bin/cinq" --version
+          sync: no # The step below copies, so that it can try again
+          prepare: pkg install -y rsync
+      # The emulated machine damages a copy now and then, which rsync alone
+      # of the ways to copy notices
+      - run: |
+          for _ in 1 2 3; do
+            rsync -a -e ssh closure.tar path.txt freebsd:/tmp/ && break
+          done
+      - shell: freebsd {0}
+        run: |
+          tar -xf /tmp/closure.tar -C /
+          "$(cat /tmp/path.txt)/bin/cinq" --version
