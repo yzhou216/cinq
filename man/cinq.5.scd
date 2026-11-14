@@ -116,6 +116,9 @@ in its place, and follows it as it changes in the same way.
 	server with their number, which keeps every channel where its output
 	puts it, and so suits a device of more than two channels under
 	PipeWire.
+	Channels past the last playback port of the server connect to none, so
+	that a patchbay of JACK can connect them elsewhere, and *cinq* shows no
+	warning for them.
 ; if windows
 	A build with the feature _asio_, as Nix builds *cinq* for Windows, also
 	lists the ASIO drivers, by IDs that begin with _asio:_, beside the devices
