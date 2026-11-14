@@ -243,3 +243,16 @@ fn editing_a_send_keeps_the_sends_to_outputs_that_have_gone() {
     let kept = app.workspace.cue(cue).and_then(|cue| cue.sends.clone());
     assert_eq!(kept.and_then(|sends| sends.get(&sub).copied()), Some(-3.0));
 }
+
+#[test]
+fn warning_about_an_output_shows_the_outputs_with_it_selected() {
+    let added = after(
+        show(None),
+        [Message::ShowOutputs, Message::Add(Place::After, 1)],
+    );
+    let back = after(added, [Message::StepList(-1)]);
+    assert!(!back.outputs_shown);
+    let inspected = after(back, [Message::InspectOutput(OutputId(2))]);
+    assert!(inspected.outputs_shown);
+    assert_eq!(inspected.output, Some(OutputId(2)));
+}

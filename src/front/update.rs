@@ -194,6 +194,14 @@ impl App {
                 ..self
             },
             Message::ShowOutputs => return self.showing_outputs().revealed(),
+            Message::InspectOutput(output) => {
+                return Self {
+                    output: Some(output),
+                    ..self
+                }
+                .showing_outputs()
+                .revealed();
+            }
             Message::SelectOutput(output) => Self {
                 output: Some(output),
                 ..self
