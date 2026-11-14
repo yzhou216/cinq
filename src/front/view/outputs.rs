@@ -57,7 +57,7 @@ impl Column {
                 .audio_problems
                 .iter()
                 .find(|(id, _)| *id == output.id)
-                .map_or_else(String::new, |(_, problem)| problem.clone()),
+                .map_or_else(String::new, |(_, problem)| problem.to_string()),
         }
     }
 

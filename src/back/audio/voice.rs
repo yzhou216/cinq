@@ -23,6 +23,7 @@ use kira::{
 };
 
 use super::{
+    Fault,
     feed::Feed,
     mixer::{Gains, Mixer},
     patch::Key,
@@ -35,7 +36,7 @@ use crate::back::{Active, Clip, Command, TICK};
 const GLIDE: Duration = TICK.saturating_mul(2);
 
 /// Mixers of the devices, by their keys, or why each could not open
-pub(super) type Mixers = HashMap<Key, Result<Mixer, String>>;
+pub(super) type Mixers = HashMap<Key, Result<Mixer, Fault>>;
 
 pub(super) struct Voice {
     pub(super) run: u32,

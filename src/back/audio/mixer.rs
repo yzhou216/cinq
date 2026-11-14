@@ -36,7 +36,7 @@ use kira::backend::{
 };
 use rtrb::{Consumer, Producer, RingBuffer};
 
-use super::device;
+use super::{Fault, device};
 pub(super) use mix::Gains;
 use mix::{Command, Gone, Mix};
 
@@ -85,17 +85,14 @@ impl Mixer {
         device: Option<&str>,
         name: Option<&str>,
         channels: u16,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, Fault> {
         let found = match device {
-            Some(id) => device::find(id, name)?,
+            Some(id) => device::find(id, name).map_err(Fault::Missing)?,
             None => cpal::default_host()
                 .default_output_device()
-                .ok_or("there is no default audio device")?,
+                .ok_or_else(|| Fault::Missing("there is no default audio device".to_owned()))?,
         };
-        Self::start(&found, channels).map_err(|error| match device {
-            Some(id) => format!("cannot play on {id}: {error}"),
-            None => error,
-        })
+        Self::start(&found, channels).map_err(Fault::Refused)
     }
 
     fn start(found: &Device, channels: u16) -> Result<Self, String> {
