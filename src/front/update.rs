@@ -146,6 +146,11 @@ impl App {
                 ..self
             },
             Message::ShowOutputs => self.showing_outputs(),
+            Message::InspectOutput(output) => Self {
+                output: Some(output),
+                ..self
+            }
+            .showing_outputs(),
             Message::SelectOutput(output) => Self {
                 output: Some(output),
                 ..self

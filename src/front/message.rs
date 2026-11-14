@@ -145,6 +145,8 @@ pub enum Message {
     AudioDeviceKept(Result<(), String>),
     /// Shows the outputs of the show in place of a cue list
     ShowOutputs,
+    /// Shows the outputs and selects one of them, as a warning about it does
+    InspectOutput(OutputId),
     /// Selects an output, which the inspector then shows
     SelectOutput(OutputId),
     /// Text typed into the field of a setting, which applies once it reads

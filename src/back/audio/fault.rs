@@ -35,6 +35,15 @@ impl Fault {
             Fault::Channels(count) => format!("Past its {count} channels"),
         }
     }
+
+    /// Returns why the device fails, where it fails for a reason beyond
+    /// its absence or its channels
+    pub fn reason(&self) -> Option<&str> {
+        match self {
+            Fault::Refused(reason) | Fault::Stopped(reason) => Some(reason),
+            Fault::Missing(_) | Fault::Channels(_) => None,
+        }
+    }
 }
 
 impl fmt::Display for Fault {

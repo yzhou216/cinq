@@ -90,3 +90,16 @@ fn typed_sends_apply_and_an_empty_field_takes_the_send_away() {
     let app = typed(app, Setting::Send(cue, main), "");
     assert_eq!(sends(&app), None);
 }
+
+#[test]
+fn warning_about_an_output_shows_the_outputs_with_it_selected() {
+    let added = after(
+        show(None),
+        [Message::ShowOutputs, Message::Add(Place::After)],
+    );
+    let back = after(added, [Message::StepList(-1)]);
+    assert!(!back.outputs_shown);
+    let inspected = after(back, [Message::InspectOutput(OutputId(2))]);
+    assert!(inspected.outputs_shown);
+    assert_eq!(inspected.output, Some(OutputId(2)));
+}
