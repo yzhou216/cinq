@@ -107,10 +107,17 @@ in its place, and follows it as it changes in the same way.
 	So through PulseAudio, as through _alsa:default_, a device of many
 	channels sounds on channels that no output names, unless an output names
 	the last channel of the device.
+	The ALSA plugin of PipeWire, as _alsa:pipewire_ and, where PipeWire
+	serves it, _alsa:default_, takes the channels of a stream past the
+	second for those of surround sound: on a device whose channels are not
+	surround channels, as a desk's are not, only the first two sound, and on
+	a surround device the third and fourth of four channels sound on its
+	fifth and sixth.
 	While a JACK server runs, as PipeWire's can, *cinq* also lists
 	_jack:output_, whose channels each connect to the playback port of the
 	server with their number, which keeps every channel where its output
-	puts it.
+	puts it, and so suits a device of more than two channels under
+	PipeWire.
 ; if windows
 	The Windows build that Nix makes also lists the ASIO drivers, by IDs that
 	begin with _asio:_, beside the devices of WASAPI.
