@@ -37,7 +37,7 @@ use kira::backend::{
 };
 use rtrb::{Consumer, Producer, RingBuffer};
 
-use super::device;
+use super::{Fault, device};
 use config::config;
 use mix::{Command, Gone};
 pub(super) use mix::{Gains, Mix};
@@ -93,17 +93,14 @@ impl Mixer {
         device: Option<&str>,
         name: Option<&str>,
         channels: u16,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, Fault> {
         let found = match device {
-            Some(id) => device::find(id, name)?,
+            Some(id) => device::find(id, name).map_err(Fault::Missing)?,
             None => cpal::default_host()
                 .default_output_device()
-                .ok_or("there is no default audio device")?,
+                .ok_or_else(|| Fault::Missing("there is no default audio device".to_owned()))?,
         };
-        Self::start(&found, channels).map_err(|error| match device {
-            Some(id) => format!("cannot play on {id}: {error}"),
-            None => error,
-        })
+        Self::start(&found, channels)
     }
 
     /// Returns how many channels the device whose ID is `device`, or the
@@ -119,7 +116,7 @@ impl Mixer {
             .map(|(config, _)| config.channels)
     }
 
-    fn start(found: &Device, channels: u16) -> Result<Self, String> {
+    fn start(found: &Device, channels: u16) -> Result<Self, Fault> {
         let (config, format) = config(found, channels)?;
         let (commands, taken) = RingBuffer::new(COMMANDS);
         let (handed, gone) = RingBuffer::new(COMMANDS);
@@ -145,8 +142,11 @@ impl Mixer {
             SampleFormat::I24 => stream::<I24>(found, config, mix, tells),
             SampleFormat::I16 => stream::<i16>(found, config, mix, tells),
             _ => stream::<f32>(found, config, mix, tells),
-        }?;
-        stream.play().map_err(|error| error.to_string())?;
+        }
+        .map_err(Fault::Refused)?;
+        stream
+            .play()
+            .map_err(|error| Fault::Refused(error.to_string()))?;
         Ok(Self {
             _stream: Some(stream),
             commands,
