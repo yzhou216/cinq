@@ -126,6 +126,9 @@ in its place, and follows it as it changes in the same way.
 	The Dante Virtual Soundcard offers all of its channels as one ASIO
 	driver, while in WDM mode it offers each pair of its first 16 channels as
 	a device of its own.
+	An ASIO driver that another program holds, as one in exclusive mode can,
+	fails to open with a warning that its hardware is malfunctioning, which
+	clears once that program lets it go.
 ; end
 	It is the default device unless the file names another.
 
