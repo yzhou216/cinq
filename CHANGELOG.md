@@ -26,11 +26,12 @@ Major changes and improvements in each release of cinq, newest first.
   tries its device again by itself, and in red where the output must change.
   The outputs on a device that cinq tries again share one warning in the
   sidebar, which shows them when pressed.  The inspector edits the one
-  selected.  The keys that select, add, move, and delete cues do the same to
-  outputs there, and the key of the next cue list reaches them past the last
-  one.  The Audio device list of the sidebar is now Default device, since it
-  chooses the device of the outputs that name none, and its first option
-  reads System default.
+  selected, whose Device list reads not found, in yellow, while its device
+  is not there.  The keys that select, add, move, and delete cues do the
+  same to outputs there, and the key of the next cue list reaches them past
+  the last one.  The Audio device list of the sidebar is now Default device,
+  since it chooses the device of the outputs that name none, and its first
+  option reads System default.
 - The Levels tab of an audio or video cue sets the level at which the cue
   sends to each output of the show, and a field left empty sends nothing
   there.  The fields scroll, so that every output stays in reach, and the

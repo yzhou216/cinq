@@ -31,7 +31,7 @@ mod shorten;
 mod state;
 mod widget;
 
-use iced::{Element, Padding, widget::button};
+use iced::{Color, Element, Padding, widget::button};
 use unicode_width::UnicodeWidthStr;
 
 use crate::front::{Message, keymap::Keymap, view::char_width};
@@ -50,6 +50,9 @@ pub struct Dropdown<'a> {
     /// for the options afresh
     on_open: Option<Message>,
     placeholder: Option<String>,
+    /// Color of the placeholder, where it tells more than that nothing is
+    /// chosen, as that the device chosen is not there
+    placeholder_color: Option<Color>,
     keymap: &'a Keymap,
 }
 
@@ -68,6 +71,7 @@ pub fn dropdown<'a, T: ToString + PartialEq + Clone + 'a>(
         pick: Box::new(move |row| options.get(row).cloned().map(&on_select)),
         on_open: None,
         placeholder: None,
+        placeholder_color: None,
         keymap,
     }
 }
@@ -76,6 +80,13 @@ impl Dropdown<'_> {
     pub fn placeholder(self, placeholder: impl Into<String>) -> Self {
         Self {
             placeholder: Some(placeholder.into()),
+            ..self
+        }
+    }
+
+    pub fn placeholder_color(self, color: Color) -> Self {
+        Self {
+            placeholder_color: Some(color),
             ..self
         }
     }
