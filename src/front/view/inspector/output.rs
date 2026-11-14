@@ -15,13 +15,13 @@ use iced::{
 
 use super::LEVEL_ROOM;
 use crate::{
-    back::{Channels, Device, Output, parse_level},
+    back::{Channels, Device, Fault, Output, parse_level},
     front::{
         App, Message, Setting,
         view::{
             OUTPUT_NAME, SPACING, char_width,
             devices::{Choice, choices},
-            dropdown, format, keep_keys, outputs, theme,
+            dropdown, faults, format, keep_keys, outputs, theme,
         },
     },
 };
@@ -122,6 +122,15 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 /// shows a device that is not there by its name
 fn device<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message> {
     let id = output.id;
+    // Device that is not there, which reads so in words and in yellow
+    // rather than in the gray of a list where nothing is chosen
+    let missing = matches!(faults::fault(app, id), Some(Fault::Missing(_)));
+    let name = outputs::device(&output.device);
+    let placeholder = if missing {
+        format!("{name}, not found")
+    } else {
+        name.to_owned()
+    };
     let options = choices(&app.audio_devices, outputs::device(&Device::Default));
     let selected = options
         .iter()
@@ -129,7 +138,8 @@ fn device<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message> {
             Device::Default => choice.id.is_none(),
             Device::Named { id, .. } => choice.id.as_ref() == Some(id),
         })
-        .cloned();
+        .cloned()
+        .filter(|_| !missing);
     let keymap = &app.config.keymap;
     let list = dropdown(
         options,
@@ -146,7 +156,12 @@ fn device<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message> {
         },
         keymap,
     )
-    .placeholder(outputs::device(&output.device))
+    .placeholder(placeholder);
+    let list = if missing {
+        list.placeholder_color(theme::PALETTE.warning)
+    } else {
+        list
+    }
     .on_open(Message::ListAudioDevices);
     keep_keys(list, keymap)
 }

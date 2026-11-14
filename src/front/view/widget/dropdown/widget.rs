@@ -142,7 +142,7 @@ impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
             Some(row) => (self.names[row].clone(), look.text_color),
             None => (
                 self.placeholder.clone().unwrap_or_default(),
-                look.placeholder_color,
+                self.placeholder_color.unwrap_or(look.placeholder_color),
             ),
         };
         let room = bounds.width - PADDING.x() - ARROW;
