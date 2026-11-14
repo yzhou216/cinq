@@ -16,6 +16,7 @@
 //! cinq's own plays each device, since kira mixes in stereo alone.
 
 mod device;
+mod fault;
 mod feed;
 mod mixer;
 mod opening;
@@ -33,6 +34,7 @@ use kira::sound::{FromFileError, streaming::StreamingSoundData};
 
 use super::{CueId, OutputId, Workspace, load::unreadable};
 pub use device::devices;
+pub use fault::Fault;
 use mixer::Mixer;
 use patch::Patch;
 use preload::{Ask, Preloader, Wanted};
@@ -91,21 +93,19 @@ impl Audio {
     /// Returns why each output that cannot play cannot: its device is not
     /// there, cannot be opened, or has stopped, or its channels lie past
     /// those of the device
-    pub fn problems(&self) -> Vec<(OutputId, String)> {
+    pub fn problems(&self) -> Vec<(OutputId, Fault)> {
         self.patch
             .outputs()
             .iter()
             .filter_map(|patched| {
-                let problem = match self.mixers.get(&patched.key)? {
-                    Err(problem) => problem.clone(),
-                    Ok(mixer) => mixer.failure().or_else(|| {
+                let fault = match self.mixers.get(&patched.key)? {
+                    Err(fault) => fault.clone(),
+                    Ok(mixer) => mixer.failure().map(Fault::Stopped).or_else(|| {
                         let channels = mixer.channels();
-                        (patched.channels.needs() > channels).then(|| {
-                            format!("its channels lie past the {channels} that the device has")
-                        })
+                        (patched.channels.needs() > channels).then_some(Fault::Channels(channels))
                     })?,
                 };
-                Some((patched.id, problem))
+                Some((patched.id, fault))
             })
             .collect()
     }
