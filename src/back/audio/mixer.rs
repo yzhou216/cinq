@@ -11,6 +11,7 @@
 //! channels of the plug devices of ALSA, which take any number.  The mix
 //! itself runs on the thread of the stream, as [`mix`] tells.
 
+mod convert;
 mod mix;
 #[cfg(test)]
 mod tests;
@@ -35,6 +36,7 @@ use kira::backend::{
 use rtrb::{Consumer, Producer, RingBuffer};
 
 use super::device;
+use convert::Converter;
 pub(super) use mix::Gains;
 use mix::{Command, Gone, Mix};
 
@@ -137,11 +139,18 @@ impl Mixer {
         self.channels
     }
 
-    /// Mixes the sound that `renderer` makes at `gains`, and returns the
-    /// identity of the sound in the mixer
-    pub(super) fn add(&mut self, renderer: Renderer, gains: Gains) -> Result<u64, String> {
+    /// Mixes the sound that `renderer` makes at `gains`, `rate` frames a
+    /// second, which the mixer converts to the rate of the device, and
+    /// returns the identity of the sound in the mixer
+    pub(super) fn add(
+        &mut self,
+        renderer: Renderer,
+        rate: u32,
+        gains: Gains,
+    ) -> Result<u64, String> {
         let id = self.next;
-        self.send(Command::add(id, renderer, gains))?;
+        let converter = Converter::new(rate, self.sample_rate);
+        self.send(Command::add(id, renderer, converter, gains))?;
         self.next += 1;
         Ok(id)
     }

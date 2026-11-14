@@ -110,7 +110,8 @@ impl Voice {
         let first = targets
             .next()
             .map(|target| {
-                let mut play = placed(target, preloaded)?;
+                let rate = preloaded.rate;
+                let mut play = placed(target, preloaded, rate)?;
                 let now = Tween {
                     duration: Duration::ZERO,
                     ..Tween::default()
@@ -249,17 +250,20 @@ impl Voice {
 
 fn opened(target: Target<'_>, file: &Path, active: &Active, clip: Clip) -> Result<Play, String> {
     let data = StreamingSoundData::from_file(file).map_err(super::reason)?;
+    let rate = rate(&data);
     let data = clipped(data, clip, clip.position(active.played()), active.level);
-    placed(target, data)
+    placed(target, data, rate)
 }
 
-/// Plays `data` in a manager of its own, whose renderer the mixer of
-/// `target` takes and mixes at the gains of `target`
-fn placed<D>(target: Target<'_>, data: D) -> Result<Play, String>
+/// Plays `data` in a manager of its own, at `rate`, the sample rate of its
+/// file, or that of the device where the file has none, whose renderer the
+/// mixer of `target` takes and mixes at the gains of `target`
+fn placed<D>(target: Target<'_>, data: D, rate: Option<u32>) -> Result<Play, String>
 where
     D: SoundData<Handle = StreamingSoundHandle<FromFileError>>,
     D::Error: std::fmt::Display,
 {
+    let rate = rate.unwrap_or_else(|| target.mixer.sample_rate());
     let Ok(mut manager) = AudioManager::<Feed>::new(AudioManagerSettings {
         capacities: Capacities {
             sub_track_capacity: 1,
@@ -269,7 +273,7 @@ where
             listener_capacity: 1,
         },
         main_track_builder: MainTrackBuilder::new().sound_capacity(1),
-        backend_settings: target.mixer.sample_rate(),
+        backend_settings: rate,
         ..AudioManagerSettings::default()
     });
     let sound = manager.play(data).map_err(|error| error.to_string())?;
@@ -277,7 +281,7 @@ where
         .backend_mut()
         .take()
         .expect("kira hands its renderer to the backend as the manager opens");
-    let id = target.mixer.add(renderer, target.gains.clone())?;
+    let id = target.mixer.add(renderer, rate, target.gains.clone())?;
     Ok(Play {
         sound,
         place: Some(Place {
@@ -306,4 +310,11 @@ pub(super) fn clipped(
         .loop_region(looped)
         .start_position(position)
         .volume(level)
+}
+
+/// Returns the sample rate of the file of `data`, which kira tells only by
+/// its frames and its length, or none for a file without frames
+pub(super) fn rate(data: &StreamingSoundData<FromFileError>) -> Option<u32> {
+    let seconds = data.duration().as_secs_f64();
+    (seconds > 0.0).then(|| (data.num_frames() as f64 / seconds).round() as u32)
 }

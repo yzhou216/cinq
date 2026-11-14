@@ -72,6 +72,7 @@ pathdiff = "0.2"
 rayon = "1.12"
 rfd = "0.17"
 rtrb = "0.4" # Commands to the threads that mix sound, which kira brings
+rubato = { version = "5.1", default-features = false } # Conversion of sample rates by windowed sinc, finer than kira's
 rust_h264 = "0.6" # Decoder of H.264 that needs no C++ compiler
 serde = { version = "1.0", features = ["derive"] }
 strum = { version = "0.28", features = ["derive"] }

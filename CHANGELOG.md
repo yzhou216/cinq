@@ -57,6 +57,11 @@ Major changes and improvements in each release of cinq, newest first.
   which offers all of its channels as one device where its WDM mode offers
   them in pairs.  The ASIO SDK of Steinberg goes into such a build under
   the GPL version 3.
+- A sound whose sample rate differs from that of its device, as a file of
+  44.1 kHz on a Dante network of 48 kHz, now converts by windowed sinc
+  interpolation, which keeps what it adds to a tone of 10 kHz 89 dB below
+  the tone, where the cubic interpolation of kira kept it 26 dB below and
+  dulled the highest frequencies.
 
 ## v0.1.4
 

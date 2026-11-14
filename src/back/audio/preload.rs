@@ -34,6 +34,8 @@ pub(super) struct Wanted {
 pub(super) struct Preloaded {
     sound: Box<dyn Sound>,
     handle: StreamingSoundHandle<FromFileError>,
+    /// Sample rate of the file, if it has frames
+    pub(super) rate: Option<u32>,
 }
 
 impl SoundData for Preloaded {
@@ -123,10 +125,15 @@ impl Preloader {
 
 fn preloaded(wanted: &Wanted, level: f32) -> Result<Preloaded, String> {
     let data = StreamingSoundData::from_file(&wanted.path).map_err(super::reason)?;
+    let rate = voice::rate(&data);
     let (sound, handle) = voice::clipped(data, wanted.clip, wanted.clip.start, level)
         .into_sound()
         .map_err(super::reason)?;
-    Ok(Preloaded { sound, handle })
+    Ok(Preloaded {
+        sound,
+        handle,
+        rate,
+    })
 }
 
 /// Makes ready the sounds that `waiting` brings and sends them to `done`.

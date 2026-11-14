@@ -11,6 +11,8 @@
 //! goes fades out over as many, so that neither clicks.
 
 use kira::backend::{Renderer, cpal::cpal::FromSample};
+
+use super::convert::Converter;
 use rtrb::{Consumer, Producer};
 
 /// Gain from the left and the right of a sound into each channel of a
@@ -18,7 +20,7 @@ use rtrb::{Consumer, Producer};
 pub(in crate::back::audio) type Gains = Box<[[f32; 2]]>;
 
 /// Frames that a sound renders at a time, which the scratch buffer holds
-const CHUNK: usize = 512;
+pub(super) const CHUNK: usize = 512;
 
 /// Frames over which gains change, ten milliseconds at 48 kHz, as long as
 /// the default fade of kira
@@ -29,6 +31,9 @@ pub(super) const RAMP: usize = 480;
 pub(super) struct Slot {
     id: u64,
     renderer: Renderer,
+    /// Conversion of the sound from the rate of its file, where it differs
+    /// from that of the device
+    converter: Option<Converter>,
     /// Gains as they stand, which ramp toward `target`
     gains: Gains,
     target: Gains,
@@ -45,10 +50,16 @@ pub(super) enum Command {
 }
 
 impl Command {
-    pub(super) fn add(id: u64, renderer: Renderer, gains: Gains) -> Self {
+    pub(super) fn add(
+        id: u64,
+        renderer: Renderer,
+        converter: Option<Converter>,
+        gains: Gains,
+    ) -> Self {
         Self::Add(Box::new(Slot {
             id,
             renderer,
+            converter,
             gains: gains.clone(),
             target: gains,
             ramp: 0,
@@ -117,7 +128,10 @@ impl Mix {
             mixed.fill(0.0);
             slots.iter_mut().for_each(|slot| {
                 let stereo = &mut scratch[..chunk.len() / channels * 2];
-                slot.renderer.process(stereo, 2);
+                match &mut slot.converter {
+                    Some(converter) => converter.fill(&mut slot.renderer, stereo),
+                    None => slot.renderer.process(stereo, 2),
+                }
                 slot.mix_into(mixed, channels, stereo);
             });
             chunk

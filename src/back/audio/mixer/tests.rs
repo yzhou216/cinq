@@ -14,7 +14,10 @@ use kira::{
 };
 use rtrb::{Consumer, Producer, RingBuffer};
 
-use super::mix::{Command, Gains, Gone, Mix, RAMP};
+use super::{
+    convert::Converter,
+    mix::{Command, Gains, Gone, Mix, RAMP},
+};
 use crate::back::audio::feed::Feed;
 
 const RATE: u32 = 48000;
@@ -52,15 +55,21 @@ impl Bench {
     }
 
     /// Plays a second of [`SOUND`] at `gains`
-    fn play(mut self, id: u64, gains: Gains) -> Self {
+    fn play(self, id: u64, gains: Gains) -> Self {
+        self.play_frames(id, RATE, vec![SOUND; RATE as usize], gains)
+    }
+
+    /// Plays `frames` at `rate` frames a second, which the mixer converts
+    /// to [`RATE`] where they differ, at `gains`
+    fn play_frames(mut self, id: u64, rate: u32, frames: Vec<Frame>, gains: Gains) -> Self {
         let Ok(mut manager) = AudioManager::<Feed>::new(AudioManagerSettings {
-            backend_settings: RATE,
+            backend_settings: rate,
             ..AudioManagerSettings::default()
         });
         manager
             .play(StaticSoundData {
-                sample_rate: RATE,
-                frames: Arc::from(vec![SOUND; RATE as usize]),
+                sample_rate: rate,
+                frames: Arc::from(frames),
                 settings: StaticSoundSettings::default(),
                 slice: None,
             })
@@ -69,7 +78,10 @@ impl Bench {
             .backend_mut()
             .take()
             .expect("kira starts the backend");
-        let sent = self.commands.push(Command::add(id, renderer, gains));
+        let converter = Converter::new(rate, RATE);
+        let sent = self
+            .commands
+            .push(Command::add(id, renderer, converter, gains));
         assert!(sent.is_ok(), "the ring takes the sound");
         self._managers.push(manager);
         self
@@ -183,4 +195,58 @@ fn stream_is_built_anew_after_its_device_goes_but_not_after_an_underrun() {
     assert!(super::ends(ErrorKind::StreamInvalidated));
     assert!(!super::ends(ErrorKind::Xrun));
     assert!(!super::ends(ErrorKind::BackendError));
+}
+
+#[test]
+fn sound_of_another_rate_converts_without_the_tones_of_cubic_interpolation() {
+    let from = 44100;
+    let tone = 10000.0;
+    let sine = |rate: u32, frame: usize| {
+        (2.0 * std::f64::consts::PI * tone * frame as f64 / f64::from(rate)).sin() * 0.5
+    };
+    let frames = (0..from as usize)
+        .map(|frame| {
+            let value = sine(from, frame) as f32;
+            Frame::new(value, value)
+        })
+        .collect();
+    let mut bench = Bench::new(1).play_frames(1, from, frames, gains(1, &[(0, [0.5, 0.5])]));
+    let heard: Vec<f64> = (0..120)
+        .flat_map(|_| bench.render().swap_remove(0))
+        .map(f64::from)
+        .skip(4096)
+        .collect();
+    // Tone at the rate of the device that fits what was heard best, and
+    // what is left
+    let fit = |wave: fn(f64) -> f64| {
+        let dot: f64 = heard
+            .iter()
+            .enumerate()
+            .map(|(frame, sample)| {
+                let phase = 2.0 * std::f64::consts::PI * tone * (frame + 4096) as f64;
+                sample * wave(phase / f64::from(RATE))
+            })
+            .sum();
+        2.0 * dot / heard.len() as f64
+    };
+    let (sine_part, cosine_part) = (fit(f64::sin), fit(f64::cos));
+    let rest = heard
+        .iter()
+        .enumerate()
+        .map(|(frame, sample)| {
+            let phase = 2.0 * std::f64::consts::PI * tone * (frame + 4096) as f64 / f64::from(RATE);
+            (sample - sine_part * phase.sin() - cosine_part * phase.cos()).powi(2)
+        })
+        .sum::<f64>()
+        / heard.len() as f64;
+    let level = sine_part.hypot(cosine_part);
+    let below = 10.0 * (level * level / 2.0 / rest).log10();
+    assert!(
+        (level - 0.5).abs() < 0.01,
+        "the tone keeps its level: {level}"
+    );
+    assert!(
+        below > 85.0,
+        "the rest lies only {below:.1} dB below the tone"
+    );
 }
