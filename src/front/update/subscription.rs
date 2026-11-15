@@ -8,6 +8,8 @@
 //! [`pace`] tells.
 
 mod pace;
+#[cfg(test)]
+mod tests;
 
 use std::time::Duration;
 
@@ -43,6 +45,7 @@ impl App {
         let always = [
             keyboard::listen().filter_map(keys::key_press),
             event::listen_with(clicked),
+            event::listen_with(side_pressed),
             event::listen_with(focused),
             window::resize_events().map(|(window, size)| Message::Resized(window, size)),
             window::close_events().map(Message::Closed),
@@ -102,4 +105,14 @@ fn clicked(event: Event, _status: event::Status, _window: window::Id) -> Option<
 
 fn focused(event: Event, _status: event::Status, id: window::Id) -> Option<Message> {
     matches!(event, Event::Window(window::Event::Focused)).then_some(Message::WindowFocused(id))
+}
+
+/// Reports a press of the back or forward button of the mouse
+fn side_pressed(event: Event, _status: event::Status, window: window::Id) -> Option<Message> {
+    match event {
+        Event::Mouse(mouse::Event::ButtonPressed(
+            button @ (mouse::Button::Back | mouse::Button::Forward),
+        )) => Some(Message::SidePressed(window, button)),
+        _ => None,
+    }
 }

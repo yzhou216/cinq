@@ -403,7 +403,7 @@ page.
 
 *back*
 	Go back to the place before the last jump, as the jump list of Vim does
-	with *Control+o*.
+	with its *Control+o*.
 	A place is a cue list with its selected cue.
 	Switching cue lists, *first* and *last* with or without a count, and
 	selecting a cue in another cue list are jumps.
@@ -422,6 +422,8 @@ page.
 	The history holds at most 100 places, each once, and ends when cinq opens
 	another show or quits.
 	The status bar names the key while there is a place to go back to.
+	The back button of the mouse does the same from the main window, unless the
+	help page is open.
 
 *forward*
 	Go forward again to the place that *back* left, as many places as the
@@ -430,6 +432,8 @@ page.
 	fields and Control+i goes forward.
 	In a text field it acts as well, and moves the keyboard to the cue list.
 	The status bar names the key while there is a place ahead.
+	The forward button of the mouse does the same from the main window, unless
+	the help page is open.
 
 *standby*
 	Put the selected cue on standby, so that the next GO fires it.

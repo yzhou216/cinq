@@ -24,7 +24,7 @@ mod tests;
 
 use std::thread;
 
-use iced::{Task, futures::channel::oneshot};
+use iced::{Task, futures::channel::oneshot, mouse};
 
 use super::{App, Message};
 use crate::back::{Command, Edit, parse_level};
@@ -124,6 +124,19 @@ impl App {
                 ..self
             },
             Message::Clicked => self,
+            // Buttons of the mouse go back and forward from the main window, as
+            // the keys do, apart from the help page, which the keys leave be
+            Message::SidePressed(window, mouse::Button::Back)
+                if self.main == Some(window) && !self.help =>
+            {
+                return self.walking(|app| app.went_back(1));
+            }
+            Message::SidePressed(window, mouse::Button::Forward)
+                if self.main == Some(window) && !self.help =>
+            {
+                return self.walking(|app| app.went_forward(1));
+            }
+            Message::SidePressed(..) => self,
             // Stage window holds no cue list to keep in view
             Message::Resized(window, size) => self.resized(window, size),
             Message::WindowFocused(window) => Self {

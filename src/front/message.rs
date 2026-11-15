@@ -8,7 +8,7 @@
 
 use std::{ffi::OsString, path::PathBuf, time::Instant};
 
-use iced::{Size, window};
+use iced::{Size, mouse, window};
 use strum::{Display, VariantArray};
 
 use super::{
@@ -147,6 +147,8 @@ pub enum Message {
     Saved(Saved),
     /// Mouse button pressed anywhere in a window
     Clicked,
+    /// Back or forward button of the mouse pressed in a window
+    SidePressed(window::Id, mouse::Button),
     /// Window changed size, to no size at all while it is minimized
     Resized(window::Id, Size),
     WindowFocused(window::Id),

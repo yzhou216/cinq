@@ -17,7 +17,8 @@ Major changes and improvements in each release of cinq, newest first.
   `Alt+ArrowRight` in the cua keymap, and the status bar names them while
   there is a place to go to.  A jump after going back keeps the places
   ahead, as in Vim, and going back or forward in a text field moves the
-  keyboard to the cue list.
+  keyboard to the cue list.  The back and forward buttons of the mouse do
+  the same from the main window, unless the help page is open.
 - In the vi keymap, the key of *open* is now `Control+l`, since `Control+o`
   is Vim's way back through the places jumped to, and Vim's `Control+l`
   only redraws the screen, which cinq never needs.  The cua keymap keeps
