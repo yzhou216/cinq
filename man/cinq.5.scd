@@ -181,10 +181,10 @@ of the help page.
 :  h, ArrowLeft
 :  Control+PageUp
 |  first
-:  g g
+:  g g, Control+Home
 :  Home
 |  last
-:  G
+:  G, Control+End
 :  End
 |  next_tab
 :  g t
@@ -223,7 +223,7 @@ of the help page.
 :  Alt+k, Alt+ArrowUp
 :  Alt+ArrowUp
 |  delete
-:  d d
+:  d d, x, Delete
 :  Delete
 |  undo
 :  u
@@ -244,7 +244,7 @@ of the help page.
 :  F11
 :  F11
 |  help
-:  ?
+:  ?, F1
 :  F1
 |  close_help
 :  q

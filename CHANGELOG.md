@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The vi keymap takes more keys of Vim: `x` and `Delete` delete the selected
+  cue, as `d d` does, `F1` shows the help page beside `?`, and `Control+Home`
+  and `Control+End` select the first and last cue as `g g` and `G` do, each
+  with a count as before.
 - `back` and `forward` go back and forward between the places that jumps
   left, as the jump list of Vim does: switching cue lists, `first`, `last`,
   and selecting a cue in another cue list are jumps.  The keys are
