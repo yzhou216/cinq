@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- `H`, `M`, and `L` select the first, middle, and last cue row in view in the
+  vi keymap, as in Vim, through the new `top_row`, `middle_row`, and
+  `bottom_row` actions.  A count before `H` counts rows from the top and
+  before `L` from the bottom.  They are jumps for `Control+o` and, unlike the
+  motions `j`, `k`, `g g`, and `G`, take no operator.
 - `Control+e` and `Control+y` scroll the cue list a row down and up in the vi
   keymap, as in Vim, or as many rows as a count, through the new
   `scroll_down` and `scroll_up` actions.  The selection stays on its cue

@@ -67,6 +67,7 @@ impl App {
                 | Message::Measured(_)
                 | Message::Remeasure
                 | Message::Drawn(_)
+                | Message::Reached { .. }
         );
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);

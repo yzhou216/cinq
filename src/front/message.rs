@@ -6,6 +6,8 @@
 //! and the keys send, and the reports of the clock, of the configuration
 //! file's watch, and of the work done on threads of its own
 
+mod scrolling;
+
 use std::{ffi::OsString, path::PathBuf, time::Instant};
 
 use iced::{Size, mouse, window};
@@ -16,6 +18,7 @@ use super::{
     update::{Measured, Read, Saved},
 };
 use crate::back::{Command, CueId, Edit, Kind, Place};
+pub use scrolling::{Height, Page};
 
 /// Page of the inspector, which goes by its name
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
@@ -67,29 +70,6 @@ pub enum Focus {
     Cues,
 }
 
-/// Distance and direction of a move by a page, as Vim names them
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Page {
-    HalfDown,
-    HalfUp,
-    WholeDown,
-    WholeUp,
-}
-
-impl Page {
-    pub fn is_half(self) -> bool {
-        matches!(self, Self::HalfDown | Self::HalfUp)
-    }
-
-    /// Returns 1 for a move downwards and -1 for one upwards
-    pub fn sign(self) -> isize {
-        match self {
-            Self::HalfDown | Self::WholeDown => 1,
-            Self::HalfUp | Self::WholeUp => -1,
-        }
-    }
-}
-
 /// Operator intent or a report of work done, which becomes a back-end
 /// command or an interface change
 #[derive(Debug, Clone)]
@@ -132,6 +112,17 @@ pub enum Message {
     /// Scrolls the cue list a number of rows, down when positive, and keeps
     /// the selection in view
     Scroll(isize),
+    /// Selects the row at a height in view, counted from the top or the bottom
+    /// with the count typed before the keys, as a jump
+    InView(Height, Option<usize>),
+    /// Selects the row, counted from zero, that a measure of the cue list
+    /// found, as a jump, unless the list or the selection that the key found
+    /// has changed since
+    Reached {
+        list: usize,
+        from: Option<CueId>,
+        row: usize,
+    },
     StandbySelected,
     SwitchList(usize),
     /// Shows the cue list a number of lists further down the sidebar

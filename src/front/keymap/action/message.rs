@@ -7,7 +7,10 @@
 use super::Action;
 use crate::{
     back::Place,
-    front::{Caret, Focus, Message, message::Page},
+    front::{
+        Caret, Focus, Message,
+        message::{Height, Page},
+    },
 };
 
 impl Action {
@@ -28,6 +31,9 @@ impl Action {
             Action::PageUp => Message::Page(Page::WholeUp, count),
             Action::ScrollDown => Message::Scroll(step),
             Action::ScrollUp => Message::Scroll(-step),
+            Action::TopRow => Message::InView(Height::Top, count),
+            Action::MiddleRow => Message::InView(Height::Middle, count),
+            Action::BottomRow => Message::InView(Height::Bottom, count),
             Action::NextList => Message::StepList(step),
             Action::PreviousList => Message::StepList(-step),
             Action::NextTab => count.map_or(Message::StepTab(1), Message::ShowTab),

@@ -79,6 +79,11 @@ impl App {
                 return (app, measure);
             }
             Message::Scroll(rows) => return self.scrolled(rows),
+            Message::InView(height, count) => return self.in_view(height, count),
+            Message::Reached { list, from, row } if self.list == list && self.selected == from => {
+                self.jumping(|app| app.at_row(row.saturating_add(1)))
+            }
+            Message::Reached { .. } => self,
             Message::SwitchList(list) => {
                 return self
                     .without_search()

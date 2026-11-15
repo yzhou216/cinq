@@ -2,7 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Scrolling the cue list a row at a time, with the keys of Vim
+//! Scrolling the cue list a row at a time, and selecting the rows in its view,
+//! with the keys of Vim
 //!
 //! Like paging, it measures the list as it is laid out, and takes the rows
 //! to be as tall as the average, since the rows that a long name wraps are
@@ -11,7 +12,7 @@
 use iced::Task;
 
 use super::paging::{Landing, viewport::Shape};
-use crate::front::{App, Message};
+use crate::front::{App, Message, message::Height};
 
 /// Slack for the rounding of a row height that is the quotient of a sum
 const SLACK: f32 = 0.001;
@@ -67,5 +68,46 @@ pub(super) fn scroll(
     Some(Landing {
         offset,
         row: row.min(last),
+    })
+}
+
+impl App {
+    /// Selects the row at `height` in view, counted from the top for the
+    /// first height and from the bottom for the last by `count`, as `H` and
+    /// `L` do in Vim.  Selecting is a jump, as in Vim, and the view stays
+    /// where it is.
+    pub(super) fn in_view(self, height: Height, count: Option<usize>) -> (Self, Task<Message>) {
+        let cues = self.current().cues.len();
+        let (list, from) = (self.list, self.selected);
+        self.landing(
+            move |row| Message::Reached { list, from, row },
+            move |shape| in_view(height, count, shape, cues),
+        )
+    }
+}
+
+/// Returns the row at `height` in view of a list of `cues` rows, with the
+/// view left where it is.  A count that reaches past the rows in view stops
+/// at the last of them, or the first, and the middle takes the upper of two
+/// rows, as `M` does.
+pub(super) fn in_view(
+    height: Height,
+    count: Option<usize>,
+    shape: Shape,
+    cues: usize,
+) -> Option<Landing> {
+    let last = cues.checked_sub(1)?;
+    let row_height = shape.content / cues as f32;
+    let first_row = first_in_view(shape, row_height).min(last);
+    let last_row = last_in_view(shape, row_height).min(last);
+    let from_edge = count.unwrap_or(1).saturating_sub(1);
+    let row = match height {
+        Height::Top => first_row.saturating_add(from_edge).min(last_row),
+        Height::Middle => first_row + (last_row - first_row) / 2,
+        Height::Bottom => last_row.saturating_sub(from_edge).max(first_row),
+    };
+    Some(Landing {
+        offset: shape.scrolled,
+        row,
     })
 }

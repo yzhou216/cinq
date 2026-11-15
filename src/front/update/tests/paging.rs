@@ -17,7 +17,7 @@ use crate::front::{
     update::paging::{landing, rows, rows_fitting, viewport::Shape},
 };
 
-fn letter(key: &str) -> Key {
+pub(super) fn letter(key: &str) -> Key {
     Key::Character(key.into())
 }
 

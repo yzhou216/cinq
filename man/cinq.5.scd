@@ -201,6 +201,15 @@ of the help page.
 |  scroll_up
 :  Control+y
 :  none
+|  top_row
+:  H
+:  none
+|  middle_row
+:  M
+:  none
+|  bottom_row
+:  L
+:  none
 |  next_list
 :  l, ArrowRight
 :  Control+PageDown
@@ -355,6 +364,8 @@ It copies, cuts, deletes, or adds as many cues for *copy*, *cut*, *delete*,
 goes back as many tabs for *previous_tab*.
 It gives the row, counted from one, that *first* and *last* select, and the
 tab, counted from one, that *next_tab* shows.
+It gives the row in view, counted from the top for *top_row* and from the bottom
+for *bottom_row*, that they select.
 For *half_page_down* and *half_page_up*, it sets how many rows they move, as
 in Vim, and later presses of either move that many rows, or lines on the help
 page, until another count sets it again, the main window changes size, or
@@ -383,6 +394,8 @@ A count before the operator, before the motion, or both counts the motion, and
 the two multiply, so that *2 d 3 j* cuts the selected cue and the next six.
 A motion that cannot move, such as *d k* on the first cue, does nothing, and a
 count past the end stops at the last cue.
+The keys of *top_row*, *middle_row*, and *bottom_row* are no motions, since
+the rows in view are known only once the window has drawn the list.
 The cues of a cut leave the selection on the cue that takes their place, and a
 copy leaves it on the first cue copied.
 Cutting is one change for undo, and the clipboard holds the cues in order.
@@ -590,6 +603,23 @@ page.
 	does.
 	On the help page, scroll up a line.
 	While a menu is open, *Control+y* picks the highlighted option instead.
+
+*top_row*
+	Select the first cue row in view, or the row that many rows below it
+	for a count, stopping at the last row in view, as *H* does in Vim.
+	The view stays where it is.
+	It is a jump for *back*.
+
+*middle_row*
+	Select the cue row in the middle of the view, or of the rows in view when
+	the list is shorter, taking the upper of two middle rows, as *M* does in
+	Vim.
+	It is a jump for *back*.
+
+*bottom_row*
+	Select the last cue row in view, or the row that many rows above it for a
+	count, stopping at the first row in view, as *L* does in Vim.
+	It is a jump for *back*.
 
 *next_list*
 	Show the next cue list.
