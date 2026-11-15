@@ -27,14 +27,26 @@ use crate::front::{
 impl App {
     pub(super) fn typed(self, press: Press, repeat: bool) -> (Self, Task<Message>) {
         let outcome = self.config.keymap.parse(&self.keys, press);
+        let across = outcome.across();
         let app = Self {
             keys: outcome.pending,
+            clipped: self.clipped.filter(|_| outcome.action.is_none()),
+            remark: self.remark.filter(|_| outcome.action.is_none()),
             ..self
         };
+        if let Some((operator, motion, count)) = across {
+            // Help page has no cues to operate on, and the stage window leaves
+            // the cues to the main window
+            return if app.help || app.stage.has_keyboard() {
+                (app, Task::none())
+            } else {
+                app.handled(Message::Across(operator, motion, count))
+            };
+        }
         match outcome.action {
             Some((action, _)) if repeat && action.acts_once_a_press() => (app, Task::none()),
             // Cue list is out of sight from the stage window, so that the keys
-            // that change the show wait for the main window
+            // that change the show or the clipboard wait for the main window
             Some((action, _)) if app.stage.has_keyboard() && action.edits_the_show() => {
                 (app, Task::none())
             }

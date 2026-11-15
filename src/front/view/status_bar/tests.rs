@@ -7,10 +7,14 @@
 mod cancel;
 mod places;
 
-use super::{fitted, hints as hinted};
-use crate::front::{
-    App,
-    keymap::{Action, Keymap, Preset, config::Config},
+use super::{clipped, fitted, hints as hinted};
+use crate::{
+    back::{Command, Cue, CueId, CueList, Kind, Workspace},
+    front::{
+        App,
+        keymap::{Action, Keymap, Preset, config::Config},
+        update::Clipped,
+    },
 };
 
 fn owned<const N: usize>(hints: [(Option<Action>, &str); N]) -> Vec<(Option<Action>, String)> {
@@ -80,4 +84,46 @@ fn opened(preset: Preset) -> App {
         config,
         ..App::default()
     }
+}
+
+#[test]
+fn a_cut_names_the_keys_that_paste_and_undo_while_a_copy_names_only_the_paste_key() {
+    let shown = |told: &str, cut: bool| App {
+        clipped: Some(Clipped {
+            told: told.to_owned(),
+            cut,
+        }),
+        workspace: Workspace::new(vec![CueList::new(
+            "Main",
+            vec![Cue::new(CueId(1), "1", Kind::Memo, "Note").build()],
+        )])
+        .apply(Command::Delete(vec![CueId(1)])),
+        ..App::default()
+    };
+    assert_eq!(
+        clipped(&shown("Cut cue 4", true)).as_deref(),
+        Some("Cut cue 4 | p: paste | u: undo")
+    );
+    assert_eq!(
+        clipped(&shown("Copied 3 cues", false)).as_deref(),
+        Some("Copied 3 cues | p: paste")
+    );
+    // Show mode locks pasting, so no key is offered
+    let locked = App {
+        workspace: Workspace::default().apply(Command::ShowMode(true)),
+        ..shown("Copied 3 cues", false)
+    };
+    assert_eq!(clipped(&locked).as_deref(), Some("Copied 3 cues"));
+}
+
+#[test]
+fn what_a_key_remarked_shows_in_the_bar_before_anything_else() {
+    let app = App {
+        remark: Some("The clipboard is empty"),
+        ..App::default()
+    };
+    let told = hinted(&app)
+        .into_iter()
+        .find_map(|(action, hint)| action.is_none().then_some(hint));
+    assert_eq!(told.as_deref(), Some("The clipboard is empty"));
 }

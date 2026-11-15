@@ -10,6 +10,7 @@ mod dropping;
 mod file;
 mod manual;
 mod notation;
+mod operators;
 mod typing;
 mod viewing;
 

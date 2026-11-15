@@ -4,6 +4,7 @@
 
 //! Text for back-end values, kept apart from the widgets that show it
 
+mod change;
 #[cfg(test)]
 mod tests;
 
@@ -11,7 +12,8 @@ use std::path::Path;
 
 use itertools::Itertools;
 
-use crate::back::{Active, Advance, Change, Cue, CueList, Edit, Kind, Media, Phase, Workspace};
+use crate::back::{Active, Advance, Cue, CueList, Kind, Media, Phase, Workspace};
+pub use change::change;
 
 /// Formats seconds as `m:ss.s`
 fn clock(seconds: f64) -> String {
@@ -131,42 +133,12 @@ pub fn chain(workspace: &Workspace, list: &CueList, standby: &Cue) -> String {
     format!("GO fires {fired}: {}", described.format(", "))
 }
 
-/// Describes a change to the show in few words, starting in lower case, as
-/// the status bar tells what undo or redo acts on
-pub fn change(workspace: &Workspace, change: &Change) -> String {
-    let named = |id| workspace.cue(id).map_or_else(String::new, number);
-    match change {
-        Change::Added { placed, .. } => format!("added cue {}", number(&placed.cue)),
-        Change::Deleted { cues, .. } => match cues.as_slice() {
-            [placed] => format!("deleted cue {}", number(&placed.cue)),
-            cues => format!("deleted {} cues", cues.len()),
-        },
-        Change::Moved { cue, .. } => format!("moved cue {}", named(*cue)),
-        Change::Edited { cue, redo, .. } => {
-            let cue = named(*cue);
-            match redo {
-                Edit::Number(_) => format!("changed the number of cue {cue}"),
-                Edit::Name(_) => format!("changed the name of cue {cue}"),
-                Edit::File(_) => format!("changed the file of cue {cue}"),
-                Edit::FileAndName { .. } => format!("chose the file of cue {cue}"),
-                Edit::Start(_) => format!("changed the start of cue {cue}"),
-                Edit::End(_) => format!("changed the end of cue {cue}"),
-                Edit::Loop(_) => format!("changed whether cue {cue} loops"),
-                Edit::Target(_) => format!("changed the target of cue {cue}"),
-                Edit::Notes(_) => format!("changed the notes of cue {cue}"),
-                Edit::PreWait(_) => format!("changed the pre-wait of cue {cue}"),
-                Edit::Duration(_) => format!("changed the duration of cue {cue}"),
-                Edit::PostWait(_) => format!("changed the post-wait of cue {cue}"),
-                Edit::Advance(_) => format!("changed what follows cue {cue}"),
-                Edit::Level(_) => format!("changed the level of cue {cue}"),
-                Edit::StopTarget(_) => format!("changed whether cue {cue} stops its target"),
-            }
-        }
-        Change::Standby(standby) => match standby.after.and_then(|id| workspace.cue(id)) {
-            Some(cue) => format!("moved standby to cue {}", number(cue)),
-            None => "moved standby past the end".to_owned(),
-        },
-        Change::Restored { .. } => "brought back the unsaved changes".to_owned(),
+/// Tells what a copy or cut took with `verb`, by the number of the cue, or
+/// else by how many cues
+pub fn clipped(verb: &str, cues: &[Cue]) -> String {
+    match cues {
+        [cue] => format!("{verb} cue {}", number(cue)),
+        cues => format!("{verb} {} cues", cues.len()),
     }
 }
 

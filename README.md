@@ -35,6 +35,8 @@ Minimal cue-based show controller, the
 - **Show mode** locks editing during a performance.
 - **Several cue lists**, and a warnings list that says why any cue cannot
   play.
+- **Clipboard.**  Cut, copy, and paste cues, between shows as well.  cinq(5) lists
+  the keys.
 - **Readable show files** in TOML, which `cinq SHOW` opens, easy to diff and
   keep under version control.
 

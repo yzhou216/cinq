@@ -72,5 +72,11 @@ fn keys_that_type_characters_show_joined_and_others_keep_their_spaces() {
 fn the_screen_joins_the_keys_of_a_sequence_and_the_file_keeps_their_spaces() {
     let keymap = Keymap::from(Preset::Vi);
     assert_eq!(keymap.listed(Action::NextTab), "gt");
+    assert_eq!(keymap.key(Action::RowToMiddle).as_deref(), Some("zz"));
+    assert_eq!(
+        keymap.hint(Action::Copy, "copy").as_deref(),
+        Some("yy: copy")
+    );
+    assert_eq!(keymap.listed(Action::RowToTop), "zt, z Enter");
     assert_eq!(written(&keys("g g")), "g g");
 }

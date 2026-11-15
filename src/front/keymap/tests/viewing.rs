@@ -46,6 +46,10 @@ fn z_followed_by_enter_dot_or_minus_places_the_row_as_z_t_z_z_and_z_b_do() {
 fn plus_and_minus_move_to_the_next_and_previous_cue_as_in_vim() {
     assert_eq!(action("+"), Some((Action::Next, None)));
     assert_eq!(action("3 -"), Some((Action::Previous, Some(3))));
-    let cua = Keymap::from(Preset::Cua);
-    assert_eq!(cua.parse(&[], one("+").expect("a key")).action, None);
+    // And they are motions after an operator, as the other keys of the moves
+    assert_eq!(
+        typed("d +").across(),
+        Some((Action::Cut, Action::Next, None))
+    );
+    assert_eq!(typed_on(&Keymap::from(Preset::Cua), "+").action, None);
 }

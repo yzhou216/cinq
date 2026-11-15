@@ -7,6 +7,7 @@
 //! Only [`cinq`] reaches the parts with side effects.
 
 mod cinq;
+mod clipboard;
 mod clock;
 mod device;
 mod editing;
@@ -15,6 +16,7 @@ mod keys;
 mod link;
 mod loading;
 mod navigation;
+mod operators;
 mod paging;
 mod scroll;
 mod settled;
@@ -31,6 +33,7 @@ use iced::{Task, futures::channel::oneshot, mouse};
 
 use super::{App, Message};
 use crate::back::Command;
+pub(super) use clipboard::{Clipboard, Clipped};
 pub(super) use history::{History, Spot};
 use link::{edit_config, open_link};
 pub(super) use paging::kept::{Measured, Measures};
@@ -72,9 +75,14 @@ impl App {
             Message::StepList(offset) => self.jumping(|app| app.stepped_list(offset)).revealed(),
             Message::Back(count) => self.walking(|app| app.went_back(count)),
             Message::Forward(count) => self.walking(|app| app.went_forward(count)),
-            Message::Add(place) => self.with_new_cue(place).revealed(),
+            Message::Add(place, count) => self.with_new_cue(place, count).revealed(),
             Message::Move(by) => self.with_selected_moved(by).revealed(),
+            Message::Cut(count) => self.cut(count).revealed(),
+            Message::Paste(place, count) => self.with_pasted(place, count).revealed(),
             Message::Delete(count) => self.without_selected(count).revealed(),
+            Message::Across(operator, motion, count) => {
+                self.across(operator, motion, count).revealed()
+            }
             Message::Undo(count) => self.undone(count).revealed(),
             Message::Redo(count) => self.redone(count).revealed(),
             Message::Resized(window, size) => self.resized(window, size),
@@ -124,6 +132,7 @@ impl App {
             | Message::Landed { .. }
             | Message::Measured(_)
             | Message::Reached { .. }
+            | Message::Copy(_)
             | Message::Panic
             | Message::PauseAll
             | Message::ResumeAll
@@ -200,6 +209,8 @@ impl App {
         let clicked = matches!(message, Message::Clicked);
         let app = Self {
             keys: if typing { self.keys } else { Vec::new() },
+            clipped: self.clipped.filter(|_| typing),
+            remark: self.remark.filter(|_| typing),
             typed_level: self.typed_level.filter(|_| passive || clicked),
             ..self
         };

@@ -263,8 +263,20 @@ of the help page.
 :  Alt+k, Alt+ArrowUp
 :  Alt+ArrowUp
 |  delete
-:  d d, x, Delete
+:  none
 :  Delete
+|  copy
+:  y y, Y
+:  Control+c
+|  cut
+:  d d, x, Delete
+:  Control+x
+|  paste_below
+:  p
+:  Control+v
+|  paste_above
+:  P
+:  Control+V
 |  undo
 :  u
 :  Control+z
@@ -339,8 +351,10 @@ The key of *cancel* drops it as well, without any other effect.
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
 *move_down*, *move_up*, *scroll_down*, *scroll_up*, *back*, and *forward*.
-It deletes as many cues for *delete*, undoes or redoes as many changes for
-*undo* and *redo*, and goes back as many tabs for *previous_tab*.
+It copies, cuts, deletes, or adds as many cues for *copy*, *cut*, *delete*,
+*add_below*, and *add_above*, pastes as many times for *paste_below* and
+*paste_above*, undoes or redoes as many changes for *undo* and *redo*, and
+goes back as many tabs for *previous_tab*.
 It gives the row, counted from one, that *first* and *last* select, and the
 tab, counted from one, that *next_tab* shows.
 It gives the row in view, counted from the top for *top_row* and from the bottom
@@ -357,6 +371,33 @@ A count larger than what there is, such as *9 Control+o* with fewer places
 behind, *9 g t* with fewer tabs, or *3 d d* on the last cue, makes *cinq* go as
 far as it can, where Vim would refuse it.
 Since digits count, no sequence can start with one.
+
+The actions *copy*, *cut*, and *delete* also act as operators, as *y* and *d*
+do in Vim.
+An operator key is the key that one of their bindings doubles: *d* for *d d*
+and *y* for *y y* in the vi keymap, and *D* for a binding *D D* that replaces
+*d d*.
+A binding that does not double a key, such as *Control+x*, *x*, or *c v*, makes
+no operator.
+The operator key followed by any key bound to *next*, *previous*, *first*, or
+*last* applies the action to the cues from the selection to where that motion
+would move it, inclusive, as Vim does for whole lines: *d j* cuts the selected
+cue and the next, *y k* copies it and the previous, *d G* cuts down to the last
+cue, *d g g* up to the first, and *d 3 G* to row 3, in whichever direction the
+row lies.
+A count before the operator, before the motion, or both counts the motion, and
+the two multiply, so that *2 d 3 j* cuts the selected cue and the next six.
+A motion that cannot move, such as *d k* on the first cue, does nothing, and a
+count past the end stops at the last cue.
+The keys of *top_row*, *middle_row*, and *bottom_row* are no motions, since
+the rows in view are known only once the window has drawn the list.
+The cues of a cut leave the selection on the cue that takes their place, and a
+copy leaves it on the first cue copied.
+Cutting is one change for undo, and the clipboard holds the cues in order.
+Show mode locks *d* with a motion as it locks *cut* and *delete*, and leaves *y*
+with a motion alone, as it leaves *copy*.
+A key that is neither a count nor a motion drops the operator and itself, and
+the keys of *go* and *panic* act at once as usual.
 
 A key bound by itself to *go* or *panic* acts at once, even halfway through
 another sequence, and when it is bound without modifiers, whatever modifiers
@@ -436,17 +477,20 @@ While the stage window has the keyboard, as the window manager may leave it
 once the stage window opens, and as each GO that makes it fullscreen gives
 it, *edit*, *next_field*, and *previous_field* do nothing, since the keys
 typed there would never reach a field of the main window.
-The keys that change the show do nothing there either: *add_below*,
-*add_above*, *delete*, *move_down*, *move_up*, *undo*, and *redo*, since the
-cue list is out of sight from that window and a held key could change cues
-unseen.
+The keys that change the show or fill the clipboard do nothing there either:
+*add_below*, *add_above*, *cut*, *copy*, *paste_below*, *paste_above*,
+*delete*, *move_down*, *move_up*, *undo*, and *redo*, and the operators that
+begin with a key of *cut*, *copy*, or *delete*, since the cue list is out of
+sight from that window and a held key could change cues unseen.
 The keys of *go*, *panic*, and *standby*, and those that move the selection,
 act as before.
 A click on the main window gives it the keyboard.
 
 Show mode locks editing: *edit*, *add_below*, *add_above*, *move_down*,
-*move_up*, and *delete* do nothing in it, and *undo* and *redo* only move
-standby back and forth.
+*move_up*, *delete*, *cut*, *paste_below*, and *paste_above* do nothing in it,
+and *undo* and *redo* only move standby back and forth.
+Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
+read-only buffer.
 
 # ACTIONS
 
@@ -642,10 +686,13 @@ page.
 *add_below*
 	Add a cue of the kind chosen in the toolbar below the selection, or at the
 	end of the list without one.
+	A count adds that many cues in a row, at most a thousand, as one change
+	that undo takes back, and selects the last of them, as the cursor of Vim
+	goes to the last line that *3o* inserts.
 
 *add_above*
 	Add a cue of the kind chosen in the toolbar above the selection, or at the
-	end of the list without one.
+	end of the list without one, as many as the count, as *add_below* does.
 
 *move_down*
 	Move the selected cue one place down its list, or as many places as the
@@ -656,11 +703,64 @@ page.
 	count.
 
 *delete*
-	Delete the selected cue, or as many cues from it down as the count.
+	Delete the selected cue, or as many cues from it down as the count,
+	without copying them.
+	The vi keymap binds no key to it, since *cut* is what its *d d*, *x*, and
+	*Delete* do, as in Vim.
+	The cua keymap binds the Delete key to it, as desktop programs do.
+
+*copy*
+	Copy the selected cue, or as many cues from it down as the count, to the
+	clipboard of *cinq*, in place of what it held.
+	The clipboard is *cinq*'s own and not that of the desktop.
+	It is no part of the show, and undo does not touch it.
+	It acts in show mode, since it changes no show.
+	The status bar tells how many cues went to the clipboard and names the key
+	of *paste_below*.
+	The vi keymap binds *Y* to it as well as *y y*, as Vim yanks a line with
+	both, and *y* followed by a motion copies the cues the motion reaches, as
+	*TYPING* describes.
+
+*cut*
+	Copy the selected cue, or as many cues from it down as the count, to the
+	clipboard and delete them, so that *cut* and then *paste_below* moves a
+	cue.
+	The vi keymap binds *x* and *Delete* to it as well as *d d*, as Vim cuts
+	with all three, and *d* followed by a motion cuts the cues the motion
+	reaches, as *TYPING* describes.
+	The status bar tells how many cues went to the clipboard and names the keys
+	of *paste_below* and *undo*, and goes on telling the change as a cut after
+	later keys and in the notices of *undo* and *redo*.
+
+*paste_below*
+	Paste the cues of the clipboard below the selection, or at the end of the
+	list without one, as many times in a row as the count, and select the
+	first cue pasted.
+	Pasting adds new cues with the settings of the copied ones, as one change
+	that undo takes back, and changes nothing while the clipboard is empty,
+	which the status bar tells.
+	A pasted cue keeps its number unless another cue holds it, when it takes
+	the next free number.
+	A fade or stop cue pasted together with its target, whether copied or cut
+	with it, targets the new copy of that cue, as in QLab, in each round of a
+	count.
+	Otherwise it keeps its target when it is pasted into the show it was
+	copied from and the target is still there, and has none in another show.
+	The file of a cue goes by its path from the directory of the show it lands
+	in, when it lies there.
+	The clipboard stays when another show opens, and one paste adds at most a
+	thousand cues, even of a clipboard that holds more.
+
+*paste_above*
+	Paste the cues of the clipboard above the selection, as *paste_below*
+	does below it.
 
 *undo*
 	Undo the latest change to the show, or as many of the latest changes as the
 	count, stopping at the oldest.
+	Undoing an addition or a paste, of all the cues that a count made, selects
+	the cue that it went below or above, as the cursor of Vim goes back to
+	where the change was made.
 
 *redo*
 	Redo the change undone last, or as many changes as the count, stopping at
@@ -762,13 +862,13 @@ go = ["Space", "F5"]
 ```
 
 Keep the vi keymap, but move through cues and menus with the arrows alone,
-and let no key delete a cue:
+and let no key cut a cue:
 
 ```
 [keys]
 next = "ArrowDown"
 previous = "ArrowUp"
-delete = []
+cut = []
 ```
 
 Build a keymap of one's own from no keys at all, in which only GO, Panic, and

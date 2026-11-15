@@ -34,19 +34,20 @@ Major changes and improvements in each release of cinq, newest first.
   `previous_tab` goes back that many tabs.
 - A key that completes or continues no sequence of keys cancels what was typed
   so far and does nothing itself, as Vim beeps and drops the keys, so that a
-  mistyped `dx` no longer deletes a cue, and `gj` and `gk` move the selection
-  down and up in the vi keymap, as they do in Vim.  The keys of GO and Panic
-  still act at once.
+  mistyped `dx` no longer cuts a cue, and `gj` and `gk` move the selection down
+  and up in the vi keymap, as they do in Vim.  The keys of GO and Panic still
+  act at once.
 - `Control+c` cancels in the vi keymap, as in Vim, through the new `cancel`
   action, which has no key in the cua keymap, where `Control+c` copies.  It
   drops the keys typed so far, takes the keyboard out of a text field, and never
   stops playback, so that no one reaches for `Escape`, which is Panic.  The
   status bar hints the key while keys wait, and a text field with a selection
   still copies it first.
-- While the stage window has the keyboard, the keys that change the show, such
-  as `x`, `Delete`, `o`, and `u`, do nothing, as the keys of editing a name and
-  of the help page already did, so that a key held down there cannot change cues
-  out of sight.  GO, Panic, standby, and the moves still act.
+- While the stage window has the keyboard, the keys that change the show or fill
+  the clipboard, such as `x`, `Delete`, `o`, `u`, `p`, and the operators, do
+  nothing, as the keys of editing a name and of the help page already did, so
+  that a key held down there cannot change cues out of sight.  GO, Panic,
+  standby, and the moves still act.
 - The help page, the box of the keys that can follow, and the status bar write
   a sequence of keys that type characters joined, as Vim does: `dd`, `gg`,
   `gt`, and `zz`, no longer `d d`, since a newcomer pressed the Space between
@@ -73,7 +74,8 @@ Major changes and improvements in each release of cinq, newest first.
 - `H`, `M`, and `L` select the first, middle, and last cue row in view in the vi
   keymap, as in Vim, through the new `top_row`, `middle_row`, and `bottom_row`
   actions.  A count before `H` counts rows from the top and before `L` from the
-  bottom.  They are jumps for `back`.
+  bottom.  They are jumps for `back` and, unlike the motions `j`, `k`, `gg`, and
+  `G`, take no operator.
 - `zz`, `zt`, and `zb`, and `z.`, `z Enter`, and `z-`, put the selected row in
   the middle, at the top, or at the bottom of the view in the vi keymap, as in
   Vim, through the new `row_to_middle`, `row_to_top`, and `row_to_bottom`
@@ -84,6 +86,34 @@ Major changes and improvements in each release of cinq, newest first.
   thresholds: seven rows above the view and 13 rows below it in a view of 23
   rows.  A move to a row near the view still scrolls by the least, as does GO
   moving the standby a row.
+- Cues can be copied, cut, and pasted with a clipboard of cinq's own that
+  outlasts the show it was filled from: `yy`, `Y`, `p`, and `P` in the vi keymap
+  copy and paste, `dd`, `x`, and `Delete` cut, and `Control+c`, `Control+x`,
+  `Control+v`, and `Control+V` do the same in the cua keymap.  The new `copy`,
+  `cut`, `paste_below`, and `paste_above` actions carry these keys.  The cua
+  `Delete` key still deletes without copying, and `delete` has no key in the vi
+  keymap, where `cut = []` in `config.toml` now lets no key remove a cue, as
+  `delete = []` did.
+- A count copies or cuts that many cues and pastes that many times, a paste is
+  one change that undo takes back, and a fade pasted together with its target
+  targets the new copy, as in QLab.  The status bar tells what was cut or copied
+  and names the key that pastes, and undo and redo still call a cut a cut.  A
+  paste with nothing to paste says that the clipboard is empty, and the `copy`
+  action works in show mode, as Vim yanks in a read-only buffer.
+- In the vi keymap, `d` and `y` take a motion, as in Vim: `dj` cuts the selected
+  cue and the next, `yk` copies it and the previous, and `dG`, `dgg`, and `d3G`
+  reach the last cue, the first, and row 3.  Counts before the operator and the
+  motion multiply, so that `2d3j` cuts seven cues, and the box above the status
+  bar lists the motions after the operator.  The operator key is the doubled key
+  of the binding, so that `cut = ["D D"]` makes `DD` and `Dj` cut, and a cut of
+  several cues is one change for undo.
+- A count before the keys of `add_below` and `add_above`, such as `3o`, adds
+  that many cues in a row, at most a thousand, as one change for undo, and
+  selects the last of them, as the cursor of Vim goes to the last line that `3o`
+  inserts.
+- Undoing the addition of a cue or a paste below a cue selects the cue that was
+  selected when it was made, as the cursor of Vim goes back to where a change
+  was made, in place of the cue that follows.
 
 ## v0.1.4
 

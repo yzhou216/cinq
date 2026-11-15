@@ -73,10 +73,10 @@ impl Workspace {
 
     fn reverted(self, change: Change) -> Self {
         match change {
-            Change::Added { placed, standby } => self
+            Change::Added { cues, standby, .. } | Change::Pasted { cues, standby, .. } => self
                 .with_standby_moved(standby.reversed())
-                .removed([placed.cue.id]),
-            Change::Deleted { cues, standby } => {
+                .removed(cues.iter().map(|placed| placed.cue.id)),
+            Change::Deleted { cues, standby, .. } => {
                 let restored = cues.into_iter().fold(self, Self::with_placed);
                 standby
                     .into_iter()
@@ -92,9 +92,10 @@ impl Workspace {
 
     fn remade(self, change: Change) -> Self {
         match change {
-            Change::Added { placed, standby } => {
-                self.with_placed(*placed).with_standby_moved(standby)
-            }
+            Change::Added { cues, standby, .. } | Change::Pasted { cues, standby, .. } => cues
+                .into_iter()
+                .fold(self, Self::with_placed)
+                .with_standby_moved(standby),
             Change::Deleted { cues, .. } => self.removed(cues.iter().map(|placed| placed.cue.id)),
             Change::Moved { cue, to, .. } => self.with_cue_moved(cue, to),
             Change::Edited { cue, redo, .. } => self.changed(cue, redo),

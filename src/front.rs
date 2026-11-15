@@ -28,7 +28,7 @@ use iced::{Size, window};
 use crate::back::{Audio, CueId, CueList, Kind, Video, Workspace};
 use keymap::{Press, config::Config};
 use message::{Focus, Message, Tab};
-use update::{History, Keeper, Measures, Reader, Show, Stage};
+use update::{Clipboard, Clipped, History, Keeper, Measures, Reader, Show, Stage};
 
 /// Opens the main window with the show in `show`, or a new show without
 /// one, and runs the interface until the main window closes.  The key
@@ -152,6 +152,14 @@ struct App {
     /// place of the level until the operator does anything else
     typed_level: Option<(CueId, String)>,
     tab: Tab,
+    /// Cues copied or cut, which pasting adds
+    clipboard: Clipboard,
+    /// What the latest copy or cut told, until the operator does anything
+    /// else
+    clipped: Option<Clipped>,
+    /// What the latest key found to say that is no change, such as an empty
+    /// clipboard, until the operator does anything else
+    remark: Option<&'static str>,
     /// Kind of cue that Add cue creates
     new_kind: Kind,
     /// Time of the last clock tick, or `None` while the clock is stopped

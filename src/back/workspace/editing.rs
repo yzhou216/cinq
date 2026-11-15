@@ -10,18 +10,9 @@ use itertools::Itertools;
 use super::{
     Workspace,
     history::{Change, Placed, Standby},
+    numbering::Numbers,
 };
 use crate::back::{Active, CueId, CueList, Edit, Kind, Media, Place};
-
-/// Returns the next whole number above every numeric cue number, which
-/// keeps new cue numbers apart across all lists as QLab does.  Numbers too
-/// large to count up from leave the next number at the largest there is.
-fn next_number<'a>(numbers: impl Iterator<Item = &'a str>) -> String {
-    let highest = numbers
-        .filter_map(|number| number.trim().parse::<f64>().ok())
-        .fold(0.0_f64, f64::max);
-    (highest.floor() as u64).saturating_add(1).to_string()
-}
 
 impl Workspace {
     /// Puts `standby` on standby in a list without recording the move, as
@@ -48,37 +39,53 @@ impl Workspace {
         }
     }
 
-    /// Adds a cue with the next identity, numbered after the highest cue of
-    /// any list, and records it with the standby of its list before and
-    /// after, which the new cue can take.  Once the identities have run
-    /// out, no cue is added.
-    pub(super) fn added(self, list: usize, kind: Kind, at: Place) -> Self {
-        let Some(id) = self.next_cue_id() else {
-            return self;
-        };
-        let number = next_number(self.cues().map(|cue| cue.number.as_str()));
+    /// Adds cues with the next identities, each after the one before and
+    /// numbered after the highest cue of any list, and records them as one
+    /// change at the place of the first, with the standby of their list before
+    /// and after, which the first of them can take.  Once the identities have
+    /// run out, no more cues are added.
+    pub(super) fn added(self, list: usize, kind: Kind, at: Place, count: usize) -> Self {
+        let ids: Vec<CueId> = (self.next_id..)
+            .take(count)
+            .map_while(|id| u32::try_from(id).ok().map(CueId))
+            .collect();
         let before = self.lists.get(list).and_then(|cues| cues.standby);
-        let workspace = Self {
-            next_id: self.next_id + 1,
-            ..self.with_list(list, |cues| cues.with_new_cue(id, number, kind, at))
-        };
-        let Some(placed) = workspace.place_of(id) else {
+        let numbers = Numbers::of(self.cues().map(|cue| cue.number.as_str()));
+        let (workspace, ..) =
+            ids.iter()
+                .fold((self, at, numbers), |(workspace, at, numbers), &id| {
+                    let number = numbers.next();
+                    let numbers = numbers.with_taken(&number);
+                    let added = Self {
+                        next_id: workspace.next_id + 1,
+                        ..workspace.with_list(list, |cues| cues.with_new_cue(id, number, kind, at))
+                    };
+                    (added, Place::After(id), numbers)
+                });
+        let cues: Vec<Placed> = ids
+            .iter()
+            .filter_map(|&id| workspace.place_of(id))
+            .collect();
+        if cues.is_empty() {
             return workspace;
-        };
-        let standby = Standby {
+        }
+        let standby = workspace.standby_since(list, before);
+        workspace.recorded(Change::Added { cues, at, standby })
+    }
+
+    /// Returns the move of the standby of a list from `before` to where it
+    /// is now
+    pub(super) fn standby_since(&self, list: usize, before: Option<CueId>) -> Standby {
+        Standby {
             list,
             before,
-            after: workspace.lists[list].standby,
-        };
-        workspace.recorded(Change::Added {
-            placed: Box::new(placed),
-            standby,
-        })
+            after: self.lists[list].standby,
+        }
     }
 
     /// Deletes cues as one change, with the places they had and where
-    /// standby was before and after
-    pub(super) fn deleted(self, ids: &[CueId]) -> Self {
+    /// standby was before and after, and whether they were cut
+    pub(super) fn deleted(self, ids: &[CueId], cut: bool) -> Self {
         // Cues in the order of their places, which is the order undo puts
         // them back in
         let cues: Vec<Placed> = ids
@@ -100,13 +107,9 @@ impl Workspace {
         let workspace = self.removed(cues.iter().map(|placed| placed.cue.id));
         let standby = before
             .into_iter()
-            .map(|(list, before)| Standby {
-                list,
-                before,
-                after: workspace.lists[list].standby,
-            })
+            .map(|(list, before)| workspace.standby_since(list, before))
             .collect();
-        workspace.recorded(Change::Deleted { cues, standby })
+        workspace.recorded(Change::Deleted { cues, standby, cut })
     }
 
     pub(super) fn moved(self, id: CueId, by: isize) -> Self {

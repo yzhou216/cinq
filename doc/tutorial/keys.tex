@@ -26,7 +26,11 @@ keys, which differ between the keymaps:
 Action & vi & cua \\
 \hline
 Add a cue below the selection & \key{o} & \key{Control+n} \\
-Delete the selected cue & \key{dd} & \key{Delete} \\
+Cut the selected cue & \key{dd}, \key{x}, \key{Delete} & \key{Control+x} \\
+Copy the selected cue & \key{yy}, \key{Y} & \key{Control+c} \\
+Paste below the selection & \key{p} & \key{Control+v} \\
+Paste above the selection & \key{P} & \key{Control+V} \\
+Delete the selected cue, no copy & none & \key{Delete} \\
 Cancel what is typed halfway & \key{Control+c} & none \\
 Edit the name of the selected cue & \key{i} & \key{F2} \\
 Undo the latest change & \key{u} & \key{Control+z} \\
@@ -80,13 +84,18 @@ another with no \key{Space} between them, since \key{Space} is GO.
 \end{figure}
 
 A number typed first repeats the action: \key{3j} moves the selection three
-rows down, \key{3dd} deletes three cues, and \key{3u} undoes three changes.
-A key that does not continue the sequence cancels it and does nothing, as Vim
-beeps and drops the keys typed so far, so that a mistyped \key{dx} deletes
-nothing.  The keys for GO and Panic act immediately, even in the middle of a
-sequence.  \key{Control+c} cancels a sequence in the vi keymap, as it does in
-Vim, and the status bar hints it while a sequence waits, so that no one
-reaches for \key{Escape}, which is Panic.
+rows down, \key{3dd} cuts three cues, \key{3o} adds three cues, \key{3p}
+pastes the copied cues three times, and \key{3u} undoes three changes.
+\key{d} and \key{y} also take a motion: \key{dj} cuts the selected cue and
+the next, \key{yk} copies it and the previous, and \key{dG} cuts down to the
+last cue.  A number before the operator, before the motion, or both
+multiplies, so that \key{2d3j} cuts seven cues.  A key that does not
+continue the sequence cancels it and does nothing, as Vim beeps and drops the
+keys typed so far, so that a mistyped \key{dx} cuts nothing.  The keys for GO
+and Panic act immediately, even in the middle of a sequence.  \key{Control+c}
+cancels a sequence in the vi keymap, as it does in Vim, and the status bar
+hints it while a sequence waits, so that no one reaches for \key{Escape},
+which is Panic.
 
 \section{Changing the keys}
 

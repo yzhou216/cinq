@@ -18,6 +18,8 @@
 #[cfg(test)]
 mod tests;
 
+use std::iter;
+
 use iced::{
     Center, Element, Fill,
     widget::{container, responsive, rich_text, row, span, text, text::Wrapping},
@@ -119,9 +121,9 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
     let key =
         |action: Action, label: &str| keymap.hint(action, label).map(|hint| (Some(action), hint));
     let typed = (!app.keys.is_empty()).then(|| (None, shown(&app.keys)));
-    let told = app
-        .told
-        .clone()
+    let told = clipped(app)
+        .or_else(|| app.remark.map(str::to_owned))
+        .or_else(|| app.told.clone())
         .or_else(|| notice(app))
         .map(|told| (None, told));
     let back = going(app, Action::Back, app.back_to());
@@ -175,6 +177,25 @@ fn going(app: &App, action: Action, spot: Option<Spot>) -> Option<(Option<Action
         .keymap
         .hint(action, &label)
         .map(|hint| (Some(action), hint))
+}
+
+/// Tells what the latest copy or cut took, with the key that pastes it and,
+/// for a cut, the key that takes it back
+fn clipped(app: &App) -> Option<String> {
+    let keymap = &app.config.keymap;
+    let clipped = app.clipped.as_ref()?;
+    let paste = keymap
+        .hint(Action::PasteBelow, "paste")
+        .filter(|_| app.editable());
+    let undo = keymap
+        .hint(Action::Undo, Action::Undo.name())
+        .filter(|_| clipped.cut && app.workspace.undoable().is_some());
+    Some(
+        iter::once(clipped.told.clone())
+            .chain(paste)
+            .chain(undo)
+            .join(LINE),
+    )
 }
 
 /// Tells the latest change to the show, with the key that takes it back,

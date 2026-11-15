@@ -130,7 +130,7 @@ fn moving_by_rows_editing_and_looking_elsewhere_record_nothing() {
         show(cue(5)),
         [
             Message::Step(2),
-            Message::Add(Place::After),
+            Message::Add(Place::After, 1),
             Message::Move(1),
             Message::Delete(1),
             Message::Undo(1),

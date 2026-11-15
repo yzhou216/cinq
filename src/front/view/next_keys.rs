@@ -5,10 +5,14 @@
 //! Keys that can follow those typed so far, which a box lists while a
 //! command waits for more, as which-key does in Emacs and as Helix does
 
+#[cfg(test)]
+mod tests;
+
 use iced::{
     Element, Fill, never,
     widget::{column, container, rich_text, span},
 };
+use itertools::Itertools;
 use unicode_width::UnicodeWidthStr;
 
 use super::{SPACING, theme};
@@ -18,12 +22,7 @@ pub(super) fn view(app: &App) -> Option<Element<'_, Message>> {
     if app.help {
         return None;
     }
-    let next: Vec<(String, &str)> = app
-        .config
-        .keymap
-        .continuations(&app.keys)
-        .map(|(keys, action)| (shown(keys), action.description()))
-        .collect();
+    let next = listed(app);
     let width = next.iter().map(|(keys, _)| keys.width()).max()?;
     // Monospace font lines the descriptions up after the padded keys, which
     // are padded by the columns they take, as a wide character takes two
@@ -46,4 +45,22 @@ pub(super) fn view(app: &App) -> Option<Element<'_, Message>> {
             .padding(SPACING)
             .into(),
     )
+}
+
+/// Returns what can follow the keys typed so far, each action once with all
+/// its keys, as the help page lists them, and its description
+fn listed(app: &App) -> Vec<(String, String)> {
+    app.config
+        .keymap
+        .continuations(&app.keys)
+        .chunk_by(|&(_, action, operator)| (action, operator))
+        .into_iter()
+        .map(|((action, operator), group)| {
+            let description = operator.map_or_else(
+                || action.description().to_owned(),
+                |operator| operator.over(action),
+            );
+            (group.map(|(keys, ..)| shown(keys)).join(", "), description)
+        })
+        .collect()
 }

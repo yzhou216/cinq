@@ -4,7 +4,7 @@
 
 //! Requests that change a workspace
 
-use crate::back::{CueId, CueList, Edit, Kind, Media};
+use crate::back::{Cue, CueId, CueList, Edit, Kind, Media};
 
 /// Request to change the show
 ///
@@ -27,10 +27,26 @@ pub enum Command {
     Standby { list: usize, cue: Option<CueId> },
     /// Locks editing for a performance, or unlocks it
     ShowMode(bool),
-    /// Adds a cue of a kind at a place in a list
-    Add { list: usize, kind: Kind, at: Place },
+    /// Adds a number of cues of a kind in a row at a place in a list, as one
+    /// change
+    Add {
+        list: usize,
+        kind: Kind,
+        at: Place,
+        count: usize,
+    },
+    /// Pastes copies of cues, in order, at a place in a list as one change,
+    /// each with an identity of its own
+    Paste {
+        list: usize,
+        cues: Vec<Cue>,
+        at: Place,
+    },
     /// Removes cues, stopping those that are running, as one change
     Delete(Vec<CueId>),
+    /// Removes cues as [`Command::Delete`] does, and records that they went
+    /// to the clipboard, so that the change is told as a cut
+    Cut(Vec<CueId>),
     /// Moves a cue within its list by a number of places, downwards when
     /// positive, as far as the ends of the list allow
     Move { cue: CueId, by: isize },
@@ -60,7 +76,9 @@ impl Command {
         matches!(
             self,
             Command::Add { .. }
+                | Command::Paste { .. }
                 | Command::Delete(_)
+                | Command::Cut(_)
                 | Command::Move { .. }
                 | Command::Edit(..)
                 | Command::Restore(_)

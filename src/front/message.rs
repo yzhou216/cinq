@@ -14,7 +14,7 @@ use std::{ffi::OsString, path::PathBuf, time::Instant};
 use iced::{Size, mouse, window};
 
 use super::{
-    keymap::{Press, config::Config},
+    keymap::{Action, Press, config::Config},
     update::{Measured, Read, Saved},
 };
 use crate::back::{Command, CueId, Edit, Kind, Place};
@@ -110,14 +110,26 @@ pub enum Message {
     /// tab when there are fewer
     ShowTab(usize),
     NewKind(Kind),
-    /// Adds a cue next to the selection, on the side that the function
-    /// picks
-    Add(fn(CueId) -> Place),
+    /// Adds a number of cues in a row next to the selection, on the side that
+    /// the function picks, as one change
+    Add(fn(CueId) -> Place, usize),
     /// Moves the selected cue by a number of places, downwards when
     /// positive
     Move(isize),
+    /// Copies a number of cues from the selection down to the clipboard
+    Copy(usize),
+    /// Copies a number of cues from the selection down to the clipboard and
+    /// deletes them
+    Cut(usize),
+    /// Pastes the clipboard a number of times next to the selection, on the
+    /// side that the function picks
+    Paste(fn(CueId) -> Place, usize),
     /// Deletes a number of cues from the selection down
     Delete(usize),
+    /// Applies the operator `Cut`, `Copy`, or `Delete` to the cues from the
+    /// selection to where the motion `Next`, `Previous`, `First`, or `Last`
+    /// would move it, counted as the motion is
+    Across(Action, Action, Option<usize>),
     Edit(CueId, Edit),
     LevelTyped(CueId, String),
     /// Asks which file an audio, video, or picture cue plays or shows

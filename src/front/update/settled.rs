@@ -31,6 +31,7 @@ impl App {
             Message::Reached { list, from, row } if self.list == list && self.selected == from => {
                 self.jumping(|app| app.at_row(row.saturating_add(1)))
             }
+            Message::Copy(count) => self.with_copied(count),
             Message::Panic => Self {
                 help: false,
                 ..self.send(Command::Panic)

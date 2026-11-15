@@ -41,7 +41,7 @@ fn enter_acts_at_once_only_when_bound_to_go_or_panic() {
 #[test]
 fn commands_of_two_keys_wait_for_the_second() {
     assert_eq!(typed("2 d").pending, keys("2 d"));
-    assert_eq!(action("2 d d"), Some((Action::Delete, Some(2))));
+    assert_eq!(action("2 d d"), Some((Action::Cut, Some(2))));
     assert_eq!(action("g g"), Some((Action::First, None)));
     assert_eq!(action("7 G"), Some((Action::Last, Some(7))));
     assert_eq!(action("g T"), Some((Action::PreviousTab, None)));
@@ -70,7 +70,7 @@ fn keys_typed_halfway_list_what_can_follow_them() {
     let next = |text: &str| -> Vec<(String, Action)> {
         keymap
             .continuations(&keys(text))
-            .map(|(rest, action)| (written(rest), action))
+            .map(|(rest, action, _)| (written(rest), action))
             .collect()
     };
     let g = [
@@ -82,21 +82,23 @@ fn keys_typed_halfway_list_what_can_follow_them() {
     ];
     assert_eq!(next("g"), g);
     assert_eq!(next("1 2 g"), g);
-    assert_eq!(next("2 d"), [("d".to_owned(), Action::Delete)]);
+    assert_eq!(next("2 d")[0], ("d".to_owned(), Action::Cut));
     assert!(next("3").is_empty());
     assert_eq!(keymap.continuations(&[]).count(), 0);
 }
 
 #[test]
-fn keys_of_vim_delete_help_first_and_last_take_counts_as_their_twins_do() {
-    assert_eq!(action("x"), Some((Action::Delete, None)));
-    assert_eq!(action("3 x"), Some((Action::Delete, Some(3))));
-    assert_eq!(action("2 Delete"), Some((Action::Delete, Some(2))));
-    assert_eq!(action("F1"), Some((Action::Help, None)));
-    assert_eq!(action("?"), Some((Action::Help, None)));
-    assert_eq!(action("4 Control+Home"), Some((Action::First, Some(4))));
-    assert_eq!(action("Control+End"), Some((Action::Last, None)));
-    assert_eq!(action("7 Control+End"), Some((Action::Last, Some(7))));
+fn keys_of_vim_cut_help_first_and_last_take_counts_as_their_twins_do() {
+    assert_actions(&[
+        ("x", Action::Cut, None),
+        ("3 x", Action::Cut, Some(3)),
+        ("2 Delete", Action::Cut, Some(2)),
+        ("F1", Action::Help, None),
+        ("?", Action::Help, None),
+        ("4 Control+Home", Action::First, Some(4)),
+        ("Control+End", Action::Last, None),
+        ("7 Control+End", Action::Last, Some(7)),
+    ]);
 }
 
 #[test]
@@ -104,16 +106,14 @@ fn x_cuts_and_begins_no_other_command() {
     let keymap = Keymap::default();
     assert!(typed("x").pending.is_empty());
     assert!(keymap.continuations(&keys("x")).next().is_none());
-    assert_eq!(
-        one("x").and_then(|press| keymap.alone(press)),
-        Some(Action::Delete)
-    );
+    assert_eq!(keymap.alone(press("x")), Some(Action::Cut));
 }
 
 #[test]
-fn keys_of_delete_and_help_stay_with_a_field_that_has_the_keyboard() {
-    assert!(!Action::Delete.acts_in_fields());
-    assert!(!Action::Help.acts_in_fields());
+fn keys_of_delete_cut_and_help_stay_with_a_field_that_has_the_keyboard() {
+    [Action::Delete, Action::Cut, Action::Help]
+        .into_iter()
+        .for_each(|action| assert!(!action.acts_in_fields(), "{action:?}"));
 }
 
 #[test]
@@ -173,8 +173,7 @@ fn keys_that_move_by_a_page_are_those_of_vim_and_act_in_no_field() {
         assert!(!keymap.acts_in_fields(press(keys)), "{keys}");
     });
     // Keys of the prefixes g and d stay theirs, apart from Control+d
-    assert_eq!(action("g g"), Some((Action::First, None)));
-    assert_eq!(action("d d"), Some((Action::Delete, None)));
+    assert_actions(&[("g g", Action::First, None), ("d d", Action::Cut, None)]);
     assert_eq!(typed("d").pending.len(), 1);
 }
 
@@ -188,6 +187,61 @@ fn cua_pages_by_the_whole_page_and_binds_no_key_to_the_half_pages() {
 }
 
 #[test]
+fn vi_copies_with_y_y_cuts_with_d_d_and_pastes_with_p_and_capital_p() {
+    assert_actions(&[
+        ("y y", Action::Copy, None),
+        ("3 y y", Action::Copy, Some(3)),
+        ("d d", Action::Cut, None),
+        ("p", Action::PasteBelow, None),
+        ("2 P", Action::PasteAbove, Some(2)),
+    ]);
+    // Cutting is what deleting does in Vim, so that no key only deletes
+    assert!(Keymap::default().keys(Action::Delete).is_empty());
+}
+
+#[test]
+fn cua_copies_cuts_and_pastes_with_control_and_deletes_with_delete_alone() {
+    let keymap = Keymap::from(Preset::Cua);
+    [
+        ("Control+c", Action::Copy),
+        ("Control+x", Action::Cut),
+        ("Control+v", Action::PasteBelow),
+        ("Control+V", Action::PasteAbove),
+        ("Delete", Action::Delete),
+    ]
+    .into_iter()
+    .for_each(|(text, wanted)| {
+        let action = typed_on(&keymap, text).action.map(|(action, _)| action);
+        assert_eq!(action, Some(wanted), "{text}");
+    });
+}
+
+#[test]
+fn capital_y_copies_like_y_y_and_takes_a_count() {
+    assert_actions(&[
+        ("Y", Action::Copy, None),
+        ("3 Y", Action::Copy, Some(3)),
+        ("y y", Action::Copy, None),
+        // Y is bound by itself, so it makes no operator
+        ("Y j", Action::Next, None),
+    ]);
+    assert!(typed("Y").pending.is_empty());
+}
+
+#[test]
+fn counts_reach_the_actions_that_add_cues() {
+    assert_actions(&[
+        ("3 o", Action::AddBelow, Some(3)),
+        ("2 O", Action::AddAbove, Some(2)),
+    ]);
+    assert!(matches!(
+        Action::AddBelow.message(Some(3)),
+        Message::Add(_, 3)
+    ));
+    assert!(matches!(Action::AddAbove.message(None), Message::Add(_, 1)));
+}
+
+#[test]
 fn undo_and_redo_act_in_a_closed_list_and_not_in_a_text_field() {
     let cua = Keymap::from(Preset::Cua);
     let vi = Keymap::from(Preset::Vi);
@@ -196,7 +250,7 @@ fn undo_and_redo_act_in_a_closed_list_and_not_in_a_text_field() {
     assert!(vi.acts_in_lists(press("u")) && vi.acts_in_lists(press("Control+r")));
     // Keys of scrolling and of the other edits stay out of the list
     assert!(!vi.acts_in_lists(press("Control+e")) && !vi.acts_in_lists(press("j")));
-    assert!(!cua.acts_in_lists(press("Delete")));
+    assert!(!cua.acts_in_lists(press("Control+x")));
     // Keys that act in every field act in a list too
     assert!(vi.acts_in_lists(press("Tab")) && vi.acts_in_lists(press("Control+c")));
 }

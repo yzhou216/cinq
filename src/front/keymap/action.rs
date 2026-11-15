@@ -52,6 +52,10 @@ pub enum Action {
     MoveDown,
     MoveUp,
     Delete,
+    Copy,
+    Cut,
+    PasteBelow,
+    PasteAbove,
     Undo,
     Redo,
     Open,
@@ -110,7 +114,11 @@ impl Action {
             Action::AddAbove => "Add a cue above the selection",
             Action::MoveDown => "Move the selected cue down",
             Action::MoveUp => "Move the selected cue up",
-            Action::Delete => "Delete the selected cue",
+            Action::Delete => "Delete the selected cue without copying it",
+            Action::Copy => "Copy the selected cue to the clipboard",
+            Action::Cut => "Cut the selected cue to the clipboard",
+            Action::PasteBelow => "Paste the copied cues below the selection",
+            Action::PasteAbove => "Paste the copied cues above the selection",
             Action::Undo => "Undo the latest change to the show, or as many as counted",
             Action::Redo => "Redo the change undone last, or as many as counted",
             Action::Open => "Open a show",
@@ -127,8 +135,35 @@ impl Action {
     /// and the help page alike
     pub(super) const AT_ONCE: [Action; 2] = [Action::Go, Action::Panic];
 
+    /// Actions that apply to the rows that a motion reaches, as `d` and `y`
+    /// do in Vim.  Each takes its operator key from a binding that doubles
+    /// a key, such as `d d`.
+    pub(super) const OPERATORS: [Action; 3] = [Action::Cut, Action::Copy, Action::Delete];
+
+    /// Actions whose keys are the motions that follow an operator, each
+    /// reaching the rows from the selection to where it would move it
+    pub(super) const MOTIONS: [Action; 4] =
+        [Action::Next, Action::Previous, Action::First, Action::Last];
+
     pub fn acts_at_once(self) -> bool {
         Self::AT_ONCE.contains(&self)
+    }
+
+    /// Describes the operator `self` applied over the rows that `motion`
+    /// reaches
+    pub fn over(self, motion: Action) -> String {
+        let verb = match self {
+            Action::Copy => "Copy",
+            Action::Cut => "Cut",
+            _ => "Delete",
+        };
+        let rows = match motion {
+            Action::Next => "the selected cue and the next",
+            Action::Previous => "the selected cue and the previous",
+            Action::First => "the cues from the selection up to the first",
+            _ => "the cues from the selection down to the last",
+        };
+        format!("{verb} {rows}")
     }
 
     /// Returns whether a key of the action that is held down acts only
@@ -212,11 +247,15 @@ impl Action {
             Action::Edit => Message::Focus(Focus::Name),
             Action::NextField => Message::Focus(Focus::Next),
             Action::PreviousField => Message::Focus(Focus::Previous),
-            Action::AddBelow => Message::Add(Place::After),
-            Action::AddAbove => Message::Add(Place::Before),
+            Action::AddBelow => Message::Add(Place::After, times),
+            Action::AddAbove => Message::Add(Place::Before, times),
             Action::MoveDown => Message::Move(step),
             Action::MoveUp => Message::Move(-step),
             Action::Delete => Message::Delete(times),
+            Action::Copy => Message::Copy(times),
+            Action::Cut => Message::Cut(times),
+            Action::PasteBelow => Message::Paste(Place::After, times),
+            Action::PasteAbove => Message::Paste(Place::Before, times),
             Action::Undo => Message::Undo(times),
             Action::Redo => Message::Redo(times),
             Action::Open => Message::Open,
@@ -228,14 +267,19 @@ impl Action {
         }
     }
 
-    /// Returns whether the action edits the show, which the stage window
-    /// leaves to the main window: the operator cannot see the cue list from
-    /// there, so a key held down by mistake would change cues out of sight
+    /// Returns whether the action edits the show or fills the clipboard, which
+    /// the stage window leaves to the main window: the operator cannot see the
+    /// cue list from there, so a key held down by mistake would change cues
+    /// out of sight
     pub fn edits_the_show(self) -> bool {
         matches!(
             self,
             Action::AddBelow
                 | Action::AddAbove
+                | Action::Cut
+                | Action::Copy
+                | Action::PasteBelow
+                | Action::PasteAbove
                 | Action::Delete
                 | Action::MoveDown
                 | Action::MoveUp

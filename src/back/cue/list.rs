@@ -52,6 +52,16 @@ impl CueList {
         Self { standby, ..self }
     }
 
+    /// Returns the index that a cue put at `at` takes
+    pub(in crate::back) fn index_at(&self, at: Place) -> usize {
+        match at {
+            Place::After(cue) => self.position(cue).map(|index| index + 1),
+            Place::Before(cue) => self.position(cue),
+            Place::End => None,
+        }
+        .unwrap_or(self.cues.len())
+    }
+
     /// Inserts a new cue of `kind` with an identity and a number at a place
     /// in the list, named as new cues of its kind are.  As in QLab, a new
     /// fade or stop cue targets the cue it follows when it can act on that
@@ -65,12 +75,7 @@ impl CueList {
         kind: Kind,
         at: Place,
     ) -> Self {
-        let index = match at {
-            Place::After(cue) => self.position(cue).map(|index| index + 1),
-            Place::Before(cue) => self.position(cue),
-            Place::End => None,
-        }
-        .unwrap_or(self.cues.len());
+        let index = self.index_at(at);
         let cue = Cue::new(id, number, kind, Cue::new_name(kind)).build();
         let target = index
             .checked_sub(1)
@@ -82,6 +87,23 @@ impl CueList {
             ..self
         }
         .with_cue_at(index, Cue { target, ..cue })
+    }
+
+    /// Inserts cues at an index.  Standby waiting past the end moves to the
+    /// first cue pasted there, as for a cue added there.
+    pub(in crate::back) fn with_pasted(self, index: usize, pasted: Vec<Cue>) -> Self {
+        let index = index.min(self.cues.len());
+        let standby = self.standby.or(pasted
+            .first()
+            .filter(|_| index == self.cues.len())
+            .map(|cue| cue.id));
+        let mut cues = self.cues;
+        cues.splice(index..index, pasted);
+        Self {
+            cues,
+            standby,
+            ..self
+        }
     }
 
     /// Removes a cue.  Standby on that cue moves on to the next cue, or

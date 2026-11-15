@@ -6,7 +6,7 @@
 //! exceptions that [`theme`] lists, and only space the controls apart
 
 mod cue_table;
-mod format;
+pub(super) mod format;
 mod help;
 mod inspector;
 mod next_keys;

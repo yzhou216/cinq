@@ -10,15 +10,17 @@
 //! [`super::Video`] into pictures.  A [`Command`] asks for each change, and
 //! an [`Active`] records each cue that GO has fired.  The rules of playback
 //! live in [`playback`] and [`stopping`], those that change the cue lists
-//! in [`editing`], undo and redo in [`history`], show files in [`show`],
-//! the places of the files of cues in [`files`], and why cues cannot play
-//! in [`problems`].
+//! in [`editing`] and [`pasting`], undo and redo in [`history`], show files
+//! in [`show`], the places of the files of cues in [`files`], and why cues
+//! cannot play in [`problems`].
 
 mod active;
 mod command;
 mod editing;
 mod files;
 mod history;
+mod numbering;
+mod pasting;
 mod playback;
 mod problems;
 mod show;
@@ -180,8 +182,15 @@ impl Workspace {
             Command::Loaded { cue, file, media } => self.loaded(cue, &file, media),
             Command::Undo => self.undone(),
             Command::Redo => self.redone(),
-            Command::Add { list, kind, at } => self.added(list, kind, at),
-            Command::Delete(ids) => self.deleted(&ids),
+            Command::Add {
+                list,
+                kind,
+                at,
+                count,
+            } => self.added(list, kind, at, count),
+            Command::Paste { list, cues, at } => self.pasted(list, cues, at),
+            Command::Delete(ids) => self.deleted(&ids, false),
+            Command::Cut(ids) => self.deleted(&ids, true),
             Command::Move { cue, by } => self.moved(cue, by),
             Command::Edit(id, edit) => self.edited(id, edit),
             Command::Restore(lists) => self.restored(lists),

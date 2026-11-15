@@ -34,12 +34,11 @@ fn g_j_and_g_k_move_the_selection_as_j_and_k_do_for_a_vim_user_who_types_them() 
 #[test]
 fn digits_past_the_largest_count_are_not_kept() {
     let digits = "9 ".repeat(100);
-    let held = typed(&digits);
-    assert_eq!(held.pending.len(), 20);
-    assert_eq!(
-        action(&format!("{digits} j")),
-        Some((Action::Next, Some(usize::MAX)))
-    );
+    assert_eq!(typed(&digits).pending.len(), 20);
+    let most = format!("{digits} j");
+    assert_eq!(action(&most), Some((Action::Next, Some(usize::MAX))));
+    // After an operator, the second count saturates the same way
+    assert_eq!(typed(&format!("d {digits}")).pending.len(), 21);
     // Key that is no digit still ends the keys
     assert_eq!(typed(&format!("{digits} w")), Outcome::default());
 }
