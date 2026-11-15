@@ -112,5 +112,4 @@ fn a_way_back_that_no_jump_recorded_is_remembered_to_go_forward_to() {
 fn an_output_is_a_place_apart_from_a_cue_and_a_list() {
     let history = jumped_from([Spot::Output(OutputId(1)), Spot::Outputs, Spot::List(0)]);
     assert_eq!(history.behind.len(), 3);
-    assert_eq!(Spot::Output(OutputId(1)).cue(), None);
 }

@@ -35,8 +35,8 @@ use itertools::Itertools;
 use unicode_width::UnicodeWidthStr;
 
 use super::{
-    LINE, NO_MATCH, SEARCH, SPACING, answered, char_width, format, giving_way, keep_keys,
-    line_height, line_keys, theme, warnings,
+    LINE, SEARCH, SPACING, answered, char_width, format, giving_way, keep_keys, line_height,
+    line_keys, no_match, theme, warnings,
 };
 use crate::{
     back::Turn,
@@ -109,7 +109,7 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
     let (left, taken) = match &app.search {
         Some(search) => (
             search_line(app, search),
-            search_columns(&search.text, search.warned),
+            search_columns(&search.text, search.warned, app.outputs_shown),
         ),
         None => {
             let status = status(app);
@@ -135,8 +135,12 @@ fn columns(width: f32) -> usize {
 
 /// Columns that the search line keeps for its text, and for what it tells,
 /// so that the hints never cover them
-fn search_columns(text: &str, warned: bool) -> usize {
-    let told = if warned { NO_MATCH.width() + 1 } else { 0 };
+fn search_columns(text: &str, warned: bool, outputs: bool) -> usize {
+    let told = if warned {
+        no_match(outputs).width() + 1
+    } else {
+        0
+    };
     (mark(false).width() + text.width() + told).max(SEARCH_ROOM)
 }
 
@@ -153,7 +157,7 @@ fn search_line<'a>(app: &'a App, search: &'a Search) -> Element<'a, Message> {
     let line = row![text(mark(search.backward)), field]
         .push(search.warned.then(|| {
             container(
-                text(NO_MATCH)
+                text(no_match(app.outputs_shown))
                     .color(theme::PALETTE.warning)
                     .wrapping(Wrapping::None),
             )

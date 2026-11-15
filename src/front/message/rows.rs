@@ -2,15 +2,15 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The messages that act on the rows of a cue list
+//! The messages that act on the rows of the list in the main window
 
 use super::Message;
 
 impl Message {
     /// Returns whether the message moves the selection through the rows of
-    /// the cue list, scrolls it, searches it, or edits it.  While the outputs
-    /// show in place of the cue list, these must not reach it.
-    pub fn acts_on_rows(&self) -> bool {
+    /// the list in the main window, scrolls it, or searches it.  The cue list
+    /// and the outputs share these.
+    pub fn moves_through_rows(&self) -> bool {
         matches!(
             self,
             Message::Step(_)
@@ -21,21 +21,33 @@ impl Message {
                 | Message::InView(..)
                 | Message::Reached { .. }
                 | Message::Place(..)
-                | Message::StandbySelected
-                | Message::StepTab(_)
-                | Message::ShowTab(_)
-                | Message::Add(..)
-                | Message::Move(_)
-                | Message::Copy(_)
-                | Message::Cut(_)
-                | Message::Paste(..)
-                | Message::Delete(_)
-                | Message::Across(..)
                 | Message::Search { .. }
                 | Message::Searching(_)
                 | Message::SearchKey(_)
                 | Message::SearchAccepted
                 | Message::SearchStep(_)
         )
+    }
+
+    /// Returns whether the message acts on the rows of the cue list: those
+    /// that [`Message::moves_through_rows`] names, and those that act on a
+    /// cue, edit rows, or change the inspector tab.  While the outputs show
+    /// in place of the cue list, the ones that are not shared must not
+    /// reach it.
+    pub fn acts_on_rows(&self) -> bool {
+        self.moves_through_rows()
+            || matches!(
+                self,
+                Message::StandbySelected
+                    | Message::StepTab(_)
+                    | Message::ShowTab(_)
+                    | Message::Add(..)
+                    | Message::Move(_)
+                    | Message::Copy(_)
+                    | Message::Cut(_)
+                    | Message::Paste(..)
+                    | Message::Delete(_)
+                    | Message::Across(..)
+            )
     }
 }

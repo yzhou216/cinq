@@ -23,6 +23,7 @@ mod naming;
 mod operators;
 mod operators_pasting;
 mod output_places;
+mod output_rows;
 mod outputs;
 mod paging;
 mod scrolling;

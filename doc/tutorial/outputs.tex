@@ -54,9 +54,13 @@ red where the output must change.
 The outputs of one device share a warning in the sidebar, which shows them
 when clicked, and cues play on the other outputs.
 
-While the outputs show, the keys of cues act on them: \key{ArrowDown} and
-\key{ArrowUp} select an output, and the keys that add, move, and delete cues
-add, move, and delete outputs.  The key \key{Control+o} of the vi keymap,
+While the outputs show, the keys that move through the cue list move through
+the outputs the same way: \key{j} and \key{k} of the vi keymap select an
+output, \key{g g} and \key{G} the first and the last, and the keys of pages,
+of scrolling, and of the rows in view do the same, which matters once the
+show has more outputs than the window shows.  The search keys, \key{/} and
+\key{n}, look for the name of an output.  The keys that add, move, and delete
+cues add, move, and delete outputs.  The key \key{Control+o} of the vi keymap,
 which goes back to the place before the last jump, leaves the outputs for the
 cue list that showed, and the status bar at the bottom names it while the
 outputs show.

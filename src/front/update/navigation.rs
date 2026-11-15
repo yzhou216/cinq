@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Moving the selection, along with standby as GO moves it, and switching
-//! the cue list on screen
+//! Standby as GO moves it, the selection of a cue, and switching the cue
+//! list on screen
 
 use crate::{
     back::{Command, CueId},
@@ -36,23 +36,6 @@ impl App {
             selected: Some(id),
             ..self
         }
-    }
-
-    pub(super) fn stepped(self, offset: isize) -> Self {
-        let cues = &self.current().cues;
-        let selected = step(self.selected_row(), offset, cues.len()).map(|row| cues[row].id);
-        Self { selected, ..self }
-    }
-
-    /// Selects the cue on a row counted from one, or the last cue for a row
-    /// past the end
-    pub(super) fn at_row(self, row: usize) -> Self {
-        let cues = &self.current().cues;
-        let selected = cues
-            .get(row.saturating_sub(1))
-            .or(cues.last())
-            .map(|cue| cue.id);
-        Self { selected, ..self }
     }
 
     /// Shows a cue list with its standby cue selected, or its first cue

@@ -18,6 +18,7 @@ use crate::{
         App, Message,
         message::Height,
         update::{
+            Spot,
             paging::viewport::Shape,
             viewing::{in_view, place, scroll},
         },
@@ -124,7 +125,8 @@ fn a_list_shorter_than_its_view_has_its_middle_among_its_rows() {
 }
 
 fn reaching(app: App, from: Option<CueId>, row: usize) -> App {
-    app.next(Message::Reached { list: 0, from, row }).0
+    let from = from.map_or(Spot::List(0), Spot::Cue);
+    app.next(Message::Reached { from, row }).0
 }
 
 #[test]

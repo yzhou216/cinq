@@ -15,10 +15,10 @@ impl Action {
             Action::Cancel => {
                 "Drop the keys typed so far, close the search line or a menu, and leave a field"
             }
-            Action::Next => "Select the next cue or menu option",
-            Action::Previous => "Select the previous cue or menu option",
-            Action::First => "Select the first cue or menu option, or the row counted",
-            Action::Last => "Select the last cue or menu option, or the row counted",
+            Action::Next => "Select the next cue, output, or menu option",
+            Action::Previous => "Select the previous cue, output, or menu option",
+            Action::First => "Select the first cue, output, or menu option, or the row counted",
+            Action::Last => "Select the last cue, output, or menu option, or the row counted",
             Action::HalfPageDown => {
                 "Scroll half a page down with the selection, or the rows counted"
             }
@@ -29,19 +29,19 @@ impl Action {
             Action::PageUp => {
                 "Scroll a page up with the selection, or the pages counted, or move one in a menu"
             }
-            Action::ScrollDown => "Scroll the cue list a row down, or the rows counted",
-            Action::ScrollUp => "Scroll the cue list a row up, or the rows counted",
+            Action::ScrollDown => "Scroll the list a row down, or the rows counted",
+            Action::ScrollUp => "Scroll the list a row up, or the rows counted",
             Action::TopRow => "Select the first row in view, or the row counted from it",
             Action::MiddleRow => "Select the middle row in view",
             Action::BottomRow => "Select the last row in view, or the row counted up from it",
             Action::RowToMiddle => {
-                "Scroll the cue list to put the selected row, or the row counted, in the middle"
+                "Scroll the list to put the selected row, or the row counted, in the middle"
             }
             Action::RowToTop => {
-                "Scroll the cue list to put the selected row, or the row counted, at the top"
+                "Scroll the list to put the selected row, or the row counted, at the top"
             }
             Action::RowToBottom => {
-                "Scroll the cue list to put the selected row, or the row counted, at the bottom"
+                "Scroll the list to put the selected row, or the row counted, at the bottom"
             }
             Action::NextList => "Show the next cue list, then the outputs",
             Action::PreviousList => "Show the previous cue list, or the last from the outputs",
@@ -49,8 +49,8 @@ impl Action {
             Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
             Action::Back => "Go back to the place that the last jump left, or leave the outputs",
             Action::Forward => "Go forward again after going back",
-            Action::Search => "Search the cues by name",
-            Action::SearchBackward => "Search the cues by name, upwards",
+            Action::Search => "Search the cues, or the outputs, by name",
+            Action::SearchBackward => "Search the cues, or the outputs, by name, upwards",
             Action::NextMatch => "Select the next match of the search, in its direction",
             Action::PreviousMatch => {
                 "Select the next match of the search, in the opposite direction"

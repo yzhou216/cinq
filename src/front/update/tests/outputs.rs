@@ -15,6 +15,7 @@ use crate::{
         App, Message, Setting,
         keymap::Action,
         message::{Height, LineKey, Page},
+        update::Spot,
     },
 };
 
@@ -67,7 +68,8 @@ fn keys_of_cues_add_move_and_delete_outputs_while_they_show() {
     assert_eq!(deleted.output, Some(OutputId(1)), "the next output shows");
 }
 
-/// Returns what a message for the rows of a cue list could change in it
+/// Returns what a message for the rows could change in a cue list that is out
+/// of sight
 fn cue_list(app: &App) -> String {
     let lists: Vec<_> = app
         .workspace
@@ -81,13 +83,11 @@ fn cue_list(app: &App) -> String {
         })
         .collect();
     format!(
-        "{lists:?} {} {:?} {:?} {} {} {:?}",
+        "{lists:?} {} {:?} {:?} {}",
         app.list,
         app.selected,
         app.tab,
-        app.search.is_some(),
         app.clipped.is_some(),
-        app.remark,
     )
 }
 
@@ -98,15 +98,13 @@ fn no_message_for_rows_reaches_the_cue_list_while_the_outputs_show() {
         Message::Row(2),
         Message::Page(Page::HalfDown, None),
         Message::Landed {
-            list: 0,
-            from: Some(CueId(3)),
+            from: Spot::Cue(CueId(3)),
             row: 5,
         },
         Message::Scroll(2),
         Message::InView(Height::Top, None),
         Message::Reached {
-            list: 0,
-            from: Some(CueId(3)),
+            from: Spot::Cue(CueId(3)),
             row: 5,
         },
         Message::Place(Height::Middle, None),

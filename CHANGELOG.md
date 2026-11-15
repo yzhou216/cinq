@@ -33,13 +33,12 @@ Major changes and improvements in each release of cinq, newest first.
   Device list reads not found, in yellow, while its device is not there.  A
   name or a level applies as it is typed, and channels once Enter is pressed
   or the field is left, since a device opens again for them.  The keys that
-  select, add, move, and delete cues do the same to outputs there, which
-  scroll the selected one into view, and the key of the next cue list
-  reaches them past the last one.  The other keys of the rows of the cue
-  list, such as paging, searching, cutting, and pasting, do nothing there,
-  so that none of them changes a cue list out of sight.  The Audio device
-  list of the sidebar is now Default device, since it chooses the device of
-  the outputs that name none, and its first option reads System default.
+  add, move, and delete cues do the same to outputs there, and the key of the
+  next cue list reaches them past the last one.  The keys that act on cues
+  alone, such as standby, cutting, and pasting, do nothing there, so that
+  none of them changes a cue list out of sight.  The Audio device list of
+  the sidebar is now Default device, since it chooses the device of the
+  outputs that name none, and its first option reads System default.
 - The Levels tab of an audio or video cue sets the level at which the cue
   sends to each output of the show, and a field left empty sends nothing
   there.  The fields scroll, so that every output stays in reach, and the
@@ -91,6 +90,12 @@ Major changes and improvements in each release of cinq, newest first.
   five seconds have passed without an answer.  A device that has fewer
   channels than an output names is looked at ever more seldom, up to every
   thirty seconds, until what it offers changes.
+- The keys that move through the rows of the cue list, such as j, k, g g,
+  G, the keys of half and whole pages, the keys that scroll by a row, select
+  a row in view, or place the selected row, and the search keys, do the same
+  to the outputs while they show, by the code that the two share, and the
+  search looks for the names of outputs.  The outputs now show their titles
+  above the rows, as the cue list does.
 - Showing the outputs and leaving them are jumps, so that Control+o in the
   vi keymap, or Alt+ArrowLeft, goes back from the outputs to the cue list
   that showed, with its cue and its inspector tab, and Control+i returns.

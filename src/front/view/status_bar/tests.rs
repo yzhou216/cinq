@@ -8,15 +8,14 @@
 mod cancel;
 mod outputs;
 
-use super::{
-    NO_MATCH, SEARCH_ROOM, YIELDING, clipped, fitted, hints as hinted, mark, search_columns,
-};
+use super::{SEARCH_ROOM, YIELDING, clipped, fitted, hints as hinted, mark, search_columns};
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Workspace},
     front::{
         App,
         keymap::{Action, Keymap, Preset, config::Config},
         update::Clipped,
+        view::NO_MATCH,
     },
 };
 
@@ -125,11 +124,11 @@ fn what_a_key_remarked_shows_in_the_bar_before_anything_else() {
 
 #[test]
 fn hints_give_way_to_the_text_of_the_search_line_and_its_note() {
-    assert_eq!(search_columns("", false), SEARCH_ROOM);
-    assert_eq!(search_columns("storm", true), SEARCH_ROOM);
-    assert_eq!(search_columns(&"x".repeat(40), false), 41);
+    assert_eq!(search_columns("", false, false), SEARCH_ROOM);
+    assert_eq!(search_columns("storm", true, false), SEARCH_ROOM);
+    assert_eq!(search_columns(&"x".repeat(40), false, false), 41);
     assert_eq!(
-        search_columns(&"x".repeat(40), true),
+        search_columns(&"x".repeat(40), true, false),
         41 + NO_MATCH.len() + 1
     );
 }

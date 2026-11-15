@@ -16,7 +16,7 @@ const LIMIT: usize = 100;
 /// A place in the show.  A cue names its place by its identity, so that the
 /// place follows the cue as it moves between cue lists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(in crate::front) enum Spot {
+pub enum Spot {
     Cue(CueId),
     /// Cue list with no selected cue, which only its index names
     List(usize),
@@ -25,15 +25,6 @@ pub(in crate::front) enum Spot {
     Output(OutputId),
     /// Outputs view with no selected output
     Outputs,
-}
-
-impl Spot {
-    pub(in crate::front::update) fn cue(self) -> Option<CueId> {
-        match self {
-            Spot::Cue(id) => Some(id),
-            Spot::List(_) | Spot::Output(_) | Spot::Outputs => None,
-        }
-    }
 }
 
 /// Places that jumps left, the latest last, and the places that going back

@@ -475,6 +475,9 @@ A search up the list begins at the cue before the selected one.
 The search wraps around the list and ends on the selected cue, as a search of
 Vim does from the start of a line, so that the selected cue is the match only
 when no other cue holds the text.
+While the outputs show in place of the cue list, the search goes through the
+names of the outputs in the same way, by the same rules, and never looks at
+the cues out of sight.
 Enter accepts the search and closes the line, and remembers the text and the
 direction for *next_match* and *previous_match*.
 *next_match* finds the next cue that holds the text in the direction of the
@@ -610,15 +613,23 @@ Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
 read-only buffer.
 
 The outputs of the show, which *Outputs* below the cue lists in the sidebar
-shows in place of the cue list, take some actions of cues: *next*,
-*previous*, *first*, and *last* select an output, which the inspector then
-edits, *edit* edits its name, *add_below* and *add_above* add an output,
-*move_down* and *move_up* move it, and *delete* deletes the selected output only,
-whatever the count.
-Every other action that moves through, scrolls, searches, or changes the rows
-of a cue list, such as *standby*, *half_page_down*, *search*, *cut*, *copy*,
-and *paste_below*, does nothing there, since the cue list is out of sight.
-*first* and *last* with a count are jumps there, as they are for cues.
+shows in place of the cue list, take the actions that move through rows as
+the cue list takes them, by the same code: *next*, *previous*, *first*, and
+*last* select an output, which the inspector then edits, and so do the
+actions of half and whole pages, of scrolling by a row, of the rows in view,
+and of placing the selected row in view, which only matter once there are more
+outputs than rows in the view.
+*search*, *search_backward*, *next_match*, and *previous_match* search the
+names of the outputs, in any case, with the rules of *SEARCHING*, and the
+line tells that no output matches.
+*first* and *last* with a count, and the searches, are jumps there, as they
+are for cues.
+Some actions of cues also edit outputs: *edit* edits the name of the output,
+*add_below* and *add_above* add an output, *move_down* and *move_up* move it,
+and *delete* deletes the selected output only, whatever the count.
+Every other action that acts on cues, or changes the rows of a cue list, such
+as *standby*, *cut*, *copy*, and *paste_below*, does nothing there, since the
+cue list is out of sight.
 While the outputs show, the status bar names the keys of *add_below*, *edit*,
 and *back*, and gives way, from the first to the last, to the key of *forward*,
 *add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that
