@@ -4,7 +4,7 @@
 
 //! Messages that change the state and start no task
 
-use super::{App, Message};
+use super::{App, Measured, Message};
 use crate::{
     back::{Command, Edit, parse_level},
     front::Tab,
@@ -18,6 +18,19 @@ impl App {
     /// arms that leave the state as it is.
     pub(super) fn settled_by(self, message: Message) -> Self {
         match message {
+            Message::Landed { list, from, row } if self.list == list && self.selected == from => {
+                self.at_row(row.saturating_add(1))
+            }
+            Message::Measured(Measured::Cues {
+                serial,
+                list,
+                cues,
+                shape,
+            }) => self.with_measure(serial, list, cues, shape),
+            Message::Measured(Measured::Help(view)) => self.with_help_measure(view),
+            Message::Reached { list, from, row } if self.list == list && self.selected == from => {
+                self.jumping(|app| app.at_row(row.saturating_add(1)))
+            }
             Message::Panic => Self {
                 help: false,
                 ..self.send(Command::Panic)
@@ -52,7 +65,6 @@ impl App {
             },
             Message::Clicked => self,
             // Stage window holds no cue list to keep in view
-            Message::Resized(window, size) => self.resized(window, size),
             Message::WindowFocused(window) => Self {
                 stage: self.stage.with_keyboard_in(window),
                 ..self

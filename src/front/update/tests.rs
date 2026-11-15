@@ -14,6 +14,9 @@ mod clock;
 mod counts;
 mod history;
 mod loading;
+mod paging;
+mod scrolling;
+mod viewing;
 
 use std::ops::RangeInclusive;
 

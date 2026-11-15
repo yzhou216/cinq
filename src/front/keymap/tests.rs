@@ -11,6 +11,7 @@ mod file;
 mod manual;
 mod notation;
 mod typing;
+mod viewing;
 
 use itertools::Itertools;
 use strum::VariantArray;

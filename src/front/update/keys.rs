@@ -41,8 +41,15 @@ impl App {
             // Page opens in the main window, which the fullscreen stage
             // window may cover, so that the page would open out of sight
             Some((Action::Help, _)) if app.stage.has_keyboard() => (app, Task::none()),
-            Some((action @ (Action::Next | Action::Previous), count)) if app.help => {
-                let down = if action == Action::Next { 1.0 } else { -1.0 };
+            Some((
+                action @ (Action::Next | Action::Previous | Action::ScrollDown | Action::ScrollUp),
+                count,
+            )) if app.help => {
+                let down = if matches!(action, Action::Next | Action::ScrollDown) {
+                    1.0
+                } else {
+                    -1.0
+                };
                 let lines = count.map_or(1.0, |count| count as f32);
                 let offset = AbsoluteOffset {
                     x: 0.0,
@@ -56,6 +63,10 @@ impl App {
             Some((Action::Last, _)) if app.help => {
                 (app, operation::snap_to(view::HELP, RelativeOffset::END))
             }
+            Some((action, count)) if app.help && !action.acts_over_help() => match action.page() {
+                Some(page) => app.help_paged(page, count),
+                None => (app, Task::none()),
+            },
             Some((action, count)) if !app.help || action.acts_over_help() => {
                 app.handled(action.message(count))
             }

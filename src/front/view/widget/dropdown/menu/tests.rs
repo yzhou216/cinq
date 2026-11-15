@@ -69,7 +69,7 @@ fn pressed(keys: &[Key]) -> Outcome {
 
 #[test]
 fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
-    let (none, ctrl) = (Modifiers::empty(), Modifiers::CTRL);
+    let (none, ctrl, alt) = (Modifiers::empty(), Modifiers::CTRL, Modifiers::ALT);
     let (letter, named) = (|text: &str| Key::Character(text.into()), Key::Named);
     let cases = [
         (Preset::Vi, letter("n"), ctrl, Reply::Step(1)),
@@ -88,12 +88,10 @@ fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
         (Preset::Vi, letter("d"), none, Reply::Keep),
         (Preset::Vi, letter("o"), ctrl, Reply::Keep),
         (Preset::Vi, letter("i"), ctrl, Reply::Keep),
-        (
-            Preset::Cua,
-            named(Named::ArrowLeft),
-            Modifiers::ALT,
-            Reply::Keep,
-        ),
+        (Preset::Cua, named(Named::ArrowLeft), alt, Reply::Keep),
+        (Preset::Vi, letter("d"), ctrl, Reply::Keep),
+        (Preset::Vi, named(Named::PageDown), none, Reply::Keep),
+        (Preset::Cua, named(Named::PageUp), none, Reply::Keep),
     ];
     let wrong: Vec<_> = cases
         .into_iter()

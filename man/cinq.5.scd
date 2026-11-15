@@ -170,10 +170,10 @@ of the help page.
 :  Escape
 :  Escape
 |  next
-:  j, g j, ArrowDown, Control+n
+:  j, g j, ArrowDown, Control+n, +
 :  ArrowDown
 |  previous
-:  k, g k, ArrowUp, Control+p
+:  k, g k, ArrowUp, Control+p, -
 :  ArrowUp
 |  next_list
 :  l, ArrowRight
@@ -187,6 +187,42 @@ of the help page.
 |  last
 :  G, Control+End
 :  End
+|  half_page_down
+:  Control+d
+:  none
+|  half_page_up
+:  Control+u
+:  none
+|  page_down
+:  Control+f, PageDown
+:  PageDown
+|  page_up
+:  Control+b, PageUp
+:  PageUp
+|  scroll_down
+:  Control+e
+:  none
+|  scroll_up
+:  Control+y
+:  none
+|  top_row
+:  H
+:  none
+|  middle_row
+:  M
+:  none
+|  bottom_row
+:  L
+:  none
+|  row_to_middle
+:  z z, z .
+:  none
+|  row_to_top
+:  z t, z Enter
+:  none
+|  row_to_bottom
+:  z b, z -
+:  none
 |  next_tab
 :  g t
 :  Control+Tab
@@ -302,11 +338,20 @@ The key of *cancel* drops it as well, without any other effect.
 
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
-*move_down*, *move_up*, *back*, and *forward*.
+*move_down*, *move_up*, *scroll_down*, *scroll_up*, *back*, and *forward*.
 It deletes as many cues for *delete*, undoes or redoes as many changes for
 *undo* and *redo*, and goes back as many tabs for *previous_tab*.
 It gives the row, counted from one, that *first* and *last* select, and the
 tab, counted from one, that *next_tab* shows.
+It gives the row in view, counted from the top for *top_row* and from the bottom
+for *bottom_row*, that they select.
+It gives the row, counted from one, that *row_to_top*, *row_to_middle*, and
+*row_to_bottom* select before they put it in place.
+For *half_page_down* and *half_page_up*, it sets how many rows they move, as
+in Vim, and later presses of either move that many rows, or lines on the help
+page, until another count sets it again, the main window changes size, or
+another show opens.
+For *page_down* and *page_up*, it counts the pages.
 Other actions leave the count unused.
 A count larger than what there is, such as *9 Control+o* with fewer places
 behind, *9 g t* with fewer tabs, or *3 d d* on the last cue, makes *cinq* go as
@@ -321,6 +366,23 @@ Holding either key down acts only once, so that holding the key of Panic does
 not cut a panic short.
 So does holding a key of *fullscreen*, which would otherwise toggle the stage
 window back and forth, while every other key repeats as it is held.
+
+# SCROLLING
+
+The cue list scrolls to keep the selected cue in view, with three rows around
+it where there is room, and by the least that does it, as when *next* or *go*
+moves the selection a row.
+A move or jump that leaves the selected row far outside the view, such as
+*last* or *back*, puts it in the middle of the view instead, much as Vim does
+after a jump that far.
+Above the view, the row goes to the middle once it, with its three rows of
+margin, lies half the view less one row above the top of the view, which is
+seven rows above it in a view of 23 rows.
+Below the view, it goes to the middle once its bottom lies more than half the
+view and a row past the bottom of the view, which is 13 rows past the last
+row in view in a view of 23 rows.
+Vim counts lines of equal height, while a long name that wraps makes a row of
+the list taller, so the thresholds of *cinq* are in pixels of the view.
 
 # WHERE KEYS ACT
 
@@ -344,15 +406,19 @@ The help page
 	The page fills the main window, while the stage window keeps showing the
 	stage.  Closing it gives the main window back as it was, with the cue
 	list scrolled where it was and the keyboard in the same field.  The keys
-	of *next* and *previous* scroll the page, a line for each one and as many
-	lines as a count, and those of *first* and *last* go to its top and its
-	bottom.  Of the rest, only the keys of *go*, *panic*, *help*, and
-	*close_help* act, whichever window has the keyboard, so that no field
-	takes a key meanwhile.  The keys of *go* and *panic* close the page as
-	well, so that the show is in view.  The key of *help* opens the page
-	from the main window only, since the stage window may cover that window
-	when it is fullscreen, and does nothing while the stage window has the
-	keyboard, where the key of *close_help* closes the page.
+	of *next*, *previous*, *scroll_down*, and *scroll_up* scroll the page, a
+	line for each one and as many lines as a count, those of *first* and *last*
+	go to its top and its bottom, and those of *half_page_down*,
+	*half_page_up*, *page_down*, and *page_up* scroll it by half or all of
+	what the window shows, with a count of lines for the half pages, which
+	the cue list shares, and of pages for the whole pages.  Of the rest, only
+	the keys of *go*, *panic*, *help*, and *close_help* act, whichever window
+	has the keyboard, so that no field takes a key meanwhile.  The keys of *go*
+	and *panic* close the page as well, so that the show is in view.  The key
+	of *help* opens the page from the main window only, since the stage window
+	may cover that window when it is fullscreen, and does nothing while the
+	stage window has the keyboard, where the key of *close_help* closes the
+	page.
 
 The menu of a drop-down list
 	The keys bound by themselves to *next* and *previous* move the highlight
@@ -400,6 +466,8 @@ page.
 	the help page down.
 	The vi keymap binds *g j* as well as *j*, since a user of Vim types *gj* to
 	move by a displayed line.
+	It binds *+* as well, which is the key of Vim for the next line, and *-*
+	for the previous line.
 
 *previous*
 	Select the previous cue, move the highlight of an open menu up, or
@@ -419,6 +487,90 @@ page.
 *last*
 	Select the last cue, or the cue on the row counted, or go to the bottom
 	of the help page.
+
+*half_page_down*
+	Scroll the cue list half a page down, that is, half as many rows as fit
+	in it, or the rows that a count sets, and select the cue that many rows
+	further down, so that the selection keeps its row on the screen, as the
+	cursor does in Vim.
+	At the end of the list the view stops and the selection goes on to the
+	last cue.
+	On the help page, scroll down by half a page, or by the lines that a
+	count sets.
+
+*half_page_up*
+	Scroll the cue list half a page up, and select the cue as many rows
+	further up.
+	At the top of the list the view stops and the selection goes on to the
+	first cue.
+	On the help page, scroll up by half a page.
+
+*page_down*
+	Scroll the cue list a whole page down, less two rows that stay in view,
+	as Vim does, or as many pages as the count, and select the first cue in
+	view, or keep the selection when it lies further down.
+	At the end of the list the view stops and the selection goes on to the
+	last cue.
+	On the help page, scroll down by a page less two lines.
+
+*page_up*
+	Scroll the cue list a whole page up, less two rows, and select the last
+	cue in view, or keep the selection when it lies further up.
+	At the top of the list the view stops and the selection goes on to the
+	first cue.
+	On the help page, scroll up by a page less two lines.
+
+*scroll_down*
+	Scroll the cue list a row down, or as many rows as the count, as
+	*Control+e* does in Vim.
+	The selection stays on its cue while that is in view, and moves to the
+	nearest row in view when the scroll would take it out.
+	The view stops at the end of the list.
+	On the help page, scroll down a line, or as many lines as the count.
+
+*scroll_up*
+	Scroll the cue list a row up, or as many rows as the count, as
+	*Control+y* does in Vim, and keep the selection in view as *scroll_down*
+	does.
+	On the help page, scroll up a line.
+
+*top_row*
+	Select the first cue row in view, or the row that many rows below it
+	for a count, stopping at the last row in view, as *H* does in Vim.
+	The view stays where it is.
+	It is a jump for *back*.
+
+*middle_row*
+	Select the cue row in the middle of the view, or of the rows in view when
+	the list is shorter, taking the upper of two middle rows, as *M* does in
+	Vim.
+	It is a jump for *back*.
+
+*bottom_row*
+	Select the last cue row in view, or the row that many rows above it for a
+	count, stopping at the first row in view, as *L* does in Vim.
+	It is a jump for *back*.
+
+*row_to_middle*
+	Scroll the cue list to put the selected row in the middle of the view, as
+	*z z* does in Vim, and so does *z .* in the vi keymap.
+	The selection stays on its cue, and the view stops at either end of the
+	list, so that a row near an end stays short of the middle.
+	A count selects the row, counted from one, first, as in Vim, and the last
+	cue for a row past the end.
+	It is no jump.
+
+*row_to_top*
+	Scroll the cue list to put the selected row at the top of the view, as
+	*z t* does in Vim, and so does *z Enter* in the vi keymap, stopping at the
+	end of the list.
+	A count selects its row first, as for *row_to_middle*.
+
+*row_to_bottom*
+	Scroll the cue list to put the selected row at the bottom of the view, as
+	*z b* does in Vim, and so does *z -* in the vi keymap, stopping at the top
+	of the list.
+	A count selects its row first, as for *row_to_middle*.
 
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,

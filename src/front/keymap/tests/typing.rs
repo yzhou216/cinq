@@ -157,14 +157,46 @@ fn counts_of_vi_keys_reach_undo_redo_and_the_tabs() {
 }
 
 #[test]
+fn keys_that_move_by_a_page_are_those_of_vim_and_act_in_no_field() {
+    let keymap = Keymap::default();
+    [
+        ("Control+d", Action::HalfPageDown),
+        ("Control+u", Action::HalfPageUp),
+        ("Control+f", Action::PageDown),
+        ("PageDown", Action::PageDown),
+        ("Control+b", Action::PageUp),
+        ("PageUp", Action::PageUp),
+    ]
+    .into_iter()
+    .for_each(|(keys, page)| {
+        assert_actions(&[(keys, page, None), (&format!("4 {keys}"), page, Some(4))]);
+        assert!(!keymap.acts_in_fields(press(keys)), "{keys}");
+    });
+    // Keys of the prefixes g and d stay theirs, apart from Control+d
+    assert_eq!(action("g g"), Some((Action::First, None)));
+    assert_eq!(action("d d"), Some((Action::Delete, None)));
+    assert_eq!(typed("d").pending.len(), 1);
+}
+
+#[test]
+fn cua_pages_by_the_whole_page_and_binds_no_key_to_the_half_pages() {
+    let keymap = Keymap::from(Preset::Cua);
+    assert_eq!(keymap.keys(Action::PageDown), [keys("PageDown")]);
+    assert_eq!(keymap.keys(Action::PageUp), [keys("PageUp")]);
+    assert!(keymap.keys(Action::HalfPageDown).is_empty());
+    assert!(keymap.keys(Action::HalfPageUp).is_empty());
+}
+
+#[test]
 fn undo_and_redo_act_in_a_closed_list_and_not_in_a_text_field() {
     let cua = Keymap::from(Preset::Cua);
     let vi = Keymap::from(Preset::Vi);
     assert!(cua.acts_in_lists(press("Control+z")) && !cua.acts_in_fields(press("Control+z")));
     assert!(cua.acts_in_lists(press("Control+y")) && cua.acts_in_lists(press("Control+Z")));
     assert!(vi.acts_in_lists(press("u")) && vi.acts_in_lists(press("Control+r")));
-    // Keys of moving and of the other edits stay out of the list
-    assert!(!vi.acts_in_lists(press("j")) && !cua.acts_in_lists(press("Delete")));
+    // Keys of scrolling and of the other edits stay out of the list
+    assert!(!vi.acts_in_lists(press("Control+e")) && !vi.acts_in_lists(press("j")));
+    assert!(!cua.acts_in_lists(press("Delete")));
     // Keys that act in every field act in a list too
     assert!(vi.acts_in_lists(press("Tab")) && vi.acts_in_lists(press("Control+c")));
 }

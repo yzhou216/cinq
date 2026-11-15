@@ -15,6 +15,7 @@ mod keys;
 mod link;
 mod loading;
 mod navigation;
+mod paging;
 mod scroll;
 mod settled;
 mod show;
@@ -22,6 +23,7 @@ mod stage;
 mod subscription;
 #[cfg(test)]
 mod tests;
+mod viewing;
 
 use std::thread;
 
@@ -31,6 +33,7 @@ use super::{App, Message};
 use crate::back::Command;
 pub(super) use history::{History, Spot};
 use link::{edit_config, open_link};
+pub(super) use paging::kept::{Measured, Measures};
 pub(super) use show::{Keeper, Read, Reader, Saved, Show};
 pub(super) use stage::Stage;
 
@@ -52,6 +55,19 @@ impl App {
             Message::Select(id) => self.crossing(|app| app.with_selection(id)).revealed(),
             Message::Step(offset) => self.stepped(offset).revealed(),
             Message::Row(row) => self.jumping(|app| app.at_row(row)).revealed(),
+            Message::Page(page, count) => self.paged(page, count),
+            Message::Drawn(window) if self.main == Some(window) && self.unmeasured() => {
+                let measure = self.measure_cues();
+                (self, measure)
+            }
+            Message::Remeasure => {
+                let app = self.remeasured();
+                let measure = app.measure_cues();
+                (app, measure)
+            }
+            Message::Scroll(rows) => self.scrolled(rows),
+            Message::InView(height, count) => self.in_view(height, count),
+            Message::Place(height, count) => self.placed(height, count),
             Message::SwitchList(list) => self.jumping(|app| app.switched_to(list)).revealed(),
             Message::StepList(offset) => self.jumping(|app| app.stepped_list(offset)).revealed(),
             Message::Back(count) => self.walking(|app| app.went_back(count)),
@@ -61,9 +77,7 @@ impl App {
             Message::Delete(count) => self.without_selected(count).revealed(),
             Message::Undo(count) => self.undone(count).revealed(),
             Message::Redo(count) => self.redone(count).revealed(),
-            Message::Resized(window, size) if self.main == Some(window) => {
-                self.resized(window, size).revealed()
-            }
+            Message::Resized(window, size) => self.resized(window, size),
             Message::Recheck => self.recheck(),
             Message::Open => self.with_task(Self::choose_show),
             Message::Opened(read) => self.opened(*read).revealed(),
@@ -105,7 +119,11 @@ impl App {
             }
             // Naming each variant here, with no wildcard, keeps the compiler
             // checking that a new message is handled by one part or the other
-            message @ (Message::SidePressed(..)
+            message @ (Message::Drawn(_)
+            | Message::SidePressed(..)
+            | Message::Landed { .. }
+            | Message::Measured(_)
+            | Message::Reached { .. }
             | Message::Panic
             | Message::PauseAll
             | Message::ResumeAll
@@ -121,7 +139,6 @@ impl App {
             | Message::AudioDevicesListed(_)
             | Message::AudioDeviceKept(_)
             | Message::Clicked
-            | Message::Resized(..)
             | Message::WindowFocused(_)
             | Message::Edit(..)
             | Message::LevelTyped(..)
@@ -173,6 +190,11 @@ impl App {
                 | Message::Saved(_)
                 | Message::Resized(..)
                 | Message::WindowFocused(_)
+                | Message::Landed { .. }
+                | Message::Measured(_)
+                | Message::Remeasure
+                | Message::Drawn(_)
+                | Message::Reached { .. }
         );
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);

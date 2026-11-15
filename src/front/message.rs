@@ -6,6 +6,7 @@
 //! and the keys send, and the reports of the clock, of the configuration
 //! file's watch, and of the work done on threads of its own
 
+mod scrolling;
 mod tab;
 
 use std::{ffi::OsString, path::PathBuf, time::Instant};
@@ -14,9 +15,10 @@ use iced::{Size, mouse, window};
 
 use super::{
     keymap::{Press, config::Config},
-    update::{Read, Saved},
+    update::{Measured, Read, Saved},
 };
 use crate::back::{Command, CueId, Edit, Kind, Place};
+pub use scrolling::{Height, Page};
 pub use tab::Tab;
 
 /// Text field that keys move the keyboard focus to, since iced itself
@@ -53,6 +55,44 @@ pub enum Message {
     /// Selects the cue on a row counted from one, or the last cue for a row
     /// past the end
     Row(usize),
+    /// Scrolls the cue list by a page and moves the selection with it, with
+    /// the count typed before the keys, which sets the rows of a half page and
+    /// counts the whole pages
+    Page(Page, Option<usize>),
+    /// Selects the row, counted from zero, where a page scrolled the cue list
+    /// to, which has scrolled already, unless the list or the selection that
+    /// the key found has changed since, as a key pressed in between would
+    /// have changed them
+    Landed {
+        list: usize,
+        from: Option<CueId>,
+        row: usize,
+    },
+    /// What a measure of the cue list or of the help page found
+    Measured(Measured),
+    /// The mouse may have scrolled the cue list, so that it is measured again
+    Remeasure,
+    /// A window has drawn, which measures the cue list when no measure of it
+    /// is kept, as the window opens and after a change that made it out of
+    /// date, since the list is laid out only once the window has drawn
+    Drawn(window::Id),
+    /// Scrolls the cue list a number of rows, down when positive, and keeps
+    /// the selection in view
+    Scroll(isize),
+    /// Selects the row at a height in view, counted from the top or the bottom
+    /// with the count typed before the keys, as a jump
+    InView(Height, Option<usize>),
+    /// Selects the row, counted from zero, that a measure of the cue list
+    /// found, as a jump, unless the list or the selection that the key found
+    /// has changed since
+    Reached {
+        list: usize,
+        from: Option<CueId>,
+        row: usize,
+    },
+    /// Scrolls the cue list to put the selected row at a height in view, after
+    /// selecting the row that the count typed before the keys names
+    Place(Height, Option<usize>),
     StandbySelected,
     SwitchList(usize),
     /// Shows the cue list a number of lists further down the sidebar

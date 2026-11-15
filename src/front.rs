@@ -28,7 +28,7 @@ use iced::{Size, window};
 use crate::back::{Audio, CueId, CueList, Kind, Video, Workspace};
 use keymap::{Press, config::Config};
 use message::{Focus, Message, Tab};
-use update::{History, Keeper, Reader, Show, Stage};
+use update::{History, Keeper, Measures, Reader, Show, Stage};
 
 /// Opens the main window with the show in `show`, or a new show without
 /// one, and runs the interface until the main window closes.  The key
@@ -139,6 +139,10 @@ struct App {
     /// Why the configuration file did not keep the audio device chosen
     /// last, until it keeps another
     device_problem: Option<String>,
+    /// Rows that a half page moves in the cue list, once a count has set them
+    scroll: Option<usize>,
+    /// What the latest measures of the cue list and the help page found
+    measures: Measures,
     list: usize,
     /// Places that jumps have left, for going back to them
     history: History,

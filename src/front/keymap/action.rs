@@ -8,7 +8,10 @@ use strum::{EnumString, IntoStaticStr, VariantArray};
 
 use crate::{
     back::Place,
-    front::{Focus, Message},
+    front::{
+        Focus, Message,
+        message::{Height, Page},
+    },
 };
 
 /// [`Action::VARIANTS`] lists every action in the order of the help page.
@@ -23,6 +26,18 @@ pub enum Action {
     PreviousList,
     First,
     Last,
+    HalfPageDown,
+    HalfPageUp,
+    PageDown,
+    PageUp,
+    ScrollDown,
+    ScrollUp,
+    TopRow,
+    MiddleRow,
+    BottomRow,
+    RowToMiddle,
+    RowToTop,
+    RowToBottom,
     NextTab,
     PreviousTab,
     Back,
@@ -62,6 +77,26 @@ impl Action {
             Action::PreviousList => "Show the previous cue list",
             Action::First => "Select the first cue, or the row counted",
             Action::Last => "Select the last cue, or the row counted",
+            Action::HalfPageDown => {
+                "Scroll half a page down with the selection, or the rows counted"
+            }
+            Action::HalfPageUp => "Scroll half a page up with the selection, or the rows counted",
+            Action::PageDown => "Scroll a page down with the selection, or the pages counted",
+            Action::PageUp => "Scroll a page up with the selection, or the pages counted",
+            Action::ScrollDown => "Scroll the cue list a row down, or the rows counted",
+            Action::ScrollUp => "Scroll the cue list a row up, or the rows counted",
+            Action::TopRow => "Select the first row in view, or the row counted from it",
+            Action::MiddleRow => "Select the middle row in view",
+            Action::BottomRow => "Select the last row in view, or the row counted up from it",
+            Action::RowToMiddle => {
+                "Scroll the cue list to put the selected row, or the row counted, in the middle"
+            }
+            Action::RowToTop => {
+                "Scroll the cue list to put the selected row, or the row counted, at the top"
+            }
+            Action::RowToBottom => {
+                "Scroll the cue list to put the selected row, or the row counted, at the bottom"
+            }
             Action::NextTab => "Show the next inspector tab, or the tab counted",
             Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
             Action::Back => "Go back to the place that the last jump left",
@@ -132,6 +167,18 @@ impl Action {
         self.acts_at_once() || matches!(self, Action::Help | Action::CloseHelp)
     }
 
+    /// Returns the page that the action moves by, if it is one of the four
+    /// that do
+    pub fn page(self) -> Option<Page> {
+        match self {
+            Action::HalfPageDown => Some(Page::HalfDown),
+            Action::HalfPageUp => Some(Page::HalfUp),
+            Action::PageDown => Some(Page::WholeDown),
+            Action::PageUp => Some(Page::WholeUp),
+            _ => None,
+        }
+    }
+
     pub fn message(self, count: Option<usize>) -> Message {
         let times = count.unwrap_or(1);
         let step = isize::try_from(times).unwrap_or(isize::MAX);
@@ -144,6 +191,18 @@ impl Action {
             Action::PreviousList => Message::StepList(-step),
             Action::First => Message::Row(times),
             Action::Last => Message::Row(count.unwrap_or(usize::MAX)),
+            Action::HalfPageDown => Message::Page(Page::HalfDown, count),
+            Action::HalfPageUp => Message::Page(Page::HalfUp, count),
+            Action::PageDown => Message::Page(Page::WholeDown, count),
+            Action::PageUp => Message::Page(Page::WholeUp, count),
+            Action::ScrollDown => Message::Scroll(step),
+            Action::ScrollUp => Message::Scroll(-step),
+            Action::TopRow => Message::InView(Height::Top, count),
+            Action::MiddleRow => Message::InView(Height::Middle, count),
+            Action::BottomRow => Message::InView(Height::Bottom, count),
+            Action::RowToMiddle => Message::Place(Height::Middle, count),
+            Action::RowToTop => Message::Place(Height::Top, count),
+            Action::RowToBottom => Message::Place(Height::Bottom, count),
             Action::NextTab => count.map_or(Message::StepTab(1), Message::ShowTab),
             Action::PreviousTab => Message::StepTab(-step),
             Action::Back => Message::Back(times),

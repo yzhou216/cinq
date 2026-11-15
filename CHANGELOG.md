@@ -26,7 +26,8 @@ Major changes and improvements in each release of cinq, newest first.
   redraws the screen, which cinq never needs.  The cua keymap keeps
   `Control+o`.
 - `Control+Home` and `Control+End` select the first and last cue as `gg` and
-  `G` do, each with a count.
+  `G` do, each with a count.  `+` and `-` select the next and the previous cue,
+  as in Vim.
 - A count typed before the keys of undo and redo turns that many changes, as
   `3u` does in Vim, and stops at the oldest or newest.  A count before
   `next_tab` shows the inspector tab of that number, as `2gt` does, and before
@@ -47,15 +48,42 @@ Major changes and improvements in each release of cinq, newest first.
   of the help page already did, so that a key held down there cannot change cues
   out of sight.  GO, Panic, standby, and the moves still act.
 - The help page, the box of the keys that can follow, and the status bar write
-  a sequence of keys that type characters joined, as Vim does: `dd`, `gg`, and
-  `gt`, no longer `d d`, since a newcomer pressed the Space between them, which
-  is GO.  A sequence with a named key keeps its spaces, as does `config.toml`,
-  and the help page says that the keys of a sequence are typed with no Space
-  between them.
+  a sequence of keys that type characters joined, as Vim does: `dd`, `gg`,
+  `gt`, and `zz`, no longer `d d`, since a newcomer pressed the Space between
+  them, which is GO.  A sequence with a named key, such as `z Enter`, keeps its
+  spaces, as does `config.toml`, and the help page says that the keys of a
+  sequence are typed with no Space between them.
 - The keys of undo and redo act while a closed drop-down list has the keyboard,
   as `Control+z` does in the cua keymap, where they did nothing and said
   nothing.  A text field still keeps them, since the text typed there is typed
   into it.
+- The keys of Vim that move by a page work in the vi keymap: `Control+d` and
+  `Control+u` scroll the cue list half a page and move the selection the same
+  number of rows, so that it keeps its row on the screen, and `Control+f`,
+  `Control+b`, `PageDown`, and `PageUp` scroll a whole page less two rows and
+  select the first row in view going down, or the last going up.  A count before
+  `Control+d` or `Control+u` sets how many rows they move, until the window
+  changes size or another show opens, and a count before the whole pages counts
+  them.  The same keys scroll the help page, and the cua keymap binds `PageDown`
+  and `PageUp` to the whole pages.
+- `Control+e` and `Control+y` scroll the cue list a row down and up in the vi
+  keymap, as in Vim, or as many rows as a count, through the new `scroll_down`
+  and `scroll_up` actions.  The selection stays on its cue unless it would leave
+  the view, when it moves to the nearest row in view.
+- `H`, `M`, and `L` select the first, middle, and last cue row in view in the vi
+  keymap, as in Vim, through the new `top_row`, `middle_row`, and `bottom_row`
+  actions.  A count before `H` counts rows from the top and before `L` from the
+  bottom.  They are jumps for `back`.
+- `zz`, `zt`, and `zb`, and `z.`, `z Enter`, and `z-`, put the selected row in
+  the middle, at the top, or at the bottom of the view in the vi keymap, as in
+  Vim, through the new `row_to_middle`, `row_to_top`, and `row_to_bottom`
+  actions.  A count selects that row first, as `{count}zt` does.  The selection
+  stays on its cue, and the view stops at the ends of the list.
+- A move or jump that leaves the selected cue far outside the view, such as `G`
+  or going back, scrolls the list to put it in the middle, with Vim's
+  thresholds: seven rows above the view and 13 rows below it in a view of 23
+  rows.  A move to a row near the view still scrolls by the least, as does GO
+  moving the standby a row.
 
 ## v0.1.4
 
