@@ -5,6 +5,8 @@
 //! Tests of the keys that move through an open menu, of how far they move
 //! its highlight, and of what keys and clicks leave to the widgets under it
 
+mod picking;
+
 use iced::{
     Event, Point, Size,
     advanced::{
@@ -79,6 +81,12 @@ fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
         (Preset::Cua, named(Named::ArrowUp), none, Reply::Step(-1)),
         (Preset::Cua, letter("n"), ctrl, Reply::Keep),
         (Preset::Vi, named(Named::Enter), none, Reply::Pick),
+        (Preset::Vi, letter("y"), ctrl, Reply::Pick),
+        (Preset::Vi, letter("e"), ctrl, Reply::Dismiss),
+        (Preset::Cua, named(Named::F4), none, Reply::Dismiss),
+        (Preset::Cua, letter("y"), ctrl, Reply::Keep),
+        (Preset::Cua, letter("e"), ctrl, Reply::Keep),
+        (Preset::Vi, letter("y"), none, Reply::Keep),
         (Preset::Vi, named(Named::Escape), none, Reply::Close),
         (Preset::Vi, named(Named::Space), none, Reply::Close),
         (Preset::Vi, named(Named::F1), none, Reply::Pass),

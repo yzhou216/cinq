@@ -8,9 +8,10 @@
 //! on the cue list behind it.  These lists look like iced's pick list but
 //! open a [`menu`] of their own, in which the keys of [`Action::Next`] and
 //! [`Action::Previous`] move the highlight, which the menu keeps in view,
-//! and Enter picks the highlighted option.  GO and Panic act as everywhere
-//! and close the menu, so that the show is in view, and the menu keeps
-//! every other key until it closes.
+//! and Enter or the key of [`Action::Pick`] picks the highlighted option,
+//! while the key of [`Action::CloseMenu`] closes the menu without a pick.
+//! GO and Panic act as everywhere and close the menu, so that the show is
+//! in view, and the menu keeps every other key until it closes.
 //!
 //! The keys that move between fields move to these lists as well, which
 //! then show the border of a focused field, and Enter opens the menu, which
@@ -25,6 +26,8 @@
 //!
 //! [`Action::Next`]: crate::front::keymap::Action::Next
 //! [`Action::Previous`]: crate::front::keymap::Action::Previous
+//! [`Action::Pick`]: crate::front::keymap::Action::Pick
+//! [`Action::CloseMenu`]: crate::front::keymap::Action::CloseMenu
 
 mod menu;
 mod shorten;

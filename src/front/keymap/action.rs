@@ -56,6 +56,8 @@ pub enum Action {
     Fullscreen,
     Help,
     CloseHelp,
+    Pick,
+    CloseMenu,
 }
 
 impl Action {
@@ -110,6 +112,8 @@ impl Action {
             Action::Fullscreen => "Toggle fullscreen on the stage window",
             Action::Help => "Show or hide this help",
             Action::CloseHelp => "Hide this help",
+            Action::Pick => "Pick the highlighted option of an open menu",
+            Action::CloseMenu => "Close an open menu without picking an option",
         }
     }
 
@@ -235,6 +239,7 @@ impl Action {
             Action::Fullscreen => Message::ToggleFullscreen,
             Action::Help => Message::ToggleHelp,
             Action::CloseHelp => Message::CloseHelp,
+            Action::Pick | Action::CloseMenu => Message::Nothing,
         }
     }
 }

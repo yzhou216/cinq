@@ -98,6 +98,10 @@ impl<'b> Choice<'b> {
             }
             Reply::Pick => self.pick(self.highlighted(), shell),
             Reply::Close => self.shared.open.set(false),
+            Reply::Dismiss => {
+                self.shared.open.set(false);
+                shell.capture_event();
+            }
             Reply::Pass => {}
             Reply::Keep => shell.capture_event(),
         }
@@ -129,6 +133,9 @@ enum Reply {
     /// Moves the highlight by a number of options, downwards when positive
     Step(isize),
     Pick,
+    /// Closes the menu without a pick, and keeps the key from acting on
+    /// anything behind it, which is how it differs from [`Reply::Close`]
+    Dismiss,
     /// Lets the key act and closes the menu, as the keys of GO and Panic do
     Close,
     /// Lets the key act and leaves the menu open, as the key of Help does:
@@ -146,6 +153,8 @@ fn reply(keymap: &Keymap, key: &Key, press: Option<Press>) -> Reply {
         (Some(Action::Previous), _) => Reply::Step(-1),
         (Some(action), _) if action.acts_at_once() => Reply::Close,
         (Some(Action::Help), _) => Reply::Pass,
+        (Some(Action::Pick), _) => Reply::Pick,
+        (Some(Action::CloseMenu), _) => Reply::Dismiss,
         (_, Key::Named(Named::Enter)) => Reply::Pick,
         _ => Reply::Keep,
     }

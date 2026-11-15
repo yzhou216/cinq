@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- In an open drop-down list, `Control+y` picks the highlighted option and
+  `Control+e` closes the list without picking one in the vi keymap, as in
+  Vim's popup menu, and `F4` closes it in the cua keymap.  Closing it
+  with these keys, unlike with Escape, does not also panic, through the new
+  `pick` and `close_menu` actions.
 - A count before the keys of `add_below` and `add_above`, such as `3 o`,
   adds that many cues in a row, at most a thousand, as one change for undo,
   and selects the last of them, as the cursor of Vim goes to the last line

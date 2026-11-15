@@ -285,6 +285,12 @@ of the help page.
 |  close_help
 :  q
 :  Control+w
+|  pick
+:  Control+y
+:  none
+|  close_menu
+:  Control+e
+:  F4
 
 # KEYS
 
@@ -461,7 +467,8 @@ The menu of a drop-down list
 	The keys bound by themselves to *next* and *previous* move the highlight
 	one option at a time, whatever the count, and the highlight stays put past
 	either end.
-	Enter picks the highlighted option.
+	Enter and the key of *pick* pick the highlighted option, and the key of
+	*close_menu* closes the menu without picking one.
 	The keys of *go* and *panic* act as they do everywhere and close the menu
 	as well.
 	The key of *help* opens the help page and leaves the menu open, hidden
@@ -741,6 +748,18 @@ page.
 
 *close_help*
 	Hide the help page.
+
+*pick*
+	Pick the highlighted option of an open menu, as Enter does and as Control+y
+	does in Vim's popup menu.
+	It does nothing while no menu is open.
+
+*close_menu*
+	Close an open menu without picking an option, as Control+e does in Vim's
+	popup menu.
+	Unlike Escape, which closes the menu and also acts as Panic, it does not
+	panic.
+	It does nothing while no menu is open.
 
 # DIAGNOSTICS
 

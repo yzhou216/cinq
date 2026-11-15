@@ -176,6 +176,7 @@ impl App {
             // A click on blank space would leave the search line open with no
             // way to close it but Panic
             Message::Clicked => self.without_search(),
+            Message::Nothing => self,
             // Buttons of the mouse go back and forward from the main window, as
             // the keys do, apart from the help page, which the keys leave be
             Message::SidePressed(window, mouse::Button::Back)

@@ -74,6 +74,8 @@ impl Preset {
             Action::Fullscreen => [&["F11"], &["F11"]],
             Action::Help => [&["F1"], &["F1"]],
             Action::CloseHelp => [&["q"], &["Control+w"]],
+            Action::Pick => [&["Control+y"], &[]],
+            Action::CloseMenu => [&["Control+e"], &["F4"]],
         };
         match self {
             Preset::Vi => vi,
