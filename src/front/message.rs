@@ -142,6 +142,14 @@ pub enum Message {
     /// Moves the selected cue by a number of places, downwards when
     /// positive
     Move(isize),
+    /// Copies a number of cues from the selection down to the clipboard
+    Copy(usize),
+    /// Copies a number of cues from the selection down to the clipboard and
+    /// deletes them
+    Cut(usize),
+    /// Pastes the clipboard a number of times next to the selection, on the
+    /// side that the function picks
+    Paste(fn(CueId) -> Place, usize),
     /// Deletes a number of cues from the selection down
     Delete(usize),
     Edit(CueId, Edit),

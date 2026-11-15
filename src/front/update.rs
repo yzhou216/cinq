@@ -7,6 +7,7 @@
 //! Only [`cinq`] reaches the parts with side effects.
 
 mod cinq;
+mod clipboard;
 mod clock;
 mod device;
 mod editing;
@@ -29,6 +30,7 @@ use iced::{Task, futures::channel::oneshot, mouse};
 
 use super::{App, Message, Tab};
 use crate::back::{Command, Edit, parse_level};
+pub(super) use clipboard::{Clipboard, Clipped};
 pub(super) use history::History;
 use link::{edit_config, open_link};
 pub(super) use paging::kept::{Measured, Measures};
@@ -84,6 +86,9 @@ impl App {
             Message::Forward(count) => return self.walking(|app| app.went_forward(count)),
             Message::Add(place) => return self.with_new_cue(place).revealed(),
             Message::Move(by) => return self.with_selected_moved(by).revealed(),
+            Message::Copy(count) => self.with_copied(count),
+            Message::Cut(count) => return self.cut(count).revealed(),
+            Message::Paste(place, count) => return self.with_pasted(place, count).revealed(),
             Message::Delete(count) => return self.without_selected(count).revealed(),
             Message::Undo(count) => return self.undone(count).revealed(),
             Message::Redo(count) => return self.redone(count).revealed(),
@@ -247,6 +252,8 @@ impl App {
         let clicked = matches!(message, Message::Clicked);
         let app = Self {
             keys: if typing { self.keys } else { Vec::new() },
+            clipped: self.clipped.filter(|_| typing),
+            remark: self.remark.filter(|_| typing),
             typed_level: self.typed_level.filter(|_| passive || clicked),
             ..self
         };

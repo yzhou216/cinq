@@ -10,6 +10,19 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Cues can be copied, cut, and pasted with a clipboard of cinq's own that
+  outlasts the show it was filled from: `y y`, `p`, and `P` in the vi
+  keymap copy and paste, `d d`, `x`, and `Delete` cut, and `Control+c`,
+  `Control+x`, `Control+v`, and `Control+V` do the same in the cua keymap.
+  A count copies or cuts that many cues and pastes that many times, a paste
+  is one change that undo takes back, and a fade pasted together with its
+  target targets the new copy, as in QLab.  The status bar tells what was
+  cut or copied and names the key that pastes, and undo and redo still call
+  a cut a cut.  A paste with nothing to paste says that the clipboard is
+  empty.  The `copy` action works in show mode, as Vim yanks in a read-only
+  buffer.  The cua `Delete` key still
+  deletes without copying, through the new `copy`, `cut`, `paste_below`, and
+  `paste_above` actions, while `delete` has no key in the vi keymap.
 - The keys of Vim that move by a page work in the vi keymap: `Control+d` and
   `Control+u` scroll the cue list half a page and move the selection the
   same number of rows, so that it keeps its row on the screen, and
@@ -23,10 +36,10 @@ Major changes and improvements in each release of cinq, newest first.
   `3 u` does in Vim, and stops at the oldest or newest.  A count before
   `next_tab` shows the inspector tab of that number, as `2 g t` does, and
   before `previous_tab` goes back that many tabs.
-- The vi keymap takes more keys of Vim: `x` and `Delete` delete the selected
-  cue, as `d d` does, `F1` shows the help page beside `?`, and `Control+Home`
-  and `Control+End` select the first and last cue as `g g` and `G` do, each
-  with a count as before.
+- The vi keymap takes more keys of Vim: `x` and `Delete` join `d d` in
+  cutting the selected cue, `F1` shows the help page beside `?`, and
+  `Control+Home` and `Control+End` select the first and last cue as `g g`
+  and `G` do, each with a count as before.
 - `back` and `forward` go back and forward between the places that jumps
   left, as the jump list of Vim does: switching cue lists, `first`, `last`,
   and selecting a cue in another cue list are jumps.  The keys are

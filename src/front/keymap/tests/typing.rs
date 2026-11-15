@@ -41,7 +41,7 @@ fn enter_acts_at_once_only_when_bound_to_go_or_panic() {
 #[test]
 fn commands_of_two_keys_wait_for_the_second() {
     assert_eq!(typed("2 d").pending, keys("2 d"));
-    assert_eq!(action("2 d d"), Some((Action::Delete, Some(2))));
+    assert_eq!(action("2 d d"), Some((Action::Cut, Some(2))));
     assert_eq!(action("g g"), Some((Action::First, None)));
     assert_eq!(action("7 G"), Some((Action::Last, Some(7))));
     assert_eq!(action("g T"), Some((Action::PreviousTab, None)));
@@ -88,16 +88,16 @@ fn keys_typed_halfway_list_what_can_follow_them() {
     ];
     assert_eq!(next("g"), g);
     assert_eq!(next("1 2 g"), g);
-    assert_eq!(next("2 d"), [("d".to_owned(), Action::Delete)]);
+    assert_eq!(next("2 d"), [("d".to_owned(), Action::Cut)]);
     assert!(next("3").is_empty());
     assert_eq!(keymap.continuations(&[]).count(), 0);
 }
 
 #[test]
-fn keys_of_vim_delete_help_first_and_last_take_counts_as_their_twins_do() {
-    assert_eq!(action("x"), Some((Action::Delete, None)));
-    assert_eq!(action("3 x"), Some((Action::Delete, Some(3))));
-    assert_eq!(action("2 Delete"), Some((Action::Delete, Some(2))));
+fn keys_of_vim_cut_help_first_and_last_take_counts_as_their_twins_do() {
+    assert_eq!(action("x"), Some((Action::Cut, None)));
+    assert_eq!(action("3 x"), Some((Action::Cut, Some(3))));
+    assert_eq!(action("2 Delete"), Some((Action::Cut, Some(2))));
     assert_eq!(action("F1"), Some((Action::Help, None)));
     assert_eq!(action("4 Control+Home"), Some((Action::First, Some(4))));
     assert_eq!(action("Control+End"), Some((Action::Last, None)));
@@ -111,13 +111,14 @@ fn x_begins_no_other_command_and_types_in_a_field() {
     assert!(keymap.continuations(&keys("x")).next().is_none());
     assert_eq!(
         one("x").and_then(|press| keymap.alone(press)),
-        Some(Action::Delete)
+        Some(Action::Cut)
     );
 }
 
 #[test]
-fn keys_of_delete_and_help_stay_with_a_field_that_has_the_keyboard() {
+fn keys_of_delete_cut_and_help_stay_with_a_field_that_has_the_keyboard() {
     assert!(!Action::Delete.acts_in_fields());
+    assert!(!Action::Cut.acts_in_fields());
     assert!(!Action::Help.acts_in_fields());
 }
 
@@ -182,7 +183,7 @@ fn keys_that_move_by_a_page_are_those_of_vim_and_act_in_no_field() {
     });
     // Keys of the prefixes g and d stay theirs, apart from Control+d
     assert_eq!(action("g g"), Some((Action::First, None)));
-    assert_eq!(action("d d"), Some((Action::Delete, None)));
+    assert_eq!(action("d d"), Some((Action::Cut, None)));
     assert_eq!(typed("d").pending.len(), 1);
 }
 
@@ -194,4 +195,31 @@ fn cua_pages_by_the_whole_page_and_binds_no_key_to_the_half_pages() {
     assert!(keymap.keys(Action::HalfPageDown).is_empty());
     assert!(keymap.keys(Action::HalfPageUp).is_empty());
     assert_eq!(keymap.conflicts(), Vec::<String>::new());
+}
+
+#[test]
+fn vi_copies_with_y_y_cuts_with_d_d_and_pastes_with_p_and_capital_p() {
+    assert_eq!(action("y y"), Some((Action::Copy, None)));
+    assert_eq!(action("3 y y"), Some((Action::Copy, Some(3))));
+    assert_eq!(action("d d"), Some((Action::Cut, None)));
+    assert_eq!(action("p"), Some((Action::PasteBelow, None)));
+    assert_eq!(action("2 P"), Some((Action::PasteAbove, Some(2))));
+    // Cutting is what deleting does in Vim, so that no key only deletes
+    assert!(Keymap::default().keys(Action::Delete).is_empty());
+}
+
+#[test]
+fn cua_copies_cuts_and_pastes_with_control_and_deletes_with_delete_alone() {
+    let keymap = Keymap::from(Preset::Cua);
+    let action = |text: &str| {
+        keymap
+            .parse(&[], one(text).expect("a key"))
+            .action
+            .map(|(action, _)| action)
+    };
+    assert_eq!(action("Control+c"), Some(Action::Copy));
+    assert_eq!(action("Control+x"), Some(Action::Cut));
+    assert_eq!(action("Control+v"), Some(Action::PasteBelow));
+    assert_eq!(action("Control+V"), Some(Action::PasteAbove));
+    assert_eq!(action("Delete"), Some(Action::Delete));
 }

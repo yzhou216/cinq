@@ -29,6 +29,8 @@ impl App {
         let outcome = self.config.keymap.parse(&self.keys, press);
         let app = Self {
             keys: outcome.pending,
+            clipped: self.clipped.filter(|_| outcome.action.is_none()),
+            remark: self.remark.filter(|_| outcome.action.is_none()),
             ..self
         };
         match outcome.action {

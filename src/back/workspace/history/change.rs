@@ -17,11 +17,15 @@ pub enum Change {
         placed: Box<Placed>,
         standby: Standby,
     },
+    /// Cues pasted, with the places they took in order, and the standby of
+    /// their list before and after, which the first of them can take
+    Pasted { cues: Vec<Placed>, standby: Standby },
     /// Cues deleted, with the places they had in order, and the standby of
-    /// each list they left
+    /// each list they left, and whether they were cut to the clipboard
     Deleted {
         cues: Vec<Placed>,
         standby: Vec<Standby>,
+        cut: bool,
     },
     /// Cue moved within its list, from one place to another
     Moved { cue: CueId, from: usize, to: usize },
@@ -73,7 +77,9 @@ impl Change {
     pub fn cue(&self) -> Option<CueId> {
         match self {
             Change::Added { placed, .. } => Some(placed.cue.id),
-            Change::Deleted { cues, .. } => cues.first().map(|placed| placed.cue.id),
+            Change::Pasted { cues, .. } | Change::Deleted { cues, .. } => {
+                cues.first().map(|placed| placed.cue.id)
+            }
             Change::Moved { cue, .. } | Change::Edited { cue, .. } => Some(*cue),
             Change::Standby(_) | Change::Restored { .. } => None,
         }
@@ -127,6 +133,13 @@ impl Change {
         match self {
             Self::Added { placed, standby } if standby.list == list => Self::Added {
                 placed,
+                standby: Standby {
+                    after: standby.before,
+                    ..standby
+                },
+            },
+            Self::Pasted { cues, standby } if standby.list == list => Self::Pasted {
+                cues,
                 standby: Standby {
                     after: standby.before,
                     ..standby

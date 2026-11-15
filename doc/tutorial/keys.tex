@@ -25,7 +25,11 @@ keys, which differ between the keymaps:
 Action & vi & cua \\
 \hline
 Add a cue below the selection & \key{o} & \key{Control+n} \\
-Delete the selected cue & \key{d d} & \key{Delete} \\
+Cut the selected cue & \key{d d}, \key{x}, \key{Delete} & \key{Control+x} \\
+Copy the selected cue & \key{y y} & \key{Control+c} \\
+Paste below the selection & \key{p} & \key{Control+v} \\
+Paste above the selection & \key{P} & \key{Control+V} \\
+Delete the selected cue, no copy & none & \key{Delete} \\
 Edit the name of the selected cue & \key{i} & \key{F2} \\
 Undo the latest change & \key{u} & \key{Control+z} \\
 Redo the change undone last & \key{Control+r} & \key{Control+y} \\
@@ -77,9 +81,9 @@ which selects the first cue.
 \end{figure}
 
 A number typed first repeats the action: \key{3 j} moves the selection three
-rows down, \key{3 d d} deletes three cues, and \key{3 u} undoes three
-changes.  The keys for GO and Panic act immediately, even in the middle of a
-sequence.
+rows down, \key{3 d d} cuts three cues, \key{3 p} pastes the copied cues
+three times, and \key{3 u} undoes three changes.  The keys for GO and Panic
+act immediately, even in the middle of a sequence.
 
 \section{Changing the keys}
 

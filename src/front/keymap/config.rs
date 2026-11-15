@@ -26,7 +26,7 @@
 //! go = ["Space", "F5"]
 //!
 //! [keys]
-//! delete = []
+//! cut = []
 //! ```
 
 mod edit;

@@ -10,18 +10,9 @@ use itertools::Itertools;
 use super::{
     Workspace,
     history::{Change, Placed, Standby},
+    numbering::Numbers,
 };
 use crate::back::{Active, CueId, CueList, Edit, Kind, Media, Place};
-
-/// Returns the next whole number above every numeric cue number, which
-/// keeps new cue numbers apart across all lists as QLab does.  Numbers too
-/// large to count up from leave the next number at the largest there is.
-fn next_number<'a>(numbers: impl Iterator<Item = &'a str>) -> String {
-    let highest = numbers
-        .filter_map(|number| number.trim().parse::<f64>().ok())
-        .fold(0.0_f64, f64::max);
-    (highest.floor() as u64).saturating_add(1).to_string()
-}
 
 impl Workspace {
     /// Puts `standby` on standby in a list without recording the move, as
@@ -56,7 +47,7 @@ impl Workspace {
         let Some(id) = self.next_cue_id() else {
             return self;
         };
-        let number = next_number(self.cues().map(|cue| cue.number.as_str()));
+        let number = Numbers::of(self.cues().map(|cue| cue.number.as_str())).next();
         let before = self.lists.get(list).and_then(|cues| cues.standby);
         let workspace = Self {
             next_id: self.next_id + 1,
@@ -77,8 +68,8 @@ impl Workspace {
     }
 
     /// Deletes cues as one change, with the places they had and where
-    /// standby was before and after
-    pub(super) fn deleted(self, ids: &[CueId]) -> Self {
+    /// standby was before and after, and whether they were cut
+    pub(super) fn deleted(self, ids: &[CueId], cut: bool) -> Self {
         // Cues in the order of their places, which is the order undo puts
         // them back in
         let cues: Vec<Placed> = ids
@@ -106,7 +97,7 @@ impl Workspace {
                 after: workspace.lists[list].standby,
             })
             .collect();
-        workspace.recorded(Change::Deleted { cues, standby })
+        workspace.recorded(Change::Deleted { cues, standby, cut })
     }
 
     pub(super) fn moved(self, id: CueId, by: isize) -> Self {

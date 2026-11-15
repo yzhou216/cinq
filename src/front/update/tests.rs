@@ -6,9 +6,11 @@
 //! open, the help page that comes and goes without touching the main
 //! window, the selection after deleting or undo takes the selected cue
 //! away, the selection that follows standby, the sound file chosen for a
-//! new cue, a level typed halfway, and a link of the help page that fails to
-//! open
+//! new cue, a level typed halfway, a link of the help page that fails to
+//! open, and the clipboard
 
+mod clipboard;
+mod clipped;
 mod clock;
 mod counts;
 mod history;
