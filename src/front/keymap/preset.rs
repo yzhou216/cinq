@@ -43,6 +43,8 @@ impl Preset {
             Action::Last => [&["G"], &["End"]],
             Action::NextTab => [&["g t"], &["Control+Tab"]],
             Action::PreviousTab => [&["g T"], &["Control+Shift+Tab"]],
+            Action::Back => [&["Control+o"], &["Alt+ArrowLeft"]],
+            Action::Forward => [&["Control+i"], &["Alt+ArrowRight"]],
             Action::Standby => [&["Enter"], &["Enter"]],
             Action::Edit => [&["i"], &["F2"]],
             Action::NextField => [&["Tab"], &["Tab"]],

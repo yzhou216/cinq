@@ -10,6 +10,7 @@ mod manual;
 mod notation;
 mod typing;
 
+use itertools::Itertools;
 use strum::VariantArray;
 
 use super::{
@@ -84,4 +85,34 @@ fn keys_of_go_and_panic_hide_every_other_sequence_that_holds_them() {
             "`Space` acts at once as go, so `g Space` can never be typed",
         ]
     );
+}
+
+#[test]
+fn back_and_forward_keys_follow_vim_and_the_browsers_and_act_in_fields() {
+    let keys = |preset: Preset, action: Action| Keymap::from(preset).listed(action);
+    assert_eq!(keys(Preset::Vi, Action::Back), "Control+o");
+    assert_eq!(keys(Preset::Vi, Action::Forward), "Control+i");
+    assert_eq!(keys(Preset::Cua, Action::Back), "Alt+ArrowLeft");
+    assert_eq!(keys(Preset::Cua, Action::Forward), "Alt+ArrowRight");
+    let acting = |preset: Preset, text: &str| {
+        one(text).is_some_and(|press| Keymap::from(preset).acts_in_fields(press))
+    };
+    assert!(acting(Preset::Vi, "Control+o") && acting(Preset::Vi, "Control+i"));
+    assert!(acting(Preset::Cua, "Alt+ArrowLeft") && acting(Preset::Cua, "Alt+ArrowRight"));
+    assert!(!acting(Preset::Cua, "Control+i"));
+}
+
+#[test]
+fn no_key_is_bound_twice_in_a_shipped_keymap() {
+    let twice: Vec<_> = Preset::VARIANTS
+        .iter()
+        .flat_map(|preset| {
+            Action::VARIANTS
+                .iter()
+                .flat_map(|&action| preset.keys(action))
+                .duplicates()
+                .map(|keys| (preset.name(), *keys))
+        })
+        .collect();
+    assert!(twice.is_empty(), "{twice:?}");
 }

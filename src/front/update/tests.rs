@@ -6,11 +6,12 @@
 //! open, the help page that comes and goes without touching the main
 //! window, the selection after deleting or undo takes the selected cue
 //! away, the selection that follows standby, the sound file chosen for a
-//! new cue, a level typed halfway, a link of the help page that fails to
-//! open, loading the files of the show, and the window drawn before a show
-//! has opened
+//! new cue, a level typed halfway, and a link of the help page that fails to
+//! open
 
 mod clock;
+mod history;
+mod loading;
 
 use std::ops::RangeInclusive;
 
@@ -21,7 +22,7 @@ use iced::{
 };
 
 use crate::{
-    back::{CueId, CueList, Load, Place, Workspace, audio, load_files},
+    back::{CueId, CueList, Place, Workspace, audio},
     front::{App, MAIN_SIZE, Message, Tab, keymap::Press},
 };
 
@@ -49,14 +50,17 @@ pub(super) fn press(key: Key) -> Press {
 }
 
 /// Returns the keys that act in text fields, apart from those of GO and
-/// Panic: those that move between fields, and open and save shows
-pub(super) fn field_keys() -> [Press; 5] {
+/// Panic: those that open and save shows, go back and forward, and move
+/// between fields
+pub(super) fn field_keys() -> [Press; 7] {
     let tab = || Key::Named(Named::Tab);
     let control = |key: &str| chord(Key::Character(key.into()), Modifiers::CTRL);
     [
         control("l"),
         control("s"),
         control("S"),
+        control("o"),
+        control("i"),
         press(tab()),
         chord(tab(), Modifiers::SHIFT),
     ]
@@ -111,7 +115,7 @@ fn keys_that_act_in_fields_do_nothing_over_the_help_page_but_go_still_fires() {
     // Keys of opening and saving would build a file chooser, which rfd
     // builds only on the main thread on Darwin, so only the moves between
     // fields are fired with the page shut
-    field_keys()[3..].iter().for_each(|&key| {
+    field_keys()[5..].iter().for_each(|&key| {
         let (_, acting) = typed(false, key);
         assert_eq!(acting.units(), 1, "{key:?}");
     });
@@ -224,24 +228,4 @@ fn link_that_fails_to_open_shows_until_the_help_page_closes() {
     assert_eq!(closed.link_problem, None);
     let (unseen, _) = closed.next(failure());
     assert_eq!(unseen.link_problem, None);
-}
-
-#[test]
-fn one_load_runs_at_a_time_until_what_it_found_comes_back() {
-    let app = show(None);
-    let found = load_files(Load::all(&app.workspace, app.workspace.unloaded()));
-    let (loading, first) = app.load();
-    let (still, again) = loading.load();
-    assert_eq!(first.units(), 1);
-    assert_eq!(again.units(), 0);
-    assert!(still.loading);
-    let show = still.show.id();
-    let done = still.loaded(show, found);
-    assert!(!done.loading);
-    assert_eq!(done.workspace.unloaded().count(), 0);
-}
-
-#[test]
-fn window_draws_before_a_show_has_opened() {
-    let _ = crate::front::view::view(&App::default());
 }

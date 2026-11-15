@@ -71,6 +71,10 @@ pub enum Message {
     SwitchList(usize),
     /// Shows the cue list a number of lists further down the sidebar
     StepList(isize),
+    /// Goes a number of places back, among those that jumps left
+    Back(usize),
+    /// Goes a number of places forward again after going back
+    Forward(usize),
     ShowMode(bool),
     Tab(Tab),
     /// Shows the inspector tab a number of tabs to the right

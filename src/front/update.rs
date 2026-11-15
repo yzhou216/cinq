@@ -10,6 +10,7 @@ mod cinq;
 mod clock;
 mod device;
 mod editing;
+mod history;
 mod keys;
 mod link;
 mod loading;
@@ -27,6 +28,7 @@ use iced::{Task, futures::channel::oneshot};
 
 use super::{App, Message};
 use crate::back::{Command, Edit, parse_level};
+pub(super) use history::History;
 use link::{edit_config, open_link};
 pub(super) use show::{Keeper, Read, Reader, Saved, Show};
 pub(super) use stage::Stage;
@@ -43,11 +45,19 @@ impl App {
             Message::Focus(focus) => return self.focused(focus),
             // Selection scrolls into view as it or the rows around it move,
             // and as the main window changes size
-            Message::Select(id) => return self.with_selection(id).revealed(),
+            Message::Select(id) => {
+                return self.crossing(|app| app.with_selection(id)).revealed();
+            }
             Message::Step(offset) => return self.stepped(offset).revealed(),
-            Message::Row(row) => return self.at_row(row).revealed(),
-            Message::SwitchList(list) => return self.switched_to(list).revealed(),
-            Message::StepList(offset) => return self.stepped_list(offset).revealed(),
+            Message::Row(row) => return self.jumping(|app| app.at_row(row)).revealed(),
+            Message::SwitchList(list) => {
+                return self.jumping(|app| app.switched_to(list)).revealed();
+            }
+            Message::StepList(offset) => {
+                return self.jumping(|app| app.stepped_list(offset)).revealed();
+            }
+            Message::Back(count) => return self.walking(|app| app.went_back(count)),
+            Message::Forward(count) => return self.walking(|app| app.went_forward(count)),
             Message::Add(place) => return self.with_new_cue(place).revealed(),
             Message::Move(by) => return self.with_selected_moved(by).revealed(),
             Message::Delete(count) => return self.without_selected(count).revealed(),

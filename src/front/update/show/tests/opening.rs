@@ -106,3 +106,15 @@ fn failure_to_keep_takes_back_the_note_that_changes_were_kept() {
     let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
     assert_eq!(app.with_keep_problem(Some("late".to_owned())).told, None);
 }
+
+#[test]
+fn opening_another_show_clears_the_places_to_go_back_to() {
+    let lists = SHOW.replace("Main", "Main\"\n\n[[list]]\nname = \"Preshow");
+    let app = App::default()
+        .opened(found(Some(STORM), Some(&lists), None))
+        .next(Message::SwitchList(1))
+        .0;
+    assert!(app.can_go_back());
+    let app = app.opened(found(Some(CALM), Some(SHOW), None));
+    assert!(!app.can_go_back() && !app.can_go_forward());
+}

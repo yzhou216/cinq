@@ -4,13 +4,16 @@
 
 //! Status of the show, most important first, then at the right the keys of
 //! a command typed so far, what the latest opening or saving told or else
-//! the latest change to the show with the key that takes it back, the key
-//! that saves unsaved changes, and the keys of GO, Panic, and the help page
+//! the latest change to the show with the key that takes it back, the keys
+//! that go back and forward between the places jumped to while there is a
+//! place to go to, the key that saves unsaved changes, and the keys of GO,
+//! Panic, and the help page
 //!
 //! The bar keeps to one line.  When it is too narrow for all of it, the
-//! keys of GO, of Panic, of saving, and of the help page give way in turn,
-//! each one whole, and then the status gives way from its end, so that the
-//! keys typed so far and what the latest change told always show in full.
+//! keys of going forward and back, of GO, of Panic, of saving, and of the
+//! help page give way in turn, each one whole, and then the status gives way
+//! from its end, so that the keys typed so far and what the latest change
+//! told always show in full.
 
 #[cfg(test)]
 mod tests;
@@ -33,7 +36,14 @@ use crate::{
     },
 };
 
-const YIELDING: [Action; 4] = [Action::Go, Action::Panic, Action::Save, Action::Help];
+const YIELDING: [Action; 6] = [
+    Action::Forward,
+    Action::Back,
+    Action::Go,
+    Action::Panic,
+    Action::Save,
+    Action::Help,
+];
 
 pub(super) fn view(app: &App) -> Element<'_, Message> {
     // Bar is one line of text high with the gap around it, since a
@@ -108,10 +118,14 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
         .clone()
         .or_else(|| notice(app))
         .map(|told| (None, told));
+    let back = key(Action::Back, Action::Back.name()).filter(|_| app.can_go_back());
+    let forward = key(Action::Forward, Action::Forward.name()).filter(|_| app.can_go_forward());
     let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
     typed
         .into_iter()
         .chain(told)
+        .chain(back)
+        .chain(forward)
         .chain(save)
         .chain(key(Action::Go, "GO"))
         .chain(key(Action::Panic, "Panic"))

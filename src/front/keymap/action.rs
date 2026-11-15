@@ -25,6 +25,8 @@ pub enum Action {
     Last,
     NextTab,
     PreviousTab,
+    Back,
+    Forward,
     Standby,
     Edit,
     NextField,
@@ -61,6 +63,8 @@ impl Action {
             Action::Last => "Select the last cue, or the row counted",
             Action::NextTab => "Show the next inspector tab",
             Action::PreviousTab => "Show the previous inspector tab",
+            Action::Back => "Go back to the place that the last jump left",
+            Action::Forward => "Go forward again after going back",
             Action::Standby => "Put the selected cue on standby",
             Action::Edit => "Edit the name of the selected cue",
             Action::NextField => "Move to the next field",
@@ -104,6 +108,8 @@ impl Action {
                 self,
                 Action::NextField
                     | Action::PreviousField
+                    | Action::Back
+                    | Action::Forward
                     | Action::Open
                     | Action::Save
                     | Action::SaveAs
@@ -131,6 +137,8 @@ impl Action {
             Action::Last => Message::Row(count.unwrap_or(usize::MAX)),
             Action::NextTab => Message::StepTab(1),
             Action::PreviousTab => Message::StepTab(-1),
+            Action::Back => Message::Back(times),
+            Action::Forward => Message::Forward(times),
             Action::Standby => Message::StandbySelected,
             Action::Edit => Message::Focus(Focus::Name),
             Action::NextField => Message::Focus(Focus::Next),

@@ -12,7 +12,7 @@ use iced::Task;
 use super::{Read, Show, chooser, open};
 use crate::{
     back::{Command, Workspace},
-    front::{App, Message, keymap::Action, view::answered},
+    front::{App, History, Message, keymap::Action, view::answered},
 };
 
 impl App {
@@ -101,6 +101,12 @@ impl App {
         };
         // Selection and message once the kept changes are back, since
         // bringing them back replaces the cues and clears what was told
-        Self { told, ..opened }.switched_to(0)
+        Self {
+            told,
+            // Cue identities restart from one in each show
+            history: History::default(),
+            ..opened
+        }
+        .switched_to(0)
     }
 }
