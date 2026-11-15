@@ -169,10 +169,10 @@ of the help page.
 :  Escape
 :  Escape
 |  next
-:  j, ArrowDown, Control+n
+:  j, g j, ArrowDown, Control+n
 :  ArrowDown
 |  previous
-:  k, ArrowUp, Control+p
+:  k, g k, ArrowUp, Control+p
 :  ArrowUp
 |  next_list
 :  l, ArrowRight
@@ -333,8 +333,9 @@ after another, as in *g g*.
 The keys of a sequence wait until the sequence is complete, and the status bar
 shows the keys typed so far, while a box above it lists the keys that can come
 next and what each of them does.
-A key that begins no sequence is dropped, but a key that breaks off a sequence
-typed halfway starts a new one, so that a stray key never swallows the next.
+A key that completes or continues no sequence is dropped together with the
+keys typed so far, as Vim beeps and drops them, so that a key mistyped halfway,
+such as the *x* of *d x*, never starts a sequence of its own.
 Anything done other than typing, such as a click, drops a sequence typed
 halfway, and so does a change to the file.
 
@@ -380,8 +381,8 @@ copy leaves it on the first cue copied.
 Cutting is one change for undo, and the clipboard holds the cues in order.
 Show mode locks *d* with a motion as it locks *cut* and *delete*, and leaves *y*
 with a motion alone, as it leaves *copy*.
-A key that is neither a count nor a motion drops the operator and starts a new
-sequence, and the keys of *go* and *panic* act at once as usual.
+A key that is neither a count nor a motion drops the operator and itself, and
+the keys of *go* and *panic* act at once as usual.
 
 A key bound by itself to *go* or *panic* acts at once, even halfway through
 another sequence, and when it is bound without modifiers, whatever modifiers
@@ -512,10 +513,13 @@ page.
 *next*
 	Select the next cue, move the highlight of an open menu down, or scroll
 	the help page down.
+	The vi keymap binds *g j* as well as *j*, since a user of Vim types *gj* to
+	move by a displayed line.
 
 *previous*
 	Select the previous cue, move the highlight of an open menu up, or
 	scroll the help page up.
+	The vi keymap binds *g k* as well as *k*, as it binds *g j*.
 
 *next_list*
 	Show the next cue list.
@@ -643,7 +647,7 @@ page.
 	replaces it, as Vim's *c c* and *S* change a whole line.
 	Enter leaves the field with the name unchanged unless a key was typed.
 	Unlike in Vim, *c* is no operator, so only *c c* begins a change, and a *c*
-	before any other key is dropped, as *TYPING* describes.
+	before any other key is dropped with that key, as *TYPING* describes.
 
 *next_field*
 	Move the keyboard to the next field: a text field or drop-down list of the

@@ -83,20 +83,15 @@ fn operator_waits_for_a_count_and_for_the_rest_of_a_motion() {
 }
 
 #[test]
-fn key_that_is_no_motion_drops_the_operator_and_starts_anew() {
-    assert_eq!(action("d i"), Some((Action::Edit, None)));
-    assert_eq!(typed("d z"), typed("z"));
-    assert_eq!(typed("2 d 3 z"), typed("z"));
-    assert_eq!(typed("d g z"), typed("z"));
-    assert_eq!(action("d u"), Some((Action::Undo, None)));
-    // A command that is no motion, though it begins as one
-    assert_eq!(action("d g t"), None);
-    assert_eq!(action("d p"), Some((Action::PasteBelow, None)));
-    assert!(
-        typed("d l")
-            .action
-            .is_some_and(|(action, _)| action == Action::NextList)
-    );
+fn key_that_is_no_motion_drops_the_operator_and_the_key_as_vim_does() {
+    let dropped = Outcome::default();
+    for keys in [
+        "d i", "d z", "2 d 3 z", "d g z", "d u", "d x", "d p", "d o", "d l", "d g t", "y x", "y p",
+    ] {
+        assert_eq!(typed(keys), dropped, "{keys}");
+    }
+    // Next key starts afresh
+    assert_eq!(action("d x j"), Some((Action::Next, None)));
 }
 
 #[test]
@@ -194,9 +189,11 @@ fn box_lists_the_motions_after_an_operator_with_what_they_do() {
         motions,
         [
             ("j", Action::Next, Some(Action::Cut)),
+            ("g j", Action::Next, Some(Action::Cut)),
             ("ArrowDown", Action::Next, Some(Action::Cut)),
             ("Control+n", Action::Next, Some(Action::Cut)),
             ("k", Action::Previous, Some(Action::Cut)),
+            ("g k", Action::Previous, Some(Action::Cut)),
             ("ArrowUp", Action::Previous, Some(Action::Cut)),
             ("Control+p", Action::Previous, Some(Action::Cut)),
             ("g g", Action::First, Some(Action::Cut)),
@@ -209,10 +206,14 @@ fn box_lists_the_motions_after_an_operator_with_what_they_do() {
     assert_eq!(next("2 d 3"), after_d);
     assert_eq!(
         next("d g"),
-        [("g".to_owned(), Action::First, Some(Action::Cut))]
+        [
+            ("j".to_owned(), Action::Next, Some(Action::Cut)),
+            ("k".to_owned(), Action::Previous, Some(Action::Cut)),
+            ("g".to_owned(), Action::First, Some(Action::Cut)),
+        ]
     );
     assert_eq!(
-        next("y g")[0],
+        next("y g")[2],
         ("g".to_owned(), Action::First, Some(Action::Copy))
     );
 }

@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A key that completes or continues no sequence of keys cancels what was
+  typed so far and does nothing itself, as Vim beeps and drops the keys, so
+  that a mistyped `d x` no longer cuts a cue, and `g j` and `g k` move the
+  selection down and up in the vi keymap, as they do in Vim.  The keys of GO
+  and Panic still act at once.
 - The vi keymap enters the name of the selected cue as Vim enters text:
   `i`, `a`, and `A` put the caret at its end, `I` puts it at its start, and
   `c c` and `S` select all of it, so that typing replaces it.  The new

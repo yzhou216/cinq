@@ -37,13 +37,13 @@ fn keys_of_vim_enter_the_name_of_the_selected_cue_and_show_its_tab() {
 }
 
 #[test]
-fn c_begins_no_operator_so_a_c_before_another_key_breaks_off() {
+fn c_begins_no_operator_so_a_c_before_another_key_drops_both() {
     let levels = App {
         tab: Tab::Levels,
         ..show(Some(CueId(3)))
     };
     let (moved, _) = typed(levels, &["c", "j"]);
-    assert_eq!((moved.selected, moved.tab), (Some(CueId(4)), Tab::Levels));
+    assert_eq!((moved.selected, moved.tab), (Some(CueId(3)), Tab::Levels));
     assert_eq!(moved.workspace.lists()[0].cues.len(), 12);
 }
 

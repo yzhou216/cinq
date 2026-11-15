@@ -40,12 +40,20 @@ impl Outcome {
 }
 
 impl Keymap {
-    /// Keys that begin no command are dropped, but a key that breaks off a
-    /// command starts a new one, so that a stray key never swallows the
-    /// next.
+    /// Keys that complete or continue no command are dropped, with the keys
+    /// typed so far, as Vim beeps and drops them, so that a key mistyped
+    /// halfway through a command, such as the `x` of `d x`, never starts a
+    /// command of its own.  The keys of GO and Panic act at once all the
+    /// same.
     pub fn parse(&self, pending: &[Press], press: Press) -> Outcome {
         if let Some((action, _)) = self.at_once_bound(press) {
             return Outcome::of(action, None);
+        }
+        if press.digit().is_some() && saturated(pending) {
+            return Outcome {
+                pending: pending.to_vec(),
+                ..Outcome::default()
+            };
         }
         let keys = [pending, &[press]].concat();
         let (digits, command) = split_count(&keys);
@@ -56,12 +64,7 @@ impl Keymap {
                 pending: keys,
                 ..Outcome::default()
             },
-            None => self
-                .operated(&keys, count, command)
-                .unwrap_or_else(|| match pending {
-                    [] => Outcome::default(),
-                    _ => self.parse(&[], press),
-                }),
+            None => self.operated(&keys, count, command).unwrap_or_default(),
         }
     }
 
@@ -212,6 +215,16 @@ fn counted(digits: &[Press]) -> Option<usize> {
             count.saturating_mul(10).saturating_add(digit)
         });
     Some(count).filter(|&count| count > 0)
+}
+
+/// Tells whether the digits that end `keys` already make the largest count,
+/// so that one more changes nothing and a held digit key costs nothing
+fn saturated(keys: &[Press]) -> bool {
+    let start = keys
+        .iter()
+        .rposition(|key| key.digit().is_none())
+        .map_or(0, |last| last + 1);
+    counted(&keys[start..]) == Some(usize::MAX)
 }
 
 /// Multiplies the counts typed before an operator and before its motion,

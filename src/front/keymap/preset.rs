@@ -35,8 +35,8 @@ impl Preset {
         let [vi, cua]: [&[&str]; 2] = match action {
             Action::Go => [&["Space"], &["Space"]],
             Action::Panic => [&["Escape"], &["Escape"]],
-            Action::Next => [&["j", "ArrowDown", "Control+n"], &["ArrowDown"]],
-            Action::Previous => [&["k", "ArrowUp", "Control+p"], &["ArrowUp"]],
+            Action::Next => [&["j", "g j", "ArrowDown", "Control+n"], &["ArrowDown"]],
+            Action::Previous => [&["k", "g k", "ArrowUp", "Control+p"], &["ArrowUp"]],
             Action::NextList => [&["l", "ArrowRight"], &["Control+PageDown"]],
             Action::PreviousList => [&["h", "ArrowLeft"], &["Control+PageUp"]],
             Action::First => [&["g g", "Control+Home"], &["Home"]],

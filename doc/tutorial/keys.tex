@@ -92,8 +92,10 @@ pastes the copied cues three times, and \key{3 u} undoes three changes.
 \key{d} and \key{y} also take a motion: \key{d j} cuts the selected cue and
 the next, \key{y k} copies it and the previous, and \key{d G} cuts down to the
 last cue.  A number before the operator, before the motion, or both
-multiplies, so that \key{2 d 3 j} cuts seven cues.  The keys for GO and Panic
-act immediately, even in the middle of a sequence.
+multiplies, so that \key{2 d 3 j} cuts seven cues.  A key that does not
+continue the sequence cancels it and does nothing, as Vim beeps and drops the
+keys typed so far, so that a mistyped \key{d x} cuts nothing.  The keys for GO
+and Panic act immediately, even in the middle of a sequence.
 
 \section{Searching the cues}
 

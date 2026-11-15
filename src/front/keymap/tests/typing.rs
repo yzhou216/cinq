@@ -65,14 +65,6 @@ fn key_bound_with_the_modifiers_held_goes_to_its_own_action() {
 }
 
 #[test]
-fn key_that_breaks_off_a_command_starts_a_new_one() {
-    assert_eq!(action("d i"), Some((Action::Edit, None)));
-    assert_eq!(action("2 g j"), Some((Action::Next, None)));
-    assert_eq!(typed("g z"), typed("z"));
-    assert!(typed("4 z").pending.is_empty());
-}
-
-#[test]
 fn keys_typed_halfway_list_what_can_follow_them() {
     let keymap = Keymap::default();
     let next = |text: &str| -> Vec<(String, Action)> {
@@ -82,6 +74,8 @@ fn keys_typed_halfway_list_what_can_follow_them() {
             .collect()
     };
     let g = [
+        ("j".to_owned(), Action::Next),
+        ("k".to_owned(), Action::Previous),
         ("g".to_owned(), Action::First),
         ("t".to_owned(), Action::NextTab),
         ("T".to_owned(), Action::PreviousTab),

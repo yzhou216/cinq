@@ -64,6 +64,8 @@ fn file_reports_bindings_that_hide_others() {
     assert_eq!(
         messages(&problems),
         [
+            "`g` comes first, so `g j` can never be typed",
+            "`g` comes first, so `g k` can never be typed",
             "`g` comes first, so `g g` can never be typed",
             "`g` comes first, so `g t` can never be typed",
             "`g` comes first, so `g T` can never be typed",
