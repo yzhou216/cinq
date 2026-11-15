@@ -233,3 +233,14 @@ fn capital_y_copies_like_y_y_and_takes_a_count() {
     // Y is bound by itself, so it makes no operator
     assert_eq!(typed("Y j").action, Some((Action::Next, None)));
 }
+
+#[test]
+fn counts_reach_the_actions_that_add_cues() {
+    assert_eq!(action("3 o"), Some((Action::AddBelow, Some(3))));
+    assert_eq!(action("2 O"), Some((Action::AddAbove, Some(2))));
+    assert!(matches!(
+        Action::AddBelow.message(Some(3)),
+        Message::Add(_, 3)
+    ));
+    assert!(matches!(Action::AddAbove.message(None), Message::Add(_, 1)));
+}

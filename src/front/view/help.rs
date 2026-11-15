@@ -72,7 +72,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     let page = column![
         text(format!("Keys of the {} keymap", keymap.name())).size(24),
         bindings,
-        text(format!("A count typed before a key repeats a move{example}.  It goes that many places back or forward, undoes or redoes that many changes, copies, cuts, or deletes that many cues, pastes that many times, and goes that many matches along or that many pages down or up.  It picks the row for the first and last cue and the tab for the next tab, and sets the rows of a half page.")),
+        text(format!("A count typed before a key repeats a move{example}.  It goes that many places back or forward, undoes or redoes that many changes, copies, cuts, deletes, or adds that many cues, pastes that many times, and goes that many matches along or that many pages down or up.  It picks the row for the first and last cue and the tab for the next tab, and sets the rows of a half page.")),
     ]
     .extend(operators.map(Element::from))
     .push(text("The keys of GO and Panic act at once, even halfway through another command."))

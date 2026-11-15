@@ -10,11 +10,11 @@ use crate::back::{Cue, CueId, CueList, Edit, Place};
 
 #[derive(Debug, Clone)]
 pub enum Change {
-    /// Cue added at a place, with the standby of its list before and after,
-    /// which the new cue can take.  The cue is boxed, since it is far larger
-    /// than what the other changes record.
+    /// Cues added at a place, with the places they took in order, and the
+    /// standby of their list before and after, which the first of them can
+    /// take.  The place is where the first of them went.
     Added {
-        placed: Box<Placed>,
+        cues: Vec<Placed>,
         at: Place,
         standby: Standby,
     },
@@ -82,26 +82,26 @@ pub enum Turn {
 impl Change {
     pub fn cue(&self) -> Option<CueId> {
         match self {
-            Change::Added { placed, .. } => Some(placed.cue.id),
-            Change::Pasted { cues, .. } | Change::Deleted { cues, .. } => {
-                cues.first().map(|placed| placed.cue.id)
-            }
+            Change::Added { cues, .. }
+            | Change::Pasted { cues, .. }
+            | Change::Deleted { cues, .. } => cues.first().map(|placed| placed.cue.id),
             Change::Moved { cue, .. } | Change::Edited { cue, .. } => Some(*cue),
             Change::Standby(_) | Change::Restored { .. } => None,
         }
     }
 
-    /// Returns the cue that an addition or a paste went below, if it did,
+    /// Returns the cue that an addition or a paste went next to, if it did,
     /// which undo returns the selection to, as Vim's undo returns the cursor
-    /// to where the change was made
+    /// to where the change was made, whether the cues went below it or above
+    /// it, where the selection was on the last of them
     pub fn anchor(&self) -> Option<CueId> {
         match self {
             Change::Added {
-                at: Place::After(cue),
+                at: Place::After(cue) | Place::Before(cue),
                 ..
             }
             | Change::Pasted {
-                at: Place::After(cue),
+                at: Place::After(cue) | Place::Before(cue),
                 ..
             } => Some(*cue),
             _ => None,
@@ -154,12 +154,8 @@ impl Change {
     /// on standby
     pub(super) fn keeping_standby_of(self, list: usize) -> Self {
         match self {
-            Self::Added {
-                placed,
-                at,
-                standby,
-            } if standby.list == list => Self::Added {
-                placed,
+            Self::Added { cues, at, standby } if standby.list == list => Self::Added {
+                cues,
                 at,
                 standby: Standby {
                     after: standby.before,

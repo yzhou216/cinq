@@ -150,9 +150,9 @@ pub enum Message {
     /// tab when there are fewer
     ShowTab(usize),
     NewKind(Kind),
-    /// Adds a cue next to the selection, on the side that the function
-    /// picks
-    Add(fn(CueId) -> Place),
+    /// Adds a number of cues in a row next to the selection, on the side that
+    /// the function picks, as one change
+    Add(fn(CueId) -> Place, usize),
     /// Moves the selected cue by a number of places, downwards when
     /// positive
     Move(isize),

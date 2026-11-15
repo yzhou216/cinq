@@ -329,10 +329,10 @@ halfway, and so does a change to the file.
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
 *move_down*, *move_up*, *back*, *forward*, *next_match*, and *previous_match*.
-It copies, cuts, or deletes as many cues for *copy*, *cut*, and *delete*,
-pastes as many times for *paste_below* and *paste_above*, undoes or redoes as
-many changes for *undo* and *redo*, and goes back as many tabs for
-*previous_tab*.
+It copies, cuts, deletes, or adds as many cues for *copy*, *cut*, *delete*,
+*add_below*, and *add_above*, pastes as many times for *paste_below* and
+*paste_above*, undoes or redoes as many changes for *undo* and *redo*, and
+goes back as many tabs for *previous_tab*.
 It gives the row, counted from one, that *first* and *last* select, and the
 tab, counted from one, that *next_tab* shows.
 For *half_page_down* and *half_page_up*, it sets how many rows they move, as
@@ -629,10 +629,13 @@ page.
 *add_below*
 	Add a cue of the kind chosen in the toolbar below the selection, or at the
 	end of the list without one.
+	A count adds that many cues in a row, at most a thousand, as one change
+	that undo takes back, and selects the last of them, as the cursor of Vim
+	goes to the last line that *3o* inserts.
 
 *add_above*
 	Add a cue of the kind chosen in the toolbar above the selection, or at the
-	end of the list without one.
+	end of the list without one, as many as the count, as *add_below* does.
 
 *move_down*
 	Move the selected cue one place down its list, or as many places as the
@@ -698,9 +701,9 @@ page.
 *undo*
 	Undo the latest change to the show, or as many of the latest changes as the
 	count, stopping at the oldest.
-	Undoing the addition of a cue or a paste below a cue selects that cue, as
-	the cursor of Vim goes back to where the change was made, and undoing
-	one above a cue selects the cue that has taken its place.
+	Undoing an addition or a paste, of all the cues that a count made, selects
+	the cue that it went below or above, as the cursor of Vim goes back to
+	where the change was made.
 
 *redo*
 	Redo the change undone last, or as many changes as the count, stopping at

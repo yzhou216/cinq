@@ -85,7 +85,7 @@ fn a_move_that_scrolls_or_a_change_in_the_list_drops_the_measure_kept() {
     assert_eq!(moved(stepped), 0);
     let (wheeled, _) = kept().handled(Message::Remeasure);
     assert_eq!(moved(wheeled), 0);
-    let (added, _) = kept().handled(Message::Add(Place::After));
+    let (added, _) = kept().handled(Message::Add(Place::After, 1));
     assert_eq!(moved(added), 0);
 }
 

@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A count before the keys of `add_below` and `add_above`, such as `3 o`,
+  adds that many cues in a row, at most a thousand, as one change for undo,
+  and selects the last of them, as the cursor of Vim goes to the last line
+  that `3o` inserts.
 - `Y` copies the selected cue in the vi keymap, as `y y` does, and takes a
   count.
 - In the vi keymap, `d` and `y` take a motion, as in Vim: `d j` cuts the

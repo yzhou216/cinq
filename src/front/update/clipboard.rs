@@ -19,9 +19,9 @@ use crate::{
     front::{App, view::format},
 };
 
-/// Most cues that one paste adds, even of a clipboard that holds more, which
-/// keeps a count typed by mistake from filling the memory
-const PASTE_LIMIT: usize = 1000;
+/// Most cues that one paste or one add adds, even of a clipboard that holds
+/// more, which keeps a count typed by mistake from filling the memory
+pub(super) const PASTE_LIMIT: usize = 1000;
 
 /// What the status bar tells when a paste finds nothing to paste, as Vim
 /// does with its E353

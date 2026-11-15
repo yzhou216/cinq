@@ -39,33 +39,42 @@ impl Workspace {
         }
     }
 
-    /// Adds a cue with the next identity, numbered after the highest cue of
-    /// any list, and records it with the standby of its list before and
-    /// after, which the new cue can take.  Once the identities have run
-    /// out, no cue is added.
-    pub(super) fn added(self, list: usize, kind: Kind, at: Place) -> Self {
-        let Some(id) = self.next_cue_id() else {
-            return self;
-        };
-        let number = Numbers::of(self.cues().map(|cue| cue.number.as_str())).next();
+    /// Adds cues with the next identities, each after the one before and
+    /// numbered after the highest cue of any list, and records them as one
+    /// change at the place of the first, with the standby of their list before
+    /// and after, which the first of them can take.  Once the identities have
+    /// run out, no more cues are added.
+    pub(super) fn added(self, list: usize, kind: Kind, at: Place, count: usize) -> Self {
+        let ids: Vec<CueId> = (self.next_id..)
+            .take(count)
+            .map_while(|id| u32::try_from(id).ok().map(CueId))
+            .collect();
         let before = self.lists.get(list).and_then(|cues| cues.standby);
-        let workspace = Self {
-            next_id: self.next_id + 1,
-            ..self.with_list(list, |cues| cues.with_new_cue(id, number, kind, at))
-        };
-        let Some(placed) = workspace.place_of(id) else {
+        let numbers = Numbers::of(self.cues().map(|cue| cue.number.as_str()));
+        let (workspace, ..) =
+            ids.iter()
+                .fold((self, at, numbers), |(workspace, at, mut numbers), &id| {
+                    let number = numbers.next();
+                    numbers.take(&number);
+                    let added = Self {
+                        next_id: workspace.next_id + 1,
+                        ..workspace.with_list(list, |cues| cues.with_new_cue(id, number, kind, at))
+                    };
+                    (added, Place::After(id), numbers)
+                });
+        let cues: Vec<Placed> = ids
+            .iter()
+            .filter_map(|&id| workspace.place_of(id))
+            .collect();
+        if cues.is_empty() {
             return workspace;
-        };
+        }
         let standby = Standby {
             list,
             before,
             after: workspace.lists[list].standby,
         };
-        workspace.recorded(Change::Added {
-            placed: Box::new(placed),
-            at,
-            standby,
-        })
+        workspace.recorded(Change::Added { cues, at, standby })
     }
 
     /// Deletes cues as one change, with the places they had and where

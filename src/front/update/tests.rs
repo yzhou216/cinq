@@ -9,6 +9,7 @@
 //! new cue, a level typed halfway, a link of the help page that fails to
 //! open, and the clipboard
 
+mod adding;
 mod clipboard;
 mod clipped;
 mod clock;
@@ -93,7 +94,7 @@ fn deleting_selects_the_cue_after_or_else_the_one_before() {
 
 #[test]
 fn undoing_away_the_selected_cue_selects_the_cue_in_its_place() {
-    let (added, _) = show(Some(CueId(4))).handled(Message::Add(Place::Before));
+    let (added, _) = show(Some(CueId(4))).handled(Message::Add(Place::Before, 1));
     let (undone, _) = added.handled(Message::Undo(1));
     assert_eq!(undone.selected, Some(CueId(4)));
 }
@@ -109,8 +110,8 @@ fn undoing_an_addition_or_a_paste_selects_the_cue_that_was_selected_when_it_was_
     };
     let undo = |message| selected_after(vec![message, Message::Undo(1)]);
     // Below and above, as `o u`, `O u`, `p u`, and `P u` of Vim end
-    assert_eq!(undo(Message::Add(Place::After)), Some(CueId(4)));
-    assert_eq!(undo(Message::Add(Place::Before)), Some(CueId(4)));
+    assert_eq!(undo(Message::Add(Place::After, 1)), Some(CueId(4)));
+    assert_eq!(undo(Message::Add(Place::Before, 1)), Some(CueId(4)));
     assert_eq!(undo(Message::Paste(Place::After, 1)), Some(CueId(4)));
     assert_eq!(undo(Message::Paste(Place::Before, 1)), Some(CueId(4)));
     // Paste of several cues, and the selection moved before the undo
@@ -122,11 +123,43 @@ fn undoing_an_addition_or_a_paste_selects_the_cue_that_was_selected_when_it_was_
     assert_eq!(moved, Some(CueId(4)));
     // Redo selects what was added again
     let redone = selected_after(vec![
-        Message::Add(Place::After),
+        Message::Add(Place::After, 1),
         Message::Undo(1),
         Message::Redo(1),
     ]);
     assert_eq!(redone, Some(CueId(22)));
+}
+
+#[test]
+fn undoing_a_counted_addition_removes_all_its_cues_as_one_change_and_selects_the_anchor() {
+    let counted = |place, count| {
+        let (added, _) = show(Some(CueId(4))).handled(Message::Add(place, count));
+        let cues: Vec<_> = added.workspace.lists()[0]
+            .cues
+            .iter()
+            .map(|c| c.id.0)
+            .collect();
+        let (undone, _) = added.handled(Message::Undo(1));
+        let after: Vec<_> = undone.workspace.lists()[0]
+            .cues
+            .iter()
+            .map(|c| c.id.0)
+            .collect();
+        (cues, after, undone.selected)
+    };
+    let (cues, after, selected) = counted(Place::After, 3);
+    assert_eq!(cues[3..8], [4, 22, 23, 24, 5]);
+    assert_eq!(after, (1..=12).collect::<Vec<_>>());
+    assert_eq!(selected, Some(CueId(4)));
+    let (cues, after, selected) = counted(Place::Before, 3);
+    assert_eq!(cues[2..7], [3, 22, 23, 24, 4]);
+    assert_eq!(after, (1..=12).collect::<Vec<_>>());
+    assert_eq!(selected, Some(CueId(4)));
+    // One undo took all three, and redo puts them back with the first selected
+    let (added, _) = show(Some(CueId(4))).handled(Message::Add(Place::After, 3));
+    let (redone, _) = added.handled(Message::Undo(1)).0.handled(Message::Redo(1));
+    assert_eq!(redone.workspace.lists()[0].cues.len(), 15);
+    assert_eq!(redone.selected, Some(CueId(22)));
 }
 
 #[test]
@@ -135,7 +168,7 @@ fn sound_file_chosen_for_a_new_cue_names_it_by_its_path_from_the_show() {
         workspace: Workspace::new(Vec::new()).directory("/show"),
         ..App::default()
     };
-    let (added, _) = app.handled(Message::Add(Place::After));
+    let (added, _) = app.handled(Message::Add(Place::After, 1));
     let id = added.selected.expect("a new cue is selected");
     let chosen = Message::FileChosen(id, "/show/sounds/storm.ogg".into());
     let (chosen, _) = added.handled(chosen);

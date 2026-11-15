@@ -88,7 +88,7 @@ impl App {
             }
             Message::Back(count) => return self.walking(|app| app.went_back(count)),
             Message::Forward(count) => return self.walking(|app| app.went_forward(count)),
-            Message::Add(place) => return self.with_new_cue(place).revealed(),
+            Message::Add(place, count) => return self.with_new_cue(place, count).revealed(),
             Message::Move(by) => return self.with_selected_moved(by).revealed(),
             Message::Copy(count) => self.with_copied(count),
             Message::Cut(count) => return self.cut(count).revealed(),
