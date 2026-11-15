@@ -6,11 +6,15 @@
 //! files of audio, video, and picture cues, and undoing and redoing changes
 //! to the show
 
+use std::ops::ControlFlow;
+
 use iced::Task;
 use itertools::Itertools;
 
 use crate::{
-    back::{Change, Command, CueId, Kind, PICTURE_FILES, Place, SOUND_FILES, VIDEO_FILES},
+    back::{
+        Change, Command, CueId, Kind, PICTURE_FILES, Place, SOUND_FILES, VIDEO_FILES, Workspace,
+    },
     front::{App, Message},
 };
 
@@ -69,16 +73,36 @@ impl App {
         self.send(Command::Delete(ids)).showing(None, Some(first))
     }
 
-    pub(super) fn undone(self) -> Self {
-        let cue = self.workspace.undoable().and_then(Change::cue);
-        let row = self.selected_row();
-        self.send(Command::Undo).showing(cue, row)
+    /// Undoes up to `count` changes, and stops quietly at the oldest
+    pub(super) fn undone(self, count: usize) -> Self {
+        self.turned(count, Command::Undo, Workspace::undoable)
     }
 
-    pub(super) fn redone(self) -> Self {
-        let cue = self.workspace.redoable().and_then(Change::cue);
-        let row = self.selected_row();
-        self.send(Command::Redo).showing(cue, row)
+    /// Redoes up to `count` changes, and stops quietly at the newest
+    pub(super) fn redone(self, count: usize) -> Self {
+        self.turned(count, Command::Redo, Workspace::redoable)
+    }
+
+    /// Sends `command` once for each of `count` changes that `next` finds,
+    /// one at a time so that the selection and the notice follow the last
+    /// of them
+    fn turned(
+        self,
+        count: usize,
+        command: Command,
+        next: fn(&Workspace) -> Option<&Change>,
+    ) -> Self {
+        let flow = (0..count).try_fold(self, |app, _| match next(&app.workspace) {
+            Some(change) => {
+                let cue = change.cue();
+                let row = app.selected_row();
+                ControlFlow::Continue(app.send(command.clone()).showing(cue, row))
+            }
+            None => ControlFlow::Break(app),
+        });
+        match flow {
+            ControlFlow::Continue(app) | ControlFlow::Break(app) => app,
+        }
     }
 
     /// Selects a cue that a change touched, if it is still there.  A

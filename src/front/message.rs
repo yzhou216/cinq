@@ -32,7 +32,15 @@ impl Tab {
     /// either end
     pub fn stepped(self, offset: isize) -> Self {
         let count = Self::VARIANTS.len() as isize;
-        Self::VARIANTS[(self as isize + offset).rem_euclid(count) as usize]
+        // Reduced first, since a count as large as a number can hold would
+        // overflow the sum
+        Self::VARIANTS[(self as isize + offset.rem_euclid(count)).rem_euclid(count) as usize]
+    }
+
+    /// Returns the tab with a number, counted from one, or the last tab
+    /// when there are fewer
+    pub fn numbered(number: usize) -> Self {
+        Self::VARIANTS[number.saturating_sub(1).min(Self::VARIANTS.len() - 1)]
     }
 }
 
@@ -77,8 +85,12 @@ pub enum Message {
     Forward(usize),
     ShowMode(bool),
     Tab(Tab),
-    /// Shows the inspector tab a number of tabs to the right
+    /// Shows the inspector tab a number of tabs to the right, wrapping
+    /// around at either end
     StepTab(isize),
+    /// Shows the inspector tab with a number, counted from one, or the last
+    /// tab when there are fewer
+    ShowTab(usize),
     NewKind(Kind),
     /// Adds a cue next to the selection, on the side that the function
     /// picks
@@ -93,8 +105,10 @@ pub enum Message {
     /// Asks which file an audio, video, or picture cue plays or shows
     ChooseFile(CueId),
     FileChosen(CueId, PathBuf),
-    Undo,
-    Redo,
+    /// Undoes a number of changes, stopping at the oldest
+    Undo(usize),
+    /// Redoes a number of changes, stopping at the newest
+    Redo(usize),
     Focus(Focus),
     ToggleHelp,
     CloseHelp,

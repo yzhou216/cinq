@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A count typed before the keys of undo and redo turns that many changes, as
+  `3 u` does in Vim, and stops at the oldest or newest.  A count before
+  `next_tab` shows the inspector tab of that number, as `2 g t` does, and
+  before `previous_tab` goes back that many tabs.
 - The vi keymap takes more keys of Vim: `x` and `Delete` delete the selected
   cue, as `d d` does, `F1` shows the help page beside `?`, and `Control+Home`
   and `Control+End` select the first and last cue as `g g` and `G` do, each

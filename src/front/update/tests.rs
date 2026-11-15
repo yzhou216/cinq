@@ -10,6 +10,7 @@
 //! open
 
 mod clock;
+mod counts;
 mod history;
 mod loading;
 
@@ -162,7 +163,7 @@ fn deleting_selects_the_cue_after_or_else_the_one_before() {
 #[test]
 fn undoing_away_the_selected_cue_selects_the_cue_in_its_place() {
     let (added, _) = show(Some(CueId(4))).handled(Message::Add(Place::After));
-    let (undone, _) = added.handled(Message::Undo);
+    let (undone, _) = added.handled(Message::Undo(1));
     assert_eq!(undone.selected, Some(CueId(5)));
 }
 

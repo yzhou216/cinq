@@ -293,11 +293,14 @@ halfway, and so does a change to the file.
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
 *move_down*, *move_up*, *back*, and *forward*.
-It deletes as many cues for *delete*, and gives the row, counted from one,
-that *first* and *last* select.
+It deletes as many cues for *delete*, undoes or redoes as many changes for
+*undo* and *redo*, and goes back as many tabs for *previous_tab*.
+It gives the row, counted from one, that *first* and *last* select, and the
+tab, counted from one, that *next_tab* shows.
 Other actions leave the count unused.
 A count larger than what there is, such as *9 Control+o* with fewer places
-behind, makes cinq go as far as it can, where Vim would refuse it.
+behind, *9 g t* with fewer tabs, or *3 d d* on the last cue, makes cinq go as
+far as it can, where Vim would refuse it.
 Since digits count, no sequence can start with one.
 
 A key bound by itself to *go* or *panic* acts at once, even halfway through
@@ -396,10 +399,12 @@ page.
 	of the help page.
 
 *next_tab*
-	Show the next tab of the inspector.
+	Show the next tab of the inspector, or the tab whose number the count gives,
+	counted from one, or the last tab when there are fewer.
 
 *previous_tab*
-	Show the previous tab of the inspector.
+	Show the previous tab of the inspector, or go back as many tabs as the count,
+	wrapping around at the first.
 
 *back*
 	Go back to the place before the last jump, as the jump list of Vim does
@@ -469,10 +474,12 @@ page.
 	Delete the selected cue, or as many cues from it down as the count.
 
 *undo*
-	Undo the latest change to the show.
+	Undo the latest change to the show, or as many of the latest changes as the
+	count, stopping at the oldest.
 
 *redo*
-	Redo the change undone last.
+	Redo the change undone last, or as many changes as the count, stopping at
+	the newest.
 
 *open*
 	Open a show that the file chooser of the desktop picks.

@@ -6,6 +6,7 @@
 //! the keys of GO and Panic, and keys that act alone
 
 use super::*;
+use crate::front::Message;
 
 #[test]
 fn counts_repeat_motions() {
@@ -118,4 +119,43 @@ fn x_begins_no_other_command_and_types_in_a_field() {
 fn keys_of_delete_and_help_stay_with_a_field_that_has_the_keyboard() {
     assert!(!Action::Delete.acts_in_fields());
     assert!(!Action::Help.acts_in_fields());
+}
+
+#[test]
+fn counts_of_cua_keys_act_as_those_of_vi_keys_do() {
+    let cua = Keymap::from(Preset::Cua);
+    let action = |text: &str| {
+        keys(text)
+            .into_iter()
+            .fold(Outcome::default(), |outcome, press| {
+                cua.parse(&outcome.pending, press)
+            })
+            .action
+    };
+    assert_eq!(action("3 Control+z"), Some((Action::Undo, Some(3))));
+    assert_eq!(action("2 Control+y"), Some((Action::Redo, Some(2))));
+    assert_eq!(action("2 Control+Tab"), Some((Action::NextTab, Some(2))));
+    assert_eq!(
+        action("2 Control+Shift+Tab"),
+        Some((Action::PreviousTab, Some(2)))
+    );
+}
+
+#[test]
+fn counts_of_vi_keys_reach_undo_redo_and_the_tabs() {
+    assert_eq!(action("3 u"), Some((Action::Undo, Some(3))));
+    assert_eq!(action("2 Control+r"), Some((Action::Redo, Some(2))));
+    assert_eq!(action("2 g t"), Some((Action::NextTab, Some(2))));
+    assert_eq!(action("2 g T"), Some((Action::PreviousTab, Some(2))));
+    assert!(matches!(Action::Undo.message(Some(3)), Message::Undo(3)));
+    assert!(matches!(Action::Redo.message(None), Message::Redo(1)));
+    assert!(matches!(
+        Action::NextTab.message(Some(2)),
+        Message::ShowTab(2)
+    ));
+    assert!(matches!(Action::NextTab.message(None), Message::StepTab(1)));
+    assert!(matches!(
+        Action::PreviousTab.message(Some(2)),
+        Message::StepTab(-2)
+    ));
 }

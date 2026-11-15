@@ -26,7 +26,7 @@ use std::thread;
 
 use iced::{Task, futures::channel::oneshot, mouse};
 
-use super::{App, Message};
+use super::{App, Message, Tab};
 use crate::back::{Command, Edit, parse_level};
 pub(super) use history::History;
 use link::{edit_config, open_link};
@@ -61,8 +61,8 @@ impl App {
             Message::Add(place) => return self.with_new_cue(place).revealed(),
             Message::Move(by) => return self.with_selected_moved(by).revealed(),
             Message::Delete(count) => return self.without_selected(count).revealed(),
-            Message::Undo => return self.undone().revealed(),
-            Message::Redo => return self.redone().revealed(),
+            Message::Undo(count) => return self.undone(count).revealed(),
+            Message::Redo(count) => return self.redone(count).revealed(),
             Message::Resized(window, size) if self.main == Some(window) => {
                 return self.resized(window, size).revealed();
             }
@@ -166,6 +166,10 @@ impl App {
                 ..self
             },
             Message::Tab(tab) => Self { tab, ..self },
+            Message::ShowTab(number) => Self {
+                tab: Tab::numbered(number),
+                ..self
+            },
             Message::StepTab(offset) => Self {
                 tab: self.tab.stepped(offset),
                 ..self
