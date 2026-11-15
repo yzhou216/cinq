@@ -833,7 +833,8 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   whatever modifiers are held with it there, apart from a key that the other
   of the two has by itself, as *TYPING* describes.
 
-The help page shows the keys as they ended up.
+The help page shows the keys as they ended up, and leaves out the actions that
+the keymap in use binds to no key.
 
 # EXAMPLES
 

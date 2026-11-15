@@ -10,6 +10,8 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The help page leaves out the actions that the keymap in use binds to no
+  key, such as `delete` in the vi keymap, so that its table is shorter.
 - The help page and the table of cinq(5) list the actions in groups, GO,
   Panic, and standby first, then the moves, then the edits, then the files
   and the window, in place of the order in which actions were added.

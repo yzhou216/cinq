@@ -2,10 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Help page, which lists every key binding and fills the window
+//! Help page, which lists every action that has a key and fills the window
 //!
 //! The keys of the next and previous cue scroll it, and those of the first
 //! and last cue go to its top and its bottom.
+
+#[cfg(test)]
+mod tests;
 
 use std::ffi::OsString;
 
@@ -21,7 +24,7 @@ use strum::VariantArray;
 use super::{HELP, SPACING, button, theme};
 use crate::front::{
     App, Message,
-    keymap::{Action, config::Source},
+    keymap::{Action, Keymap, config::Source},
 };
 
 /// Widest that the text of the page grows, so that its lines stay easy to
@@ -54,7 +57,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
                 text(action.name())
             }),
         ],
-        Action::VARIANTS.iter().copied(),
+        bound(keymap),
     )
     .padding_y(ROW_GAP);
     let example = keymap
@@ -75,6 +78,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         text(format!("A count typed before a key repeats a move{example}.  It goes that many places back or forward, undoes or redoes that many changes, copies, cuts, deletes, or adds that many cues, pastes that many times, and goes that many matches along or that many pages down or up.  It picks the row for the first and last cue and the tab for the next tab, and sets the rows of a half page.")),
     ]
     .extend(operators.map(Element::from))
+    .push(text("Actions that this keymap binds to no key are left out of the table, and cinq(5) lists them all."))
     .push(text("The keys of GO and Panic act at once, even halfway through another command."))
     .push(source(&app.config.source))
     .push(key_values)
@@ -90,6 +94,16 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         .width(Fill)
         .height(Fill);
     container(scrolling).padding(SPACING).into()
+}
+
+/// Returns the actions that the keymap binds to a key, in the order of the
+/// page, since a row with no key would only crowd the page
+fn bound(keymap: &Keymap) -> Vec<Action> {
+    Action::VARIANTS
+        .iter()
+        .copied()
+        .filter(|&action| keymap.key(action).is_some())
+        .collect()
 }
 
 fn source(source: &Source) -> Element<'_, Message> {
