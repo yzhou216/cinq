@@ -90,6 +90,21 @@ Major changes and improvements in each release of cinq, newest first.
   five seconds have passed without an answer.  A device that has fewer
   channels than an output names is looked at ever more seldom, up to every
   thirty seconds, until what it offers changes.
+- The keys that edit cues edit outputs while they show: o and O add an
+  output, and a count adds that many, up to 64, d d, x, and the motions such
+  as d j cut outputs, y y and Y copy them, p and P paste them, Alt+j and
+  Alt+k move one, and i, a, A, I, c c, and S enter its name, with outputs
+  taking a register of their own beside that of cues.  A cut output pasted
+  back into the same show takes back its identity, so that the cues that
+  sent to it send to it again, while a copy is a new output that no cue
+  sends to.  A show keeps at least one output, and the status bar tells where
+  the cues that name no sends play when the first output changes.  Undo and
+  redo select the output that they changed, and undoing a change to a cue
+  shows the cue list, as a jump that going back returns from.
+  A notice in the status bar that does not fit gives way at a word, ending in
+  an ellipsis, and a pasted output reads as pasted, not as added.
+  In the cua keymap, F2 selects the name of an output, and Tab selects the
+  text of the field that it reaches, as they do for a cue.
 - The keys that move through the rows of the cue list, such as j, k, g g,
   G, the keys of half and whole pages, the keys that scroll by a row, select
   a row in view, or place the selected row, and the search keys, do the same

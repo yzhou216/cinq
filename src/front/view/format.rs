@@ -13,6 +13,7 @@ use itertools::Itertools;
 
 use crate::back::{
     Active, Advance, Change, Cue, CueList, Edit, Kind, Media, Output, Phase, Workspace,
+    moved_output,
 };
 
 /// Formats seconds as `m:ss.s`
@@ -180,7 +181,13 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
             None => "moved standby past the end".to_owned(),
         },
         Change::Restored { .. } => "brought back the unsaved changes".to_owned(),
-        Change::Outputs { before, after, .. } => outputs(before, after),
+        Change::Outputs {
+            before,
+            after,
+            cut,
+            pasted,
+            ..
+        } => outputs(workspace, before, after, *cut, *pasted),
     }
 }
 
@@ -193,14 +200,27 @@ pub fn clipped(verb: &str, cues: &[Cue]) -> String {
     }
 }
 
+/// Tells what a copy or cut of outputs took with `verb`, by the name of the
+/// output, or else by how many outputs
+pub fn clipped_outputs(verb: &str, outputs: &[Output]) -> String {
+    match outputs {
+        [output] => format!("{verb} the output {}", output.name),
+        outputs => format!("{verb} {} outputs", outputs.len()),
+    }
+}
+
 /// Describes a change to the outputs by what differs between them before
-/// and after it
-fn outputs(before: &[Output], after: &[Output]) -> String {
-    let missing = |from: &[Output], of: &[Output]| {
-        from.iter()
-            .find(|output| of.iter().all(|other| other.id != output.id))
-            .map(|output| output.name.clone())
-    };
+/// and after it, and where the cues that name no outputs play now, when that
+/// changed
+fn outputs(
+    workspace: &Workspace,
+    before: &[Output],
+    after: &[Output],
+    cut: bool,
+    pasted: bool,
+) -> String {
+    let removed = if cut { "cut" } else { "deleted" };
+    let added = if pasted { "pasted" } else { "added" };
     let pairs = || {
         before.iter().filter_map(|was| {
             let now = after.iter().find(|now| now.id == was.id)?;
@@ -221,19 +241,35 @@ fn outputs(before: &[Output], after: &[Output]) -> String {
             None
         }
     });
-    let moved = || {
-        before
-            .iter()
-            .zip(after)
-            .find(|(was, now)| was.id != now.id)
-            .map(|(_, now)| format!("moved the output {}", now.name))
-    };
-    missing(after, before)
-        .map(|name| format!("added the output {name}"))
-        .or_else(|| missing(before, after).map(|name| format!("deleted the output {name}")))
-        .or(edited)
-        .or_else(moved)
-        .unwrap_or_else(|| "changed the outputs".to_owned())
+    let moved =
+        || moved_output(before, after, None).map(|now| format!("moved the output {}", now.name));
+    let described = match (
+        missing(after, before).as_slice(),
+        missing(before, after).as_slice(),
+    ) {
+        ([output], []) => Some(format!("{added} the output {}", output.name)),
+        ([], [output]) => Some(format!("{removed} the output {}", output.name)),
+        (put, []) if !put.is_empty() => Some(format!("{added} {} outputs", put.len())),
+        ([], gone) if !gone.is_empty() => Some(format!("{removed} {} outputs", gone.len())),
+        (put, deleted) if !put.is_empty() || !deleted.is_empty() => {
+            Some("changed the outputs".to_owned())
+        }
+        _ => edited.or_else(moved),
+    }
+    .unwrap_or_else(|| "changed the outputs".to_owned());
+    [Some(described), rerouting(workspace, before, after)]
+        .into_iter()
+        .flatten()
+        .join(", ")
+}
+
+/// Tells where the cues that name no outputs play, when a change to the
+/// outputs made another output the first, and some cue names none
+pub fn rerouting(workspace: &Workspace, before: &[Output], after: &[Output]) -> Option<String> {
+    let first = after.first()?;
+    let moved = before.first().is_none_or(|was| was.id != first.id);
+    let unrouted = workspace.cues().any(|cue| cue.sends.is_none());
+    (moved && unrouted).then(|| format!("so that cues with no sends play on {}", first.name))
 }
 
 fn number(cue: &Cue) -> String {
@@ -242,4 +278,11 @@ fn number(cue: &Cue) -> String {
     } else {
         cue.number.clone()
     }
+}
+
+/// Returns the outputs of `from` that `of` lacks
+fn missing<'a>(from: &'a [Output], of: &[Output]) -> Vec<&'a Output> {
+    from.iter()
+        .filter(|output| of.iter().all(|other| other.id != output.id))
+        .collect()
 }

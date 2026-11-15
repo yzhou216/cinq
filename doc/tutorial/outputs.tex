@@ -27,10 +27,11 @@ Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
   selected output, Main.
 \item Press \ui{Add output}.  A new output appears below Main, on the first
   two channels of the default device.  In the inspector, replace the text of
-  its \ui{Name} with \texttt{Left}: in the vi keymap, press \key{c c} with
-  the output selected, and in either keymap, click the field and press
-  \key{Control+a} to select its text, then type.  Replace its \ui{Channels}
-  with \texttt{1} the same way, and press \key{Enter}, which applies them.
+  its \ui{Name} with \texttt{Left}: press \key{c c} in the vi keymap, or
+  \key{F2} in the cua keymap, with the output selected, which selects the
+  text of the name, then type.  Press \key{Tab} twice, which passes the
+  \ui{Device} list and selects the text of \ui{Channels}, and type
+  \texttt{1}.  Press \key{Enter}, which applies them.
 \item Press \ui{Add output} again, and make an output named \texttt{Right} on
   channel~2.  The outputs now look as in Figure~\ref{fig:outputs}.
 \end{enumerate}
@@ -59,11 +60,19 @@ the outputs the same way: \key{j} and \key{k} of the vi keymap select an
 output, \key{g g} and \key{G} the first and the last, and the keys of pages,
 of scrolling, and of the rows in view do the same, which matters once the
 show has more outputs than the window shows.  The search keys, \key{/} and
-\key{n}, look for the name of an output.  The keys that add, move, and delete
-cues add, move, and delete outputs.  The key \key{Control+o} of the vi keymap,
-which goes back to the place before the last jump, leaves the outputs for the
-cue list that showed, and the status bar at the bottom names it while the
-outputs show.
+\key{n}, look for the name of an output.  The key \key{Control+o} of the vi
+keymap, which goes back to the place before the last jump, leaves the outputs
+for the cue list that showed, and the status bar at the bottom names it while
+the outputs show.
+
+The keys that edit cues edit outputs as well.  In the vi keymap, \key{o} and
+\key{O} add an output below and above the selected one, and a count adds that
+many.  \key{d d} cuts the selected output, \key{p} puts it back below the
+selected one, and \key{u} takes the cut back.  An output that is cut and
+pasted back into the same show is the output that it was, so that the cues
+that sent to it send to it again, while \key{y y} and \key{p} make a copy
+that no cue sends to.  A show keeps at least one output.  \key{i} edits the
+name of the output.
 
 \section{Sending a cue}
 

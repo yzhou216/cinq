@@ -139,10 +139,10 @@ impl Action {
             _ => "Delete",
         };
         let rows = match motion {
-            Action::Next => "the selected cue and the next",
-            Action::Previous => "the selected cue and the previous",
-            Action::First => "the cues from the selection up to the first",
-            _ => "the cues from the selection down to the last",
+            Action::Next => "the selected cue or output and the next",
+            Action::Previous => "the selected cue or output and the previous",
+            Action::First => "the cues or outputs from the selection up to the first",
+            _ => "the cues or outputs from the selection down to the last",
         };
         format!("{verb} {rows}")
     }

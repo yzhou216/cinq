@@ -29,14 +29,17 @@ fn the_keys_of_one_action_share_a_line_after_an_operator() {
             .map(|(keys, _)| keys.as_str())
     };
     assert_eq!(
-        line("Cut the selected cue and the next"),
+        line("Cut the selected cue or output and the next"),
         Some("j, g j, ArrowDown, Control+n, +")
     );
     assert_eq!(
-        line("Cut the selected cue and the previous"),
+        line("Cut the selected cue or output and the previous"),
         Some("k, g k, ArrowUp, Control+p, -")
     );
-    assert_eq!(line("Cut the selected cue to the clipboard"), Some("d"));
+    assert_eq!(
+        line("Cut the selected cue, or output, to the clipboard"),
+        Some("d")
+    );
 }
 
 #[test]

@@ -17,8 +17,8 @@ fn only_outputs_that_the_cue_sends_to_count_as_unable_to_play() {
         sends: Some(sends.clone()),
         ..Cue::new(CueId(1), "1", Kind::Audio, "Music").build()
     };
-    let workspace =
-        Workspace::new(vec![CueList::new("Main", vec![cue])]).apply(Command::AddOutput { at: 1 });
+    let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])])
+        .apply(Command::AddOutput { at: 1, count: 1 });
     let missing = || Fault::Missing("there is no audio device".to_owned());
     let app = App {
         workspace,

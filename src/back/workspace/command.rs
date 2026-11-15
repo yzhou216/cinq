@@ -55,11 +55,23 @@ pub enum Command {
     /// Puts cue lists and outputs kept from before in place of those of
     /// the show, as one change, as bringing back unsaved changes does
     Restore(Vec<CueList>, Vec<Output>),
-    /// Adds an output at a place among the outputs, counted from zero, or
-    /// at the end past them
-    AddOutput { at: usize },
-    /// Removes an output, unless it is the last one
-    DeleteOutput(OutputId),
+    /// Adds a number of outputs in a row at a place among the outputs, counted
+    /// from zero, or at the end past them, as one change
+    AddOutput { at: usize, count: usize },
+    /// Removes outputs as one change, unless that leaves none
+    DeleteOutputs(Vec<OutputId>),
+    /// Removes outputs as [`Command::DeleteOutputs`] does, and records that
+    /// they went to the register of outputs, so that the change is told as a
+    /// cut
+    CutOutputs(Vec<OutputId>),
+    /// Pastes outputs in a row at a place among the outputs as one change.
+    /// With `restore`, an output whose identity is free takes it back, so that
+    /// the cues that sent to it send to it again.
+    PasteOutputs {
+        at: usize,
+        outputs: Vec<Output>,
+        restore: bool,
+    },
     /// Moves an output by a number of places, downwards when positive
     MoveOutput { output: OutputId, by: isize },
     /// Changes one setting of an output
@@ -92,7 +104,9 @@ impl Command {
                 | Command::Edit(..)
                 | Command::Restore(..)
                 | Command::AddOutput { .. }
-                | Command::DeleteOutput(_)
+                | Command::DeleteOutputs(_)
+                | Command::CutOutputs(_)
+                | Command::PasteOutputs { .. }
                 | Command::MoveOutput { .. }
                 | Command::EditOutput(..)
         )

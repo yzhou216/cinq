@@ -65,7 +65,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         .map_or_else(String::new, |keys| format!(", as in 3 {keys}"));
     let operators = Some(keymap.operator_keys())
         .filter(|keys| !keys.is_empty())
-        .map(|keys| text(format!("After {}, a key that selects the next, previous, first, or last cue applies the action to the cues from the selection to where that key would move it.  A count before the operator, before the key, or both counts the move, and the two multiply.", keys.join(" or "))));
+        .map(|keys| text(format!("After {}, a key that selects the next, previous, first, or last cue or output applies the action to the cues or outputs from the selection to where that key would move it.  A count before the operator, before the key, or both counts the move, and the two multiply.", keys.join(" or "))));
     let key_values = paragraph(
         "The manual page cinq(5) describes config.toml, where keys go by their W3C UI Events key values, listed at ",
         link(KEY_VALUES, OsString::from(KEY_VALUES)),

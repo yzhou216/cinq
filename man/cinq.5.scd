@@ -624,12 +624,44 @@ names of the outputs, in any case, with the rules of *SEARCHING*, and the
 line tells that no output matches.
 *first* and *last* with a count, and the searches, are jumps there, as they
 are for cues.
-Some actions of cues also edit outputs: *edit* edits the name of the output,
-*add_below* and *add_above* add an output, *move_down* and *move_up* move it,
-and *delete* deletes the selected output only, whatever the count.
-Every other action that acts on cues, or changes the rows of a cue list, such
-as *standby*, *cut*, *copy*, and *paste_below*, does nothing there, since the
-cue list is out of sight.
+The actions that edit cues edit the outputs in the same way while they show.
+*edit*, *edit_start*, and *change_name* enter the Name field of the output
+with the caret at its end, at its start, or with all of it selected, as *F2*
+does in the cua keymap.
+*next_field* and *previous_field* move among the fields and lists of the
+output and select the text of a field that they reach, as they do for a cue.
+*add_below* and *add_above* add an output on the default device and its first
+two channels, as many as the count says, at most 64, and select the last of
+them.
+*move_down* and *move_up* move the output.
+*cut*, *copy*, *paste_below*, and *paste_above*, and the keys of an operator
+with a motion, such as *d j* and *y G*, take the selected output and those
+below it, as many as the count says or the motion reaches, into a register of
+outputs, which is apart from the cues that were copied, or put the register
+back, as many times as the count says, at most 64 outputs, and select the
+first output pasted.
+*delete* deletes them without copying.
+A show keeps at least one output, so that a cut or a delete that reaches all
+of them does nothing and the status bar tells so.
+A cut output pasted back into the show that it came from takes back its
+identity, with the level of its new cues, so that the cues that sent to it send
+to it again, as a line that was cut and pasted back in Vim is the line that
+was.
+A copy, and anything pasted into another show, has an identity of its own, the
+name of the original, numbered from 2 on where another output has that name,
+no cue that sends to it, and new cues that do not send to it.
+Cues that name no sends play on the first output, so that cutting, adding,
+moving, or pasting at the first place changes where they play, which the
+status bar tells with the change.
+*undo* and *redo* select the output that the change touched, or the neighbor
+of one that it took away.
+A change to a cue or to the cue lists leaves the outputs for the cue list in
+the same way as a jump, so that *back* returns to the outputs, and the change
+is undone or made again there, as are the changes that follow in the count.
+Show mode locks all of these but *copy*, and *undo* and *redo* do nothing
+there.
+Every other action that acts on cues, such as *standby*, does nothing, since
+the cue list is out of sight.
 While the outputs show, the status bar names the keys of *add_below*, *edit*,
 and *back*, and gives way, from the first to the last, to the key of *forward*,
 *add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that

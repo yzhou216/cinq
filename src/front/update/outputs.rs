@@ -11,6 +11,10 @@
 //! show, so that adding, deleting, moving, and renaming an output takes the
 //! keys of a cue.
 
+mod clipboard;
+mod editing;
+mod undoing;
+
 use iced::Task;
 
 use crate::{
@@ -41,17 +45,23 @@ impl App {
         }
     }
 
-    /// Applies a message that changes the rows of the cue list while the
-    /// outputs show: the keys that add, move, and delete rows do the same to
-    /// outputs, and every other such message does nothing, since the cue
+    /// Applies a message that acts on the rows of the cue list alone or
+    /// changes them while the outputs show: the keys that add, move, copy, cut,
+    /// paste, delete, undo, and redo do the same to outputs, each by the code
+    /// of outputs, and every other such message does nothing, since the cue
     /// list is out of sight
     pub(super) fn in_outputs(self, message: Message) -> (Self, Task<Message>) {
+        let above = |place: fn(CueId) -> Place| matches!(place(CueId(0)), Place::Before(_));
         let app = match message {
-            Message::Add(place, _) => {
-                self.with_new_output(matches!(place(CueId(0)), Place::Before(_)))
-            }
+            Message::Add(place, count) => self.with_new_outputs(above(place), count),
             Message::Move(by) => self.with_output_moved(by),
-            Message::Delete(_) => self.without_output(),
+            Message::Copy(count) => self.copied_outputs(count),
+            Message::Cut(count) => self.cut_outputs(count),
+            Message::Paste(place, count) => self.with_pasted_outputs(above(place), count),
+            Message::Delete(count) => self.without_outputs(count),
+            Message::Across(operator, motion, count) => self.across(operator, motion, count),
+            Message::Undo(count) => self.undone_outputs(count),
+            Message::Redo(count) => self.redone_outputs(count),
             _ => return (self, Task::none()),
         };
         app.revealed()
@@ -62,38 +72,6 @@ impl App {
         let outputs = self.workspace.outputs();
         self.output
             .and_then(|id| outputs.iter().position(|output| output.id == id))
-    }
-
-    /// Adds an output below the one shown, or above it, and shows the new
-    /// one
-    pub(super) fn with_new_output(self, above: bool) -> Self {
-        // Show mode adds nothing, so the selection stays where it is
-        if !self.editable() {
-            return self;
-        }
-        let at = self
-            .output_row()
-            .map_or(usize::MAX, |row| if above { row } else { row + 1 });
-        let app = self.send(Command::AddOutput { at });
-        let row = at.min(app.workspace.outputs().len().saturating_sub(1));
-        app.selecting(Some(row))
-    }
-
-    pub(super) fn with_output_moved(self, by: isize) -> Self {
-        match self.output {
-            Some(output) => self.send(Command::MoveOutput { output, by }),
-            None => self,
-        }
-    }
-
-    /// Deletes the output shown and shows the one that takes its place
-    pub(super) fn without_output(self) -> Self {
-        let (Some(output), row) = (self.output, self.output_row()) else {
-            return self;
-        };
-        let app = self.send(Command::DeleteOutput(output));
-        let last = app.workspace.outputs().len().saturating_sub(1);
-        app.selecting(row.map(|row| row.min(last)))
     }
 
     /// Applies the channels typed into the field of an output once the

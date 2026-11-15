@@ -22,6 +22,7 @@ mod matches;
 mod naming;
 mod operators;
 mod operators_pasting;
+mod output_editing;
 mod output_places;
 mod output_rows;
 mod outputs;

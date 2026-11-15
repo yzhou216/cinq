@@ -82,13 +82,7 @@ fn cue_list(app: &App) -> String {
             )
         })
         .collect();
-    format!(
-        "{lists:?} {} {:?} {:?} {}",
-        app.list,
-        app.selected,
-        app.tab,
-        app.clipped.is_some(),
-    )
+    format!("{lists:?} {} {:?} {:?}", app.list, app.selected, app.tab,)
 }
 
 #[test]

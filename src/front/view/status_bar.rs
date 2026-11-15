@@ -12,9 +12,10 @@
 //!
 //! The bar keeps to one line.  When it is too narrow for all of it, the
 //! keys of going forward and back, of GO, of Panic, of saving, and of the
-//! help page give way in turn, each one whole, and then the status gives way
-//! from its end, so that the keys typed so far, what the latest change told,
-//! and the key of cancel always show in full.
+//! help page give way in turn, each one whole, and then what the latest
+//! change told gives way, at a word, with an ellipsis, so that the status
+//! shows in full, while the keys typed so far and the key of cancel always
+//! show in full.
 //! While the outputs show, the bar names the keys that add and rename an
 //! output, and the key that goes back always, since it is the way out, so
 //! that the keys give way in another order: forward, add, rename, GO, Panic,
@@ -22,29 +23,22 @@
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
 
+mod fit;
+mod hints;
 #[cfg(test)]
 mod tests;
-
-use std::iter;
 
 use iced::{
     Center, Element, Fill, Padding,
     widget::{container, responsive, rich_text, row, span, text, text::Wrapping, text_input},
 };
-use itertools::Itertools;
 use unicode_width::UnicodeWidthStr;
 
 use super::{
-    LINE, SEARCH, SPACING, answered, char_width, format, giving_way, keep_keys, line_height,
-    line_keys, no_match, theme, warnings,
+    LINE, SEARCH, SPACING, char_width, format, giving_way, keep_keys, line_height, line_keys,
+    no_match, theme, warnings,
 };
-use crate::{
-    back::Turn,
-    front::{
-        App, Message, Search,
-        keymap::{Action, written},
-    },
-};
+use crate::front::{App, Message, Search, keymap::Action};
 
 const YIELDING: [Action; 8] = [
     Action::Forward,
@@ -120,7 +114,12 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
             (shown.into(), columns)
         }
     };
-    let shown = fitted(&hints(app), room.saturating_sub(taken), yielding(app));
+    let shown = fit::shown(
+        |told| hints::hints_told(app, told),
+        hints::told(app),
+        room.saturating_sub(taken),
+        yielding(app),
+    );
     row![left, text(shown).wrapping(Wrapping::None)]
         .spacing(SPACING)
         .padding(SPACING)
@@ -167,22 +166,6 @@ fn search_line<'a>(app: &'a App, search: &'a Search) -> Element<'a, Message> {
     keep_keys(line_keys(line), &app.config.keymap)
 }
 
-/// Returns the hints joined, each one whole, without as many of those
-/// that give way as it takes for the rest to fit in `room` columns
-fn fitted(hints: &[(Option<Action>, String)], room: usize, yielding: &[Action]) -> String {
-    giving_way(
-        yielding,
-        |gone| {
-            hints
-                .iter()
-                .filter(|(action, _)| !action.is_some_and(|action| gone.contains(&action)))
-                .map(|(_, hint)| hint)
-                .join(LINE)
-        },
-        |hints| hints.width() <= room,
-    )
-}
-
 fn status(app: &App) -> Vec<text::Span<'_>> {
     let count = warnings(app);
     let mode = if app.editable() {
@@ -199,92 +182,4 @@ fn status(app: &App) -> Vec<text::Span<'_>> {
         span(format::count(count, "warning"))
             .color_maybe((count > 0).then_some(theme::PALETTE.warning)),
     ]
-}
-
-/// Returns the hints, each with the action whose keys it names when it can
-/// give way
-fn hints(app: &App) -> Vec<(Option<Action>, String)> {
-    let keymap = &app.config.keymap;
-    let key =
-        |action: Action, label: &str| keymap.hint(action, label).map(|hint| (Some(action), hint));
-    let typed = (!app.keys.is_empty()).then(|| (None, written(&app.keys)));
-    let told = clipped(app)
-        .or_else(|| app.remark.map(str::to_owned))
-        .or_else(|| app.told.clone())
-        .or_else(|| notice(app))
-        .map(|told| (None, told));
-    let back = key(Action::Back, Action::Back.name()).filter(|_| app.can_go_back());
-    let forward = key(Action::Forward, Action::Forward.name()).filter(|_| app.can_go_forward());
-    // Two keys that a newcomer to the outputs needs, and none that destroys
-    let teaching = (app.outputs_shown && app.editable()).then(|| {
-        [
-            key(Action::AddBelow, "add output"),
-            key(Action::Edit, "rename"),
-        ]
-    });
-    let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
-    // The page covers an open menu, and takes its keys.  Enter picks
-    // whichever key is bound to pick, so that it stands in where none is.
-    let in_menu = app.menu && !app.help;
-    let pick =
-        key(Action::Pick, "pick").or_else(|| Some((Some(Action::Pick), "Enter: pick".to_owned())));
-    let close = key(Action::CloseMenu, "close");
-    // Escape would panic, so that the key that only cancels is told while it can
-    let cancel =
-        key(Action::Cancel, "cancel").filter(|_| !app.keys.is_empty() || app.search.is_some());
-    typed
-        .into_iter()
-        .chain(told)
-        .chain(pick.filter(|_| in_menu))
-        .chain(close.filter(|_| in_menu))
-        .chain(cancel)
-        .chain(teaching.into_iter().flatten().flatten())
-        .chain(back)
-        .chain(forward)
-        .chain(save)
-        .chain(key(Action::Go, "GO"))
-        .chain(key(Action::Panic, "Panic"))
-        .chain(key(Action::Help, Action::Help.name()))
-        .collect()
-}
-
-/// Tells what the latest copy or cut took, with the key that pastes it and,
-/// for a cut, the key that takes it back
-fn clipped(app: &App) -> Option<String> {
-    let keymap = &app.config.keymap;
-    let clipped = app.clipped.as_ref()?;
-    let paste = keymap
-        .hint(Action::PasteBelow, "paste")
-        .filter(|_| app.editable());
-    let undo = keymap
-        .hint(Action::Undo, Action::Undo.name())
-        .filter(|_| clipped.cut && app.workspace.undoable().is_some());
-    Some(
-        iter::once(clipped.told.clone())
-            .chain(paste)
-            .chain(undo)
-            .join(LINE),
-    )
-}
-
-/// Tells the latest change to the show, with the key that takes it back,
-/// or that makes it again after an undo, while that key can act
-fn notice(app: &App) -> Option<String> {
-    let workspace = &app.workspace;
-    let (turn, change) = workspace.latest_change()?;
-    let told = format::change(workspace, change);
-    let (told, action, next) = match turn {
-        Turn::Done => (capitalized(&told), Action::Undo, workspace.undoable()),
-        Turn::Undone => (format!("Undid: {told}"), Action::Redo, workspace.redoable()),
-        Turn::Redone => (format!("Redid: {told}"), Action::Undo, workspace.undoable()),
-    };
-    next.map(|_| answered(told, &app.config.keymap, action))
-}
-
-fn capitalized(text: &str) -> String {
-    text.chars()
-        .take(1)
-        .flat_map(char::to_uppercase)
-        .chain(text.chars().skip(1))
-        .collect()
 }

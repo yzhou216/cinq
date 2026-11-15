@@ -34,7 +34,7 @@ fn sends(pairs: &[(u32, f32)]) -> Sends {
 fn house_and_sub() -> Workspace {
     workspace(vec![audio(1)])
         .apply(edit_output(1, OutputEdit::Name("House".to_owned())))
-        .apply(Command::AddOutput { at: 1 })
+        .apply(Command::AddOutput { at: 1, count: 1 })
         .apply(edit_output(2, OutputEdit::Name("Sub".to_owned())))
         .apply(edit_output(2, OutputEdit::Channels(Channels::Mono(2))))
         .apply(edit_output(2, OutputEdit::NewCues(Some(-6.0))))
@@ -51,8 +51,11 @@ fn show_starts_with_main_where_cues_that_name_no_outputs_send() {
 #[test]
 fn outputs_add_after_one_another_under_names_of_their_own_and_keep_one() {
     let added = workspace(Vec::new())
-        .apply(Command::AddOutput { at: usize::MAX })
-        .apply(Command::AddOutput { at: 1 });
+        .apply(Command::AddOutput {
+            at: usize::MAX,
+            count: 1,
+        })
+        .apply(Command::AddOutput { at: 1, count: 1 });
     assert_eq!(names(&added), ["Main", "Output 2", "Output 1"]);
     let renamed = added
         .apply(edit_output(2, OutputEdit::Name("Main".to_owned())))
@@ -65,7 +68,9 @@ fn outputs_add_after_one_another_under_names_of_their_own_and_keep_one() {
     assert_eq!(names(&moved), ["Output 2", "Output 1", "Main"]);
     let one = [MAIN, OutputId(2), OutputId(3)]
         .into_iter()
-        .fold(moved, |show, id| show.apply(Command::DeleteOutput(id)));
+        .fold(moved, |show, id| {
+            show.apply(Command::DeleteOutputs(vec![id]))
+        });
     assert_eq!(names(&one), ["Output 2"]);
 }
 
@@ -100,7 +105,7 @@ fn every_cue_of_a_counted_add_sends_where_the_outputs_say() {
 #[test]
 fn deleting_an_output_silences_its_sends_until_undo_brings_it_back() {
     let show = house_and_sub().apply(edit(1, Edit::Sends(Some(sends(&[(1, 0.0), (2, -3.0)])))));
-    let deleted = show.apply(Command::DeleteOutput(OutputId(2)));
+    let deleted = show.apply(Command::DeleteOutputs(vec![OutputId(2)]));
     let cue = |show: &Workspace| show.cue(CueId(1)).cloned().expect("the cue is there");
     assert_eq!(deleted.sends(&cue(&deleted)), sends(&[(1, 0.0)]));
     let undone = deleted.apply(Command::Undo);

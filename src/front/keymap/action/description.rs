@@ -55,22 +55,28 @@ impl Action {
             Action::PreviousMatch => {
                 "Select the next match of the search, in the opposite direction"
             }
-            Action::Edit => "Edit the name of the selected cue, with the caret at its end",
-            Action::EditStart => "Edit the name of the selected cue, with the caret at its start",
-            Action::ChangeName => "Change the name of the selected cue, selecting all of it",
+            Action::Edit => {
+                "Edit the name of the selected cue, or output, with the caret at its end"
+            }
+            Action::EditStart => {
+                "Edit the name of the selected cue, or output, with the caret at its start"
+            }
+            Action::ChangeName => {
+                "Change the name of the selected cue, or output, selecting all of it"
+            }
             Action::NextField => "Move to the next field",
             Action::PreviousField => "Move to the previous field",
             Action::Pick => "Pick the highlighted option of an open menu",
             Action::CloseMenu => "Close an open menu without picking an option",
-            Action::AddBelow => "Add a cue below the selection",
-            Action::AddAbove => "Add a cue above the selection",
-            Action::Cut => "Cut the selected cue to the clipboard",
-            Action::Copy => "Copy the selected cue to the clipboard",
-            Action::PasteBelow => "Paste the copied cues below the selection",
-            Action::PasteAbove => "Paste the copied cues above the selection",
-            Action::Delete => "Delete the selected cue without copying it",
-            Action::MoveDown => "Move the selected cue down",
-            Action::MoveUp => "Move the selected cue up",
+            Action::AddBelow => "Add a cue, or an output, below the selection",
+            Action::AddAbove => "Add a cue, or an output, above the selection",
+            Action::Cut => "Cut the selected cue, or output, to the clipboard",
+            Action::Copy => "Copy the selected cue, or output, to the clipboard",
+            Action::PasteBelow => "Paste the copied cues, or outputs, below the selection",
+            Action::PasteAbove => "Paste the copied cues, or outputs, above the selection",
+            Action::Delete => "Delete the selected cue, or output, without copying it",
+            Action::MoveDown => "Move the selected cue, or output, down",
+            Action::MoveUp => "Move the selected cue, or output, up",
             Action::Undo => "Undo the latest change to the show, or as many as counted",
             Action::Redo => "Redo the change undone last, or as many as counted",
             Action::Open => "Open a show",

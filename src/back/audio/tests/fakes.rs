@@ -39,7 +39,7 @@ pub(super) fn show(main: Channels, sub: Channels) -> Workspace {
     Workspace::default()
         .apply(Command::EditOutput(MAIN, OutputEdit::Device(named("a"))))
         .apply(Command::EditOutput(MAIN, OutputEdit::Channels(main)))
-        .apply(Command::AddOutput { at: 1 })
+        .apply(Command::AddOutput { at: 1, count: 1 })
         .apply(Command::EditOutput(SUB, OutputEdit::Device(named("b"))))
         .apply(Command::EditOutput(SUB, OutputEdit::Channels(sub)))
 }

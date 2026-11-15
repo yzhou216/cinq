@@ -48,6 +48,8 @@ impl Message {
                     | Message::Paste(..)
                     | Message::Delete(_)
                     | Message::Across(..)
+                    | Message::Undo(_)
+                    | Message::Redo(_)
             )
     }
 }

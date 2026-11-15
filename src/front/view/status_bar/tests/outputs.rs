@@ -4,9 +4,13 @@
 
 //! Tests of the hints that the outputs view shows
 
-use super::{super::yielding, cancel::COLUMNS, fitted, hinted, opened};
+use super::{
+    super::{hints::notice, yielding},
+    cancel::COLUMNS,
+    fitted, hinted, opened,
+};
 use crate::{
-    back::{Command, Workspace},
+    back::{Command, OutputId, Workspace},
     front::{
         App,
         keymap::{Action, Preset},
@@ -75,4 +79,37 @@ fn the_cue_list_keeps_its_order_of_giving_way() {
     let cues = yielding(&App::default());
     assert_eq!(cues[..2], [Action::Forward, Action::Back]);
     assert_ne!(cues, yielding(&in_outputs(Preset::Vi)));
+}
+
+#[test]
+fn a_cut_output_stays_a_cut_in_the_notice_and_in_undo_and_redo() {
+    let sub = OutputId(2);
+    let show = Workspace::default().apply(Command::AddOutput { at: 1, count: 1 });
+    let told = |workspace: Workspace| {
+        notice(&App {
+            workspace,
+            ..App::default()
+        })
+    };
+    let cut = show.clone().apply(Command::CutOutputs(vec![sub]));
+    assert_eq!(
+        told(cut.clone()).as_deref(),
+        Some("Cut the output Output 1 | u: undo")
+    );
+    let undone = cut.clone().apply(Command::Undo);
+    assert_eq!(
+        told(undone.clone()).as_deref(),
+        Some("Undid: cut the output Output 1 | Control+r: redo")
+    );
+    let redone = undone.apply(Command::Redo);
+    assert_eq!(
+        told(redone).as_deref(),
+        Some("Redid: cut the output Output 1 | u: undo")
+    );
+    // A delete says so, as it did
+    let deleted = show.apply(Command::DeleteOutputs(vec![sub]));
+    assert_eq!(
+        told(deleted).as_deref(),
+        Some("Deleted the output Output 1 | u: undo")
+    );
 }

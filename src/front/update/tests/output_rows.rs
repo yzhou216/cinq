@@ -23,7 +23,7 @@ use crate::{
 /// Returns the show with ten outputs showing, the first selected, over a cue
 /// list that has the third cue selected.  The outputs are named for the
 /// searches, from House L to Booth.
-fn outputs() -> App {
+pub(super) fn outputs() -> App {
     let names = [
         "House L",
         "House R",
@@ -55,7 +55,7 @@ fn outputs() -> App {
 }
 
 /// Returns the row of the selected output, counted from one
-fn at(app: &App) -> usize {
+pub(super) fn at(app: &App) -> usize {
     app.output_row().map_or(0, |row| row + 1)
 }
 

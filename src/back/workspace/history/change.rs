@@ -44,12 +44,15 @@ pub enum Change {
     /// show, with those before and after
     Restored { before: Kept, after: Kept },
     /// Outputs added, deleted, moved, or edited, with all of them before
-    /// and after, and the output and the setting that an edit changed, by
-    /// which edits of one setting in a row make one change
+    /// and after, whether they were cut to the register of outputs or
+    /// pasted from it, and the output and the setting that an edit changed,
+    /// by which edits of one setting in a row make one change
     Outputs {
         before: Vec<Output>,
         after: Vec<Output>,
         setting: Option<(OutputId, mem::Discriminant<OutputEdit>)>,
+        cut: bool,
+        pasted: bool,
     },
 }
 
@@ -157,10 +160,21 @@ impl Change {
             (Self::Moved { cue, from, .. }, Self::Moved { to, .. }) => {
                 Self::Moved { cue, from, to }
             }
-            (Self::Outputs { before, .. }, Self::Outputs { after, setting, .. }) => Self::Outputs {
+            (
+                Self::Outputs { before, .. },
+                Self::Outputs {
+                    after,
+                    setting,
+                    cut,
+                    pasted,
+                    ..
+                },
+            ) => Self::Outputs {
                 before,
                 after,
                 setting,
+                cut,
+                pasted,
             },
             (_, next) => next,
         }

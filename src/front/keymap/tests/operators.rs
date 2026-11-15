@@ -224,15 +224,15 @@ fn box_lists_the_motions_after_an_operator_with_what_they_do() {
 fn descriptions_name_the_operator_and_the_rows_it_reaches() {
     assert_eq!(
         Action::Cut.over(Action::Next),
-        "Cut the selected cue and the next"
+        "Cut the selected cue or output and the next"
     );
     assert_eq!(
         Action::Copy.over(Action::Last),
-        "Copy the cues from the selection down to the last"
+        "Copy the cues or outputs from the selection down to the last"
     );
     assert_eq!(
         Action::Delete.over(Action::First),
-        "Delete the cues from the selection up to the first"
+        "Delete the cues or outputs from the selection up to the first"
     );
 }
 

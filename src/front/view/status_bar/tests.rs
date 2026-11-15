@@ -8,7 +8,12 @@
 mod cancel;
 mod outputs;
 
-use super::{SEARCH_ROOM, YIELDING, clipped, fitted, hints as hinted, mark, search_columns};
+use super::{
+    SEARCH_ROOM, YIELDING,
+    fit::{fitted, shown},
+    hints::{clipped, hints as hinted},
+    mark, search_columns,
+};
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Workspace},
     front::{
@@ -211,4 +216,25 @@ fn the_help_hint_beside_an_open_menu_reads_f1_in_the_vi_keymap() {
     };
     assert_eq!(help(Preset::Vi).as_deref(), Some("F1: help"));
     assert_eq!(help(Preset::Cua).as_deref(), Some("F1: help"));
+}
+
+#[test]
+fn a_notice_that_does_not_fit_gives_way_at_a_word_and_keeps_the_keys_after_it() {
+    let told = "Cut the output House L, so that cues play on House R | p: paste | u: undo";
+    let with_go = |told: Option<String>| -> Vec<(Option<Action>, String)> {
+        told.into_iter()
+            .map(|told| (None, told))
+            .chain([(Some(Action::Go), "Space: GO".to_owned())])
+            .collect()
+    };
+    let shown = |room| shown(with_go, Some(told.to_owned()), room, &YIELDING);
+    assert_eq!(shown(85), format!("{told} | Space: GO"));
+    assert_eq!(shown(73), told, "the key gives way first");
+    assert_eq!(
+        shown(50),
+        "Cut the output House L, so… | p: paste | u: undo",
+        "the comma is not left before the ellipsis, nor half a word"
+    );
+    assert_eq!(shown(46), "Cut the output House L… | p: paste | u: undo",);
+    assert_eq!(shown(5), told, "with no word to cut at, it shows whole");
 }
