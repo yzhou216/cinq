@@ -10,6 +10,7 @@
 //! open, the clipboard, and the keys that enter the name of a cue
 
 mod adding;
+mod cancel;
 mod clipboard;
 mod clipped;
 mod clock;

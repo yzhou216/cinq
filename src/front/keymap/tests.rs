@@ -5,6 +5,7 @@
 //! Tests of the key bindings, with the helpers that read the keys they
 //! type
 
+mod cancel;
 mod dropping;
 mod file;
 mod manual;

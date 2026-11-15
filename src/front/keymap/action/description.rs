@@ -12,6 +12,9 @@ impl Action {
             Action::Go => "GO: fire the standby cue and its chain",
             Action::Panic => "Panic: fade everything out, or stop it at once",
             Action::Standby => "Put the selected cue on standby",
+            Action::Cancel => {
+                "Drop the keys typed so far, close the search line or a menu, and leave a field"
+            }
             Action::Next => "Select the next cue or menu option",
             Action::Previous => "Select the previous cue or menu option",
             Action::First => "Select the first cue or menu option, or the row counted",

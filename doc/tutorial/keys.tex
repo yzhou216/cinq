@@ -30,6 +30,7 @@ Copy the selected cue & \key{y y}, \key{Y} & \key{Control+c} \\
 Paste below the selection & \key{p} & \key{Control+v} \\
 Paste above the selection & \key{P} & \key{Control+V} \\
 Delete the selected cue, no copy & none & \key{Delete} \\
+Cancel what is typed halfway & \key{Control+c} & none \\
 Edit the name of the selected cue & \key{i}, \key{a}, \key{A} & \key{F2} \\
 Edit the name from its start & \key{I} & none \\
 Change the name, selecting all of it & \key{c c}, \key{S} & none \\
@@ -99,7 +100,10 @@ last cue.  A number before the operator, before the motion, or both
 multiplies, so that \key{2 d 3 j} cuts seven cues.  A key that does not
 continue the sequence cancels it and does nothing, as Vim beeps and drops the
 keys typed so far, so that a mistyped \key{d x} cuts nothing.  The keys for GO
-and Panic act immediately, even in the middle of a sequence.
+and Panic act immediately, even in the middle of a sequence.  \key{Control+c}
+cancels a sequence in the vi keymap, as it does in Vim, and the status bar
+hints it while a sequence waits, so that no one reaches for \key{Escape},
+which is Panic.
 
 \section{Searching the cues}
 
@@ -115,9 +119,10 @@ A long cue list is easier to search than to scroll.
   so that the selection is the match only when no other cue holds the text.
   When no cue holds the text, the line says so and the selection goes back to
   where the search began.
-\item Press \key{Enter} to accept the search.  \key{Escape}, which is also
-  Panic, closes the line and puts the selection back, and any click closes it
-  and leaves the selection where it is.
+\item Press \key{Enter} to accept the search.  \key{Control+c} in the vi
+  keymap, and \key{Escape}, which is also Panic, close the line and put the
+  selection back, and any click closes it and leaves the selection where it
+  is.
 \item Press \key{n} for the next match in the direction of the search, wrapping
   around at the end of the list, and \key{N} for the next match in the other
   direction.  \key{Enter} on an empty line repeats the last search.  The cua

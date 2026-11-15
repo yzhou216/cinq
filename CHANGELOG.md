@@ -10,6 +10,14 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- `Control+c` cancels in the vi keymap, as in Vim, through the new `cancel`
+  action, which has no key in the cua keymap, where `Control+c` copies.  It
+  drops the keys typed so far, closes the search line with the selection
+  going back to where the search began, takes the keyboard out of a text
+  field, and closes an open drop-down list without picking, and never
+  stops playback, so that no one reaches for `Escape`, which is Panic.  The
+  status bar hints the key while keys wait or the search line is open.  A
+  text field with a selection still copies it first.
 - While the stage window has the keyboard, the keys that change the show or
   fill the clipboard, such as `x`, `Delete`, `o`, `u`, `p`, and the
   operators, do nothing, as the keys of editing a name, of searching, and

@@ -4,16 +4,17 @@
 
 //! Status of the show, most important first, then at the right the keys of
 //! a command typed so far, what the latest opening or saving told or else
-//! the latest change to the show with the key that takes it back, the keys
-//! that go back and forward between the places jumped to while there is a
-//! place to go to, the key that saves unsaved changes, and the keys of GO,
-//! Panic, and the help page
+//! the latest change to the show with the key that takes it back, the key
+//! that cancels while keys wait or the search line is open, the keys that go
+//! back and forward between the places jumped to while there is a place to
+//! go to, the key that saves unsaved changes, and the keys of GO, Panic, and
+//! the help page
 //!
 //! The bar keeps to one line.  When it is too narrow for all of it, the
 //! keys of going forward and back, of GO, of Panic, of saving, and of the
 //! help page give way in turn, each one whole, and then the status gives way
-//! from its end, so that the keys typed so far and what the latest change
-//! told always show in full.
+//! from its end, so that the keys typed so far, what the latest change told,
+//! and the key of cancel always show in full.
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
 
@@ -75,7 +76,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 /// without moving the rest.  An open search line takes the place of the
 /// status, as Vim's command line does, and the hints give way to its text.
 fn bar(app: &App, width: f32) -> Element<'_, Message> {
-    let room = ((width - 3.0 * SPACING) / char_width()).floor() as usize;
+    let room = columns(width);
     let (left, taken) = match &app.search {
         Some(search) => (
             search_line(app, search),
@@ -96,6 +97,11 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
         .padding(SPACING)
         .align_y(Center)
         .into()
+}
+
+/// Returns the columns of text that fit in the bar of `width` pixels
+fn columns(width: f32) -> usize {
+    ((width - 3.0 * SPACING) / char_width()).floor() as usize
 }
 
 /// Columns that the search line keeps for its text, and for what it tells,
@@ -183,11 +189,15 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
     let pick =
         key(Action::Pick, "pick").or_else(|| Some((Some(Action::Pick), "Enter: pick".to_owned())));
     let close = key(Action::CloseMenu, "close");
+    // Escape would panic, so that the key that only cancels is told while it can
+    let cancel =
+        key(Action::Cancel, "cancel").filter(|_| !app.keys.is_empty() || app.search.is_some());
     typed
         .into_iter()
         .chain(told)
         .chain(pick.filter(|_| in_menu))
         .chain(close.filter(|_| in_menu))
+        .chain(cancel)
         .chain(back)
         .chain(forward)
         .chain(save)

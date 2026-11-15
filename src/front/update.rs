@@ -153,6 +153,8 @@ impl App {
                     (app, Task::none())
                 };
             }
+            // Keys typed so far went already, as for any message
+            Message::Cancel => return self.cancelled(),
             Message::PauseAll => self.send(Command::Pause(true)),
             Message::ResumeAll => self.send(Command::Pause(false)),
             Message::Stop(id) => self.send(Command::Stop(id)),

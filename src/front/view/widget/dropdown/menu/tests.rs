@@ -81,6 +81,8 @@ fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
         (Preset::Vi, named(Named::Enter), none, Reply::Pick),
         (Preset::Vi, letter("y"), ctrl, Reply::Pick),
         (Preset::Vi, letter("e"), ctrl, Reply::Dismiss),
+        (Preset::Vi, letter("c"), ctrl, Reply::Dismiss),
+        (Preset::Cua, letter("c"), ctrl, Reply::Keep),
         (Preset::Cua, named(Named::F4), none, Reply::Dismiss),
         (Preset::Cua, letter("y"), ctrl, Reply::Keep),
         (Preset::Cua, letter("e"), ctrl, Reply::Keep),

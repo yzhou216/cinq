@@ -36,6 +36,7 @@ impl Preset {
             Action::Go => [&["Space"], &["Space"]],
             Action::Panic => [&["Escape"], &["Escape"]],
             Action::Standby => [&["Enter"], &["Enter"]],
+            Action::Cancel => [&["Control+c"], &[]],
             Action::Next => [&["j", "g j", "ArrowDown", "Control+n"], &["ArrowDown"]],
             Action::Previous => [&["k", "g k", "ArrowUp", "Control+p"], &["ArrowUp"]],
             Action::First => [&["g g", "Control+Home"], &["Home"]],

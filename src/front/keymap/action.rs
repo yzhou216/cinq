@@ -20,6 +20,7 @@ pub enum Action {
     Go,
     Panic,
     Standby,
+    Cancel,
     Next,
     Previous,
     First,
@@ -108,7 +109,8 @@ impl Action {
         self.acts_at_once()
             || matches!(
                 self,
-                Action::Next
+                Action::Cancel
+                    | Action::Next
                     | Action::Previous
                     | Action::PageDown
                     | Action::PageUp
@@ -157,7 +159,8 @@ impl Action {
         self.acts_at_once()
             || matches!(
                 self,
-                Action::NextField
+                Action::Cancel
+                    | Action::NextField
                     | Action::PreviousField
                     | Action::Back
                     | Action::Forward

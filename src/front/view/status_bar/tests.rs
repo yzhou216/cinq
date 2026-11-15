@@ -5,6 +5,8 @@
 //! Tests of the hints that fit in the status bar, and of the room that the
 //! search line keeps from them
 
+mod cancel;
+
 use super::{NO_MATCH, SEARCH_ROOM, clipped, fitted, hints as hinted, mark, search_columns};
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Workspace},

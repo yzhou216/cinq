@@ -220,7 +220,7 @@ fn reply(keymap: &Keymap, key: &Key, press: Option<Press>) -> Reply {
         (Some(action), _) if action.acts_at_once() => Reply::Close,
         (Some(Action::Help), _) => Reply::Pass,
         (Some(Action::Pick), _) => Reply::Pick,
-        (Some(Action::CloseMenu), _) => Reply::Dismiss,
+        (Some(Action::CloseMenu | Action::Cancel), _) => Reply::Dismiss,
         (_, Key::Named(Named::Enter)) => Reply::Pick,
         // The keys of a page, as Vim's popup menu has them, whichever keys
         // the keymap binds, unless held with a modifier

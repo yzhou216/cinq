@@ -86,6 +86,18 @@ impl App {
         }
     }
 
+    /// Gives up the search line, with the selection going back to where the
+    /// search began, and takes the keyboard out of the field that has it,
+    /// as Control+c does in Vim.  Playback goes on, since it is no Panic.
+    pub(super) fn cancelled(self) -> (Self, Task<Message>) {
+        let (app, reveal) = if self.search.is_some() {
+            self.search_cancelled().revealed()
+        } else {
+            (self, Task::none())
+        };
+        (app, Task::batch([reveal, operate(focusable::unfocus())]))
+    }
+
     /// Editing the name shows the Basics tab, which holds the Name field.  No
     /// field takes the keyboard while the stage window has it, since the
     /// keys typed there would never reach the field.

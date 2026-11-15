@@ -171,6 +171,9 @@ of the help page.
 |  standby
 :  Enter
 :  Enter
+|  cancel
+:  Control+c
+:  none
 |  next
 :  j, g j, ArrowDown, Control+n
 :  ArrowDown
@@ -362,6 +365,7 @@ keys typed so far, as Vim beeps and drops them, so that a key mistyped halfway,
 such as the *x* of *d x*, never starts a sequence of its own.
 Anything done other than typing, such as a click, drops a sequence typed
 halfway, and so does a change to the file.
+The key of *cancel* drops it as well, without any other effect.
 
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
@@ -445,8 +449,8 @@ that no cue matches when a step finds none, until the next action.
 Enter on an empty line repeats the search accepted last in the direction of
 the line.
 Backspace on an empty line closes it, and so does Escape, which is also
-*panic*, and either puts the selection back where it was when the line
-opened.
+*panic*, and so does the key of *cancel*, which stops no playback.
+Each puts the selection back where it was when the line opened.
 Any press of a mouse button closes the line and keeps the selection where it
 is, and a press on a cue selects that cue.
 Going *back* or *forward*, with the keys or the buttons of the mouse, moving
@@ -477,8 +481,8 @@ A text field of the inspector, or a drop-down list
 	*previous_field* move it from one text field or drop-down list to the
 	next, which shows a border in the color of focus.
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
-	*panic*, *next_field*, *previous_field*, *back*, *forward*, *open*, *save*,
-	and *save_as*, which act unless a text field takes them for typing.
+	*panic*, *cancel*, *next_field*, *previous_field*, *back*, *forward*, *open*,
+	*save*, and *save_as*, which act unless a text field takes them for typing.
 	Enter leaves a text field, and opens the menu of a drop-down list, which
 	takes the keyboard from there.
 
@@ -557,6 +561,18 @@ page.
 
 *standby*
 	Put the selected cue on standby, so that the next GO fires it.
+
+*cancel*
+	Drop the keys typed so far, close the search line, with the selection going
+	back to where the search began, as Escape does there, close an open menu
+	without picking, and take the keyboard out of a text field or drop-down list,
+	as Control+c does in Vim.
+	It never touches playback, which is how it differs from Escape, so that it is
+	the key to reach for when no show should stop.
+	It acts in text fields, where a text field that has a selection still copies
+	it first.
+	The cua keymap binds no key to it, since Control+c copies there.
+	While keys wait or the search line is open, the status bar hints its key.
 
 *next*
 	Select the next cue, move the highlight of an open menu down, or scroll

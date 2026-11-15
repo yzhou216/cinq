@@ -21,6 +21,7 @@ impl Action {
             Action::Go => Message::Go,
             Action::Panic => Message::Panic,
             Action::Standby => Message::StandbySelected,
+            Action::Cancel => Message::Cancel,
             Action::Next => Message::Step(step),
             Action::Previous => Message::Step(-step),
             Action::First => Message::Row(times),
