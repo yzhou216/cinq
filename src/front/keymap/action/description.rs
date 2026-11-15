@@ -34,9 +34,15 @@ impl Action {
             Action::TopRow => "Select the first row in view, or the row counted from it",
             Action::MiddleRow => "Select the middle row in view",
             Action::BottomRow => "Select the last row in view, or the row counted up from it",
-            Action::RowToMiddle => "Scroll the cue list to put the selected row in the middle",
-            Action::RowToTop => "Scroll the cue list to put the selected row at the top",
-            Action::RowToBottom => "Scroll the cue list to put the selected row at the bottom",
+            Action::RowToMiddle => {
+                "Scroll the cue list to put the selected row, or the row counted, in the middle"
+            }
+            Action::RowToTop => {
+                "Scroll the cue list to put the selected row, or the row counted, at the top"
+            }
+            Action::RowToBottom => {
+                "Scroll the cue list to put the selected row, or the row counted, at the bottom"
+            }
             Action::NextList => "Show the next cue list",
             Action::PreviousList => "Show the previous cue list",
             Action::NextTab => "Show the next inspector tab, or the tab counted",

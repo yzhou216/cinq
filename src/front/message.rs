@@ -102,8 +102,9 @@ pub enum Message {
         from: Option<CueId>,
         row: usize,
     },
-    /// Scrolls the cue list to put the selected row at a height in view
-    Place(Height),
+    /// Scrolls the cue list to put the selected row at a height in view, after
+    /// selecting the row that the count typed before the keys names
+    Place(Height, Option<usize>),
     /// A drop-down list opened its menu, or its menu closed
     MenuOpen(bool),
     StandbySelected,

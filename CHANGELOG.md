@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A count before `z t`, `z z`, or `z b` selects that row first and then puts
+  it in place, as `{count}zt` does in Vim, and `z Enter`, `z .`, and `z -`
+  do what `z t`, `z z`, and `z b` do.  `+` and `-` select the next and the
+  previous cue in the vi keymap, as in Vim.
 - The search line takes the keys of Vim's command line: `Control+w` deletes
   the word before the cursor, `Control+u` everything before it, and
   `ArrowUp` and `ArrowDown` recall the older and newer of the last fifty

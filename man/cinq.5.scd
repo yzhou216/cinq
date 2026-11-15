@@ -175,10 +175,10 @@ of the help page.
 :  Control+c
 :  none
 |  next
-:  j, g j, ArrowDown, Control+n
+:  j, g j, ArrowDown, Control+n, +
 :  ArrowDown
 |  previous
-:  k, g k, ArrowUp, Control+p
+:  k, g k, ArrowUp, Control+p, -
 :  ArrowUp
 |  first
 :  g g, Control+Home
@@ -214,13 +214,13 @@ of the help page.
 :  L
 :  none
 |  row_to_middle
-:  z z
+:  z z, z .
 :  none
 |  row_to_top
-:  z t
+:  z t, z Enter
 :  none
 |  row_to_bottom
-:  z b
+:  z b, z -
 :  none
 |  next_list
 :  l, ArrowRight
@@ -379,6 +379,8 @@ It gives the row, counted from one, that *first* and *last* select, and the
 tab, counted from one, that *next_tab* shows.
 It gives the row in view, counted from the top for *top_row* and from the bottom
 for *bottom_row*, that they select.
+It gives the row, counted from one, that *row_to_top*, *row_to_middle*, and
+*row_to_bottom* select before they put it in place.
 For *half_page_down* and *half_page_up*, it sets how many rows they move, as
 in Vim, and later presses of either move that many rows, or lines on the help
 page, until another count sets it again, the main window changes size, or
@@ -586,6 +588,8 @@ page.
 	the help page down.
 	The vi keymap binds *g j* as well as *j*, since a user of Vim types *gj* to
 	move by a displayed line.
+	It binds *+* as well, which is the key of Vim for the next line, and *-*
+	for the previous line.
 
 *previous*
 	Select the previous cue, move the highlight of an open menu up, or
@@ -673,18 +677,24 @@ page.
 
 *row_to_middle*
 	Scroll the cue list to put the selected row in the middle of the view, as
-	*z z* does in Vim.
+	*z z* does in Vim, and so does *z .* in the vi keymap.
 	The selection stays on its cue, and the view stops at either end of the
 	list, so that a row near an end stays short of the middle.
-	It is no jump, and leaves the count unused.
+	A count selects the row, counted from one, first, as in Vim, and the last
+	cue for a row past the end.
+	It is no jump.
 
 *row_to_top*
 	Scroll the cue list to put the selected row at the top of the view, as
-	*z t* does in Vim, stopping at the end of the list.
+	*z t* does in Vim, and so does *z Enter* in the vi keymap, stopping at the
+	end of the list.
+	A count selects its row first, as for *row_to_middle*.
 
 *row_to_bottom*
 	Scroll the cue list to put the selected row at the bottom of the view, as
-	*z b* does in Vim, stopping at the top of the list.
+	*z b* does in Vim, and so does *z -* in the vi keymap, stopping at the top
+	of the list.
+	A count selects its row first, as for *row_to_middle*.
 
 *next_list*
 	Show the next cue list.

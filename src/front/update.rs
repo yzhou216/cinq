@@ -84,7 +84,7 @@ impl App {
                 self.jumping(|app| app.at_row(row.saturating_add(1)))
             }
             Message::Reached { .. } => self,
-            Message::Place(height) => return self.placed(height),
+            Message::Place(height, count) => return self.placed(height, count),
             Message::MenuOpen(open) => Self { menu: open, ..self },
             Message::SwitchList(list) => {
                 return self

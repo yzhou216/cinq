@@ -6,6 +6,8 @@
 //! its view, and of putting the selected row in view, in the cue list and on
 //! the help page
 
+use iced::Task;
+
 use super::{
     paging::{letter, shaped, typed},
     show,
@@ -201,6 +203,27 @@ fn keys_of_z_measure_the_cue_list_and_leave_the_selection_alone() {
         .into_iter()
         .for_each(|key| assert_eq!(keys(key), (Some(CueId(2)), 0, 0, 2), "z {key}"));
     // Without a selected cue there is no row to place
-    let (_, task) = show(None).handled(Message::Place(Height::Top));
+    let (_, task) = show(None).handled(Message::Place(Height::Top, None));
     assert_eq!(task.units(), 2);
+}
+
+#[test]
+fn a_count_before_the_keys_of_z_selects_that_row_first_and_is_no_jump() {
+    let placed = |count| {
+        show(Some(CueId(2)))
+            .handled(Message::Place(Height::Top, count))
+            .0
+    };
+    assert_eq!(placed(None).selected, Some(CueId(2)));
+    assert_eq!(placed(Some(5)).selected, Some(CueId(5)));
+    // Row past the end is the last, as for the keys of the first and last
+    assert_eq!(placed(Some(99)).selected, Some(CueId(12)));
+    assert!(!placed(Some(5)).can_go_back());
+    // Key reaches the message with the count
+    let (typed, task) = ["5", "z", "z"]
+        .iter()
+        .fold((show(Some(CueId(2))), Task::none()), |(app, _), key| {
+            app.typed(super::press(letter(key)), false)
+        });
+    assert_eq!((typed.selected, task.units()), (Some(CueId(5)), 2));
 }
