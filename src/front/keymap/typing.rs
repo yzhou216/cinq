@@ -197,6 +197,28 @@ impl Keymap {
             })
     }
 
+    /// Returns the motion that keys of two presses or more complete while a
+    /// menu is open, such as `g g`, after the `waiting` keys that came first,
+    /// and the keys that wait for another press, as the first `g` does
+    pub fn menu_motion(&self, waiting: &[Press], press: Press) -> (Option<Action>, Vec<Press>) {
+        let keys = [waiting, &[press]].concat();
+        let done = self
+            .motions()
+            .find(|(_, bound)| *bound == keys)
+            .map(|(action, _)| action);
+        let longer = self
+            .motions()
+            .any(|(_, bound)| bound.len() > keys.len() && bound.starts_with(&keys));
+        (
+            done,
+            if done.is_none() && longer {
+                keys
+            } else {
+                Vec::new()
+            },
+        )
+    }
+
     /// Returns the action of [`Action::AT_ONCE`] whose key is pressed,
     /// together with the key as it is bound: as pressed, or else without
     /// the modifiers held, so that an action bound to the key with those

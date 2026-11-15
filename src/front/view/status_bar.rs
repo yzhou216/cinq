@@ -41,13 +41,15 @@ use crate::{
     },
 };
 
-const YIELDING: [Action; 6] = [
+const YIELDING: [Action; 8] = [
     Action::Forward,
     Action::Back,
     Action::Go,
     Action::Panic,
     Action::Save,
     Action::Help,
+    Action::CloseMenu,
+    Action::Pick,
 ];
 
 /// Mark that opens the search line, or the one that opens it for a search that
@@ -175,9 +177,17 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
     let back = key(Action::Back, Action::Back.name()).filter(|_| app.can_go_back());
     let forward = key(Action::Forward, Action::Forward.name()).filter(|_| app.can_go_forward());
     let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
+    // The page covers an open menu, and takes its keys.  Enter picks
+    // whichever key is bound to pick, so that it stands in where none is.
+    let in_menu = app.menu && !app.help;
+    let pick =
+        key(Action::Pick, "pick").or_else(|| Some((Some(Action::Pick), "Enter: pick".to_owned())));
+    let close = key(Action::CloseMenu, "close");
     typed
         .into_iter()
         .chain(told)
+        .chain(pick.filter(|_| in_menu))
+        .chain(close.filter(|_| in_menu))
         .chain(back)
         .chain(forward)
         .chain(save)

@@ -44,6 +44,6 @@ fn a_prefix_lists_each_key_that_completes_a_binding() {
     let lines = listed(&after(&["g"]));
     assert!(lines.contains(&(
         "g".to_owned(),
-        "Select the first cue, or the row counted".to_owned()
+        "Select the first cue or menu option, or the row counted".to_owned()
     )));
 }

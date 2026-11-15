@@ -36,6 +36,10 @@ use crate::front::{
 };
 pub(super) use overlay::Menu;
 
+/// Options that a key of a page moves the highlight by before the menu has
+/// been laid out, as Vim's popup menu moves by ten
+const PAGE: isize = 10;
+
 /// State of the menu, which the list keeps in cells, since the list and its
 /// open menu both act on it
 #[derive(Default)]
@@ -48,6 +52,11 @@ pub(super) struct Shared {
     highlight: Cell<Option<usize>>,
     /// Whether the menu has yet to scroll the highlight into view
     reveal: Cell<bool>,
+    /// Options that the open menu shows at once, or none before it is laid
+    /// out, which the keys of a page move the highlight by
+    fit: Cell<usize>,
+    /// Keys of a motion typed halfway, such as the first `g` of `g g`
+    waiting: Cell<Vec<Press>>,
 }
 
 impl Shared {
@@ -80,6 +89,8 @@ impl<'b> Choice<'b> {
             self.shared.open.set(true);
             self.shared.highlight.set(None);
             self.shared.reveal.set(true);
+            self.shared.waiting.take();
+            shell.publish(Message::MenuOpen(true));
         }
         if let Some(message) = &self.dropdown.on_open {
             shell.publish(message.clone());
@@ -89,17 +100,24 @@ impl<'b> Choice<'b> {
     }
 
     pub(super) fn press(&self, key: &Key, press: Option<Press>, shell: &mut Shell<'_, Message>) {
-        match reply(self.dropdown.keymap, key, press) {
-            Reply::Step(offset) => {
-                let row = step(self.highlighted(), offset, self.dropdown.names.len());
-                self.shared.highlight.set(row);
-                self.shared.reveal.set(true);
-                shell.capture_event();
-            }
+        let keymap = self.dropdown.keymap;
+        let (motion, waiting) = press.map_or_else(Default::default, |press| {
+            keymap.menu_motion(&self.shared.waiting.take(), press)
+        });
+        self.shared.waiting.set(waiting);
+        let reply = match (reply(keymap, key, press), motion.and_then(Reply::moving)) {
+            (Reply::Keep, Some(moved)) => moved,
+            (reply, _) => reply,
+        };
+        match reply {
+            Reply::Step(offset) => self.highlight(self.stepped(offset), shell),
+            Reply::Page(sign) => self.highlight(self.stepped(sign * self.page()), shell),
+            Reply::First => self.highlight((!self.dropdown.names.is_empty()).then_some(0), shell),
+            Reply::Last => self.highlight(self.dropdown.names.len().checked_sub(1), shell),
             Reply::Pick => self.pick(self.highlighted(), shell),
-            Reply::Close => self.shared.open.set(false),
+            Reply::Close => self.close(shell),
             Reply::Dismiss => {
-                self.shared.open.set(false);
+                self.close(shell);
                 shell.capture_event();
             }
             Reply::Pass => {}
@@ -108,10 +126,28 @@ impl<'b> Choice<'b> {
         shell.request_redraw();
     }
 
+    fn stepped(&self, offset: isize) -> Option<usize> {
+        step(self.highlighted(), offset, self.dropdown.names.len())
+    }
+
+    /// Returns how many options a key of a page moves the highlight by: those
+    /// in view, or ten before the menu has been laid out
+    fn page(&self) -> isize {
+        isize::try_from(self.shared.fit.get()).map_or(PAGE, |fit| if fit == 0 { PAGE } else { fit })
+    }
+
+    /// Moves the highlight to `row`, which the menu scrolls into view, and
+    /// keeps the key from acting on anything behind the menu
+    fn highlight(&self, row: Option<usize>, shell: &mut Shell<'_, Message>) {
+        self.shared.highlight.set(row);
+        self.shared.reveal.set(true);
+        shell.capture_event();
+    }
+
     /// Closes the menu on a click beside it, which goes on to act on what it
     /// lands on, unless it lands on the list, whose menu it would open again
     pub(super) fn click_beside(&self, on_list: bool, shell: &mut Shell<'_, Message>) {
-        self.shared.open.set(false);
+        self.close(shell);
         if on_list {
             shell.capture_event();
         }
@@ -122,8 +158,16 @@ impl<'b> Choice<'b> {
         if let Some(message) = row.and_then(|row| (self.dropdown.pick)(row)) {
             shell.publish(message);
         }
-        self.shared.open.set(false);
+        self.close(shell);
         shell.capture_event();
+    }
+
+    /// Closes the menu and tells the interface, which hints the keys of an
+    /// open menu while one is open
+    pub(super) fn close(&self, shell: &mut Shell<'_, Message>) {
+        self.shared.open.set(false);
+        self.shared.waiting.take();
+        shell.publish(Message::MenuOpen(false));
     }
 }
 
@@ -132,6 +176,11 @@ impl<'b> Choice<'b> {
 enum Reply {
     /// Moves the highlight by a number of options, downwards when positive
     Step(isize),
+    /// Moves the highlight by a page of options, downwards when positive
+    Page(isize),
+    /// Moves the highlight to the first option or to the last
+    First,
+    Last,
     Pick,
     /// Closes the menu without a pick, and keeps the key from acting on
     /// anything behind it, which is how it differs from [`Reply::Close`]
@@ -145,17 +194,43 @@ enum Reply {
     Keep,
 }
 
+impl Reply {
+    /// Returns what a motion does
+    fn moving(action: Action) -> Option<Self> {
+        match action {
+            Action::Next => Some(Self::Step(1)),
+            Action::Previous => Some(Self::Step(-1)),
+            Action::First => Some(Self::First),
+            Action::Last => Some(Self::Last),
+            _ => None,
+        }
+    }
+}
+
 /// Decides what a key does, given the press it makes when the key bindings
 /// can name it
 fn reply(keymap: &Keymap, key: &Key, press: Option<Press>) -> Reply {
     match (press.and_then(|press| keymap.in_menu(press)), key) {
         (Some(Action::Next), _) => Reply::Step(1),
         (Some(Action::Previous), _) => Reply::Step(-1),
+        (Some(Action::PageDown), _) => Reply::Page(1),
+        (Some(Action::PageUp), _) => Reply::Page(-1),
+        (Some(Action::First), _) => Reply::First,
+        (Some(Action::Last), _) => Reply::Last,
         (Some(action), _) if action.acts_at_once() => Reply::Close,
         (Some(Action::Help), _) => Reply::Pass,
         (Some(Action::Pick), _) => Reply::Pick,
         (Some(Action::CloseMenu), _) => Reply::Dismiss,
         (_, Key::Named(Named::Enter)) => Reply::Pick,
+        // The keys of a page, as Vim's popup menu has them, whichever keys
+        // the keymap binds, unless held with a modifier
+        (_, Key::Named(named)) if press.is_some_and(Press::is_bare) => match named {
+            Named::PageDown => Reply::Page(1),
+            Named::PageUp => Reply::Page(-1),
+            Named::Home => Reply::First,
+            Named::End => Reply::Last,
+            _ => Reply::Keep,
+        },
         _ => Reply::Keep,
     }
 }

@@ -125,6 +125,8 @@ pub enum Message {
     },
     /// Scrolls the cue list to put the selected row at a height in view
     Place(Height),
+    /// A drop-down list opened its menu, or its menu closed
+    MenuOpen(bool),
     StandbySelected,
     SwitchList(usize),
     /// Shows the cue list a number of lists further down the sidebar

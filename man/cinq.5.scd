@@ -504,6 +504,12 @@ The menu of a drop-down list
 	The keys bound by themselves to *next* and *previous* move the highlight
 	one option at a time, whatever the count, and the highlight stays put past
 	either end.
+	Those bound to *page_down* and *page_up* move it by the options in view,
+	and those bound to *first* and *last* to the first and last option, which
+	includes *g g* and *G* in the vi keymap.
+	The sequences *g j* and *g k* move by one option as well.
+	PageDown, PageUp, Home, and End do so as well, as they do in the popup menu
+	of Vim, whether or not the keymap binds them.
 	Enter and the key of *pick* pick the highlighted option, and the key of
 	*close_menu* closes the menu without picking one.
 	The keys of *go* and *panic* act as they do everywhere and close the menu
@@ -512,6 +518,8 @@ The menu of a drop-down list
 	beneath the page, so that it is open on the same highlighted option once
 	the page closes.
 	The menu keeps every other key until it closes.
+	While it is open, the status bar hints the keys of *pick* and *close_menu*,
+	with Enter for *pick* when no key is bound to it.
 
 While the stage window has the keyboard, as the window manager may leave it
 once the stage window opens, and as each GO that makes it fullscreen gives
@@ -556,11 +564,11 @@ page.
 
 *first*
 	Select the first cue, or the cue on the row counted, or go to the top of
-	the help page.
+	the help page, or move the highlight of an open menu to its first option.
 
 *last*
 	Select the last cue, or the cue on the row counted, or go to the bottom
-	of the help page.
+	of the help page, or move the highlight of an open menu to its last option.
 
 *half_page_down*
 	Scroll the cue list half a page down, that is, half as many rows as fit
@@ -586,6 +594,8 @@ page.
 	At the end of the list the view stops and the selection goes on to the
 	last cue.
 	On the help page, scroll down by a page less two lines.
+	In an open menu, move the highlight down by the options in view, or by ten
+	before the menu has been drawn.
 
 *page_up*
 	Scroll the cue list a whole page up, less two rows, and select the last
@@ -593,6 +603,7 @@ page.
 	At the top of the list the view stops and the selection goes on to the
 	first cue.
 	On the help page, scroll up by a page less two lines.
+	In an open menu, move the highlight up by the options in view.
 
 *scroll_down*
 	Scroll the cue list a row down, or as many rows as the count, as

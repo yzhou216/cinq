@@ -85,6 +85,7 @@ impl App {
             }
             Message::Reached { .. } => self,
             Message::Place(height) => return self.placed(height),
+            Message::MenuOpen(open) => Self { menu: open, ..self },
             Message::SwitchList(list) => {
                 return self
                     .without_search()

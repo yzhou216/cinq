@@ -10,6 +10,13 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- While a drop-down list is open, the status bar hints the keys that pick and
+  close it, such as `Control+y: pick | Control+e: close` in the vi keymap and
+  `Enter: pick | F4: close` in the cua keymap, and gives way when the bar is
+  short.  In the open list, PageDown and PageUp, or the keys of `page_down` and
+  `page_up`, move the highlight by the options in view, Home and End or the
+  keys of `first` and `last` move it to the first and last option, as in
+  Vim's popup menu.
 - `z z`, `z t`, and `z b` scroll the cue list to put the selected row in the
   middle, at the top, or at the bottom of the view in the vi keymap, as in
   Vim, through the new `row_to_middle`, `row_to_top`, and `row_to_bottom`
@@ -46,7 +53,8 @@ Major changes and improvements in each release of cinq, newest first.
   `Control+e` closes the list without picking one in the vi keymap, as in
   Vim's popup menu, and `F4` closes it in the cua keymap.  Closing it
   with these keys, unlike with Escape, does not also panic, through the new
-  `pick` and `close_menu` actions.
+  `pick` and `close_menu` actions.  `g g` goes to the first option, as `G`
+  goes to the last.
 - A count before the keys of `add_below` and `add_above`, such as `3 o`,
   adds that many cues in a row, at most a thousand, as one change for undo,
   and selects the last of them, as the cursor of Vim goes to the last line

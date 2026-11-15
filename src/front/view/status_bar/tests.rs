@@ -8,7 +8,11 @@
 use super::{NO_MATCH, SEARCH_ROOM, clipped, fitted, hints as hinted, mark, search_columns};
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Workspace},
-    front::{App, keymap::Action, update::Clipped},
+    front::{
+        App,
+        keymap::{Action, Keymap, Preset, config::Config},
+        update::Clipped,
+    },
 };
 
 /// Returns the hints after a change, with unsaved changes
@@ -125,4 +129,76 @@ fn hints_give_way_to_the_text_of_the_search_line_and_its_note() {
 #[test]
 fn the_search_line_starts_with_a_slash_or_a_question_mark_for_a_search_up() {
     assert_eq!((mark(false), mark(true)), ("/", "?"));
+}
+
+/// Returns the hints that an open menu adds, beside those of the keys of
+/// GO and Panic
+fn in_menu(app: App) -> Vec<String> {
+    hinted(&app)
+        .into_iter()
+        .filter_map(|(action, hint)| {
+            action
+                .filter(|action| matches!(action, Action::Pick | Action::CloseMenu))
+                .map(|_| hint)
+        })
+        .collect()
+}
+
+fn opened(preset: Preset, menu: bool, help: bool) -> App {
+    let mut config = Config::default();
+    config.keymap = Keymap::from(preset);
+    App {
+        config,
+        menu,
+        help,
+        ..App::default()
+    }
+}
+
+#[test]
+fn an_open_menu_hints_the_keys_that_pick_and_close_it() {
+    assert_eq!(
+        in_menu(opened(Preset::Vi, true, false)),
+        ["Control+y: pick", "Control+e: close"]
+    );
+    assert_eq!(
+        in_menu(opened(Preset::Cua, true, false)),
+        ["Enter: pick", "F4: close"]
+    );
+}
+
+#[test]
+fn a_closed_menu_and_a_menu_under_the_help_page_hint_nothing() {
+    assert!(in_menu(opened(Preset::Vi, false, false)).is_empty());
+    assert!(in_menu(opened(Preset::Vi, true, true)).is_empty());
+}
+
+#[test]
+fn hints_of_a_menu_give_way_after_the_rest_when_the_bar_is_short() {
+    let hints: Vec<_> = [
+        (Some(Action::Pick), "Control+y: pick"),
+        (Some(Action::CloseMenu), "Control+e: close"),
+        (Some(Action::Go), "Space: GO"),
+        (Some(Action::Help), "F1: help"),
+    ]
+    .into_iter()
+    .map(|(action, hint)| (action, hint.to_owned()))
+    .collect();
+    assert_eq!(
+        fitted(&hints, 45),
+        "Control+y: pick | Control+e: close | F1: help"
+    );
+    assert_eq!(fitted(&hints, 34), "Control+y: pick | Control+e: close");
+    assert_eq!(fitted(&hints, 20), "Control+y: pick");
+}
+
+#[test]
+fn the_help_hint_beside_an_open_menu_reads_f1_in_the_vi_keymap() {
+    let help = |preset| {
+        hinted(&opened(preset, true, false))
+            .into_iter()
+            .find_map(|(action, hint)| (action == Some(Action::Help)).then_some(hint))
+    };
+    assert_eq!(help(Preset::Vi).as_deref(), Some("F1: help"));
+    assert_eq!(help(Preset::Cua).as_deref(), Some("F1: help"));
 }

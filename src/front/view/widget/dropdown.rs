@@ -10,8 +10,11 @@
 //! [`Action::Previous`] move the highlight, which the menu keeps in view,
 //! and Enter or the key of [`Action::Pick`] picks the highlighted option,
 //! while the key of [`Action::CloseMenu`] closes the menu without a pick.
-//! GO and Panic act as everywhere and close the menu, so that the show is
-//! in view, and the menu keeps every other key until it closes.
+//! PageDown, PageUp, Home, and End move the highlight a page or to either
+//! end, as in Vim's popup menu.  GO and Panic act as everywhere and close the
+//! menu, so that the show is in view, and the menu keeps every other key
+//! until it closes.  The interface hears of each opening and closing, so that
+//! its status bar hints the keys of an open menu.
 //!
 //! The keys that move between fields move to these lists as well, which
 //! then show the border of a focused field, and Enter opens the menu, which
