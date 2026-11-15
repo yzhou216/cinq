@@ -159,3 +159,39 @@ fn counts_of_vi_keys_reach_undo_redo_and_the_tabs() {
         Message::StepTab(-2)
     ));
 }
+
+#[test]
+fn keys_that_move_by_a_page_are_those_of_vim_and_act_in_no_field() {
+    let keymap = Keymap::default();
+    let pages = [
+        ("Control+d", Action::HalfPageDown),
+        ("Control+u", Action::HalfPageUp),
+        ("Control+f", Action::PageDown),
+        ("PageDown", Action::PageDown),
+        ("Control+b", Action::PageUp),
+        ("PageUp", Action::PageUp),
+    ];
+    pages.into_iter().for_each(|(keys, page)| {
+        assert_eq!(action(keys), Some((page, None)), "{keys}");
+        assert_eq!(
+            action(&format!("4 {keys}")),
+            Some((page, Some(4))),
+            "{keys}"
+        );
+        assert!(!keymap.acts_in_fields(one(keys).unwrap()), "{keys}");
+    });
+    // Keys of the prefixes g and d stay theirs, apart from Control+d
+    assert_eq!(action("g g"), Some((Action::First, None)));
+    assert_eq!(action("d d"), Some((Action::Delete, None)));
+    assert_eq!(typed("d").pending.len(), 1);
+}
+
+#[test]
+fn cua_pages_by_the_whole_page_and_binds_no_key_to_the_half_pages() {
+    let keymap = Keymap::from(Preset::Cua);
+    assert_eq!(keymap.keys(Action::PageDown), [keys("PageDown")]);
+    assert_eq!(keymap.keys(Action::PageUp), [keys("PageUp")]);
+    assert!(keymap.keys(Action::HalfPageDown).is_empty());
+    assert!(keymap.keys(Action::HalfPageUp).is_empty());
+    assert_eq!(keymap.conflicts(), Vec::<String>::new());
+}

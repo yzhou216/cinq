@@ -15,6 +15,7 @@ mod keys;
 mod link;
 mod loading;
 mod navigation;
+mod paging;
 mod scroll;
 mod show;
 mod stage;
@@ -30,6 +31,7 @@ use super::{App, Message, Tab};
 use crate::back::{Command, Edit, parse_level};
 pub(super) use history::History;
 use link::{edit_config, open_link};
+pub(super) use paging::kept::{Measured, Measures};
 pub(super) use show::{Keeper, Read, Reader, Saved, Show};
 pub(super) use stage::Stage;
 
@@ -50,6 +52,28 @@ impl App {
             }
             Message::Step(offset) => return self.stepped(offset).revealed(),
             Message::Row(row) => return self.jumping(|app| app.at_row(row)).revealed(),
+            Message::Page(page, count) => return self.paged(page, count),
+            Message::Landed { list, from, row } if self.list == list && self.selected == from => {
+                self.at_row(row.saturating_add(1))
+            }
+            Message::Landed { .. } => self,
+            Message::Measured(Measured::Cues {
+                serial,
+                list,
+                cues,
+                shape,
+            }) => self.with_measure(serial, list, cues, shape),
+            Message::Measured(Measured::Help(view)) => self.with_help_measure(view),
+            Message::Drawn(window) if self.main == Some(window) && self.unmeasured() => {
+                let measure = self.measure_cues();
+                return (self, measure);
+            }
+            Message::Drawn(_) => self,
+            Message::Remeasure => {
+                let app = self.remeasured();
+                let measure = app.measure_cues();
+                return (app, measure);
+            }
             Message::SwitchList(list) => {
                 return self.jumping(|app| app.switched_to(list)).revealed();
             }
@@ -63,9 +87,7 @@ impl App {
             Message::Delete(count) => return self.without_selected(count).revealed(),
             Message::Undo(count) => return self.undone(count).revealed(),
             Message::Redo(count) => return self.redone(count).revealed(),
-            Message::Resized(window, size) if self.main == Some(window) => {
-                return self.resized(window, size).revealed();
-            }
+            Message::Resized(window, size) => return self.resized(window, size),
             Message::Recheck => return self.recheck(),
             Message::Open => return self.with_task(Self::choose_show),
             Message::Opened(read) => return self.opened(*read).revealed(),
@@ -138,7 +160,6 @@ impl App {
             }
             Message::SidePressed(..) => self,
             // Stage window holds no cue list to keep in view
-            Message::Resized(window, size) => self.resized(window, size),
             Message::WindowFocused(window) => Self {
                 stage: self.stage.with_keyboard_in(window),
                 ..self
@@ -217,6 +238,10 @@ impl App {
                 | Message::Saved(_)
                 | Message::Resized(..)
                 | Message::WindowFocused(_)
+                | Message::Landed { .. }
+                | Message::Measured(_)
+                | Message::Remeasure
+                | Message::Drawn(_)
         );
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);

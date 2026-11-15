@@ -143,7 +143,7 @@ fn stage_window_changing_size_leaves_the_cue_list_as_it_is() {
     let (open, unmoved) = open.handled(Message::Resized(stage, STAGE_SIZE));
     assert_eq!(unmoved.units(), 0);
     let (_, revealing) = open.handled(Message::Resized(main, MAIN_SIZE));
-    assert_eq!(revealing.units(), 1);
+    assert_eq!(revealing.units(), 2);
 }
 
 #[test]

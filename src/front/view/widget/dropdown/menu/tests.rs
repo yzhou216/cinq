@@ -94,6 +94,9 @@ fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
             Modifiers::ALT,
             Reply::Keep,
         ),
+        (Preset::Vi, letter("d"), ctrl, Reply::Keep),
+        (Preset::Vi, named(Named::PageDown), none, Reply::Keep),
+        (Preset::Cua, named(Named::PageUp), none, Reply::Keep),
     ];
     let wrong: Vec<_> = cases
         .into_iter()

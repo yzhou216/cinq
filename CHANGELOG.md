@@ -10,6 +10,15 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The keys of Vim that move by a page work in the vi keymap: `Control+d` and
+  `Control+u` scroll the cue list half a page and move the selection the
+  same number of rows, so that it keeps its row on the screen, and
+  `Control+f`, `Control+b`, `PageDown`, and `PageUp` scroll a whole page less
+  two rows and select the first row in view going down, or the last going
+  up.  A count before `Control+d` or `Control+u` sets how many rows they
+  move, until the window changes size or another show opens, and a count
+  before the whole pages counts them.  The same keys scroll the help page.
+  The cua keymap binds `PageDown` and `PageUp` to the whole pages.
 - A count typed before the keys of undo and redo turns that many changes, as
   `3 u` does in Vim, and stops at the oldest or newest.  A count before
   `next_tab` shows the inspector tab of that number, as `2 g t` does, and

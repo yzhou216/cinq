@@ -13,7 +13,7 @@ use strum::{Display, VariantArray};
 
 use super::{
     keymap::{Press, config::Config},
-    update::{Read, Saved},
+    update::{Measured, Read, Saved},
 };
 use crate::back::{Command, CueId, Edit, Kind, Place};
 
@@ -57,6 +57,29 @@ pub enum Focus {
     Cues,
 }
 
+/// Distance and direction of a move by a page, as Vim names them
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Page {
+    HalfDown,
+    HalfUp,
+    WholeDown,
+    WholeUp,
+}
+
+impl Page {
+    pub fn is_half(self) -> bool {
+        matches!(self, Self::HalfDown | Self::HalfUp)
+    }
+
+    /// Returns 1 for a move downwards and -1 for one upwards
+    pub fn sign(self) -> isize {
+        match self {
+            Self::HalfDown | Self::WholeDown => 1,
+            Self::HalfUp | Self::WholeUp => -1,
+        }
+    }
+}
+
 /// Operator intent or a report of work done, which becomes a back-end
 /// command or an interface change
 #[derive(Debug, Clone)]
@@ -75,6 +98,27 @@ pub enum Message {
     /// Selects the cue on a row counted from one, or the last cue for a row
     /// past the end
     Row(usize),
+    /// Scrolls the cue list by a page and moves the selection with it, with
+    /// the count typed before the keys, which sets the rows of a half page and
+    /// counts the whole pages
+    Page(Page, Option<usize>),
+    /// Selects the row, counted from zero, where a page scrolled the cue list
+    /// to, which has scrolled already, unless the list or the selection that
+    /// the key found has changed since, as a key pressed in between would
+    /// have changed them
+    Landed {
+        list: usize,
+        from: Option<CueId>,
+        row: usize,
+    },
+    /// What a measure of the cue list or of the help page found
+    Measured(Measured),
+    /// The mouse may have scrolled the cue list, so that it is measured again
+    Remeasure,
+    /// A window has drawn, which measures the cue list when no measure of it
+    /// is kept, as the window opens and after a change that made it out of
+    /// date, since the list is laid out only once the window has drawn
+    Drawn(window::Id),
     StandbySelected,
     SwitchList(usize),
     /// Shows the cue list a number of lists further down the sidebar

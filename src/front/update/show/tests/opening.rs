@@ -118,3 +118,13 @@ fn opening_another_show_clears_the_places_to_go_back_to() {
     let app = app.opened(found(Some(CALM), Some(SHOW), None));
     assert!(!app.can_go_back() && !app.can_go_forward());
 }
+
+#[test]
+fn opening_another_show_resets_the_rows_of_a_half_page_that_a_count_set() {
+    let app = App {
+        scroll: Some(5),
+        ..App::default()
+    };
+    let app = app.opened(found(Some(CALM), Some(SHOW), None));
+    assert_eq!(app.scroll, None);
+}

@@ -105,6 +105,7 @@ impl App {
             told,
             // Cue identities restart from one in each show
             history: History::default(),
+            scroll: None,
             ..opened
         }
         .switched_to(0)

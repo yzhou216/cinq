@@ -186,6 +186,18 @@ of the help page.
 |  last
 :  G, Control+End
 :  End
+|  half_page_down
+:  Control+d
+:  none
+|  half_page_up
+:  Control+u
+:  none
+|  page_down
+:  Control+f, PageDown
+:  PageDown
+|  page_up
+:  Control+b, PageUp
+:  PageUp
 |  next_tab
 :  g t
 :  Control+Tab
@@ -297,6 +309,11 @@ It deletes as many cues for *delete*, undoes or redoes as many changes for
 *undo* and *redo*, and goes back as many tabs for *previous_tab*.
 It gives the row, counted from one, that *first* and *last* select, and the
 tab, counted from one, that *next_tab* shows.
+For *half_page_down* and *half_page_up*, it sets how many rows they move, as
+in Vim, and later presses of either move that many rows, or lines on the help
+page, until another count sets it again, the main window changes size, or
+another show opens.
+For *page_down* and *page_up*, it counts the pages.
 Other actions leave the count unused.
 A count larger than what there is, such as *9 Control+o* with fewer places
 behind, *9 g t* with fewer tabs, or *3 d d* on the last cue, makes cinq go as
@@ -332,8 +349,11 @@ The help page
 	stage.  Closing it gives the main window back as it was, with the cue
 	list scrolled where it was and the keyboard in the same field.  The keys
 	of *next* and *previous* scroll the page, a line for each one and as many
-	lines as a count, and those of *first* and *last* go to its top and its
-	bottom.  Of the rest, only the keys of *go*, *panic*, *help*, and
+	lines as a count, those of *first* and *last* go to its top and its
+	bottom, and those of *half_page_down*, *half_page_up*, *page_down*, and
+	*page_up* scroll it by half or all of what the window shows, with a count
+	of lines for the half pages, which the cue list shares, and of pages for
+	the whole pages.  Of the rest, only the keys of *go*, *panic*, *help*, and
 	*close_help* act, whichever window has the keyboard, so that no field
 	takes a key meanwhile.  The keys of *go* and *panic* close the page as
 	well, so that the show is in view.  The key of *help* opens the page
@@ -397,6 +417,38 @@ page.
 *last*
 	Select the last cue, or the cue on the row counted, or go to the bottom
 	of the help page.
+
+*half_page_down*
+	Scroll the cue list half a page down, that is, half as many rows as fit
+	in it, or the rows that a count sets, and select the cue that many rows
+	further down, so that the selection keeps its row on the screen, as the
+	cursor does in Vim.
+	At the end of the list the view stops and the selection goes on to the
+	last cue.
+	On the help page, scroll down by half a page, or by the lines that a
+	count sets.
+
+*half_page_up*
+	Scroll the cue list half a page up, and select the cue as many rows
+	further up.
+	At the top of the list the view stops and the selection goes on to the
+	first cue.
+	On the help page, scroll up by half a page.
+
+*page_down*
+	Scroll the cue list a whole page down, less two rows that stay in view,
+	as Vim does, or as many pages as the count, and select the first cue in
+	view, or keep the selection when it lies further down.
+	At the end of the list the view stops and the selection goes on to the
+	last cue.
+	On the help page, scroll down by a page less two lines.
+
+*page_up*
+	Scroll the cue list a whole page up, less two rows, and select the last
+	cue in view, or keep the selection when it lies further up.
+	At the top of the list the view stops and the selection goes on to the
+	first cue.
+	On the help page, scroll up by a page less two lines.
 
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,

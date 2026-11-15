@@ -30,12 +30,15 @@ impl App {
     /// The first cue snaps the list back to its start, as the window opened
     /// it, since the row itself begins a separator below the start.
     pub(super) fn revealed(self) -> (Self, Task<Message>) {
-        let task = match self.selected_row() {
+        // Scrolling moves the list away from the shape kept
+        let app = self.remeasured();
+        let task = match app.selected_row() {
             Some(0) => operation::snap_to(view::CUES, RelativeOffset::START),
             Some(_) => operate(Measure::default()).discard(),
             None => Task::none(),
         };
-        (self, task)
+        let measure = app.measure_cues();
+        (app, task.chain(measure))
     }
 }
 
