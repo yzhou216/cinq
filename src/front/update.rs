@@ -108,6 +108,7 @@ impl App {
             }
             Message::Search { backward } => return self.searching(backward),
             Message::Searching(text) => return self.search_typed(text),
+            Message::SearchKey(key) => return self.search_edited(key),
             Message::SearchAccepted => return self.search_accepted(),
             Message::SearchStep(offset) => return self.search_stepped(offset),
             Message::Undo(count) => return self.undone(count).revealed(),

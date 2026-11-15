@@ -159,6 +159,7 @@ fn stepping_with_no_matching_cue_does_nothing_at_any_count() {
         searched: Searched {
             text: "zz".to_owned(),
             backward: false,
+            ..Searched::default()
         },
         ..show(Some(CueId(3)))
     };
@@ -203,6 +204,7 @@ fn the_next_match_with_no_match_says_no_cue_matches_as_typing_does() {
         searched: Searched {
             text: "zzz".to_owned(),
             backward: false,
+            ..Searched::default()
         },
         ..none
     };

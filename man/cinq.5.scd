@@ -467,6 +467,13 @@ The moves made while typing, and cancelling, remember nothing.
 A count for *next_match* or *previous_match* goes round the matches at most
 once, so that a count equal to the number of matches comes back to the same
 cue.
+The line takes the keys of Vim's command line as well: Control+w deletes the
+word before the cursor and Control+u everything before it, and ArrowUp and
+ArrowDown recall the older and the newer of the last fifty searches accepted,
+which start with the text typed, as the arrows of the command line do.
+The keys act on the end of the text, since the text field does not tell where
+its cursor is, and leave the cursor there, as Vim does after a recall.
+The history is kept until *cinq* quits.
 The line keeps the keys typed into it, like a text field, and the hints at
 the right of the status bar give way to its text.
 The stage window cannot open it by keys while it has the keyboard.

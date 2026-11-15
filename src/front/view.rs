@@ -35,7 +35,7 @@ use super::{
     App, Message,
     keymap::{Action, Keymap},
 };
-use widget::{button, dropdown, hide, keep_keys, marked_row};
+use widget::{button, dropdown, hide, keep_keys, line_keys, marked_row};
 
 /// Identity of the cue list, through which the selection scrolls into view
 pub const CUES: &str = "cues";

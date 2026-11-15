@@ -20,7 +20,7 @@ impl App {
     /// counts the keys of the next and previous match among its jumps, so
     /// this one is a jump.
     pub(in crate::front::update) fn search_stepped(self, offset: isize) -> (Self, Task<Message>) {
-        let Searched { text, backward } = &self.searched;
+        let Searched { text, backward, .. } = &self.searched;
         let backward = *backward != (offset < 0);
         let cues = &self.current().cues;
         let found_cues = matching(cues, text);

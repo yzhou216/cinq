@@ -19,6 +19,7 @@
 //! made while typing and a cancel are no jumps.  Every move that a search
 //! makes goes through [`App::searched_to`].
 
+pub(super) mod line;
 mod matching;
 mod stepping;
 
@@ -33,6 +34,7 @@ use crate::{
     back::CueId,
     front::{App, Message, view},
 };
+use line::Recall;
 use matching::{found, wrapped};
 
 /// What the status bar tells when a search goes past the end of the list and
@@ -57,14 +59,20 @@ pub(in crate::front) struct Search {
     missed: bool,
     /// Whether the line tells so, which it does for a while
     pub warned: bool,
+    /// Searches that the keys of recall went through, while the text is one of
+    /// them
+    recall: Option<Recall>,
 }
 
 /// Search accepted last, which the keys of the next and previous match
 /// repeat
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub(in crate::front) struct Searched {
     pub text: String,
     pub backward: bool,
+    /// Searches accepted before, oldest first, which the keys of recall go
+    /// through.  Nothing clears them.
+    pub history: Vec<String>,
 }
 
 impl Search {
@@ -75,6 +83,7 @@ impl Search {
             began,
             missed: false,
             warned: false,
+            recall: None,
         }
     }
 }
@@ -133,6 +142,7 @@ impl App {
                 missed,
                 warned: missed,
                 began,
+                recall: None,
             }),
             remark: went_round.then(|| continued(backward)),
             ..self
@@ -152,6 +162,7 @@ impl App {
             let searched = Searched {
                 text: self.searched.text.clone(),
                 backward: search.backward,
+                ..self.searched.clone()
             };
             let (app, task) = Self { searched, ..self }
                 .search_cancelled()
@@ -163,10 +174,9 @@ impl App {
         }
         let (began, searched) = (
             search.began,
-            Searched {
-                text: search.text.clone(),
-                backward: search.backward,
-            },
+            self.searched
+                .clone()
+                .accepting(search.text.clone(), search.backward),
         );
         let went_round = began
             .cue()

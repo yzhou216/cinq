@@ -32,7 +32,7 @@ use unicode_width::UnicodeWidthStr;
 
 use super::{
     LINE, NO_MATCH, SEARCH, SPACING, answered, char_width, format, giving_way, keep_keys,
-    line_height, theme, warnings,
+    line_height, line_keys, theme, warnings,
 };
 use crate::{
     back::Turn,
@@ -131,7 +131,7 @@ fn search_line<'a>(app: &'a App, search: &'a Search) -> Element<'a, Message> {
             .padding(Padding::ZERO.right(SPACING))
         }))
         .align_y(Center);
-    keep_keys(line, &app.config.keymap)
+    keep_keys(line_keys(line), &app.config.keymap)
 }
 
 /// Returns the hints joined, each one whole, without as many of those

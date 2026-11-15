@@ -10,6 +10,12 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The search line takes the keys of Vim's command line: `Control+w` deletes
+  the word before the cursor, `Control+u` everything before it, and
+  `ArrowUp` and `ArrowDown` recall the older and newer of the last fifty
+  searches accepted that start with the text typed.  The keys act on the
+  end of the text, as the text field does not tell where its cursor is, and
+  leave the cursor there.
 - `Control+c` cancels in the vi keymap, as in Vim, through the new `cancel`
   action, which has no key in the cua keymap, where `Control+c` copies.  It
   drops the keys typed so far, closes the search line with the selection

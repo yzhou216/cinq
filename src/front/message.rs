@@ -6,6 +6,7 @@
 //! and the keys send, and the reports of the clock, of the configuration
 //! file's watch, and of the work done on threads of its own
 
+mod line;
 mod scrolling;
 mod tab;
 
@@ -18,6 +19,7 @@ use super::{
     update::{Measured, Read, Saved},
 };
 use crate::back::{Command, CueId, Edit, Kind, Place};
+pub use line::LineKey;
 pub use scrolling::{Height, Page};
 pub use tab::Tab;
 
@@ -119,6 +121,8 @@ pub enum Message {
     },
     /// Text of the search line, as typed so far
     Searching(String),
+    /// Edits the text of the search line with a key of Vim's command line
+    SearchKey(LineKey),
     /// Accepts the text of the search line
     SearchAccepted,
     /// Selects the cue a number of matches of the last search further on in
