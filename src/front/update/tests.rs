@@ -23,6 +23,7 @@ mod naming;
 mod operators;
 mod operators_pasting;
 mod paging;
+mod scrolling;
 mod search;
 mod search_line;
 mod search_places;

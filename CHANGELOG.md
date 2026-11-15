@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A move or jump that leaves the selected cue far outside the cue list, such
+  as `G`, `n`, or going back, scrolls the list to put it in the middle, much
+  as Vim does, with its thresholds: seven rows above the view and 13 rows
+  below it in a view of 23 rows.  A move to a row near the view still scrolls
+  by the least, as does `GO` moving the standby a row.
 - A count before `z t`, `z z`, or `z b` selects that row first and then puts
   it in place, as `{count}zt` does in Vim, and `z Enter`, `z .`, and `z -`
   do what `z t`, `z z`, and `z b` do.  `+` and `-` select the next and the

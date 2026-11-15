@@ -480,6 +480,23 @@ The line keeps the keys typed into it, like a text field, and the hints at
 the right of the status bar give way to its text.
 The stage window cannot open it by keys while it has the keyboard.
 
+# SCROLLING
+
+The cue list scrolls to keep the selected cue in view, with three rows around
+it where there is room, and by the least that does it, as when *next* or *go*
+moves the selection a row.
+A move or jump that leaves the selected row far outside the view, such as
+*last*, *next_match*, or *back*, puts it in the middle of the view instead,
+much as Vim does after a jump that far.
+Above the view, the row goes to the middle once it, with its three rows of
+margin, lies half the view less one row above the top of the view, which is
+seven rows above it in a view of 23 rows.
+Below the view, it goes to the middle once its bottom lies more than half the
+view and a row past the bottom of the view, which is 13 rows past the last
+row in view in a view of 23 rows.
+Vim counts lines of equal height, while a long name that wraps makes a row of
+the list taller, so the thresholds of *cinq* are in pixels of the view.
+
 # WHERE KEYS ACT
 
 Keys act on the cue list, whether the main window or the stage window has
