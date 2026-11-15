@@ -24,7 +24,7 @@ fn letter(key: &str) -> Key {
 /// Types a key with Control held in a state of the interface, which the
 /// tests give twelve cues, and returns it with the number of tasks that it
 /// started
-fn typed(app: App, key: &str, count: &[&str]) -> (App, usize) {
+pub(super) fn typed(app: App, key: &str, count: &[&str]) -> (App, usize) {
     let app = count.iter().fold(app, |app, digit| {
         app.typed(super::press(letter(digit)), false).0
     });
@@ -59,7 +59,7 @@ fn rows_that_fit_come_from_the_average_height_of_a_row() {
 
 /// Returns the shape of a list of 60 rows of 20 pixels in a view of 400,
 /// which shows 20 rows, scrolled by `rows` rows
-fn shaped(rows: f32) -> Shape {
+pub(super) fn shaped(rows: f32) -> Shape {
     Shape {
         view: 400.0,
         content: 1200.0,

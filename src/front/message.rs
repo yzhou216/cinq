@@ -129,6 +129,9 @@ pub enum Message {
     /// is kept, as the window opens and after a change that made it out of
     /// date, since the list is laid out only once the window has drawn
     Drawn(window::Id),
+    /// Scrolls the cue list a number of rows, down when positive, and keeps
+    /// the selection in view
+    Scroll(isize),
     StandbySelected,
     SwitchList(usize),
     /// Shows the cue list a number of lists further down the sidebar

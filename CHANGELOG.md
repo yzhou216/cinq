@@ -10,6 +10,13 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- `Control+e` and `Control+y` scroll the cue list a row down and up in the vi
+  keymap, as in Vim, or as many rows as a count, through the new
+  `scroll_down` and `scroll_up` actions.  The selection stays on its cue
+  unless it would leave the view, when it moves to the nearest row in view.
+  In an open drop-down list the keys keep picking and closing: `pick` and
+  `close_menu` act only in a menu, so a key may be bound to one of them and
+  to an action of the cue list without a clash.
 - The help page leaves out the actions that the keymap in use binds to no
   key, such as `delete` in the vi keymap, so that its table is shorter.
 - The help page and the table of cinq(5) list the actions in groups, GO,

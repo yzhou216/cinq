@@ -26,6 +26,7 @@ mod stage;
 mod subscription;
 #[cfg(test)]
 mod tests;
+mod viewing;
 
 use iced::{Task, mouse};
 
@@ -77,6 +78,7 @@ impl App {
                 let measure = app.measure_cues();
                 return (app, measure);
             }
+            Message::Scroll(rows) => return self.scrolled(rows),
             Message::SwitchList(list) => {
                 return self
                     .without_search()

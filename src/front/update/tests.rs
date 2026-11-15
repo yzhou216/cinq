@@ -25,6 +25,7 @@ mod paging;
 mod search;
 mod search_places;
 mod side_buttons;
+mod viewing;
 
 use std::ops::RangeInclusive;
 

@@ -195,6 +195,12 @@ of the help page.
 |  page_up
 :  Control+b, PageUp
 :  PageUp
+|  scroll_down
+:  Control+e
+:  none
+|  scroll_up
+:  Control+y
+:  none
 |  next_list
 :  l, ArrowRight
 :  Control+PageDown
@@ -341,7 +347,8 @@ halfway, and so does a change to the file.
 
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
-*move_down*, *move_up*, *back*, *forward*, *next_match*, and *previous_match*.
+*move_down*, *move_up*, *scroll_down*, *scroll_up*, *back*, *forward*,
+*next_match*, and *previous_match*.
 It copies, cuts, deletes, or adds as many cues for *copy*, *cut*, *delete*,
 *add_below*, and *add_above*, pastes as many times for *paste_below* and
 *paste_above*, undoes or redoes as many changes for *undo* and *redo*, and
@@ -457,18 +464,19 @@ The help page
 	The page fills the main window, while the stage window keeps showing the
 	stage.  Closing it gives the main window back as it was, with the cue
 	list scrolled where it was and the keyboard in the same field.  The keys
-	of *next* and *previous* scroll the page, a line for each one and as many
-	lines as a count, those of *first* and *last* go to its top and its
-	bottom, and those of *half_page_down*, *half_page_up*, *page_down*, and
-	*page_up* scroll it by half or all of what the window shows, with a count
-	of lines for the half pages, which the cue list shares, and of pages for
-	the whole pages.  Of the rest, only the keys of *go*, *panic*, *help*, and
-	*close_help* act, whichever window has the keyboard, so that no field
-	takes a key meanwhile.  The keys of *go* and *panic* close the page as
-	well, so that the show is in view.  The key of *help* opens the page
-	from the main window only, since the stage window may cover that window
-	when it is fullscreen, and does nothing while the stage window has the
-	keyboard, where the key of *close_help* closes the page.
+	of *next*, *previous*, *scroll_down*, and *scroll_up* scroll the page, a
+	line for each one and as many lines as a count, those of *first* and *last*
+	go to its top and its bottom, and those of *half_page_down*,
+	*half_page_up*, *page_down*, and *page_up* scroll it by half or all of
+	what the window shows, with a count of lines for the half pages, which
+	the cue list shares, and of pages for the whole pages.  Of the rest, only
+	the keys of *go*, *panic*, *help*, and *close_help* act, whichever window
+	has the keyboard, so that no field takes a key meanwhile.  The keys of *go*
+	and *panic* close the page as well, so that the show is in view.  The key
+	of *help* opens the page from the main window only, since the stage window
+	may cover that window when it is fullscreen, and does nothing while the
+	stage window has the keyboard, where the key of *close_help* closes the
+	page.
 
 The menu of a drop-down list
 	The keys bound by themselves to *next* and *previous* move the highlight
@@ -563,6 +571,25 @@ page.
 	At the top of the list the view stops and the selection goes on to the
 	first cue.
 	On the help page, scroll up by a page less two lines.
+
+*scroll_down*
+	Scroll the cue list a row down, or as many rows as the count, as
+	*Control+e* does in Vim.
+	The selection stays on its cue while that is in view, and moves to the
+	nearest row in view when the scroll would take it out.
+	The view stops at the end of the list.
+	On the help page, scroll down a line, or as many lines as the count.
+	While a menu is open, *Control+e* closes the menu instead, as in Vim's
+	popup menu.
+	The keys of *pick* and *close_menu* act only in a menu, so a key may be
+	bound to one of them and to a scroll without a clash.
+
+*scroll_up*
+	Scroll the cue list a row up, or as many rows as the count, as
+	*Control+y* does in Vim, and keep the selection in view as *scroll_down*
+	does.
+	On the help page, scroll up a line.
+	While a menu is open, *Control+y* picks the highlighted option instead.
 
 *next_list*
 	Show the next cue list.
@@ -825,7 +852,10 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   sequence that starts with a digit, and a value that is not a string are left
   out, and the action keeps the other keys listed for it, which may be none.
 - A sequence bound to two actions goes to the one listed first under
-  *ACTIONS*, and the other goes without it.
+  *ACTIONS*, and the other goes without it, unless the two act in different
+  places: *pick* and *close_menu* act only in an open menu, so a sequence may
+  be bound to one of them and to an action that acts on the cue list, as
+  *Control+y* is to *pick* and to *scroll_up* in the vi keymap.
   A sequence that begins a longer one, as *g* begins *g g*, leaves the longer
   one impossible to type.
   A key bound by itself to *go* or *panic* makes every other sequence that

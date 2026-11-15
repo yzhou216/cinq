@@ -26,6 +26,8 @@ impl Action {
             Action::HalfPageUp => Message::Page(Page::HalfUp, count),
             Action::PageDown => Message::Page(Page::WholeDown, count),
             Action::PageUp => Message::Page(Page::WholeUp, count),
+            Action::ScrollDown => Message::Scroll(step),
+            Action::ScrollUp => Message::Scroll(-step),
             Action::NextList => Message::StepList(step),
             Action::PreviousList => Message::StepList(-step),
             Action::NextTab => count.map_or(Message::StepTab(1), Message::ShowTab),

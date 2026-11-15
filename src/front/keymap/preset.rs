@@ -44,6 +44,8 @@ impl Preset {
             Action::HalfPageUp => [&["Control+u"], &[]],
             Action::PageDown => [&["Control+f", "PageDown"], &["PageDown"]],
             Action::PageUp => [&["Control+b", "PageUp"], &["PageUp"]],
+            Action::ScrollDown => [&["Control+e"], &[]],
+            Action::ScrollUp => [&["Control+y"], &[]],
             Action::NextList => [&["l", "ArrowRight"], &["Control+PageDown"]],
             Action::PreviousList => [&["h", "ArrowLeft"], &["Control+PageUp"]],
             Action::NextTab => [&["g t"], &["Control+Tab"]],

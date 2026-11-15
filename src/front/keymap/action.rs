@@ -27,6 +27,8 @@ pub enum Action {
     HalfPageUp,
     PageDown,
     PageUp,
+    ScrollDown,
+    ScrollUp,
     NextList,
     PreviousList,
     NextTab,
@@ -83,6 +85,8 @@ impl Action {
             Action::HalfPageUp => "Scroll half a page up with the selection, or the rows counted",
             Action::PageDown => "Scroll a page down with the selection, or the pages counted",
             Action::PageUp => "Scroll a page up with the selection, or the pages counted",
+            Action::ScrollDown => "Scroll the cue list a row down, or the rows counted",
+            Action::ScrollUp => "Scroll the cue list a row up, or the rows counted",
             Action::NextList => "Show the next cue list",
             Action::PreviousList => "Show the previous cue list",
             Action::NextTab => "Show the next inspector tab, or the tab counted",
@@ -139,6 +143,30 @@ impl Action {
 
     pub fn acts_at_once(self) -> bool {
         Self::AT_ONCE.contains(&self)
+    }
+
+    /// Returns whether a key of the action acts on the cue list, which the
+    /// keys of an open menu do not
+    pub(super) fn acts_in_list(self) -> bool {
+        !matches!(self, Action::Pick | Action::CloseMenu)
+    }
+
+    /// Returns whether a key of the action acts while a menu is open, where
+    /// every other key is kept from acting
+    pub(super) fn acts_in_menu(self) -> bool {
+        self.acts_at_once()
+            || matches!(
+                self,
+                Action::Next | Action::Previous | Action::Help | Action::Pick | Action::CloseMenu
+            )
+    }
+
+    /// Returns whether keys of the two actions act in the same place, the
+    /// cue list or an open menu.  Only keys that do can hide each other, so
+    /// that a key may pick in a menu and scroll the list.
+    pub(super) fn shares_place(self, other: Action) -> bool {
+        (self.acts_in_list() && other.acts_in_list())
+            || (self.acts_in_menu() && other.acts_in_menu())
     }
 
     /// Describes the operator `self` applied over the rows that `motion`

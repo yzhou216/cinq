@@ -60,7 +60,7 @@ impl Keymap {
         let count = counted(digits);
         match self.find(command) {
             Some(action) => Outcome::of(action, count),
-            None if self.bound().any(|(_, bound)| bound.starts_with(command)) => Outcome {
+            None if self.typable().any(|(_, bound)| bound.starts_with(command)) => Outcome {
                 pending: keys,
                 ..Outcome::default()
             },
@@ -149,7 +149,7 @@ impl Keymap {
             None => typed.to_vec(),
         };
         let plain: Vec<_> = self
-            .bound()
+            .typable()
             .filter(|_| !bare.is_empty())
             .filter_map(|(action, keys)| {
                 keys.strip_prefix(&bare[..])
@@ -184,6 +184,19 @@ impl Keymap {
             .or_else(|| self.find(&[press]))
     }
 
+    /// Returns the action that a key pressed alone has while a menu is open,
+    /// where the keys of [`Action::Pick`] and [`Action::CloseMenu`] act, and
+    /// win over a key that the cue list takes for scrolling
+    pub fn in_menu(&self, press: Press) -> Option<Action> {
+        self.at_once_bound(press)
+            .map(|(action, _)| action)
+            .or_else(|| {
+                self.bound().find_map(|(action, keys)| {
+                    (action.acts_in_menu() && keys[..] == [press]).then_some(action)
+                })
+            })
+    }
+
     /// Returns the action of [`Action::AT_ONCE`] whose key is pressed,
     /// together with the key as it is bound: as pressed, or else without
     /// the modifiers held, so that an action bound to the key with those
@@ -198,7 +211,7 @@ impl Keymap {
     }
 
     fn find(&self, keys: &[Press]) -> Option<Action> {
-        self.bound()
+        self.typable()
             .find_map(|(action, bound)| (bound == keys).then_some(action))
     }
 }

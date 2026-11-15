@@ -148,7 +148,7 @@ enum Reply {
 /// Decides what a key does, given the press it makes when the key bindings
 /// can name it
 fn reply(keymap: &Keymap, key: &Key, press: Option<Press>) -> Reply {
-    match (press.and_then(|press| keymap.alone(press)), key) {
+    match (press.and_then(|press| keymap.in_menu(press)), key) {
         (Some(Action::Next), _) => Reply::Step(1),
         (Some(Action::Previous), _) => Reply::Step(-1),
         (Some(action), _) if action.acts_at_once() => Reply::Close,
