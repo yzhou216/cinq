@@ -47,7 +47,7 @@ impl Action {
             Action::PreviousList => "Show the previous cue list, or the last from the outputs",
             Action::NextTab => "Show the next inspector tab, or the tab counted",
             Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
-            Action::Back => "Go back to the place that the last jump left",
+            Action::Back => "Go back to the place that the last jump left, or leave the outputs",
             Action::Forward => "Go forward again after going back",
             Action::Search => "Search the cues by name",
             Action::SearchBackward => "Search the cues by name, upwards",

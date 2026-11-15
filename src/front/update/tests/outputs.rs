@@ -137,13 +137,15 @@ fn no_message_for_rows_reaches_the_cue_list_while_the_outputs_show() {
 }
 
 #[test]
-fn showing_the_cue_list_again_remembers_the_place_that_going_back_returns_to() {
+fn going_back_from_the_outputs_returns_to_the_cue_list_that_showed_before() {
     let outputs = after(
         show(Some(CueId(3))),
         [Message::Select(CueId(21)), Message::ShowOutputs],
     );
     let back = after(outputs, [Message::Back(1)]);
     assert!(!back.outputs_shown);
+    assert_eq!((back.list, back.selected), (1, Some(CueId(21))));
+    let back = after(back, [Message::Back(1)]);
     assert_eq!((back.list, back.selected), (0, Some(CueId(3))));
     let switched = after(
         show(Some(CueId(3))),
@@ -151,6 +153,8 @@ fn showing_the_cue_list_again_remembers_the_place_that_going_back_returns_to() {
     );
     assert!(!switched.outputs_shown);
     let back = after(switched, [Message::Back(1)]);
+    assert!(back.outputs_shown);
+    let back = after(back, [Message::Back(1)]);
     assert_eq!((back.list, back.selected), (0, Some(CueId(3))));
 }
 

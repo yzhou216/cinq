@@ -91,6 +91,13 @@ Major changes and improvements in each release of cinq, newest first.
   five seconds have passed without an answer.  A device that has fewer
   channels than an output names is looked at ever more seldom, up to every
   thirty seconds, until what it offers changes.
+- Showing the outputs and leaving them are jumps, so that Control+o in the
+  vi keymap, or Alt+ArrowLeft, goes back from the outputs to the cue list
+  that showed, with its cue and its inspector tab, and Control+i returns.
+  Where no jump recorded a place, as after opening a show, going back from
+  the outputs shows the cue list that was showing.  While the outputs show,
+  the status bar names the keys that go back, add an output, and rename one,
+  and the key that goes back is the last of them to give way to a narrow bar.
 - In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
   rename does in desktop file managers, and no key puts the caret at the end
   of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and

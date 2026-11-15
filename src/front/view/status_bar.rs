@@ -15,6 +15,10 @@
 //! help page give way in turn, each one whole, and then the status gives way
 //! from its end, so that the keys typed so far, what the latest change told,
 //! and the key of cancel always show in full.
+//! While the outputs show, the bar names the keys that add and rename an
+//! output, and the key that goes back always, since it is the way out, so
+//! that the keys give way in another order: forward, add, rename, GO, Panic,
+//! saving, back, and the help page.
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
 
@@ -52,6 +56,31 @@ const YIELDING: [Action; 8] = [
     Action::CloseMenu,
     Action::Pick,
 ];
+
+/// Hints in turn of giving way while the outputs show.  The keys that add
+/// and rename an output go first, as they only teach, and the key that goes
+/// back goes last but one, since it is the way out of the outputs, which
+/// GO and Panic do not need, as the transport has buttons for them.
+const YIELDING_IN_OUTPUTS: [Action; 10] = [
+    Action::Forward,
+    Action::AddBelow,
+    Action::Edit,
+    Action::Go,
+    Action::Panic,
+    Action::Save,
+    Action::Back,
+    Action::Help,
+    Action::CloseMenu,
+    Action::Pick,
+];
+
+fn yielding(app: &App) -> &'static [Action] {
+    if app.outputs_shown {
+        &YIELDING_IN_OUTPUTS
+    } else {
+        &YIELDING
+    }
+}
 
 /// Mark that opens the search line, or the one that opens it for a search that
 /// goes up the list, as in Vim
@@ -91,7 +120,7 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
             (shown.into(), columns)
         }
     };
-    let shown = fitted(&hints(app), room.saturating_sub(taken));
+    let shown = fitted(&hints(app), room.saturating_sub(taken), yielding(app));
     row![left, text(shown).wrapping(Wrapping::None)]
         .spacing(SPACING)
         .padding(SPACING)
@@ -136,9 +165,9 @@ fn search_line<'a>(app: &'a App, search: &'a Search) -> Element<'a, Message> {
 
 /// Returns the hints joined, each one whole, without as many of those
 /// that give way as it takes for the rest to fit in `room` columns
-fn fitted(hints: &[(Option<Action>, String)], room: usize) -> String {
+fn fitted(hints: &[(Option<Action>, String)], room: usize, yielding: &[Action]) -> String {
     giving_way(
-        &YIELDING,
+        yielding,
         |gone| {
             hints
                 .iter()
@@ -182,6 +211,13 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
         .map(|told| (None, told));
     let back = key(Action::Back, Action::Back.name()).filter(|_| app.can_go_back());
     let forward = key(Action::Forward, Action::Forward.name()).filter(|_| app.can_go_forward());
+    // Two keys that a newcomer to the outputs needs, and none that destroys
+    let teaching = (app.outputs_shown && app.editable()).then(|| {
+        [
+            key(Action::AddBelow, "add output"),
+            key(Action::Edit, "rename"),
+        ]
+    });
     let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
     // The page covers an open menu, and takes its keys.  Enter picks
     // whichever key is bound to pick, so that it stands in where none is.
@@ -198,6 +234,7 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
         .chain(pick.filter(|_| in_menu))
         .chain(close.filter(|_| in_menu))
         .chain(cancel)
+        .chain(teaching.into_iter().flatten().flatten())
         .chain(back)
         .chain(forward)
         .chain(save)

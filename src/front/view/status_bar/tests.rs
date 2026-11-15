@@ -6,8 +6,11 @@
 //! search line keeps from them
 
 mod cancel;
+mod outputs;
 
-use super::{NO_MATCH, SEARCH_ROOM, clipped, fitted, hints as hinted, mark, search_columns};
+use super::{
+    NO_MATCH, SEARCH_ROOM, YIELDING, clipped, fitted, hints as hinted, mark, search_columns,
+};
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Workspace},
     front::{
@@ -34,7 +37,7 @@ fn hints() -> Vec<(Option<Action>, String)> {
 #[test]
 fn hints_that_fit_show_in_full() {
     assert_eq!(
-        fitted(&hints(), 77),
+        fitted(&hints(), 77, &YIELDING),
         "Added cue 1 | u: undo | Control+s: save | Space: GO | Escape: Panic | ?: help"
     );
 }
@@ -42,11 +45,14 @@ fn hints_that_fit_show_in_full() {
 #[test]
 fn keys_give_way_in_turn_while_what_the_change_told_stays() {
     assert_eq!(
-        fitted(&hints(), 76),
+        fitted(&hints(), 76, &YIELDING),
         "Added cue 1 | u: undo | Control+s: save | Escape: Panic | ?: help"
     );
-    assert_eq!(fitted(&hints(), 31), "Added cue 1 | u: undo | ?: help");
-    assert_eq!(fitted(&hints(), 5), "Added cue 1 | u: undo");
+    assert_eq!(
+        fitted(&hints(), 31, &YIELDING),
+        "Added cue 1 | u: undo | ?: help"
+    );
+    assert_eq!(fitted(&hints(), 5, &YIELDING), "Added cue 1 | u: undo");
 }
 
 #[test]
@@ -64,13 +70,13 @@ fn keys_of_going_forward_and_back_give_way_before_the_rest() {
         .chain(hints().into_iter().skip(2))
         .collect();
     let all = "Added cue 1 | u: undo | Control+o: back | Control+i: forward | Space: GO | Escape: Panic | ?: help";
-    assert_eq!(fitted(&hints, 100), all);
+    assert_eq!(fitted(&hints, 100, &YIELDING), all);
     assert_eq!(
-        fitted(&hints, 80),
+        fitted(&hints, 80, &YIELDING),
         "Added cue 1 | u: undo | Control+o: back | Space: GO | Escape: Panic | ?: help"
     );
     assert_eq!(
-        fitted(&hints, 62),
+        fitted(&hints, 62, &YIELDING),
         "Added cue 1 | u: undo | Space: GO | Escape: Panic | ?: help"
     );
 }
@@ -187,11 +193,14 @@ fn hints_of_a_menu_give_way_after_the_rest_when_the_bar_is_short() {
     .map(|(action, hint)| (action, hint.to_owned()))
     .collect();
     assert_eq!(
-        fitted(&hints, 45),
+        fitted(&hints, 45, &YIELDING),
         "Control+y: pick | Control+e: close | F1: help"
     );
-    assert_eq!(fitted(&hints, 34), "Control+y: pick | Control+e: close");
-    assert_eq!(fitted(&hints, 20), "Control+y: pick");
+    assert_eq!(
+        fitted(&hints, 34, &YIELDING),
+        "Control+y: pick | Control+e: close"
+    );
+    assert_eq!(fitted(&hints, 20, &YIELDING), "Control+y: pick");
 }
 
 #[test]

@@ -193,14 +193,17 @@ impl App {
                 device_problem: kept.err(),
                 ..self
             },
-            Message::ShowOutputs => return self.showing_outputs().revealed(),
+            Message::ShowOutputs => return self.jumping(Self::showing_outputs).revealed(),
             Message::InspectOutput(output) => {
-                return Self {
-                    output: Some(output),
-                    ..self
-                }
-                .showing_outputs()
-                .revealed();
+                return self
+                    .jumping(|app| {
+                        Self {
+                            output: Some(output),
+                            ..app
+                        }
+                        .showing_outputs()
+                    })
+                    .revealed();
             }
             Message::SelectOutput(output) => Self {
                 output: Some(output),

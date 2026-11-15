@@ -47,7 +47,7 @@ impl App {
     pub(super) fn in_outputs(self, message: Message) -> (Self, Task<Message>) {
         let app = match message {
             Message::Step(offset) => self.stepped_output(offset),
-            Message::Row(row) => self.output_at_row(row),
+            Message::Row(row) => self.jumping(|app| app.output_at_row(row)),
             Message::Add(place, _) => {
                 self.with_new_output(matches!(place(CueId(0)), Place::Before(_)))
             }

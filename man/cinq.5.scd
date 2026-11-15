@@ -618,6 +618,11 @@ whatever the count.
 Every other action that moves through, scrolls, searches, or changes the rows
 of a cue list, such as *standby*, *half_page_down*, *search*, *cut*, *copy*,
 and *paste_below*, does nothing there, since the cue list is out of sight.
+*first* and *last* with a count are jumps there, as they are for cues.
+While the outputs show, the status bar names the keys of *add_below*, *edit*,
+and *back*, and gives way, from the first to the last, to the key of *forward*,
+*add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that
+the key that leaves the outputs outlasts all but the help page.
 
 # ACTIONS
 
@@ -777,10 +782,18 @@ page.
 *back*
 	Go back to the place before the last jump, as the jump list of Vim does
 	with its *Control+o*.
-	A place is a cue list with its selected cue.
+	A place is a cue list with its selected cue, or the outputs with their
+	selected output.
 	Switching cue lists, *first* and *last* with or without a count, and
 	selecting a cue in another cue list are jumps, and so are the searches
 	described under *SEARCHING*.
+	So is showing the outputs, with the sidebar, the Edit outputs button, a
+	warning that names an output, or *next_list* past the last cue list, and
+	so is leaving them for a cue list, so that *back* from the outputs returns
+	to the cue list that showed, with the cue and the inspector tab that it had.
+	Where no jump recorded a place, as after opening a show with the outputs
+	shown, *back* from the outputs shows the cue list that was showing, with
+	its selected cue, and *forward* returns to the outputs.
 	Moving the selection one row at a time, clicking a cue of the cue list
 	shown, GO moving the standby cue, adding, deleting, and moving cues,
 	undo, redo, changing the tab, and the help page are not.
@@ -795,7 +808,8 @@ page.
 	A cue that was deleted leaves no place to go to.
 	The history holds at most 100 places, each once, and ends when cinq opens
 	another show or quits.
-	The status bar names the key while there is a place to go back to.
+	The status bar names the key while there is a place to go back to, and
+	always while the outputs show.
 	The back button of the mouse does the same from the main window, unless the
 	help page is open.
 
