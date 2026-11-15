@@ -168,18 +168,15 @@ of the help page.
 |  panic
 :  Escape
 :  Escape
+|  standby
+:  Enter
+:  Enter
 |  next
 :  j, g j, ArrowDown, Control+n
 :  ArrowDown
 |  previous
 :  k, g k, ArrowUp, Control+p
 :  ArrowUp
-|  next_list
-:  l, ArrowRight
-:  Control+PageDown
-|  previous_list
-:  h, ArrowLeft
-:  Control+PageUp
 |  first
 :  g g, Control+Home
 :  Home
@@ -198,6 +195,12 @@ of the help page.
 |  page_up
 :  Control+b, PageUp
 :  PageUp
+|  next_list
+:  l, ArrowRight
+:  Control+PageDown
+|  previous_list
+:  h, ArrowLeft
+:  Control+PageUp
 |  next_tab
 :  g t
 :  Control+Tab
@@ -222,9 +225,6 @@ of the help page.
 |  previous_match
 :  N
 :  Shift+F3
-|  standby
-:  Enter
-:  Enter
 |  edit
 :  i, a, A
 :  F2
@@ -240,33 +240,39 @@ of the help page.
 |  previous_field
 :  Shift+Tab
 :  Shift+Tab
+|  pick
+:  Control+y
+:  none
+|  close_menu
+:  Control+e
+:  F4
 |  add_below
 :  o
 :  Control+n
 |  add_above
 :  O
 :  Control+N
-|  move_down
-:  Alt+j, Alt+ArrowDown
-:  Alt+ArrowDown
-|  move_up
-:  Alt+k, Alt+ArrowUp
-:  Alt+ArrowUp
-|  delete
-:  none
-:  Delete
-|  copy
-:  y y, Y
-:  Control+c
 |  cut
 :  d d, x, Delete
 :  Control+x
+|  copy
+:  y y, Y
+:  Control+c
 |  paste_below
 :  p
 :  Control+v
 |  paste_above
 :  P
 :  Control+V
+|  delete
+:  none
+:  Delete
+|  move_down
+:  Alt+j, Alt+ArrowDown
+:  Alt+ArrowDown
+|  move_up
+:  Alt+k, Alt+ArrowUp
+:  Alt+ArrowUp
 |  undo
 :  u
 :  Control+z
@@ -291,12 +297,6 @@ of the help page.
 |  close_help
 :  q
 :  Control+w
-|  pick
-:  Control+y
-:  none
-|  close_menu
-:  Control+e
-:  F4
 
 # KEYS
 
@@ -510,6 +510,9 @@ page.
 	Panic: fade every playing cue out over one second, and stop the rest.
 	A second panic while the first is still fading stops everything at once.
 
+*standby*
+	Put the selected cue on standby, so that the next GO fires it.
+
 *next*
 	Select the next cue, move the highlight of an open menu down, or scroll
 	the help page down.
@@ -520,12 +523,6 @@ page.
 	Select the previous cue, move the highlight of an open menu up, or
 	scroll the help page up.
 	The vi keymap binds *g k* as well as *k*, as it binds *g j*.
-
-*next_list*
-	Show the next cue list.
-
-*previous_list*
-	Show the previous cue list.
 
 *first*
 	Select the first cue, or the cue on the row counted, or go to the top of
@@ -566,6 +563,12 @@ page.
 	At the top of the list the view stops and the selection goes on to the
 	first cue.
 	On the help page, scroll up by a page less two lines.
+
+*next_list*
+	Show the next cue list.
+
+*previous_list*
+	Show the previous cue list.
 
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,
@@ -631,9 +634,6 @@ page.
 	as the count, going around the matches at most once.
 	It is a jump for *back*.
 
-*standby*
-	Put the selected cue on standby, so that the next GO fires it.
-
 *edit*
 	Edit the name of the selected cue: show the Basics tab and put the caret
 	at the end of the name, as Vim's *a* and *A* do at the end of a line.
@@ -657,6 +657,18 @@ page.
 *previous_field*
 	Move the keyboard to the previous field.
 
+*pick*
+	Pick the highlighted option of an open menu, as Enter does and as Control+y
+	does in Vim's popup menu.
+	It does nothing while no menu is open.
+
+*close_menu*
+	Close an open menu without picking an option, as Control+e does in Vim's
+	popup menu.
+	Unlike Escape, which closes the menu and also acts as Panic, it does not
+	panic.
+	It does nothing while no menu is open.
+
 *add_below*
 	Add a cue of the kind chosen in the toolbar below the selection, or at the
 	end of the list without one.
@@ -668,20 +680,16 @@ page.
 	Add a cue of the kind chosen in the toolbar above the selection, or at the
 	end of the list without one, as many as the count, as *add_below* does.
 
-*move_down*
-	Move the selected cue one place down its list, or as many places as the
-	count.
-
-*move_up*
-	Move the selected cue one place up its list, or as many places as the
-	count.
-
-*delete*
-	Delete the selected cue, or as many cues from it down as the count,
-	without copying them.
-	The vi keymap binds no key to it, since *cut* is what its *d d*, *x*, and
-	*Delete* do, as in Vim.
-	The cua keymap binds the Delete key to it, as desktop programs do.
+*cut*
+	Copy the selected cue, or as many cues from it down as the count, to the
+	clipboard and delete them, so that *cut* and then *paste_below* moves a
+	cue.
+	The vi keymap binds *x* and *Delete* to it as well as *d d*, as Vim cuts
+	with all three, and *d* followed by a motion cuts the cues the motion
+	reaches, as *TYPING* describes.
+	The status bar tells how many cues went to the clipboard and names the keys
+	of *paste_below* and *undo*, and goes on telling the change as a cut after
+	later keys and in the notices of *undo* and *redo*.
 
 *copy*
 	Copy the selected cue, or as many cues from it down as the count, to the
@@ -694,17 +702,6 @@ page.
 	The vi keymap binds *Y* to it as well as *y y*, as Vim yanks a line with
 	both, and *y* followed by a motion copies the cues the motion reaches, as
 	*TYPING* describes.
-
-*cut*
-	Copy the selected cue, or as many cues from it down as the count, to the
-	clipboard and delete them, so that *cut* and then *paste_below* moves a
-	cue.
-	The vi keymap binds *x* and *Delete* to it as well as *d d*, as Vim cuts
-	with all three, and *d* followed by a motion cuts the cues the motion
-	reaches, as *TYPING* describes.
-	The status bar tells how many cues went to the clipboard and names the keys
-	of *paste_below* and *undo*, and goes on telling the change as a cut after
-	later keys and in the notices of *undo* and *redo*.
 
 *paste_below*
 	Paste the cues of the clipboard below the selection, or at the end of the
@@ -728,6 +725,21 @@ page.
 *paste_above*
 	Paste the cues of the clipboard above the selection, as *paste_below*
 	does below it.
+
+*delete*
+	Delete the selected cue, or as many cues from it down as the count,
+	without copying them.
+	The vi keymap binds no key to it, since *cut* is what its *d d*, *x*, and
+	*Delete* do, as in Vim.
+	The cua keymap binds the Delete key to it, as desktop programs do.
+
+*move_down*
+	Move the selected cue one place down its list, or as many places as the
+	count.
+
+*move_up*
+	Move the selected cue one place up its list, or as many places as the
+	count.
 
 *undo*
 	Undo the latest change to the show, or as many of the latest changes as the
@@ -772,18 +784,6 @@ page.
 
 *close_help*
 	Hide the help page.
-
-*pick*
-	Pick the highlighted option of an open menu, as Enter does and as Control+y
-	does in Vim's popup menu.
-	It does nothing while no menu is open.
-
-*close_menu*
-	Close an open menu without picking an option, as Control+e does in Vim's
-	popup menu.
-	Unlike Escape, which closes the menu and also acts as Panic, it does not
-	panic.
-	It does nothing while no menu is open.
 
 # DIAGNOSTICS
 

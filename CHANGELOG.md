@@ -10,6 +10,9 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The help page and the table of cinq(5) list the actions in groups, GO,
+  Panic, and standby first, then the moves, then the edits, then the files
+  and the window, in place of the order in which actions were added.
 - A key that completes or continues no sequence of keys cancels what was
   typed so far and does nothing itself, as Vim beeps and drops the keys, so
   that a mistyped `d x` no longer cuts a cue, and `g j` and `g k` move the

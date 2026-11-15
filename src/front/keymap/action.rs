@@ -10,22 +10,25 @@ use strum::{EnumString, IntoStaticStr, VariantArray};
 
 use crate::front::message::Page;
 
-/// [`Action::VARIANTS`] lists every action in the order of the help page.
+/// [`Action::VARIANTS`] lists every action in the order of the help page,
+/// in the groups that a user of Vim scans: GO, Panic, and standby, then
+/// moving, then editing, then the files and the window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, IntoStaticStr, VariantArray)]
 #[strum(serialize_all = "snake_case")]
 pub enum Action {
     Go,
     Panic,
+    Standby,
     Next,
     Previous,
-    NextList,
-    PreviousList,
     First,
     Last,
     HalfPageDown,
     HalfPageUp,
     PageDown,
     PageUp,
+    NextList,
+    PreviousList,
     NextTab,
     PreviousTab,
     Back,
@@ -34,21 +37,22 @@ pub enum Action {
     SearchBackward,
     NextMatch,
     PreviousMatch,
-    Standby,
     Edit,
     EditStart,
     ChangeName,
     NextField,
     PreviousField,
+    Pick,
+    CloseMenu,
     AddBelow,
     AddAbove,
-    MoveDown,
-    MoveUp,
-    Delete,
-    Copy,
     Cut,
+    Copy,
     PasteBelow,
     PasteAbove,
+    Delete,
+    MoveDown,
+    MoveUp,
     Undo,
     Redo,
     Open,
@@ -57,8 +61,6 @@ pub enum Action {
     Fullscreen,
     Help,
     CloseHelp,
-    Pick,
-    CloseMenu,
 }
 
 impl Action {
@@ -70,10 +72,9 @@ impl Action {
         match self {
             Action::Go => "GO: fire the standby cue and its chain",
             Action::Panic => "Panic: fade everything out, or stop it at once",
+            Action::Standby => "Put the selected cue on standby",
             Action::Next => "Select the next cue or menu option",
             Action::Previous => "Select the previous cue or menu option",
-            Action::NextList => "Show the next cue list",
-            Action::PreviousList => "Show the previous cue list",
             Action::First => "Select the first cue, or the row counted",
             Action::Last => "Select the last cue, or the row counted",
             Action::HalfPageDown => {
@@ -82,6 +83,8 @@ impl Action {
             Action::HalfPageUp => "Scroll half a page up with the selection, or the rows counted",
             Action::PageDown => "Scroll a page down with the selection, or the pages counted",
             Action::PageUp => "Scroll a page up with the selection, or the pages counted",
+            Action::NextList => "Show the next cue list",
+            Action::PreviousList => "Show the previous cue list",
             Action::NextTab => "Show the next inspector tab, or the tab counted",
             Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
             Action::Back => "Go back to the place that the last jump left",
@@ -92,21 +95,22 @@ impl Action {
             Action::PreviousMatch => {
                 "Select the next match of the search, in the opposite direction"
             }
-            Action::Standby => "Put the selected cue on standby",
             Action::Edit => "Edit the name of the selected cue, with the caret at its end",
             Action::EditStart => "Edit the name of the selected cue, with the caret at its start",
             Action::ChangeName => "Change the name of the selected cue, selecting all of it",
             Action::NextField => "Move to the next field",
             Action::PreviousField => "Move to the previous field",
+            Action::Pick => "Pick the highlighted option of an open menu",
+            Action::CloseMenu => "Close an open menu without picking an option",
             Action::AddBelow => "Add a cue below the selection",
             Action::AddAbove => "Add a cue above the selection",
-            Action::MoveDown => "Move the selected cue down",
-            Action::MoveUp => "Move the selected cue up",
-            Action::Delete => "Delete the selected cue without copying it",
-            Action::Copy => "Copy the selected cue to the clipboard",
             Action::Cut => "Cut the selected cue to the clipboard",
+            Action::Copy => "Copy the selected cue to the clipboard",
             Action::PasteBelow => "Paste the copied cues below the selection",
             Action::PasteAbove => "Paste the copied cues above the selection",
+            Action::Delete => "Delete the selected cue without copying it",
+            Action::MoveDown => "Move the selected cue down",
+            Action::MoveUp => "Move the selected cue up",
             Action::Undo => "Undo the latest change to the show, or as many as counted",
             Action::Redo => "Redo the change undone last, or as many as counted",
             Action::Open => "Open a show",
@@ -115,8 +119,6 @@ impl Action {
             Action::Fullscreen => "Toggle fullscreen on the stage window",
             Action::Help => "Show or hide this help",
             Action::CloseHelp => "Hide this help",
-            Action::Pick => "Pick the highlighted option of an open menu",
-            Action::CloseMenu => "Close an open menu without picking an option",
         }
     }
 
