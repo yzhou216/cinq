@@ -10,6 +10,8 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- `Y` copies the selected cue in the vi keymap, as `y y` does, and takes a
+  count.
 - In the vi keymap, `d` and `y` take a motion, as in Vim: `d j` cuts the
   selected cue and the next, `y k` copies it and the previous, and `d G`,
   `d g g`, and `d 3 G` reach the last cue, the first, and row 3.  Counts

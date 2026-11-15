@@ -250,7 +250,7 @@ of the help page.
 :  none
 :  Delete
 |  copy
-:  y y
+:  y y, Y
 :  Control+c
 |  cut
 :  d d, x, Delete
@@ -657,8 +657,9 @@ page.
 	It acts in show mode, since it changes no show.
 	The status bar tells how many cues went to the clipboard and names the key
 	of *paste_below*.
-	In the vi keymap, *y* followed by a motion copies the cues the motion
-	reaches, as *TYPING* describes.
+	The vi keymap binds *Y* to it as well as *y y*, as Vim yanks a line with
+	both, and *y* followed by a motion copies the cues the motion reaches, as
+	*TYPING* describes.
 
 *cut*
 	Copy the selected cue, or as many cues from it down as the count, to the

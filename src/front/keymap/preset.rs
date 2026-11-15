@@ -62,7 +62,7 @@ impl Preset {
             Action::MoveDown => [&["Alt+j", "Alt+ArrowDown"], &["Alt+ArrowDown"]],
             Action::MoveUp => [&["Alt+k", "Alt+ArrowUp"], &["Alt+ArrowUp"]],
             Action::Delete => [&[], &["Delete"]],
-            Action::Copy => [&["y y"], &["Control+c"]],
+            Action::Copy => [&["y y", "Y"], &["Control+c"]],
             Action::Cut => [&["d d", "x", "Delete"], &["Control+x"]],
             Action::PasteBelow => [&["p"], &["Control+v"]],
             Action::PasteAbove => [&["P"], &["Control+V"]],

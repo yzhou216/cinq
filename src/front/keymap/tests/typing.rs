@@ -223,3 +223,13 @@ fn cua_copies_cuts_and_pastes_with_control_and_deletes_with_delete_alone() {
     assert_eq!(action("Control+V"), Some(Action::PasteAbove));
     assert_eq!(action("Delete"), Some(Action::Delete));
 }
+
+#[test]
+fn capital_y_copies_like_y_y_and_takes_a_count() {
+    assert_eq!(action("Y"), Some((Action::Copy, None)));
+    assert_eq!(action("3 Y"), Some((Action::Copy, Some(3))));
+    assert_eq!(action("y y"), Some((Action::Copy, None)));
+    assert!(typed("Y").pending.is_empty());
+    // Y is bound by itself, so it makes no operator
+    assert_eq!(typed("Y j").action, Some((Action::Next, None)));
+}
