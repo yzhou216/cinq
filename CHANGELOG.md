@@ -10,6 +10,14 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- In the vi keymap, `d` and `y` take a motion, as in Vim: `d j` cuts the
+  selected cue and the next, `y k` copies it and the previous, and `d G`,
+  `d g g`, and `d 3 G` reach the last cue, the first, and row 3.  Counts
+  before the operator and the motion multiply, so that `2 d 3 j` cuts seven
+  cues, and the box above the status bar lists the motions after the
+  operator.  The operator key is the doubled key of the binding, so that
+  `cut = ["D D"]` makes `D D` and `D j` cut.  A cut of several cues is one
+  change for undo.
 - Undoing the addition of a cue or a paste below a cue selects the cue that
   was selected when it was made, as the cursor of Vim goes back to where a
   change was made, in place of the cue that follows.

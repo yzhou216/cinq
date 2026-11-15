@@ -78,7 +78,7 @@ fn keys_typed_halfway_list_what_can_follow_them() {
     let next = |text: &str| -> Vec<(String, Action)> {
         keymap
             .continuations(&keys(text))
-            .map(|(rest, action)| (written(rest), action))
+            .map(|(rest, action, _)| (written(rest), action))
             .collect()
     };
     let g = [
@@ -88,7 +88,7 @@ fn keys_typed_halfway_list_what_can_follow_them() {
     ];
     assert_eq!(next("g"), g);
     assert_eq!(next("1 2 g"), g);
-    assert_eq!(next("2 d"), [("d".to_owned(), Action::Cut)]);
+    assert_eq!(next("2 d")[0], ("d".to_owned(), Action::Cut));
     assert!(next("3").is_empty());
     assert_eq!(keymap.continuations(&[]).count(), 0);
 }

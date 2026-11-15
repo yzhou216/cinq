@@ -17,6 +17,8 @@ mod help_page;
 mod history;
 mod loading;
 mod matches;
+mod operators;
+mod operators_pasting;
 mod paging;
 mod search;
 mod search_places;

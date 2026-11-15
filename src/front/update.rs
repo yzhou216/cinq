@@ -17,6 +17,7 @@ mod keys;
 mod link;
 mod loading;
 mod navigation;
+mod operators;
 mod paging;
 mod scroll;
 mod search;
@@ -93,6 +94,9 @@ impl App {
             Message::Cut(count) => return self.cut(count).revealed(),
             Message::Paste(place, count) => return self.with_pasted(place, count).revealed(),
             Message::Delete(count) => return self.without_selected(count).revealed(),
+            Message::Across(operator, motion, count) => {
+                return self.across(operator, motion, count).revealed();
+            }
             Message::Search { backward } => return self.searching(backward),
             Message::Searching(text) => return self.search_typed(text),
             Message::SearchAccepted => return self.search_accepted(),

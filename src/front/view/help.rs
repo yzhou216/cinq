@@ -60,6 +60,9 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     let example = keymap
         .key(Action::Next)
         .map_or_else(String::new, |keys| format!(", as in 3 {keys}"));
+    let operators = Some(keymap.operator_keys())
+        .filter(|keys| !keys.is_empty())
+        .map(|keys| text(format!("After {}, a key that selects the next, previous, first, or last cue applies the action to the cues from the selection to where that key would move it.  A count before the operator, before the key, or both counts the move, and the two multiply.", keys.join(" or "))));
     let key_values = paragraph(
         "The manual page cinq(5) describes config.toml, where keys go by their W3C UI Events key values, listed at ",
         link(KEY_VALUES, OsString::from(KEY_VALUES)),
@@ -70,10 +73,11 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         text(format!("Keys of the {} keymap", keymap.name())).size(24),
         bindings,
         text(format!("A count typed before a key repeats a move{example}.  It goes that many places back or forward, undoes or redoes that many changes, copies, cuts, or deletes that many cues, pastes that many times, and goes that many matches along or that many pages down or up.  It picks the row for the first and last cue and the tab for the next tab, and sets the rows of a half page.")),
-        text("The keys of GO and Panic act at once, even halfway through another command."),
-        source(&app.config.source),
-        key_values,
     ]
+    .extend(operators.map(Element::from))
+    .push(text("The keys of GO and Panic act at once, even halfway through another command."))
+    .push(source(&app.config.source))
+    .push(key_values)
     .extend(app.link_problem.as_deref().map(|why| text(why).into()))
     .extend(notice())
     .push(button("Close").on_press(Message::CloseHelp))

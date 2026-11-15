@@ -27,12 +27,21 @@ use crate::front::{
 impl App {
     pub(super) fn typed(self, press: Press, repeat: bool) -> (Self, Task<Message>) {
         let outcome = self.config.keymap.parse(&self.keys, press);
+        let across = outcome.across();
         let app = Self {
             keys: outcome.pending,
             clipped: self.clipped.filter(|_| outcome.action.is_none()),
             remark: self.remark.filter(|_| outcome.action.is_none()),
             ..self
         };
+        if let Some((operator, motion, count)) = across {
+            // Help page has no cues to operate on
+            return if app.help {
+                (app, Task::none())
+            } else {
+                app.handled(Message::Across(operator, motion, count))
+            };
+        }
         match outcome.action {
             Some((action, _)) if repeat && action.acts_once_a_press() => (app, Task::none()),
             // The page opens in the main window, which the fullscreen stage

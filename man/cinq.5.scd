@@ -346,6 +346,31 @@ behind, *9 g t* with fewer tabs, or *3 d d* on the last cue, makes cinq go as
 far as it can, where Vim would refuse it.
 Since digits count, no sequence can start with one.
 
+The actions *copy*, *cut*, and *delete* also act as operators, as *y* and *d*
+do in Vim.
+An operator key is the key that one of their bindings doubles: *d* for *d d*
+and *y* for *y y* in the vi keymap, and *D* for a binding *D D* that replaces
+*d d*.
+A binding that does not double a key, such as *Control+x*, *x*, or *c v*, makes
+no operator.
+The operator key followed by any key bound to *next*, *previous*, *first*, or
+*last* applies the action to the cues from the selection to where that motion
+would move it, inclusive, as Vim does for whole lines: *d j* cuts the selected
+cue and the next, *y k* copies it and the previous, *d G* cuts down to the last
+cue, *d g g* up to the first, and *d 3 G* to row 3, in whichever direction the
+row lies.
+A count before the operator, before the motion, or both counts the motion, and
+the two multiply, so that *2 d 3 j* cuts the selected cue and the next six.
+A motion that cannot move, such as *d k* on the first cue, does nothing, and a
+count past the end stops at the last cue.
+The cues of a cut leave the selection on the cue that takes their place, and a
+copy leaves it on the first cue copied.
+Cutting is one change for undo, and the clipboard holds the cues in order.
+Show mode locks *d* with a motion as it locks *cut* and *delete*, and leaves *y*
+with a motion alone, as it leaves *copy*.
+A key that is neither a count nor a motion drops the operator and starts a new
+sequence, and the keys of *go* and *panic* act at once as usual.
+
 A key bound by itself to *go* or *panic* acts at once, even halfway through
 another sequence, and when it is bound without modifiers, whatever modifiers
 are held with it, unless the other of the two is bound to the key with those
@@ -632,13 +657,16 @@ page.
 	It acts in show mode, since it changes no show.
 	The status bar tells how many cues went to the clipboard and names the key
 	of *paste_below*.
+	In the vi keymap, *y* followed by a motion copies the cues the motion
+	reaches, as *TYPING* describes.
 
 *cut*
 	Copy the selected cue, or as many cues from it down as the count, to the
 	clipboard and delete them, so that *cut* and then *paste_below* moves a
 	cue.
 	The vi keymap binds *x* and *Delete* to it as well as *d d*, as Vim cuts
-	with all three.
+	with all three, and *d* followed by a motion cuts the cues the motion
+	reaches, as *TYPING* describes.
 	The status bar tells how many cues went to the clipboard and names the keys
 	of *paste_below* and *undo*, and goes on telling the change as a cut after
 	later keys and in the notices of *undo* and *redo*.

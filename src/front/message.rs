@@ -12,7 +12,7 @@ use iced::{Size, mouse, window};
 use strum::{Display, VariantArray};
 
 use super::{
-    keymap::{Press, config::Config},
+    keymap::{Action, Press, config::Config},
     update::{Measured, Read, Saved},
 };
 use crate::back::{Command, CueId, Edit, Kind, Place};
@@ -166,6 +166,10 @@ pub enum Message {
     Paste(fn(CueId) -> Place, usize),
     /// Deletes a number of cues from the selection down
     Delete(usize),
+    /// Applies the operator `Cut`, `Copy`, or `Delete` to the cues from the
+    /// selection to where the motion `Next`, `Previous`, `First`, or `Last`
+    /// would move it, counted as the motion is
+    Across(Action, Action, Option<usize>),
     Edit(CueId, Edit),
     LevelTyped(CueId, String),
     /// Asks which file an audio, video, or picture cue plays or shows

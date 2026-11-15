@@ -8,7 +8,7 @@ use super::*;
 
 /// Returns the state of a show of audio cue 1, fade cue 2 that targets it,
 /// and audio cue 3, with cue 1 selected
-fn fading() -> App {
+pub(in crate::front::update::tests) fn fading() -> App {
     let fade = Cue::new(CueId(2), "2", Kind::Fade, "Fade")
         .target(CueId(1))
         .build();
@@ -20,7 +20,7 @@ fn fading() -> App {
 }
 
 /// Returns the identity and target of each cue of the first list
-fn targets(app: &App) -> Vec<(u32, Option<u32>)> {
+pub(in crate::front::update::tests) fn targets(app: &App) -> Vec<(u32, Option<u32>)> {
     app.workspace.lists()[0]
         .cues
         .iter()

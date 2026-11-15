@@ -6,6 +6,8 @@
 
 mod targets;
 
+pub(in crate::front::update::tests) use targets::{fading, targets};
+
 use super::*;
 use crate::back::{Cue, Kind};
 
