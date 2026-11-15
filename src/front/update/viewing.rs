@@ -111,3 +111,34 @@ pub(super) fn in_view(
         row,
     })
 }
+impl App {
+    /// Scrolls the cue list to put the selected row at `height` in view,
+    /// as `z t`, `z z`, and `z b` do in Vim, and leaves the selection on its
+    /// cue.
+    pub(super) fn placed(self, height: Height) -> (Self, Task<Message>) {
+        let (cues, current) = (self.current().cues.len(), self.selected_row());
+        let (list, from) = (self.list, self.selected);
+        self.landing(
+            move |row| Message::Landed { list, from, row },
+            move |shape| place(height, shape, cues, current?),
+        )
+    }
+}
+
+/// Returns where the view of a list of `cues` rows must scroll to put row
+/// `current` at `height`, stopping at either end of the list
+pub(super) fn place(height: Height, shape: Shape, cues: usize, current: usize) -> Option<Landing> {
+    let last = cues.checked_sub(1)?;
+    let row = current.min(last);
+    let row_height = shape.content / cues as f32;
+    let (top, bottom) = (row as f32 * row_height, (row + 1) as f32 * row_height);
+    let wanted = match height {
+        Height::Top => top,
+        Height::Middle => (top + bottom - shape.view) / 2.0,
+        Height::Bottom => bottom - shape.view,
+    };
+    Some(Landing {
+        offset: wanted.clamp(0.0, (shape.content - shape.view).max(0.0)),
+        row,
+    })
+}

@@ -2,8 +2,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of scrolling the cue list a row at a time, and of selecting the rows
-//! in its view, in the cue list and on the help page
+//! Tests of scrolling the cue list a row at a time, of selecting the rows in
+//! its view, and of putting the selected row in view, in the cue list and on
+//! the help page
 
 use super::{
     paging::{letter, shaped, typed},
@@ -16,7 +17,7 @@ use crate::{
         message::Height,
         update::{
             paging::viewport::Shape,
-            viewing::{in_view, scroll},
+            viewing::{in_view, place, scroll},
         },
     },
 };
@@ -155,4 +156,51 @@ fn keys_of_top_middle_and_bottom_measure_the_cue_list_before_the_selection_moves
         .into_iter()
         .for_each(|key| assert_eq!(typed(key, &[]), (Some(CueId(2)), 2), "{key}"));
     assert_eq!(typed("H", &["3"]), (Some(CueId(2)), 2));
+}
+
+/// Returns the offset in rows that puts `current` at `height` in the list
+/// of [`shaped`]
+fn placed(height: Height, current: usize) -> f32 {
+    let landing = place(height, shaped(0.0), 60, current).expect("a row to place");
+    assert_eq!(landing.row, current);
+    landing.offset / 20.0
+}
+
+#[test]
+fn z_puts_the_selected_row_at_the_top_middle_or_bottom_of_the_view() {
+    // Twenty rows in view, so that row 30 sits at 30, 20, and 11 rows down
+    assert_eq!(placed(Height::Top, 30), 30.0);
+    assert_eq!(placed(Height::Middle, 30), 20.5);
+    assert_eq!(placed(Height::Bottom, 30), 11.0);
+}
+
+#[test]
+fn z_stops_at_either_end_of_the_list() {
+    assert_eq!(placed(Height::Middle, 3), 0.0);
+    assert_eq!(placed(Height::Bottom, 3), 0.0);
+    assert_eq!(placed(Height::Top, 55), 40.0);
+    assert_eq!(placed(Height::Middle, 58), 40.0);
+    assert!(place(Height::Top, shaped(0.0), 0, 0).is_none());
+    // List that fits its view does not scroll
+    let fits = Shape {
+        content: 100.0,
+        ..shaped(0.0)
+    };
+    assert_eq!(place(Height::Top, fits, 5, 3).map(|l| l.offset), Some(0.0));
+}
+
+#[test]
+fn keys_of_z_measure_the_cue_list_and_leave_the_selection_alone() {
+    let keys = |second: &str| {
+        let app = show(Some(CueId(2)));
+        let (app, first) = app.typed(super::press(letter("z")), false);
+        let (app, task) = app.typed(super::press(letter(second)), false);
+        (app.selected, app.keys.len(), first.units(), task.units())
+    };
+    ["z", "t", "b"]
+        .into_iter()
+        .for_each(|key| assert_eq!(keys(key), (Some(CueId(2)), 0, 0, 2), "z {key}"));
+    // Without a selected cue there is no row to place
+    let (_, task) = show(None).handled(Message::Place(Height::Top));
+    assert_eq!(task.units(), 2);
 }

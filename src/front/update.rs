@@ -84,6 +84,7 @@ impl App {
                 self.jumping(|app| app.at_row(row.saturating_add(1)))
             }
             Message::Reached { .. } => self,
+            Message::Place(height) => return self.placed(height),
             Message::SwitchList(list) => {
                 return self
                     .without_search()

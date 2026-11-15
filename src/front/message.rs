@@ -123,6 +123,8 @@ pub enum Message {
         from: Option<CueId>,
         row: usize,
     },
+    /// Scrolls the cue list to put the selected row at a height in view
+    Place(Height),
     StandbySelected,
     SwitchList(usize),
     /// Shows the cue list a number of lists further down the sidebar

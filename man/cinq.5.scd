@@ -210,6 +210,15 @@ of the help page.
 |  bottom_row
 :  L
 :  none
+|  row_to_middle
+:  z z
+:  none
+|  row_to_top
+:  z t
+:  none
+|  row_to_bottom
+:  z b
+:  none
 |  next_list
 :  l, ArrowRight
 :  Control+PageDown
@@ -620,6 +629,21 @@ page.
 	Select the last cue row in view, or the row that many rows above it for a
 	count, stopping at the first row in view, as *L* does in Vim.
 	It is a jump for *back*.
+
+*row_to_middle*
+	Scroll the cue list to put the selected row in the middle of the view, as
+	*z z* does in Vim.
+	The selection stays on its cue, and the view stops at either end of the
+	list, so that a row near an end stays short of the middle.
+	It is no jump, and leaves the count unused.
+
+*row_to_top*
+	Scroll the cue list to put the selected row at the top of the view, as
+	*z t* does in Vim, stopping at the end of the list.
+
+*row_to_bottom*
+	Scroll the cue list to put the selected row at the bottom of the view, as
+	*z b* does in Vim, stopping at the top of the list.
 
 *next_list*
 	Show the next cue list.

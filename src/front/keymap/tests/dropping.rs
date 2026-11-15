@@ -11,11 +11,11 @@ use super::*;
 fn key_that_ends_no_command_drops_the_keys_typed_so_far_and_itself() {
     let dropped = Outcome::default();
     assert_eq!(typed("d i"), dropped);
-    assert_eq!(typed("g z"), dropped);
-    assert_eq!(typed("4 z"), dropped);
-    assert_eq!(typed("2 g z"), dropped);
+    assert_eq!(typed("g w"), dropped);
+    assert_eq!(typed("4 w"), dropped);
+    assert_eq!(typed("2 g w"), dropped);
     // Next key starts afresh
-    assert_eq!(action("g z j"), Some((Action::Next, None)));
+    assert_eq!(action("g w j"), Some((Action::Next, None)));
     assert_eq!(action("2 g j"), Some((Action::Next, Some(2))));
 }
 

@@ -217,7 +217,7 @@ fn operator_typed_halfway_shows_in_the_keys_and_acts_only_when_complete() {
 
 #[test]
 fn operator_dropped_by_a_stray_key_cuts_nothing() {
-    let app = typing(show(Some(CueId(2))), &["d", "z", "j"]);
+    let app = typing(show(Some(CueId(2))), &["d", "w", "j"]);
     assert_eq!(rows(&app).len(), 12);
     assert_eq!(app.selected, Some(CueId(3)));
 }

@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- `z z`, `z t`, and `z b` scroll the cue list to put the selected row in the
+  middle, at the top, or at the bottom of the view in the vi keymap, as in
+  Vim, through the new `row_to_middle`, `row_to_top`, and `row_to_bottom`
+  actions.  The selection stays on its cue, and the view stops at the ends of
+  the list.
 - `H`, `M`, and `L` select the first, middle, and last cue row in view in the
   vi keymap, as in Vim, through the new `top_row`, `middle_row`, and
   `bottom_row` actions.  A count before `H` counts rows from the top and

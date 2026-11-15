@@ -12,6 +12,7 @@ mod naming;
 mod notation;
 mod operators;
 mod typing;
+mod viewing;
 
 use itertools::Itertools;
 use strum::VariantArray;
