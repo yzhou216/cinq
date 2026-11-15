@@ -35,8 +35,9 @@ impl App {
             ..self
         };
         if let Some((operator, motion, count)) = across {
-            // Help page has no cues to operate on
-            return if app.help {
+            // Help page has no cues to operate on, and the stage window leaves
+            // the cues to the main window
+            return if app.help || app.stage.has_keyboard() {
                 (app, Task::none())
             } else {
                 app.handled(Message::Across(operator, motion, count))
@@ -44,6 +45,11 @@ impl App {
         }
         match outcome.action {
             Some((action, _)) if repeat && action.acts_once_a_press() => (app, Task::none()),
+            // The cue list is out of sight from the stage window, so that the keys
+            // that change the show or the clipboard wait for the main window
+            Some((action, _)) if app.stage.has_keyboard() && action.edits_the_show() => {
+                (app, Task::none())
+            }
             // The page opens in the main window, which the fullscreen stage
             // window may cover, so that the page would open out of sight
             Some((Action::Help, _)) if app.stage.has_keyboard() => (app, Task::none()),

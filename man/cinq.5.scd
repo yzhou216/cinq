@@ -526,6 +526,13 @@ once the stage window opens, and as each GO that makes it fullscreen gives
 it, *edit*, *edit_start*, *change_name*, *next_field*, and *previous_field* do
 nothing, since the keys typed there would never reach a field of the main
 window.
+The keys that change the show or fill the clipboard do nothing there either:
+*add_below*, *add_above*, *cut*, *copy*, *paste_below*, *paste_above*,
+*delete*, *move_down*, *move_up*, *undo*, and *redo*, and the operators that
+begin with a key of *cut*, *copy*, or *delete*, since the cue list is out of
+sight from that window and a held key could change cues unseen.
+The keys of *go*, *panic*, and *standby*, and those that move the selection,
+act as before.
 A click on the main window gives it the keyboard.
 
 Show mode locks editing: *edit*, *edit_start*, *change_name*, *add_below*,

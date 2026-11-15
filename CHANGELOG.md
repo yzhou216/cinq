@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- While the stage window has the keyboard, the keys that change the show or
+  fill the clipboard, such as `x`, `Delete`, `o`, `u`, `p`, and the
+  operators, do nothing, as the keys of editing a name, of searching, and
+  of the help page already did, so that a key held down there cannot change
+  cues out of sight.  `GO`, `Panic`, `standby`, and the moves still act.
 - While a drop-down list is open, the status bar hints the keys that pick and
   close it, such as `Control+y: pick | Control+e: close` in the vi keymap and
   `Enter: pick | F4: close` in the cua keymap, and gives way when the bar is

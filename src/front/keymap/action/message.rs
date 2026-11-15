@@ -72,4 +72,25 @@ impl Action {
             Action::CloseHelp => Message::CloseHelp,
         }
     }
+
+    /// Returns whether the action edits the show or fills the clipboard,
+    /// which the stage window leaves to the main window: the operator cannot
+    /// see the cue list from there, so a key held down by mistake would change
+    /// cues out of sight
+    pub fn edits_the_show(self) -> bool {
+        matches!(
+            self,
+            Action::AddBelow
+                | Action::AddAbove
+                | Action::Cut
+                | Action::Copy
+                | Action::PasteBelow
+                | Action::PasteAbove
+                | Action::Delete
+                | Action::MoveDown
+                | Action::MoveUp
+                | Action::Undo
+                | Action::Redo
+        )
+    }
 }
