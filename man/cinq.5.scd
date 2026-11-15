@@ -226,8 +226,14 @@ of the help page.
 :  Enter
 :  Enter
 |  edit
-:  i
+:  i, a, A
 :  F2
+|  edit_start
+:  I
+:  none
+|  change_name
+:  c c, S
+:  none
 |  next_field
 :  Tab
 :  Tab
@@ -478,13 +484,15 @@ The menu of a drop-down list
 
 While the stage window has the keyboard, as the window manager may leave it
 once the stage window opens, and as each GO that makes it fullscreen gives
-it, *edit*, *next_field*, and *previous_field* do nothing, since the keys
-typed there would never reach a field of the main window.
+it, *edit*, *edit_start*, *change_name*, *next_field*, and *previous_field* do
+nothing, since the keys typed there would never reach a field of the main
+window.
 A click on the main window gives it the keyboard.
 
-Show mode locks editing: *edit*, *add_below*, *add_above*, *move_down*,
-*move_up*, *delete*, *cut*, *paste_below*, and *paste_above* do nothing in it,
-and *undo* and *redo* only move standby back and forth.
+Show mode locks editing: *edit*, *edit_start*, *change_name*, *add_below*,
+*add_above*, *move_down*, *move_up*, *delete*, *cut*, *paste_below*, and
+*paste_above* do nothing in it, and *undo* and *redo* only move standby back
+and forth.
 Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
 read-only buffer.
 
@@ -623,7 +631,19 @@ page.
 	Put the selected cue on standby, so that the next GO fires it.
 
 *edit*
-	Edit the name of the selected cue.
+	Edit the name of the selected cue: show the Basics tab and put the caret
+	at the end of the name, as Vim's *a* and *A* do at the end of a line.
+
+*edit_start*
+	Edit the name of the selected cue with the caret at the start of the name,
+	as Vim's *I* does.
+
+*change_name*
+	Edit the name of the selected cue with all of it selected, so that typing
+	replaces it, as Vim's *c c* and *S* change a whole line.
+	Enter leaves the field with the name unchanged unless a key was typed.
+	Unlike in Vim, *c* is no operator, so only *c c* begins a change, and a *c*
+	before any other key is dropped, as *TYPING* describes.
 
 *next_field*
 	Move the keyboard to the next field: a text field or drop-down list of the

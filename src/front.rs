@@ -27,7 +27,7 @@ use iced::{Size, window};
 
 use crate::back::{Audio, CueId, CueList, Kind, Video, Workspace};
 use keymap::{Press, config::Config};
-use message::{Focus, Message, Tab};
+use message::{Caret, Focus, Message, Tab};
 use update::{
     Clipboard, Clipped, History, Keeper, Measures, Reader, Search, Searched, Show, Stage,
 };

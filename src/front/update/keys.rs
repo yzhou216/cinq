@@ -19,7 +19,7 @@ use iced::{
 };
 
 use crate::front::{
-    App, Focus, Message, Tab,
+    App, Caret, Focus, Message, Tab,
     keymap::{Action, KeyPress, Press},
     view,
 };
@@ -78,17 +78,25 @@ impl App {
     /// keys typed there would never reach the field.
     pub(super) fn focused(self, focus: Focus) -> (Self, Task<Message>) {
         match focus {
-            Focus::Name | Focus::Next | Focus::Previous if self.stage.has_keyboard() => {
+            Focus::Name(_) | Focus::Next | Focus::Previous if self.stage.has_keyboard() => {
                 (self, Task::none())
             }
-            Focus::Name if self.editable() && self.selected.is_some() => (
+            Focus::Name(caret) if self.editable() && self.selected.is_some() => (
                 Self {
                     tab: Tab::Basics,
                     ..self
                 },
-                operation::focus(view::NAME),
+                match caret {
+                    // Focusing puts the caret at the end, as Vim's `A` does
+                    Caret::End => operation::focus(view::NAME),
+                    Caret::Start => operation::focus(view::NAME)
+                        .chain(operation::move_cursor_to_front(view::NAME)),
+                    Caret::All => {
+                        operation::focus(view::NAME).chain(operation::select_all(view::NAME))
+                    }
+                },
             ),
-            Focus::Name => (self, Task::none()),
+            Focus::Name(_) => (self, Task::none()),
             Focus::Next => (self.without_search(), operation::focus_next()),
             Focus::Previous => (self.without_search(), operation::focus_previous()),
             Focus::Cues => (self, operate(focusable::unfocus())),

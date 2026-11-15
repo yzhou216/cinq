@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The vi keymap enters the name of the selected cue as Vim enters text:
+  `i`, `a`, and `A` put the caret at its end, `I` puts it at its start, and
+  `c c` and `S` select all of it, so that typing replaces it.  The new
+  `edit_start` and `change_name` actions have no key in the cua keymap, and
+  `c` is no operator, so only `c c` begins a change.
 - In an open drop-down list, `Control+y` picks the highlighted option and
   `Control+e` closes the list without picking one in the vi keymap, as in
   Vim's popup menu, and `F4` closes it in the cua keymap.  Closing it

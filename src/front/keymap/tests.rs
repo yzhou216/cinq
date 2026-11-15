@@ -7,6 +7,7 @@
 
 mod file;
 mod manual;
+mod naming;
 mod notation;
 mod operators;
 mod typing;

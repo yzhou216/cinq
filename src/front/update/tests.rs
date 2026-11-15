@@ -7,7 +7,7 @@
 //! window, the selection after deleting or undo takes the selected cue
 //! away, the selection that follows standby, the sound file chosen for a
 //! new cue, a level typed halfway, a link of the help page that fails to
-//! open, and the clipboard
+//! open, the clipboard, and the keys that enter the name of a cue
 
 mod adding;
 mod clipboard;
@@ -18,6 +18,7 @@ mod help_page;
 mod history;
 mod loading;
 mod matches;
+mod naming;
 mod operators;
 mod operators_pasting;
 mod paging;
