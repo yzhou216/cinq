@@ -10,6 +10,21 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- `/` in the vi keymap and `Control+f` in the cua keymap open a search line
+  at the left of the status bar, which selects the first cue after the
+  selection whose name or number holds the text typed, in any case, as
+  Vim's `incsearch` does, and `?` in the vi keymap searches up the list.
+  The search wraps around and ends on the selection.  `Enter` accepts it,
+  and on an empty line repeats the last search, and `Escape`, `Backspace` on
+  an empty line, or a click closes it, as do going back or forward, moving
+  to another field, and opening a show.  `n` and `N`, or `F3` and
+  `Shift+F3`, find the next match in the direction of the last search and in
+  the other, wrapping around, and a count goes round the matches at most
+  once, and the status bar says when a search or a step wrapped around or
+  found no match.  Searches are jumps, so that `back` returns to where a
+  search began or to the cue before a step to the next match.  `?` no longer
+  shows the help page in the vi keymap, as it searches, so that `F1` is its
+  key there.
 - Cues can be copied, cut, and pasted with a clipboard of cinq's own that
   outlasts the show it was filled from: `y y`, `p`, and `P` in the vi
   keymap copy and paste, `d d`, `x`, and `Delete` cut, and `Control+c`,
@@ -37,9 +52,9 @@ Major changes and improvements in each release of cinq, newest first.
   `next_tab` shows the inspector tab of that number, as `2 g t` does, and
   before `previous_tab` goes back that many tabs.
 - The vi keymap takes more keys of Vim: `x` and `Delete` join `d d` in
-  cutting the selected cue, `F1` shows the help page beside `?`, and
-  `Control+Home` and `Control+End` select the first and last cue as `g g`
-  and `G` do, each with a count as before.
+  cutting the selected cue, `F1` shows the help page, and `Control+Home`
+  and `Control+End` select the first and last cue as `g g` and `G` do, each
+  with a count as before.
 - `back` and `forward` go back and forward between the places that jumps
   left, as the jump list of Vim does: switching cue lists, `first`, `last`,
   and selecting a cue in another cue list are jumps.  The keys are

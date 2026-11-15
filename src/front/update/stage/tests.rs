@@ -8,6 +8,7 @@
 //! keys while it has the keyboard
 
 mod keys;
+mod search;
 
 use iced::{Size, window};
 

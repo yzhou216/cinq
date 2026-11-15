@@ -116,3 +116,12 @@ fn no_key_is_bound_twice_in_a_shipped_keymap() {
         .collect();
     assert!(twice.is_empty(), "{twice:?}");
 }
+
+#[test]
+fn question_mark_searches_up_the_list_in_vi_and_f1_alone_shows_the_help() {
+    let listed = |preset: Preset, action: Action| Keymap::from(preset).listed(action);
+    assert_eq!(listed(Preset::Vi, Action::SearchBackward), "?");
+    assert_eq!(listed(Preset::Vi, Action::Help), "F1");
+    assert_eq!(listed(Preset::Cua, Action::Help), "F1");
+    assert_eq!(listed(Preset::Cua, Action::SearchBackward), "none");
+}

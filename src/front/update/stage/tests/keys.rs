@@ -58,7 +58,7 @@ fn help_key_opens_the_page_from_the_main_window_only() {
             open.main.expect("the main window opens")
         };
         let (keyboard, _) = open.handled(Message::WindowFocused(window));
-        let (next, task) = keyboard.typed(press(Key::Character("?".into())), false);
+        let (next, task) = keyboard.typed(press(Key::Named(Named::F1)), false);
         (next.help, task.units())
     };
     assert_eq!(typed(false), (true, 0));
@@ -73,7 +73,7 @@ fn other_help_page_keys_act_from_the_stage_window_so_that_it_closes() {
     let stage = open.stage.window().expect("the stage window opens");
     let (keyboard, _) = App { help: true, ..open }.handled(Message::WindowFocused(stage));
     let keys = [
-        press(Key::Character("?".into())),
+        press(Key::Named(Named::F1)),
         press(Key::Character("j".into())),
     ]
     .into_iter()

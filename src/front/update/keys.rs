@@ -80,8 +80,8 @@ impl App {
                 operation::focus(view::NAME),
             ),
             Focus::Name => (self, Task::none()),
-            Focus::Next => (self, operation::focus_next()),
-            Focus::Previous => (self, operation::focus_previous()),
+            Focus::Next => (self.without_search(), operation::focus_next()),
+            Focus::Previous => (self.without_search(), operation::focus_previous()),
             Focus::Cues => (self, operate(focusable::unfocus())),
         }
     }

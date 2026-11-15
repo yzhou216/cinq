@@ -210,6 +210,18 @@ of the help page.
 |  forward
 :  Control+i
 :  Alt+ArrowRight
+|  search
+:  /
+:  Control+f
+|  search_backward
+:  ?
+:  none
+|  next_match
+:  n
+:  F3
+|  previous_match
+:  N
+:  Shift+F3
 |  standby
 :  Enter
 :  Enter
@@ -268,7 +280,7 @@ of the help page.
 :  F11
 :  F11
 |  help
-:  ?, F1
+:  F1
 :  F1
 |  close_help
 :  q
@@ -316,7 +328,7 @@ halfway, and so does a change to the file.
 
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
-*move_down*, *move_up*, *back*, and *forward*.
+*move_down*, *move_up*, *back*, *forward*, *next_match*, and *previous_match*.
 It copies, cuts, or deletes as many cues for *copy*, *cut*, and *delete*,
 pastes as many times for *paste_below* and *paste_above*, undoes or redoes as
 many changes for *undo* and *redo*, and goes back as many tabs for
@@ -342,6 +354,51 @@ Holding either key down acts only once, so that holding the key of Panic does
 not cut a panic short.
 So does holding a key of *fullscreen*, which would otherwise toggle the stage
 window back and forth, while every other key repeats as it is held.
+
+# SEARCHING
+
+The key of *search* opens a search line at the left of the status bar, where
+the status stood, which reads a slash and then the text typed, and the key of
+*search_backward* opens it with a question mark for a search up the list.
+As the text changes, the selection moves to the first cue of the list on
+screen, from the cue after the selected one down, whose name or number holds
+the text, in any case, and the list scrolls to it.
+A search up the list begins at the cue before the selected one.
+The search wraps around the list and ends on the selected cue, as a search of
+Vim does from the start of a line, so that the selected cue is the match only
+when no other cue holds the text.
+Enter accepts the search and closes the line, and remembers the text and the
+direction for *next_match* and *previous_match*.
+*next_match* finds the next cue that holds the text in the direction of the
+search accepted last, and *previous_match* in the other direction, as *n* and
+*N* do in Vim, wrapping around at either end.
+When a search or a step wraps around, the status bar says that it continued at
+the top or at the bottom, as Vim says that the search hit the bottom, and says
+that no cue matches when a step finds none, until the next action.
+Enter on an empty line repeats the search accepted last in the direction of
+the line.
+Backspace on an empty line closes it, and so does Escape, which is also
+*panic*, and either puts the selection back where it was when the line
+opened.
+Any press of a mouse button closes the line and keeps the selection where it
+is, and a press on a cue selects that cue.
+Going *back* or *forward*, with the keys or the buttons of the mouse, moving
+to another field with *next_field* or *previous_field*, and opening a show
+close the line as well, and keep the selection where the search put it.
+When no cue holds the text, the selection stays where it was when the line
+opened and the line says so for a few seconds, and Enter then leaves the line
+open.
+Searches are jumps for *back*, as they are in Vim: accepting a search with
+Enter, when it moved the selection, remembers the place where the search
+began, and *next_match* and *previous_match* remember the place that they
+leave.
+The moves made while typing, and cancelling, remember nothing.
+A count for *next_match* or *previous_match* goes round the matches at most
+once, so that a count equal to the number of matches comes back to the same
+cue.
+The line keeps the keys typed into it, like a text field, and the hints at
+the right of the status bar give way to its text.
+The stage window cannot open it by keys while it has the keyboard.
 
 # WHERE KEYS ACT
 
@@ -479,7 +536,8 @@ page.
 	with its *Control+o*.
 	A place is a cue list with its selected cue.
 	Switching cue lists, *first* and *last* with or without a count, and
-	selecting a cue in another cue list are jumps.
+	selecting a cue in another cue list are jumps, and so are the searches
+	described under *SEARCHING*.
 	Moving the selection one row at a time, clicking a cue of the cue list
 	shown, GO moving the standby cue, adding, deleting, and moving cues,
 	undo, redo, changing the tab, and the help page are not.
@@ -507,6 +565,27 @@ page.
 	The status bar names the key while there is a place ahead.
 	The forward button of the mouse does the same from the main window, unless
 	the help page is open.
+
+*search*
+	Open the search line at the left of the status bar, as described under
+	*SEARCHING*.
+
+*search_backward*
+	Open the search line for a search up the list, which begins at the cue
+	before the selected one, as described under *SEARCHING*.
+
+*next_match*
+	Select the next cue that matches the search accepted last, in the
+	direction of that search, wrapping around at the end of the list, or as
+	many matches further as the count, going around the matches at most once.
+	It is a jump for *back*.
+	It does nothing before a search.
+
+*previous_match*
+	Select the next cue that matches the search accepted last in the opposite
+	direction, wrapping around at the top of the list, or as many matches back
+	as the count, going around the matches at most once.
+	It is a jump for *back*.
 
 *standby*
 	Put the selected cue on standby, so that the next GO fires it.

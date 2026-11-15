@@ -49,6 +49,10 @@ impl Preset {
             Action::PreviousTab => [&["g T"], &["Control+Shift+Tab"]],
             Action::Back => [&["Control+o"], &["Alt+ArrowLeft"]],
             Action::Forward => [&["Control+i"], &["Alt+ArrowRight"]],
+            Action::Search => [&["/"], &["Control+f"]],
+            Action::SearchBackward => [&["?"], &[]],
+            Action::NextMatch => [&["n"], &["F3"]],
+            Action::PreviousMatch => [&["N"], &["Shift+F3"]],
             Action::Standby => [&["Enter"], &["Enter"]],
             Action::Edit => [&["i"], &["F2"]],
             Action::NextField => [&["Tab"], &["Tab"]],
@@ -68,7 +72,7 @@ impl Preset {
             Action::Save => [&["Control+s"], &["Control+s"]],
             Action::SaveAs => [&["Control+S"], &["Control+S"]],
             Action::Fullscreen => [&["F11"], &["F11"]],
-            Action::Help => [&["?", "F1"], &["F1"]],
+            Action::Help => [&["F1"], &["F1"]],
             Action::CloseHelp => [&["q"], &["Control+w"]],
         };
         match self {

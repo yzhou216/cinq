@@ -127,6 +127,20 @@ pub enum Message {
     Back(usize),
     /// Goes a number of places forward again after going back
     Forward(usize),
+    /// Opens the search line, which selects the cues that its text matches,
+    /// searching up the list when `backward`
+    Search {
+        backward: bool,
+    },
+    /// Text of the search line, as typed so far
+    Searching(String),
+    /// Accepts the text of the search line
+    SearchAccepted,
+    /// Selects the cue a number of matches of the last search further on in
+    /// the direction that it went, or the other way when negative
+    SearchStep(isize),
+    /// Time that the search line has told that no cue matches has passed
+    SearchSettled,
     ShowMode(bool),
     Tab(Tab),
     /// Shows the inspector tab a number of tabs to the right, wrapping

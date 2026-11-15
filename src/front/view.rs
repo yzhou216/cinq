@@ -52,6 +52,14 @@ pub const HELP: &str = "help";
 /// gives it the keyboard focus
 pub const NAME: &str = "name";
 
+/// Identity of the search line in the status bar, through which the key of
+/// the search action gives it the keyboard focus
+pub const SEARCH: &str = "search";
+
+/// What the search line and the status bar tell when no cue matches the text
+/// of a search
+pub const NO_MATCH: &str = "No cue matches";
+
 /// Monospace, so that columns of text line up
 pub const FONT: Font = Font::MONOSPACE;
 

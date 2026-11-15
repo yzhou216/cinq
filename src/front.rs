@@ -28,7 +28,9 @@ use iced::{Size, window};
 use crate::back::{Audio, CueId, CueList, Kind, Video, Workspace};
 use keymap::{Press, config::Config};
 use message::{Focus, Message, Tab};
-use update::{Clipboard, Clipped, History, Keeper, Measures, Reader, Show, Stage};
+use update::{
+    Clipboard, Clipped, History, Keeper, Measures, Reader, Search, Searched, Show, Stage,
+};
 
 /// Opens the main window with the show in `show`, or a new show without
 /// one, and runs the interface until the main window closes.  The key
@@ -167,6 +169,11 @@ struct App {
     config: Config,
     /// Keys of a command typed so far, such as a count or the `g` of `g g`
     keys: Vec<Press>,
+    /// Search line, while it is open
+    search: Option<Search>,
+    /// Text of the search accepted last, which the keys of the next and
+    /// previous match look for
+    searched: Searched,
     help: bool,
     /// Why the link that the help page opened last failed to open, which
     /// the page shows while it stays open
