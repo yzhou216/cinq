@@ -54,7 +54,7 @@ impl Preset {
             Action::Delete => [&["d d"], &["Delete"]],
             Action::Undo => [&["u"], &["Control+z"]],
             Action::Redo => [&["Control+r"], &["Control+y", "Control+Z"]],
-            Action::Open => [&["Control+o"], &["Control+o"]],
+            Action::Open => [&["Control+l"], &["Control+o"]],
             Action::Save => [&["Control+s"], &["Control+s"]],
             Action::SaveAs => [&["Control+S"], &["Control+S"]],
             Action::Fullscreen => [&["F11"], &["F11"]],

@@ -226,7 +226,7 @@ of the help page.
 :  Control+r
 :  Control+y, Control+Z
 |  open
-:  Control+o
+:  Control+l
 :  Control+o
 |  save
 :  Control+s

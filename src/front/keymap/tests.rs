@@ -59,6 +59,17 @@ fn shipped_keymaps_are_valid_and_hide_no_binding() {
 }
 
 #[test]
+fn open_is_control_l_in_vi_and_control_o_in_cua() {
+    let opens = |preset: Preset| {
+        Keymap::from(preset)
+            .key(Action::Open)
+            .expect("both keymaps bind open")
+    };
+    assert_eq!(opens(Preset::Vi), "Control+l");
+    assert_eq!(opens(Preset::Cua), "Control+o");
+}
+
+#[test]
 fn keys_of_go_and_panic_hide_every_other_sequence_that_holds_them() {
     let keymap = Keymap::default()
         .with(Action::Panic, vec![keys("Escape"), keys("Shift+Escape")])

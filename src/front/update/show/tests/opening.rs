@@ -55,7 +55,7 @@ fn file_that_is_not_a_show_leaves_the_show_on_screen() {
 
 #[test]
 fn opening_another_show_tells_where_the_unsaved_changes_went() {
-    let told = "Kept the unsaved changes to storm.cinq.toml | Control+o: open";
+    let told = "Kept the unsaved changes to storm.cinq.toml | Control+l: open";
     let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
     assert_eq!(app.told.as_deref(), Some(told));
     // Also when the show opened brings back unsaved changes of its own

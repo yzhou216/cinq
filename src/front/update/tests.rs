@@ -54,7 +54,7 @@ pub(super) fn field_keys() -> [Press; 5] {
     let tab = || Key::Named(Named::Tab);
     let control = |key: &str| chord(Key::Character(key.into()), Modifiers::CTRL);
     [
-        control("o"),
+        control("l"),
         control("s"),
         control("S"),
         press(tab()),

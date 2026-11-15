@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- In the vi keymap, the key of *open* is now `Control+l`, since `Control+o`
+  is Vim's way back through the places jumped to, and Vim's `Control+l`
+  only redraws the screen, which cinq never needs.  The cua keymap keeps
+  `Control+o`.
+
 ## v0.1.4
 
 - While the problems of `config.toml` take a screen of their own on a
