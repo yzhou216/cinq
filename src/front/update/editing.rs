@@ -79,28 +79,32 @@ impl App {
         self.send(remove(ids)).showing(None, Some(first))
     }
 
-    /// Undoes up to `count` changes, and stops quietly at the oldest
+    /// Undoes up to `count` changes, and stops quietly at the oldest.  An
+    /// addition or a paste below a cue gives the selection back to that cue,
+    /// as the cursor of Vim goes back to where the change was made.
     pub(super) fn undone(self, count: usize) -> Self {
-        self.turned(count, Command::Undo, Workspace::undoable)
+        let lands = |change: &Change| change.anchor().or_else(|| change.cue());
+        self.turned(count, Command::Undo, Workspace::undoable, lands)
     }
 
     /// Redoes up to `count` changes, and stops quietly at the newest
     pub(super) fn redone(self, count: usize) -> Self {
-        self.turned(count, Command::Redo, Workspace::redoable)
+        self.turned(count, Command::Redo, Workspace::redoable, Change::cue)
     }
 
     /// Sends `command` once for each of `count` changes that `next` finds,
     /// one at a time so that the selection and the notice follow the last
-    /// of them
+    /// of them, which `lands` tells the cue to select for
     fn turned(
         self,
         count: usize,
         command: Command,
         next: fn(&Workspace) -> Option<&Change>,
+        lands: fn(&Change) -> Option<CueId>,
     ) -> Self {
         let flow = (0..count).try_fold(self, |app, _| match next(&app.workspace) {
             Some(change) => {
-                let cue = change.cue();
+                let cue = lands(change);
                 let row = app.selected_row();
                 ControlFlow::Continue(app.send(command.clone()).showing(cue, row))
             }

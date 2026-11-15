@@ -669,6 +669,9 @@ page.
 *undo*
 	Undo the latest change to the show, or as many of the latest changes as the
 	count, stopping at the oldest.
+	Undoing the addition of a cue or a paste below a cue selects that cue, as
+	the cursor of Vim goes back to where the change was made, and undoing
+	one above a cue selects the cue that has taken its place.
 
 *redo*
 	Redo the change undone last, or as many changes as the count, stopping at

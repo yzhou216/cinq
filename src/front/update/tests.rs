@@ -91,9 +91,40 @@ fn deleting_selects_the_cue_after_or_else_the_one_before() {
 
 #[test]
 fn undoing_away_the_selected_cue_selects_the_cue_in_its_place() {
-    let (added, _) = show(Some(CueId(4))).handled(Message::Add(Place::After));
+    let (added, _) = show(Some(CueId(4))).handled(Message::Add(Place::Before));
     let (undone, _) = added.handled(Message::Undo(1));
-    assert_eq!(undone.selected, Some(CueId(5)));
+    assert_eq!(undone.selected, Some(CueId(4)));
+}
+
+#[test]
+fn undoing_an_addition_or_a_paste_selects_the_cue_that_was_selected_when_it_was_made() {
+    let selected_after = |messages: Vec<Message>| {
+        let app = [Message::Select(CueId(4)), Message::Copy(1)]
+            .into_iter()
+            .chain(messages)
+            .fold(show(Some(CueId(4))), |app, message| app.handled(message).0);
+        app.selected
+    };
+    let undo = |message| selected_after(vec![message, Message::Undo(1)]);
+    // Below and above, as `o u`, `O u`, `p u`, and `P u` of Vim end
+    assert_eq!(undo(Message::Add(Place::After)), Some(CueId(4)));
+    assert_eq!(undo(Message::Add(Place::Before)), Some(CueId(4)));
+    assert_eq!(undo(Message::Paste(Place::After, 1)), Some(CueId(4)));
+    assert_eq!(undo(Message::Paste(Place::Before, 1)), Some(CueId(4)));
+    // Paste of several cues, and the selection moved before the undo
+    let moved = selected_after(vec![
+        Message::Paste(Place::After, 3),
+        Message::Select(CueId(9)),
+        Message::Undo(1),
+    ]);
+    assert_eq!(moved, Some(CueId(4)));
+    // Redo selects what was added again
+    let redone = selected_after(vec![
+        Message::Add(Place::After),
+        Message::Undo(1),
+        Message::Redo(1),
+    ]);
+    assert_eq!(redone, Some(CueId(22)));
 }
 
 #[test]

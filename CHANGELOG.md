@@ -10,6 +10,9 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Undoing the addition of a cue or a paste below a cue selects the cue that
+  was selected when it was made, as the cursor of Vim goes back to where a
+  change was made, in place of the cue that follows.
 - `/` in the vi keymap and `Control+f` in the cua keymap open a search line
   at the left of the status bar, which selects the first cue after the
   selection whose name or number holds the text typed, in any case, as

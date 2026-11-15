@@ -111,7 +111,7 @@ impl Workspace {
             before,
             after: workspace.lists[list].standby,
         };
-        workspace.recorded(Change::Pasted { cues, standby })
+        workspace.recorded(Change::Pasted { cues, at, standby })
     }
 }
 

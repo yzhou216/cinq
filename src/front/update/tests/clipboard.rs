@@ -90,9 +90,9 @@ fn delete_leaves_the_clipboard_alone_and_undo_does_not_touch_it() {
             Message::Paste(Place::After, 1),
         ],
     );
-    // Undoing the first paste leaves the selection on the cue that took the
-    // place of the pasted one, below which the second paste goes
-    assert_eq!(rows(&app)[4..8], [5, 6, 7, 23]);
+    // Undoing the first paste returns the selection to cue 6, which it was
+    // made below, so that the second paste goes there as well
+    assert_eq!(rows(&app)[4..8], [5, 6, 23, 7]);
 }
 
 #[test]

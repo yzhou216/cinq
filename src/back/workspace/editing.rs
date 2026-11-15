@@ -63,6 +63,7 @@ impl Workspace {
         };
         workspace.recorded(Change::Added {
             placed: Box::new(placed),
+            at,
             standby,
         })
     }

@@ -6,20 +6,26 @@
 
 use std::mem;
 
-use crate::back::{Cue, CueId, CueList, Edit};
+use crate::back::{Cue, CueId, CueList, Edit, Place};
 
 #[derive(Debug, Clone)]
 pub enum Change {
-    /// Cue added, with the standby of its list before and after, which the
-    /// new cue can take.  The cue is boxed, since it is far larger than
-    /// what the other changes record.
+    /// Cue added at a place, with the standby of its list before and after,
+    /// which the new cue can take.  The cue is boxed, since it is far larger
+    /// than what the other changes record.
     Added {
         placed: Box<Placed>,
+        at: Place,
         standby: Standby,
     },
-    /// Cues pasted, with the places they took in order, and the standby of
-    /// their list before and after, which the first of them can take
-    Pasted { cues: Vec<Placed>, standby: Standby },
+    /// Cues pasted at a place, with the places they took in order, and the
+    /// standby of their list before and after, which the first of them can
+    /// take
+    Pasted {
+        cues: Vec<Placed>,
+        at: Place,
+        standby: Standby,
+    },
     /// Cues deleted, with the places they had in order, and the standby of
     /// each list they left, and whether they were cut to the clipboard
     Deleted {
@@ -85,6 +91,23 @@ impl Change {
         }
     }
 
+    /// Returns the cue that an addition or a paste went below, if it did,
+    /// which undo returns the selection to, as Vim's undo returns the cursor
+    /// to where the change was made
+    pub fn anchor(&self) -> Option<CueId> {
+        match self {
+            Change::Added {
+                at: Place::After(cue),
+                ..
+            }
+            | Change::Pasted {
+                at: Place::After(cue),
+                ..
+            } => Some(*cue),
+            _ => None,
+        }
+    }
+
     /// Returns whether `next` edits the setting that this change edited, or
     /// moves the cue that it moved, so that the two make one change
     pub(super) fn takes(&self, next: &Change) -> bool {
@@ -131,15 +154,21 @@ impl Change {
     /// on standby
     pub(super) fn keeping_standby_of(self, list: usize) -> Self {
         match self {
-            Self::Added { placed, standby } if standby.list == list => Self::Added {
+            Self::Added {
                 placed,
+                at,
+                standby,
+            } if standby.list == list => Self::Added {
+                placed,
+                at,
                 standby: Standby {
                     after: standby.before,
                     ..standby
                 },
             },
-            Self::Pasted { cues, standby } if standby.list == list => Self::Pasted {
+            Self::Pasted { cues, at, standby } if standby.list == list => Self::Pasted {
                 cues,
+                at,
                 standby: Standby {
                     after: standby.before,
                     ..standby
