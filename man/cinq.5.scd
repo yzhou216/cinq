@@ -85,6 +85,11 @@ in its place, and follows it as it changes in the same way.
 	tab, one device to a line.
 	The *Default device* list in the sidebar of the main window chooses a
 	device as well, and *cinq* writes the choice here.
+	The Device list of an output names that choice in its default option, as
+	*Default device (System default)*, and while the highlight of its open menu
+	rests on that option, the *Default device* list in the sidebar takes the
+	color of the highlight, so that the output and the setting that decides its
+	device show as one.
 	It changes only the line of this setting, or adds the line before the
 	first setting of the file, and leaves the rest as it is.
 	A change moves those outputs as soon as the file is saved, and the sounds

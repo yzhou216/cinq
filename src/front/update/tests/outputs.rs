@@ -280,3 +280,44 @@ fn leaving_the_outputs_for_another_list_selects_its_standby_cue() {
         "switching to the list that shows still selects standby"
     );
 }
+
+#[test]
+fn the_sidebar_lights_only_while_a_menu_is_open_with_its_highlight_on_the_default() {
+    let lit = |app: &App| app.menu && app.default_highlighted;
+    let open = after(
+        show(None),
+        [Message::MenuOpen(true), Message::DefaultHighlighted(true)],
+    );
+    assert!(lit(&open));
+    let moved = after(open, [Message::DefaultHighlighted(false)]);
+    assert!(!lit(&moved));
+    let closed = after(
+        after(
+            show(None),
+            [Message::MenuOpen(true), Message::DefaultHighlighted(true)],
+        ),
+        [Message::MenuOpen(false)],
+    );
+    assert!(!lit(&closed));
+    assert!(
+        !closed.default_highlighted,
+        "the app never thinks that the highlight rests there once the menu closes"
+    );
+}
+
+#[test]
+fn any_menu_opening_or_closing_clears_the_highlight_that_the_sidebar_lights_for() {
+    let open = after(
+        show(None),
+        [Message::MenuOpen(true), Message::DefaultHighlighted(true)],
+    );
+    assert!(
+        !after(open, [Message::MenuOpen(true)]).default_highlighted,
+        "the menu of another list opens while the flag is still set"
+    );
+    let stale = App {
+        default_highlighted: true,
+        ..show(None)
+    };
+    assert!(!after(stale, [Message::MenuOpen(false)]).default_highlighted);
+}

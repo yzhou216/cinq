@@ -10,6 +10,14 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The default option of the Device list of an output names the choice of
+  the Default device list in the sidebar, as in `Default device (System
+  default)`, and while the highlight of the open menu rests on that option,
+  by the mouse or the keys, the Default device list in the sidebar turns
+  the blue of the highlight, which shows where the default is set.  An
+  output on the Default device whose device is not there keeps its name in
+  its list, as in `Default device (Studio), not found`, and its help says to
+  connect it or to set the default device in the sidebar.
 - After a choice in a drop-down list made with the keys, or a menu closed
   with the key of close, the keyboard stays on the list, so that Tab goes on
   to the next field from it.  While a text field or a drop-down list has the

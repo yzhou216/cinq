@@ -111,6 +111,20 @@ impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
             (false, false) => Status::Active,
         };
         let look = pick_list::default(theme, status);
+        // List that an option of another menu depends on wears the colors of
+        // the highlight of a menu, as that option does
+        let look = if self.lit {
+            let menu = iced::overlay::menu::default(theme);
+            pick_list::Style {
+                background: menu.selected_background,
+                text_color: menu.selected_text_color,
+                placeholder_color: menu.selected_text_color,
+                handle_color: menu.selected_text_color,
+                ..look
+            }
+        } else {
+            look
+        };
         // Border of a focused list is that of a focused text field
         let border = if state.focused {
             let focused = text_input::Status::Focused { is_hovered };

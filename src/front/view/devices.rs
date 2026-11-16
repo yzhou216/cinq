@@ -16,7 +16,7 @@ mod tests;
 
 use std::{fmt, iter};
 
-use crate::back::Device;
+use crate::{back::Device, front::App};
 
 /// Option of a list of audio devices
 #[derive(Debug, Clone, PartialEq)]
@@ -74,4 +74,20 @@ pub(super) fn chosen<'a>(options: &'a [Choice], device: &Device) -> Option<&'a C
                 named.next().filter(|_| named.next().is_none())
             }),
     }
+}
+
+/// Returns what the default option of the Device list of an output reads,
+/// with the choice of the Default device list in the sidebar in words, as
+/// in `Default device (System default)`, so that it tells which device an
+/// output on the default plays on
+pub(super) fn default_label(app: &App) -> String {
+    let chosen = app.config.sound.device.as_deref();
+    let name = choices(&app.audio_devices, "System default")
+        .into_iter()
+        .find(|option| option.id.as_deref() == chosen)
+        .map_or_else(
+            || chosen.unwrap_or_default().to_owned(),
+            |option| option.to_string(),
+        );
+    format!("Default device ({name})")
 }

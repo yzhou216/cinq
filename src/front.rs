@@ -193,6 +193,10 @@ struct App {
     /// Whether a text field or a drop-down list has the keyboard, which the
     /// status bar hints how to leave
     held: bool,
+    /// Whether the highlight of the open menu of the Device list of an
+    /// output rests on its default, which the Default device list of the
+    /// sidebar tells in color
+    default_highlighted: bool,
     /// Why the link that the help page opened last failed to open, which
     /// the page shows while it stays open
     link_problem: Option<String>,

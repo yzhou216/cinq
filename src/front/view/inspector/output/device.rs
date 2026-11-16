@@ -11,7 +11,7 @@ use crate::{
     front::{
         App, Message,
         view::{
-            devices::{Choice, choices, chosen},
+            devices::{Choice, choices, chosen, default_label},
             dropdown, faults, keep_keys, outputs, theme,
         },
     },
@@ -29,13 +29,9 @@ pub(super) fn view<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message>
     // Device that is not there, which reads so in words and in yellow
     // rather than in the gray of a list where nothing is chosen
     let missing = missing(app, output);
-    let name = outputs::device(&output.device);
-    let placeholder = if missing {
-        format!("{name}, not found")
-    } else {
-        name.to_owned()
-    };
-    let options = choices(&app.audio_devices, outputs::device(&Device::Default));
+    let placeholder = placeholder(app, output);
+    let options = choices(&app.audio_devices, &default_label(app));
+    let default_row = options.iter().position(|option| option.id.is_none());
     let selected = chosen(&options, &output.device)
         .cloned()
         .filter(|_| !missing);
@@ -55,7 +51,9 @@ pub(super) fn view<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message>
         },
         keymap,
     )
-    .placeholder(placeholder);
+    .placeholder(placeholder)
+    // The sidebar tells in color which device the default stands for
+    .on_highlight(move |row| Message::DefaultHighlighted(row.is_some() && row == default_row));
     let list = if missing {
         list.placeholder_color(theme::PALETTE.warning)
     } else {
@@ -65,12 +63,29 @@ pub(super) fn view<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message>
     keep_keys(list, keymap)
 }
 
-/// Returns the help beside the list: what to do where the device is not
-/// there, and nothing where it is
-pub(super) fn hint(app: &App, output: &Output) -> &'static str {
+/// Returns what the list reads while it shows no choice: the device that is
+/// not there, which an output on the Default device keeps the name of too,
+/// since the sidebar and not this list chooses it
+pub(super) fn placeholder(app: &App, output: &Output) -> String {
+    let name = match &output.device {
+        Device::Default => default_label(app),
+        device => outputs::device(device).to_owned(),
+    };
     if missing(app, output) {
-        "Connect the device, or pick another"
+        format!("{name}, not found")
     } else {
-        ""
+        name
+    }
+}
+
+/// Returns the help beside the list: what to do where the device is not
+/// there, and nothing where it is.  Choosing another device in this list
+/// takes an output off the Default device, which the sidebar changes for all
+/// that are on it.
+pub(super) fn hint(app: &App, output: &Output) -> &'static str {
+    match (missing(app, output), &output.device) {
+        (false, _) => "",
+        (true, Device::Default) => "Connect it, or set the sidebar default",
+        (true, _) => "Connect the device, or pick another",
     }
 }

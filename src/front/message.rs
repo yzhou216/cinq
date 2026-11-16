@@ -118,6 +118,10 @@ pub enum Message {
     Place(Height, Option<usize>),
     /// A drop-down list opened its menu, or its menu closed
     MenuOpen(bool),
+    /// The highlight of the open menu of the Device list of an output moved
+    /// onto its default option, or off it, or the menu closed, which tells
+    /// that no option has it
+    DefaultHighlighted(bool),
     StandbySelected,
     SwitchList(usize),
     /// Shows the cue list a number of lists further down the sidebar

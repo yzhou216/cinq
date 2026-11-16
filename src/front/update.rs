@@ -103,8 +103,19 @@ impl App {
             }
             Message::Reached { .. } => self,
             Message::Place(height, count) => return self.placed(height, count),
-            Message::MenuOpen(open) => Self { menu: open, ..self },
+            // A menu reports where its highlight rests right after it opens, so
+            // that a flag left by another menu, or by a list that left the
+            // view while open, never lights the sidebar
+            Message::MenuOpen(open) => Self {
+                menu: open,
+                default_highlighted: false,
+                ..self
+            },
             Message::Held(held) => Self { held, ..self },
+            Message::DefaultHighlighted(highlighted) => Self {
+                default_highlighted: highlighted,
+                ..self
+            },
             Message::SwitchList(list) => {
                 return self
                     .without_search()
