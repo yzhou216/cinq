@@ -28,7 +28,7 @@ use iced::{
     },
     widget::{
         button::{Status, Style},
-        text_input,
+        text, text_input,
     },
 };
 
@@ -52,6 +52,7 @@ const BLUE_WARMER: Color = color!(0x79a8ff);
 const GREEN: Color = color!(0x44bc44);
 const YELLOW_WARMER: Color = color!(0xfec43f);
 const RED: Color = color!(0xff5f59);
+const RED_COOLER: Color = color!(0xff7f9f);
 const BG_GREEN_SUBTLE: Color = color!(0x00422a);
 const BG_GREEN_INTENSE: Color = color!(0x2f822f);
 const BG_YELLOW_SUBTLE: Color = color!(0x4a4000);
@@ -189,6 +190,24 @@ fn invalid(theme: &Theme, status: text_input::Status) -> text_input::Style {
     text_input::Style {
         border: focused(style.border.color(RED), status),
         ..style
+    }
+}
+
+/// Returns the style of text in the color of what failed, which is red on the
+/// black of the window and a lighter red on a row that is selected, where the
+/// red of the window has a contrast of 3.9 to 1, below the 4.5 to 1 that text
+/// needs
+pub(super) fn danger(selected: bool) -> fn(&Theme) -> text::Style {
+    if selected {
+        lighter_danger
+    } else {
+        text::danger
+    }
+}
+
+fn lighter_danger(_: &Theme) -> text::Style {
+    text::Style {
+        color: Some(RED_COOLER),
     }
 }
 

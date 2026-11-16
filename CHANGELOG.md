@@ -10,6 +10,9 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Red text on the selected row of the outputs table and the cue table is a
+  lighter red, with a contrast of 4.9 to 1 against the row where the red of
+  the rest of the window had 3.9 to 1, below the 4.5 to 1 that text needs.
 - The border of a field or a list that has the keyboard is two pixels thick,
   in the same blue, where it was one, so that it stands out from the
   fields at rest at a glance.  A field that holds a rejected value keeps its
