@@ -122,15 +122,19 @@ fn back_and_forward_keys_follow_vim_and_the_browsers_and_act_in_fields() {
 }
 
 #[test]
-fn no_key_is_bound_twice_in_a_shipped_keymap() {
+fn no_key_is_bound_twice_in_one_place_of_a_shipped_keymap() {
+    let places: [fn(Action) -> bool; 2] = [Action::acts_in_cue_list, Action::acts_in_menu];
     let twice: Vec<_> = Preset::VARIANTS
         .iter()
         .flat_map(|preset| {
-            Action::VARIANTS
-                .iter()
-                .flat_map(|&action| preset.keys(action))
-                .duplicates()
-                .map(|keys| (preset.name(), *keys))
+            places.into_iter().flat_map(move |acts_in| {
+                Action::VARIANTS
+                    .iter()
+                    .filter(move |&&action| acts_in(action))
+                    .flat_map(|&action| preset.keys(action))
+                    .duplicates()
+                    .map(|keys| (preset.name(), *keys))
+            })
         })
         .collect();
     assert!(twice.is_empty(), "{twice:?}");
@@ -148,4 +152,63 @@ fn question_mark_and_f1_show_the_help_in_both_keymaps_and_search_up_has_no_key()
         assert!(!keymap.acts_in_fields(press("?")), "{preset:?}");
         assert!(!keymap.acts_when_captured(press("?"), true), "{preset:?}");
     });
+}
+
+#[test]
+fn a_key_may_pick_in_a_menu_and_scroll_the_cue_list() {
+    let keymap = Keymap::default();
+    let menu = |text: &str| keymap.in_menu(press(text));
+    assert_actions(&[
+        ("Control+e", Action::ScrollDown, None),
+        ("3 Control+y", Action::ScrollUp, Some(3)),
+    ]);
+    assert_eq!(menu("Control+e"), Some(Action::CloseMenu));
+    assert_eq!(menu("Control+y"), Some(Action::Pick));
+    // Keys of the list are no keys of a menu
+    assert_eq!(menu("Control+d"), None);
+}
+
+#[test]
+fn a_clash_in_the_cue_list_or_in_a_menu_is_still_reported() {
+    let in_list = Keymap::default().with(Action::Next, vec![keys("j"), keys("Control+e")]);
+    assert_eq!(
+        in_list.conflicts(),
+        [
+            "`Control+e` is bound to both next and scroll_down, so scroll_down goes without",
+            "`Control+e` is bound to both next and close_menu, so close_menu goes without",
+        ]
+    );
+    let in_menu = Keymap::default().with(Action::Pick, vec![keys("Control+e")]);
+    assert_eq!(
+        in_menu.conflicts(),
+        ["`Control+e` is bound to both pick and close_menu, so close_menu goes without"]
+    );
+    let across = Keymap::default().with(Action::Pick, vec![keys("j")]);
+    assert_eq!(
+        across.conflicts(),
+        ["`j` is bound to both next and pick, so pick goes without"]
+    );
+}
+
+#[test]
+fn a_clash_over_g_j_g_k_and_the_search_keys_is_found_in_the_place_they_act_in() {
+    let with = |action, text: &str| Keymap::default().with(action, vec![keys(text)]);
+    assert_eq!(
+        with(Action::ScrollDown, "g j").conflicts(),
+        ["`g j` is bound to both next and scroll_down, so scroll_down goes without"]
+    );
+    assert_eq!(
+        with(Action::ScrollUp, "/").conflicts(),
+        ["`/` is bound to both scroll_up and search, so search goes without"]
+    );
+    assert_eq!(
+        with(Action::Pick, "g k").conflicts(),
+        ["`g k` is bound to both previous and pick, so pick goes without"]
+    );
+    // Search keys act in the cue list only, so a menu may use them
+    assert_eq!(with(Action::Pick, "/").conflicts(), Vec::<String>::new());
+    assert_eq!(
+        with(Action::CloseMenu, "n").conflicts(),
+        Vec::<String>::new()
+    );
 }

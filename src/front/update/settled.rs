@@ -31,6 +31,9 @@ impl App {
             Message::Reached { list, from, row } if self.list == list && self.selected == from => {
                 self.jumping(|app| app.at_row(row.saturating_add(1)))
             }
+            Message::MenuOpen(open) => Self { menu: open, ..self },
+            Message::Held(held) => Self { held, ..self },
+            Message::FileHeld(file_held) => Self { file_held, ..self },
             Message::Copy(count) => self.with_copied(count),
             Message::PauseAll => self.send(Command::Pause(true)),
             Message::ResumeAll => self.send(Command::Pause(false)),

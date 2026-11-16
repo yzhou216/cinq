@@ -15,6 +15,33 @@ use crate::{
     front::{App, Message},
 };
 
+/// Returns whether `message` reports something that happened without the
+/// operator, which changes nothing that the operator was in the middle of,
+/// and moves no keyboard
+pub(super) fn passive(message: &Message) -> bool {
+    matches!(
+        message,
+        Message::Tick(_)
+            | Message::Loaded(..)
+            | Message::Recheck
+            | Message::Rechecked(..)
+            | Message::LinkOpened(_)
+            | Message::AudioDevicesListed(_)
+            | Message::AudioDeviceKept(_)
+            | Message::Saved(_)
+            | Message::SearchSettled
+            | Message::Resized(..)
+            | Message::WindowFocused(_)
+            | Message::Held(_)
+            | Message::FileHeld(_)
+            | Message::Landed { .. }
+            | Message::Measured(_)
+            | Message::Remeasure
+            | Message::Drawn(_)
+            | Message::Reached { .. }
+    )
+}
+
 impl App {
     pub(super) fn with_task(
         self,
@@ -50,31 +77,14 @@ impl App {
     /// field.  A link that failed to open is forgotten once its help page
     /// closes.
     pub(super) fn next(self, message: Message) -> (Self, Task<Message>) {
-        let passive = matches!(
-            message,
-            Message::Tick(_)
-                | Message::Loaded(..)
-                | Message::Recheck
-                | Message::Rechecked(..)
-                | Message::LinkOpened(_)
-                | Message::AudioDevicesListed(_)
-                | Message::AudioDeviceKept(_)
-                | Message::Saved(_)
-                | Message::SearchSettled
-                | Message::Resized(..)
-                | Message::WindowFocused(_)
-                | Message::Landed { .. }
-                | Message::Measured(_)
-                | Message::Remeasure
-                | Message::Drawn(_)
-                | Message::Reached { .. }
-        );
+        let passive = passive(&message);
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);
         // A field that the keyboard enters or leaves ends the run of edits to its
         // text, so that each visit makes a change of its own to undo, as each
         // stay in insert mode does in Vim
-        let ends = matches!(message, Message::Focus(_) | Message::Clicked);
+        let ends = matches!(message, Message::Focus(_) | Message::Clicked)
+            || (matches!(message, Message::Held(false)) && self.held);
         let this = if ends {
             self.send(Command::EndRun)
         } else {

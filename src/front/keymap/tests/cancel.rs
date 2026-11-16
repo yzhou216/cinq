@@ -9,12 +9,12 @@ use super::*;
 #[test]
 fn control_c_cancels_in_the_vi_keymap_and_acts_in_fields() {
     let keymap = Keymap::default();
+    let control_c = press("Control+c");
     assert_eq!(action("Control+c"), Some((Action::Cancel, None)));
-    let press = one("Control+c").expect("a key");
-    assert!(keymap.acts_in_fields(press));
-    assert!(keymap.cancels(press));
-    assert!(!keymap.acts_at_once(press));
-    assert_eq!(keymap.conflicts(), Vec::<String>::new());
+    assert!(keymap.acts_in_fields(control_c));
+    assert!(keymap.cancels(control_c));
+    assert_eq!(keymap.in_menu(control_c), Some(Action::Cancel));
+    assert!(!keymap.acts_at_once(control_c));
 }
 
 #[test]

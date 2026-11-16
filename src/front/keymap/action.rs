@@ -4,6 +4,7 @@
 
 //! Actions that keys can be bound to
 
+mod description;
 mod message;
 
 use strum::{EnumString, IntoStaticStr, VariantArray};
@@ -66,80 +67,13 @@ pub enum Action {
     Fullscreen,
     Help,
     CloseHelp,
+    Pick,
+    CloseMenu,
 }
 
 impl Action {
     pub fn name(self) -> &'static str {
         self.into()
-    }
-
-    pub fn description(self) -> &'static str {
-        match self {
-            Action::Go => "GO: fire the standby cue and its chain",
-            Action::Panic => "Panic: fade everything out, or stop it at once",
-            Action::Next => "Select the next cue or menu option",
-            Action::Previous => "Select the previous cue or menu option",
-            Action::NextList => "Show the next cue list",
-            Action::PreviousList => "Show the previous cue list",
-            Action::First => "Select the first cue, or the row counted",
-            Action::Last => "Select the last cue, or the row counted",
-            Action::HalfPageDown => {
-                "Scroll half a page down with the selection, or the rows counted"
-            }
-            Action::HalfPageUp => "Scroll half a page up with the selection, or the rows counted",
-            Action::PageDown => "Scroll a page down with the selection, or the pages counted",
-            Action::PageUp => "Scroll a page up with the selection, or the pages counted",
-            Action::ScrollDown => "Scroll the cue list a row down, or the rows counted",
-            Action::ScrollUp => "Scroll the cue list a row up, or the rows counted",
-            Action::TopRow => "Select the first row in view, or the row counted from it",
-            Action::MiddleRow => "Select the middle row in view",
-            Action::BottomRow => "Select the last row in view, or the row counted up from it",
-            Action::RowToMiddle => {
-                "Scroll the cue list to put the selected row, or the row counted, in the middle"
-            }
-            Action::RowToTop => {
-                "Scroll the cue list to put the selected row, or the row counted, at the top"
-            }
-            Action::RowToBottom => {
-                "Scroll the cue list to put the selected row, or the row counted, at the bottom"
-            }
-            Action::NextTab => "Show the next inspector tab, or the tab counted",
-            Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
-            Action::Back => "Go back to the place that the last jump left",
-            Action::Forward => "Go forward again after going back",
-            Action::Search => "Search the cues by the text of their columns",
-            Action::SearchBackward => "Search the cues by the text of their columns, upwards",
-            Action::NextMatch => "Select the next match of the search, in its direction",
-            Action::PreviousMatch => {
-                "Select the next match of the search, in the opposite direction"
-            }
-            Action::Standby => "Put the selected cue on standby",
-            Action::Cancel => {
-                "Drop the keys typed so far, close the search line, and leave a field"
-            }
-            Action::Edit => "Edit the name of the selected cue, with the caret at its end",
-            Action::EditStart => "Edit the name of the selected cue, with the caret at its start",
-            Action::ChangeName => "Change the name of the selected cue, selecting all of it",
-            Action::NextField => "Move to the next field",
-            Action::PreviousField => "Move to the previous field",
-            Action::AddBelow => "Add a cue below the selection",
-            Action::AddAbove => "Add a cue above the selection",
-            Action::MoveDown => "Move the selected cue down",
-            Action::MoveUp => "Move the selected cue up",
-            Action::Delete => "Delete the selected cue without copying it",
-            Action::Copy => "Copy the selected cue to the clipboard",
-            Action::Cut => "Cut the selected cue to the clipboard",
-            Action::PasteBelow => "Paste the copied cues below the selection",
-            Action::PasteAbove => "Paste the copied cues above the selection",
-            Action::Undo => "Undo the latest change to the show, or as many as counted",
-            Action::Redo => "Redo the change undone last, or as many as counted",
-            Action::Open => "Open a show",
-            Action::Save => "Save the show",
-            Action::SaveAs => "Save the show in another file",
-            Action::Fullscreen => "Toggle fullscreen on the stage window",
-            Action::Help => "Show or hide this help",
-            Action::CloseHelp => "Hide this help",
-        }
     }
 
     /// Actions that keep the show in hand wherever the keyboard is: their
@@ -159,6 +93,39 @@ impl Action {
 
     pub fn acts_at_once(self) -> bool {
         Self::AT_ONCE.contains(&self)
+    }
+
+    /// Returns whether a key of the action acts on the cue list, which the
+    /// keys of an open menu do not
+    pub(super) fn acts_in_cue_list(self) -> bool {
+        !matches!(self, Action::Pick | Action::CloseMenu)
+    }
+
+    /// Returns whether a key of the action acts while a menu is open, where
+    /// every other key is kept from acting
+    pub(super) fn acts_in_menu(self) -> bool {
+        self.acts_at_once()
+            || matches!(
+                self,
+                Action::Cancel
+                    | Action::Next
+                    | Action::Previous
+                    | Action::PageDown
+                    | Action::PageUp
+                    | Action::First
+                    | Action::Last
+                    | Action::Help
+                    | Action::Pick
+                    | Action::CloseMenu
+            )
+    }
+
+    /// Returns whether keys of the two actions act in the same place, the
+    /// cue list or an open menu.  Only keys that do can hide each other, so
+    /// that a key may pick in a menu and scroll the list.
+    pub(super) fn shares_place(self, other: Action) -> bool {
+        (self.acts_in_cue_list() && other.acts_in_cue_list())
+            || (self.acts_in_menu() && other.acts_in_menu())
     }
 
     /// Describes the operator `self` applied over the rows that `motion`

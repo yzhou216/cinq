@@ -105,6 +105,8 @@ pub enum Message {
     /// Scrolls the cue list to put the selected row at a height in view, after
     /// selecting the row that the count typed before the keys names
     Place(Height, Option<usize>),
+    /// A drop-down list opened its menu, or its menu closed
+    MenuOpen(bool),
     StandbySelected,
     SwitchList(usize),
     /// Shows the cue list a number of lists further down the sidebar
@@ -168,6 +170,8 @@ pub enum Message {
     /// Redoes a number of changes, stopping at the newest
     Redo(usize),
     Focus(Focus),
+    /// Nothing, which the keys of a menu amount to outside one
+    Nothing,
     ToggleHelp,
     CloseHelp,
     /// Key that no widget kept, whether typed outside any text field or one
@@ -224,6 +228,12 @@ pub enum Message {
     /// Window changed size, to no size at all while it is minimized
     Resized(window::Id, Size),
     WindowFocused(window::Id),
+    /// Whether a text field or a drop-down list has the keyboard, as the
+    /// widgets told after the latest thing that the operator did
+    Held(bool),
+    /// Whether the File field of a cue has the keyboard, as the widgets told
+    /// with [`Message::Held`]
+    FileHeld(bool),
     /// Toggles the stage window between fullscreen and a window
     ToggleFullscreen,
     /// Window closed, as the operator closes it

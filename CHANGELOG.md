@@ -41,9 +41,10 @@ Major changes and improvements in each release of cinq, newest first.
   action, which has no key in the cua keymap, where `Control+c` copies.  It
   drops the keys typed so far, closes the search line with the selection going
   back to where the search began, takes the keyboard out of a text field, and
-  never stops playback, so that no one reaches for `Escape`, which is Panic.
-  The status bar hints the key while keys wait or the search line is open, and a
-  text field with a selection still copies it first.
+  closes an open drop-down list without picking, and never stops playback, so
+  that no one reaches for `Escape`, which is Panic.  The status bar hints the
+  key while keys wait or the search line is open, and a text field with a
+  selection still copies it first.
 - While the stage window has the keyboard, the keys that change the show or fill
   the clipboard, such as `x`, `Delete`, `o`, `u`, `p`, and the operators, do
   nothing, as the keys of editing a name, of searching, and of the help page
@@ -71,7 +72,9 @@ Major changes and improvements in each release of cinq, newest first.
 - `Control+e` and `Control+y` scroll the cue list a row down and up in the vi
   keymap, as in Vim, or as many rows as a count, through the new `scroll_down`
   and `scroll_up` actions.  The selection stays on its cue unless it would leave
-  the view, when it moves to the nearest row in view.
+  the view, when it moves to the nearest row in view.  The keys of `pick` and
+  `close_menu` act only in a menu, so a key may be bound to one of them and to a
+  scroll.
 - `H`, `M`, and `L` select the first, middle, and last cue row in view in the vi
   keymap, as in Vim, through the new `top_row`, `middle_row`, and `bottom_row`
   actions.  A count before `H` counts rows from the top and before `L` from the
@@ -150,10 +153,24 @@ Major changes and improvements in each release of cinq, newest first.
   a warning in a low window pushed the Audio device list out of sight.
 - Enter in the empty File field of an audio, video, or picture cue opens the
   dialog that chooses the file, which Tab never reaches since it skips the
-  Choose button.
+  Choose button, and the status bar hints `Enter: choose a file` while the
+  empty field has the keyboard.
 - Each visit to a field, such as the name of a cue, is one step of undo, where
-  two visits in a row undid as one.  A click, or a move to a field, ends a
-  visit.
+  two visits in a row, each ended by leaving the field, undid as one.  A click,
+  or a move to a field, ends a visit as well.
+- In an open drop-down list in the vi keymap, `Control+y` picks the highlighted
+  option and `Control+e` closes the list without picking, as in Vim's popup
+  menu, and `F4` closes it in the cua keymap, through the new `pick` and
+  `close_menu` actions.  Closing with these keys does not also panic, as
+  `Escape` does, and after a choice or a close by key the keyboard stays on the
+  list, so that `Tab` goes on to the next field.  `gg` and `G`, `Home` and
+  `End`, or the keys of `first` and `last`, go to the first and last option, and
+  `PageDown` and `PageUp` move by the options in view.
+- While a drop-down list is open, the status bar hints the keys that pick and
+  close it, as `Control+y: pick | Control+e: close` in the vi keymap and
+  `Enter: pick | F4: close` in the cua keymap, and gives way when the bar is
+  short.  While a text field or a drop-down list has the keyboard, it hints the
+  keys of the next field and, in the vi keymap, of leaving it.
 
 ## v0.1.4
 

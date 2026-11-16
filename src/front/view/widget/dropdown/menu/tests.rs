@@ -5,17 +5,17 @@
 //! Tests of the keys that move through an open menu, of how far they move
 //! its highlight, and of what keys and clicks leave to the widgets under it
 
+mod announcing;
+mod mouse;
+mod pages;
+mod picking;
+
 use iced::{
-    Event, Point, Size,
-    advanced::{
-        Shell,
-        layout::{Layout, Node},
-    },
+    advanced::Shell,
     keyboard::{Key, Modifiers, key::Named},
-    mouse,
 };
 
-use super::{Choice, Reply, Shared, reply, rows::Rows};
+use super::{Choice, Reply, Shared, reply};
 use crate::front::{
     Message,
     keymap::{Keymap, Preset, Press},
@@ -26,6 +26,30 @@ use crate::front::{
 /// Options of the menus in the tests, each picked as the step it makes
 const OPTIONS: [isize; 3] = [1, 2, 3];
 
+fn letter(text: &str) -> Key {
+    Key::Character(text.into())
+}
+
+fn named(key: Named) -> Key {
+    Key::Named(key)
+}
+
+/// Presses `key` with `modifiers` in the menu of `choice`
+fn type_key(choice: Choice<'_>, key: &Key, modifiers: Modifiers, shell: &mut Shell<'_, Message>) {
+    choice.press(key, Press::from_key(key, modifiers), shell);
+}
+
+/// Returns an action that presses `key` with `modifiers`, for the helpers
+/// that take one
+fn typing_with(key: Key, modifiers: Modifiers) -> impl Fn(Choice<'_>, &mut Shell<'_, Message>) {
+    move |choice, shell| type_key(choice, &key, modifiers, shell)
+}
+
+/// Returns an action that presses `key` alone
+fn typing(key: Key) -> impl Fn(Choice<'_>, &mut Shell<'_, Message>) {
+    typing_with(key, Modifiers::empty())
+}
+
 /// What a menu does with the events of a test
 #[derive(Debug, PartialEq)]
 struct Outcome {
@@ -33,6 +57,22 @@ struct Outcome {
     /// Whether the menu keeps the events from the widgets under it
     captured: bool,
     picked: Option<isize>,
+}
+
+fn closed(captured: bool, picked: Option<isize>) -> Outcome {
+    Outcome {
+        open: false,
+        captured,
+        picked,
+    }
+}
+
+fn kept_open(captured: bool) -> Outcome {
+    Outcome {
+        open: true,
+        captured,
+        picked: None,
+    }
 }
 
 /// Opens a menu of [`OPTIONS`] with the highlight on the first, lets `act`
@@ -63,14 +103,13 @@ fn outcome(act: impl Fn(Choice<'_>, &mut Shell<'_, Message>)) -> Outcome {
 fn pressed(keys: &[Key]) -> Outcome {
     outcome(|choice, shell| {
         keys.iter()
-            .for_each(|key| choice.press(key, Press::from_key(key, Modifiers::empty()), shell));
+            .for_each(|key| type_key(choice, key, Modifiers::empty(), shell));
     })
 }
 
 #[test]
 fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
     let (none, ctrl, alt) = (Modifiers::empty(), Modifiers::CTRL, Modifiers::ALT);
-    let (letter, named) = (|text: &str| Key::Character(text.into()), Key::Named);
     let cases = [
         (Preset::Vi, letter("n"), ctrl, Reply::Step(1)),
         (Preset::Vi, letter("p"), ctrl, Reply::Step(-1)),
@@ -79,6 +118,14 @@ fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
         (Preset::Cua, named(Named::ArrowUp), none, Reply::Step(-1)),
         (Preset::Cua, letter("n"), ctrl, Reply::Keep),
         (Preset::Vi, named(Named::Enter), none, Reply::Pick),
+        (Preset::Vi, letter("y"), ctrl, Reply::Pick),
+        (Preset::Vi, letter("e"), ctrl, Reply::Dismiss),
+        (Preset::Vi, letter("c"), ctrl, Reply::Dismiss),
+        (Preset::Cua, letter("c"), ctrl, Reply::Keep),
+        (Preset::Cua, named(Named::F4), none, Reply::Dismiss),
+        (Preset::Cua, letter("y"), ctrl, Reply::Keep),
+        (Preset::Cua, letter("e"), ctrl, Reply::Keep),
+        (Preset::Vi, letter("y"), none, Reply::Keep),
         (Preset::Vi, named(Named::Escape), none, Reply::Close),
         (Preset::Vi, named(Named::Space), none, Reply::Close),
         (Preset::Vi, named(Named::F1), none, Reply::Pass),
@@ -92,8 +139,18 @@ fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
         (Preset::Vi, letter("i"), ctrl, Reply::Keep),
         (Preset::Cua, named(Named::ArrowLeft), alt, Reply::Keep),
         (Preset::Vi, letter("d"), ctrl, Reply::Keep),
-        (Preset::Vi, named(Named::PageDown), none, Reply::Keep),
-        (Preset::Cua, named(Named::PageUp), none, Reply::Keep),
+        (Preset::Vi, named(Named::PageDown), none, Reply::Page(1)),
+        (Preset::Vi, letter("f"), ctrl, Reply::Page(1)),
+        (Preset::Vi, letter("b"), ctrl, Reply::Page(-1)),
+        (Preset::Cua, named(Named::PageUp), none, Reply::Page(-1)),
+        (Preset::Vi, named(Named::Home), none, Reply::First),
+        (Preset::Vi, named(Named::End), none, Reply::Last),
+        (Preset::Vi, letter("G"), none, Reply::Last),
+        (Preset::Cua, named(Named::Home), none, Reply::First),
+        (Preset::Cua, named(Named::End), none, Reply::Last),
+        (Preset::Cua, named(Named::PageDown), ctrl, Reply::Keep),
+        (Preset::Vi, named(Named::Home), ctrl, Reply::First),
+        (Preset::Vi, named(Named::F5), none, Reply::Keep),
     ];
     let wrong: Vec<_> = cases
         .into_iter()
@@ -121,118 +178,24 @@ fn highlight_stays_put_past_either_end() {
 
 #[test]
 fn enter_picks_the_highlight_and_go_closes_the_menu_without_keeping_its_key() {
-    let (letter, named) = (|text: &str| Key::Character(text.into()), Key::Named);
-    let closed = |captured, picked| Outcome {
-        open: false,
-        captured,
-        picked,
-    };
     assert_eq!(pressed(&[named(Named::Enter)]), closed(true, Some(1)));
     assert_eq!(
         pressed(&[letter("j"), named(Named::Enter)]),
         closed(true, Some(2))
     );
     assert_eq!(pressed(&[named(Named::Space)]), closed(false, None));
-    assert_eq!(
-        pressed(&[letter("d")]),
-        Outcome {
-            open: true,
-            captured: true,
-            picked: None,
-        }
-    );
+    assert_eq!(pressed(&[letter("d")]), kept_open(true));
 }
 
 #[test]
 fn help_acts_through_the_menu_and_leaves_it_open_on_its_row() {
-    let letter = |text: &str| Key::Character(text.into());
-    let help = Key::Named(Named::F1);
-    assert_eq!(
-        pressed(std::slice::from_ref(&help)),
-        Outcome {
-            open: true,
-            captured: false,
-            picked: None,
-        }
-    );
+    let help = named(Named::F1);
+    assert_eq!(pressed(std::slice::from_ref(&help)), kept_open(false));
     let highlight = outcome(|choice, shell| {
         [letter("j"), help.clone()]
             .iter()
-            .for_each(|key| choice.press(key, Press::from_key(key, Modifiers::empty()), shell));
+            .for_each(|key| type_key(choice, key, Modifiers::empty(), shell));
         assert_eq!(choice.shared.highlight.get(), Some(1));
     });
     assert!(highlight.open);
-}
-
-#[test]
-fn click_beside_the_menu_closes_it_and_acts_unless_it_lands_on_the_list() {
-    let closed = |captured| Outcome {
-        open: false,
-        captured,
-        picked: None,
-    };
-    assert_eq!(
-        outcome(|choice, shell| choice.click_beside(false, shell)),
-        closed(false)
-    );
-    assert_eq!(
-        outcome(|choice, shell| choice.click_beside(true, shell)),
-        closed(true)
-    );
-}
-
-#[test]
-fn mouse_highlights_the_row_under_it_and_picks_the_row_it_presses() {
-    let rows = Node::with_children(
-        Size::new(100.0, 90.0),
-        (0..3)
-            .map(|row| {
-                Node::new(Size::new(100.0, 30.0)).move_to(Point::new(0.0, 30.0 * row as f32))
-            })
-            .collect(),
-    );
-    let at = |y| mouse::Cursor::Available(Point::new(10.0, y));
-    let moved = Event::Mouse(mouse::Event::CursorMoved {
-        position: Point::new(10.0, 40.0),
-    });
-    let press = Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left));
-    let picked = outcome(|choice, shell| {
-        let list = Rows(choice);
-        list.before(&moved, Layout::new(&rows), at(40.0), shell);
-        assert_eq!(choice.shared.highlight.get(), Some(1));
-        assert!(!shell.is_event_captured());
-        list.before(&press, Layout::new(&rows), at(100.0), shell);
-        assert_eq!(choice.shared.highlight.get(), Some(1));
-        list.before(&press, Layout::new(&rows), at(70.0), shell);
-    });
-    assert_eq!(
-        picked,
-        Outcome {
-            open: false,
-            captured: true,
-            picked: Some(3),
-        }
-    );
-}
-
-#[test]
-fn highlight_follows_the_selected_option_until_a_key_moves_it() {
-    let keymap = Keymap::default();
-    let shared = Shared::default();
-    let mut messages = Vec::new();
-    let list =
-        dropdown(OPTIONS, Some(OPTIONS[0]), Message::Step, &keymap).on_open(Message::Clicked);
-    Choice::new(&list, &shared).open(&mut Shell::new(&mut messages));
-    assert!(matches!(messages[..], [Message::Clicked]));
-    // Options listed afresh under the open menu put the selected one last
-    let relisted = dropdown([3, 2, 1], Some(OPTIONS[0]), Message::Step, &keymap);
-    let choice = Choice::new(&relisted, &shared);
-    assert_eq!(choice.highlighted(), Some(2));
-    let up = Key::Named(Named::ArrowUp);
-    choice.press(
-        &up,
-        Press::from_key(&up, Modifiers::empty()),
-        &mut Shell::new(&mut messages),
-    );
-    assert_eq!(choice.highlighted(), Some(1));
 }

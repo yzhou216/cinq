@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The actions of keys pressed alone, which act in fields, and those of GO and
-//! Panic, which act at once
+//! The actions of keys pressed alone, which act in fields and in an open
+//! menu, and those of GO and Panic, which act at once
 
 use super::{Action, Keymap, Press};
 
@@ -43,6 +43,41 @@ impl Keymap {
         self.at_once_bound(press)
             .map(|(action, _)| action)
             .or_else(|| self.find(&[press]))
+    }
+
+    /// Returns the action that a key pressed alone has while a menu is open,
+    /// where the keys of [`Action::Pick`] and [`Action::CloseMenu`] act, and
+    /// win over a key that the cue list takes for scrolling
+    pub fn in_menu(&self, press: Press) -> Option<Action> {
+        self.at_once_bound(press)
+            .map(|(action, _)| action)
+            .or_else(|| {
+                self.bound().find_map(|(action, keys)| {
+                    (action.acts_in_menu() && keys[..] == [press]).then_some(action)
+                })
+            })
+    }
+
+    /// Returns the motion that keys of two presses or more complete while a
+    /// menu is open, such as `g g`, after the `waiting` keys that came first,
+    /// and the keys that wait for another press, as the first `g` does
+    pub fn menu_motion(&self, waiting: &[Press], press: Press) -> (Option<Action>, Vec<Press>) {
+        let keys = [waiting, &[press]].concat();
+        let done = self
+            .motions()
+            .find(|(_, bound)| *bound == keys)
+            .map(|(action, _)| action);
+        let longer = self
+            .motions()
+            .any(|(_, bound)| bound.len() > keys.len() && bound.starts_with(&keys));
+        (
+            done,
+            if done.is_none() && longer {
+                keys
+            } else {
+                Vec::new()
+            },
+        )
     }
 
     /// Returns the action of [`Action::AT_ONCE`] whose key is pressed,

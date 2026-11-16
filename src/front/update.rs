@@ -14,6 +14,7 @@ mod dispatch;
 mod editing;
 mod focus_order;
 mod history;
+mod keyboard;
 mod keys;
 mod link;
 mod loading;
@@ -52,7 +53,9 @@ impl App {
     fn handled(self, message: Message) -> (Self, Task<Message>) {
         match message {
             Message::Typed { press, repeat } => self.typed(press, repeat),
-            Message::Focus(focus) => self.focused(focus),
+            // A key that moves the keyboard to another field ends the run of
+            // edits to the field that it leaves, as a click there does
+            Message::Focus(focus) => self.send(Command::EndRun).focused(focus),
             // Selection scrolls into view as it or the rows around it move,
             // and as the main window changes size
             Message::Select(id) => self
@@ -153,11 +156,15 @@ impl App {
             }
             // Naming each variant here, with no wildcard, keeps the compiler
             // checking that a new message is handled by one part or the other
-            message @ (Message::Drawn(_)
+            message @ (Message::Nothing
+            | Message::Drawn(_)
             | Message::SidePressed(..)
             | Message::Landed { .. }
             | Message::Measured(_)
             | Message::Reached { .. }
+            | Message::MenuOpen(_)
+            | Message::Held(_)
+            | Message::FileHeld(_)
             | Message::Copy(_)
             | Message::PauseAll
             | Message::ResumeAll

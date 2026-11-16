@@ -47,9 +47,15 @@ Go forward again & \key{Control+i} & \key{Alt+ArrowRight} \\
 Search the cues by their text & \key{/} & \key{Control+f} \\
 Select the next match & \key{n} & \key{F3} \\
 Show or hide the help & \key{?} or \key{F1} & \key{F1} or \key{?} \\
+Pick the highlighted option of an open menu & \key{Control+y} & \key{Enter} \\
+Close an open menu without picking & \key{Control+e} & \key{F4} \\
 \hline
 \end{tabular}
 \end{center}
+
+\key{Enter} picks in both keymaps.  While a drop-down list is open, the status
+bar names the keys that pick and close it, and \key{PageDown}, \key{PageUp},
+\key{Home}, and \key{End} move the highlight by a page or to either end.
 
 \section{The help page}
 
@@ -99,8 +105,8 @@ continue the sequence cancels it and does nothing, as Vim beeps and drops the
 keys typed so far, so that a mistyped \key{dx} cuts nothing.  The keys for GO
 and Panic act immediately, even in the middle of a sequence.  \key{Control+c}
 cancels a sequence in the vi keymap, as it does in Vim, and the status bar
-hints it while a sequence waits, so that no one reaches for \key{Escape},
-which is Panic.
+hints it while a sequence waits or a text field has the keyboard, so that no one
+reaches for \key{Escape}, which is Panic.
 
 \section{Searching the cues}
 

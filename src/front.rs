@@ -175,6 +175,15 @@ struct App {
     /// previous match look for
     searched: Searched,
     help: bool,
+    /// Whether the menu of a drop-down list is open, which the status bar
+    /// hints the keys of
+    menu: bool,
+    /// Whether a text field or a drop-down list has the keyboard, which the
+    /// status bar hints how to leave
+    held: bool,
+    /// Whether the File field of a cue has the keyboard, which the status bar
+    /// hints Enter for while it is empty
+    file_held: bool,
     /// Why the link that the help page opened last failed to open, which
     /// the page shows while it stays open
     link_problem: Option<String>,

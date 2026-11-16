@@ -319,6 +319,12 @@ of the help page.
 |  close_help
 :  q
 :  Control+w
+|  pick
+:  Control+y
+:  none
+|  close_menu
+:  Control+e
+:  F4
 
 # KEYS
 
@@ -526,7 +532,7 @@ A text field of the inspector, or a drop-down list
 	A list of the sidebar, which scrolls in a low window, scrolls into view as
 	these keys reach it, with its title above it.
 	Enter in the empty File field of a cue opens the dialog that chooses the
-	file, as the Choose button does.
+	file, as the Choose button does, and the status bar hints it.
 	Anywhere else Enter leaves a text field, and opens the menu of a drop-down
 	list, which takes the keyboard from there.
 
@@ -552,13 +558,23 @@ The menu of a drop-down list
 	The keys bound by themselves to *next* and *previous* move the highlight
 	one option at a time, whatever the count, and the highlight stays put past
 	either end.
-	Enter picks the highlighted option.
+	Those bound to *page_down* and *page_up* move it by the options in view,
+	and those bound to *first* and *last* to the first and last option, which
+	includes *g g* and *G* in the vi keymap.
+	The sequences *g j* and *g k* move by one option as well.
+	PageDown, PageUp, Home, and End move it too, as in the popup menu of Vim,
+	whether or not the keymap binds them.
+	Enter and the key of *pick* pick the highlighted option, and the key of
+	*close_menu* closes the menu without picking one, and either leaves the
+	keyboard on the list, so that *next_field* goes on to the field after it.
 	The keys of *go* and *panic* act as they do everywhere and close the menu
 	as well.
 	The key of *help* opens the help page and leaves the menu open, hidden
 	beneath the page, so that it is open on the same highlighted option once
 	the page closes.
 	The menu keeps every other key until it closes.
+	While it is open, the status bar hints the keys of *pick* and *close_menu*,
+	with Enter for *pick* when no key is bound to it.
 
 While the stage window has the keyboard, as the window manager may leave it
 once the stage window opens, and as each GO that makes it fullscreen gives
@@ -615,11 +631,11 @@ page.
 
 *first*
 	Select the first cue, or the cue on the row counted, or go to the top of
-	the help page.
+	the help page, or move the highlight of an open menu to its first option.
 
 *last*
 	Select the last cue, or the cue on the row counted, or go to the bottom
-	of the help page.
+	of the help page, or move the highlight of an open menu to its last option.
 
 *half_page_down*
 	Scroll the cue list half a page down, that is, half as many rows as fit
@@ -645,6 +661,8 @@ page.
 	At the end of the list the view stops and the selection goes on to the
 	last cue.
 	On the help page, scroll down by a page less two lines.
+	In an open menu, move the highlight down by the options in view, or by ten
+	before the menu has been drawn.
 
 *page_up*
 	Scroll the cue list a whole page up, less two rows, and select the last
@@ -652,6 +670,7 @@ page.
 	At the top of the list the view stops and the selection goes on to the
 	first cue.
 	On the help page, scroll up by a page less two lines.
+	In an open menu, move the highlight up by the options in view.
 
 *scroll_down*
 	Scroll the cue list a row down, or as many rows as the count, as
@@ -660,12 +679,17 @@ page.
 	nearest row in view when the scroll would take it out.
 	The view stops at the end of the list.
 	On the help page, scroll down a line, or as many lines as the count.
+	While a menu is open, *Control+e* closes the menu instead, as in Vim's
+	popup menu.
+	The keys of *pick* and *close_menu* act only in a menu, so a key may be
+	bound to one of them and to a scroll without a clash.
 
 *scroll_up*
 	Scroll the cue list a row up, or as many rows as the count, as
 	*Control+y* does in Vim, and keep the selection in view as *scroll_down*
 	does.
 	On the help page, scroll up a line.
+	While a menu is open, *Control+y* picks the highlighted option instead.
 
 *top_row*
 	Select the first cue row in view, or the row that many rows below it
@@ -777,14 +801,18 @@ page.
 
 *cancel*
 	Drop the keys typed so far, close the search line, with the selection going
-	back to where the search began, as Escape does there, and take the keyboard
-	out of a text field or drop-down list, as Control+c does in Vim.
+	back to where the search began, as Escape does there, close an open menu
+	without picking, and take the keyboard out of a text field or drop-down list,
+	as Control+c does in Vim.
 	It never touches playback, which is how it differs from Escape, so that it is
 	the key to reach for when no show should stop.
 	It acts in text fields, where a text field that has a selection still copies
 	it first.
 	The cua keymap binds no key to it, since Control+c copies there.
 	While keys wait or the search line is open, the status bar hints its key.
+	While a text field or a drop-down list has the keyboard, it hints the key
+	of *next_field* and this key as the one that leaves, so that the way out is
+	told where Escape would panic.
 
 *edit*
 	Edit the name of the selected cue: show the Basics tab and put the caret
@@ -934,6 +962,18 @@ page.
 *close_help*
 	Hide the help page.
 
+*pick*
+	Pick the highlighted option of an open menu, as Enter does and as Control+y
+	does in Vim's popup menu.
+	It does nothing while no menu is open.
+
+*close_menu*
+	Close an open menu without picking an option, as Control+e does in Vim's
+	popup menu.
+	Unlike Escape, which closes the menu and also acts as Panic, it does not
+	panic.
+	It does nothing while no menu is open.
+
 # DIAGNOSTICS
 
 Problems with the file show among the warnings in the sidebar, each after
@@ -974,7 +1014,10 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   sequence that starts with a digit, and a value that is not a string are left
   out, and the action keeps the other keys listed for it, which may be none.
 - A sequence bound to two actions goes to the one listed first under
-  *ACTIONS*, and the other goes without it.
+  *ACTIONS*, and the other goes without it, unless the two act in different
+  places: *pick* and *close_menu* act only in an open menu, so a sequence may
+  be bound to one of them and to an action that acts on the cue list, as
+  *Control+y* is to *pick* and to *scroll_up* in the vi keymap.
   A sequence that begins a longer one, as *g* begins *g g*, leaves the longer
   one impossible to type.
   A key bound by itself to *go* or *panic* makes every other sequence that

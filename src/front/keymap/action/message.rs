@@ -53,6 +53,7 @@ impl Action {
             Action::ChangeName => Message::Focus(Focus::Name(Caret::All)),
             Action::NextField => Message::Focus(Focus::Next),
             Action::PreviousField => Message::Focus(Focus::Previous),
+            Action::Pick | Action::CloseMenu => Message::Nothing,
             Action::AddBelow => Message::Add(Place::After, times),
             Action::AddAbove => Message::Add(Place::Before, times),
             Action::Cut => Message::Cut(times),

@@ -95,6 +95,11 @@ impl Press {
         self.ctrl || self.alt
     }
 
+    /// Returns whether the key is pressed with no modifier held
+    pub fn is_bare(self) -> bool {
+        self == self.bare()
+    }
+
     /// Returns whether the key types a character other than the space
     fn types_character(self) -> bool {
         matches!(self, Self { key: Name::Char(c), ctrl: false, alt: false, shift: false } if c != ' ')

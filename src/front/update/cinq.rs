@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use iced::{Element, Subscription, Task, window};
 
-use super::{Keeper, device, show};
+use super::{Keeper, device, dispatch::passive, keyboard::held_after, show};
 use crate::{
     back::{Audio, Video},
     front::{App, Cinq, MAIN_SIZE, Message, keymap, view, window_settings},
@@ -61,6 +61,9 @@ impl Cinq {
             message,
             Message::Reconfigured(_) | Message::ChooseAudioDevice(_)
         );
+        // Whatever the operator does can move the keyboard between fields,
+        // which only the widgets know
+        let asking = !passive(&message);
         let (app, task) = std::mem::take(&mut self.app).next(message);
         if routed {
             self.audio.route(app.config.sound.device.as_deref());
@@ -80,6 +83,7 @@ impl Cinq {
         let (app, load) = app.load();
         let (app, stage) = app.staged();
         self.app = app;
+        let task = if asking { held_after(task) } else { task };
         Task::batch([task, load, stage])
     }
 

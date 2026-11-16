@@ -14,7 +14,7 @@ use crate::{
     back::{Advance, Cue, Edit, Kind},
     front::{
         App, Message,
-        view::{NAME, SPACING, button, dropdown, format, theme},
+        view::{FILE, NAME, SPACING, button, dropdown, format, theme},
     },
 };
 
@@ -59,7 +59,7 @@ impl Field {
             // the Choose button, and leaves the field once a file is named
             match self {
                 Field::Name => input.id(NAME),
-                Field::Target if cue.kind.has_file() => input.on_submit_maybe(
+                Field::Target if cue.kind.has_file() => input.id(FILE).on_submit_maybe(
                     (editable && value.is_empty()).then_some(Message::ChooseFile(id)),
                 ),
                 _ => input,

@@ -423,6 +423,7 @@ dependencies = [
  "embed-manifest",
  "futures",
  "iced",
+ "iced_runtime",
  "icns",
  "image",
  "itertools 0.15.0",

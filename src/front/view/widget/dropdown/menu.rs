@@ -16,6 +16,7 @@
 //! batch begins, then to the widgets under it, so a menu that closes
 //! partway through a batch leaves the rest of the batch to them.
 
+mod keys;
 mod overlay;
 mod rows;
 #[cfg(test)]
@@ -23,18 +24,16 @@ mod tests;
 
 use std::cell::Cell;
 
-use iced::{
-    advanced::Shell,
-    keyboard::{Key, key::Named},
-};
+use iced::{advanced::Shell, keyboard::Key};
 
 use super::Dropdown;
-use crate::front::{
-    Message,
-    keymap::{Action, Keymap, Press},
-    step,
-};
+use crate::front::{Message, keymap::Press, step};
+use keys::{Reply, reply};
 pub(super) use overlay::Menu;
+
+/// Options that a key of a page moves the highlight by before the menu has
+/// been laid out, as Vim's popup menu moves by ten
+const PAGE: isize = 10;
 
 /// State of the menu, which the list keeps in cells, since the list and its
 /// open menu both act on it
@@ -48,11 +47,31 @@ pub(super) struct Shared {
     highlight: Cell<Option<usize>>,
     /// Whether the menu has yet to scroll the highlight into view
     reveal: Cell<bool>,
+    /// Options that the open menu shows at once, or none before it is laid
+    /// out, which the keys of a page move the highlight by
+    fit: Cell<usize>,
+    /// Whether a key picked an option or closed the menu without a pick, which
+    /// gives the keyboard back to the list, until the list takes it
+    returning: Cell<bool>,
+    /// Keys of a motion typed halfway, such as the first `g` of `g g`
+    waiting: Cell<Vec<Press>>,
 }
 
 impl Shared {
     pub(super) fn is_open(&self) -> bool {
         self.open.get()
+    }
+
+    /// Returns whether a key has closed the menu and the list has not taken
+    /// the keyboard back yet
+    pub(super) fn is_returning(&self) -> bool {
+        self.returning.get()
+    }
+
+    /// Returns whether a key has closed the menu since the last call, so that
+    /// the list takes the keyboard back and Tab goes on from it
+    pub(super) fn take_returning(&self) -> bool {
+        self.returning.take()
     }
 }
 
@@ -80,6 +99,8 @@ impl<'b> Choice<'b> {
             self.shared.open.set(true);
             self.shared.highlight.set(None);
             self.shared.reveal.set(true);
+            self.shared.waiting.take();
+            shell.publish(Message::MenuOpen(true));
         }
         if let Some(message) = &self.dropdown.on_open {
             shell.publish(message.clone());
@@ -89,25 +110,61 @@ impl<'b> Choice<'b> {
     }
 
     pub(super) fn press(&self, key: &Key, press: Option<Press>, shell: &mut Shell<'_, Message>) {
-        match reply(self.dropdown.keymap, key, press) {
-            Reply::Step(offset) => {
-                let row = step(self.highlighted(), offset, self.dropdown.names.len());
-                self.shared.highlight.set(row);
-                self.shared.reveal.set(true);
+        let keymap = self.dropdown.keymap;
+        let (motion, waiting) = press.map_or_else(Default::default, |press| {
+            keymap.menu_motion(&self.shared.waiting.take(), press)
+        });
+        self.shared.waiting.set(waiting);
+        let reply = match (reply(keymap, key, press), motion.and_then(Reply::moving)) {
+            (Reply::Keep, Some(moved)) => moved,
+            (reply, _) => reply,
+        };
+        match reply {
+            Reply::Step(offset) => self.highlight(self.stepped(offset), shell),
+            Reply::Page(sign) => self.highlight(self.stepped(sign * self.page()), shell),
+            Reply::First => self.highlight((!self.dropdown.names.is_empty()).then_some(0), shell),
+            Reply::Last => self.highlight(self.dropdown.names.len().checked_sub(1), shell),
+            Reply::Pick => {
+                self.shared.returning.set(true);
+                self.pick(self.highlighted(), shell);
+            }
+            Reply::Close => self.close(shell),
+            Reply::Dismiss => {
+                self.shared.returning.set(true);
+                self.close(shell);
                 shell.capture_event();
             }
-            Reply::Pick => self.pick(self.highlighted(), shell),
-            Reply::Close => self.shared.open.set(false),
             Reply::Pass => {}
             Reply::Keep => shell.capture_event(),
         }
         shell.request_redraw();
     }
 
+    fn stepped(&self, offset: isize) -> Option<usize> {
+        step(self.highlighted(), offset, self.dropdown.names.len())
+    }
+
+    /// Returns how many options a key of a page moves the highlight by: those
+    /// in view, or ten before the menu has been laid out
+    fn page(&self) -> isize {
+        isize::try_from(self.shared.fit.get())
+            .ok()
+            .filter(|&fit| fit > 0)
+            .unwrap_or(PAGE)
+    }
+
+    /// Moves the highlight to `row`, which the menu scrolls into view, and
+    /// keeps the key from acting on anything behind the menu
+    fn highlight(&self, row: Option<usize>, shell: &mut Shell<'_, Message>) {
+        self.shared.highlight.set(row);
+        self.shared.reveal.set(true);
+        shell.capture_event();
+    }
+
     /// Closes the menu on a click beside it, which goes on to act on what it
     /// lands on, unless it lands on the list, whose menu it would open again
     pub(super) fn click_beside(&self, on_list: bool, shell: &mut Shell<'_, Message>) {
-        self.shared.open.set(false);
+        self.close(shell);
         if on_list {
             shell.capture_event();
         }
@@ -118,35 +175,15 @@ impl<'b> Choice<'b> {
         if let Some(message) = row.and_then(|row| (self.dropdown.pick)(row)) {
             shell.publish(message);
         }
-        self.shared.open.set(false);
+        self.close(shell);
         shell.capture_event();
     }
-}
 
-/// What a key does while the menu is open
-#[derive(Debug, PartialEq)]
-enum Reply {
-    /// Moves the highlight by a number of options, downwards when positive
-    Step(isize),
-    Pick,
-    /// Lets the key act and closes the menu, as the keys of GO and Panic do
-    Close,
-    /// Lets the key act and leaves the menu open, as the key of Help does:
-    /// the page hides the menu, which is open still when the page closes
-    Pass,
-    /// Keeps the key from acting on anything behind the menu
-    Keep,
-}
-
-/// Decides what a key does, given the press it makes when the key bindings
-/// can name it
-fn reply(keymap: &Keymap, key: &Key, press: Option<Press>) -> Reply {
-    match (press.and_then(|press| keymap.alone(press)), key) {
-        (Some(Action::Next), _) => Reply::Step(1),
-        (Some(Action::Previous), _) => Reply::Step(-1),
-        (Some(action), _) if action.acts_at_once() => Reply::Close,
-        (Some(Action::Help), _) => Reply::Pass,
-        (_, Key::Named(Named::Enter)) => Reply::Pick,
-        _ => Reply::Keep,
+    /// Closes the menu and tells the interface, which hints the keys of an
+    /// open menu while one is open
+    pub(super) fn close(&self, shell: &mut Shell<'_, Message>) {
+        self.shared.open.set(false);
+        self.shared.waiting.take();
+        shell.publish(Message::MenuOpen(false));
     }
 }

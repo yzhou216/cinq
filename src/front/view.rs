@@ -61,6 +61,10 @@ pub const NAME: &str = "name";
 /// list reaches
 pub const INSPECTOR: &str = "inspector";
 
+/// Identity of the File field of an audio, video, or picture cue, which the
+/// status bar hints Enter for while it is empty and has the keyboard
+pub const FILE: &str = "file";
+
 /// Identity of the search line in the status bar, through which the key of
 /// the search action gives it the keyboard focus
 pub const SEARCH: &str = "search";

@@ -7,14 +7,16 @@
 //! the latest change to the show with the key that takes it back, the key
 //! that cancels while keys wait or the search line is open, the keys that go
 //! back and forward between the places jumped to while there is a place to
-//! go to, the key that saves unsaved changes, and the keys of GO, Panic, and
-//! the help page
+//! go to, the key that saves unsaved changes, the keys of GO, Panic, and the
+//! help page, and, while a text field or a drop-down list has the keyboard,
+//! the keys that go to the next field and that leave the field
 //!
 //! The bar keeps to one line.  When it is too narrow for all of it, the
-//! keys of going forward and back, of GO, of Panic, of saving, and of the
-//! help page give way in turn, each one whole, and then the status gives way
-//! from its end, so that the keys typed so far, what the latest change told,
-//! and the key of cancel always show in full.
+//! keys of going forward and back, of GO, of Panic, of saving, of the help
+//! page, of the next field, and of leaving it give way in turn, each one
+//! whole, and then the status gives way from its end, so that the keys typed
+//! so far, what the latest change told, and the key of cancel always show in
+//! full.
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
 
@@ -43,13 +45,18 @@ use crate::{
     },
 };
 
-const YIELDING: [Action; 6] = [
+/// Hints in turn of giving way, the first to go first
+const YIELDING: [Action; 10] = [
     Action::Forward,
     Action::Back,
     Action::Go,
     Action::Panic,
     Action::Save,
     Action::Help,
+    Action::NextField,
+    Action::Cancel,
+    Action::CloseMenu,
+    Action::Pick,
 ];
 
 /// Mark that opens the search line, or the one that opens it for a search that
@@ -182,15 +189,39 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
     let back = going(app, Action::Back, app.back_to());
     let forward = going(app, Action::Forward, app.forward_to());
     let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
+    // The page covers an open menu, and takes its keys.  Enter picks
+    // whichever key is bound to pick, so that it stands in where none is.
+    let in_menu = app.menu && !app.help;
+    let pick =
+        key(Action::Pick, "pick").or_else(|| Some((Some(Action::Pick), "Enter: pick".to_owned())));
+    let close = key(Action::CloseMenu, "close");
     // Escape would panic, so that the key that only cancels is told while it
-    // can.  Cancelling keys typed or a search never gives way.
+    // can.  Cancelling keys typed or a search never gives way, while the
+    // hint of leaving a field does, as it only teaches.
     let cancel = key(Action::Cancel, "cancel")
         .filter(|_| !app.keys.is_empty() || app.search.is_some())
         .map(|(_, hint)| (None, hint));
+    // A pick or a close by key, and a Tab, leave the keyboard on a field or a
+    // list, from which Escape would panic and no click is at hand
+    let in_field = app.held && !app.help && !in_menu && app.search.is_none();
+    let next_field = key(Action::NextField, "next field").filter(|_| in_field);
+    let leave = key(Action::Cancel, "leave").filter(|_| in_field && app.keys.is_empty());
+    // Tab skips the Choose button, so that Enter says how to reach the chooser
+    // while the empty File field has the keyboard
+    let choose = (in_field && app.file_held)
+        .then(|| app.selected.and_then(|id| app.workspace.cue(id)))
+        .flatten()
+        .filter(|cue| cue.file.is_empty())
+        .map(|_| (None, "Enter: choose a file".to_owned()));
     typed
         .into_iter()
         .chain(told)
+        .chain(pick.filter(|_| in_menu))
+        .chain(close.filter(|_| in_menu))
         .chain(cancel)
+        .chain(choose)
+        .chain(next_field)
+        .chain(leave)
         .chain(back)
         .chain(forward)
         .chain(save)

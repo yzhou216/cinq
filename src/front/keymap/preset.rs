@@ -68,6 +68,8 @@ impl Preset {
             Action::ChangeName => [&["c c", "S"], &["F2"]],
             Action::NextField => [&["Tab"], &["Tab"]],
             Action::PreviousField => [&["Shift+Tab"], &["Shift+Tab"]],
+            Action::Pick => [&["Control+y"], &[]],
+            Action::CloseMenu => [&["Control+e"], &["F4"]],
             Action::AddBelow => [&["o"], &["Control+n"]],
             Action::AddAbove => [&["O"], &["Control+N"]],
             Action::MoveDown => [&["Alt+j", "Alt+ArrowDown"], &["Alt+ArrowDown"]],

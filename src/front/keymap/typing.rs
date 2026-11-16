@@ -66,10 +66,9 @@ impl Keymap {
         let count = counted(digits);
         match self.find(command) {
             Some(action) => Outcome::of(action, count),
-            None if self.bound().any(|(_, bound)| bound.starts_with(command)) => Outcome {
-                pending: keys,
-                ..Outcome::default()
-            },
+            None if self.typable().any(|(_, bound)| bound.starts_with(command)) => {
+                Outcome::waiting(&keys)
+            }
             None => self.operated(&keys, count, command).unwrap_or_default(),
         }
     }
@@ -152,7 +151,7 @@ impl Keymap {
             None => typed.to_vec(),
         };
         let plain: Vec<_> = self
-            .bound()
+            .typable()
             .filter(|_| !bare.is_empty())
             .filter_map(|(action, keys)| {
                 keys.strip_prefix(&bare[..])
@@ -174,7 +173,7 @@ impl Keymap {
     }
 
     fn find(&self, keys: &[Press]) -> Option<Action> {
-        self.bound()
+        self.typable()
             .find_map(|(action, bound)| (bound == keys).then_some(action))
     }
 }
