@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The text of a drop-down list that lies across the lower edge of the
+  sidebar, as the Default device list does at 1024 by 768 pixels with a
+  notice in the status bar, no longer draws below the sidebar, over the
+  inspector, where the software renderer let it spill.
 - The default option of the Device list of an output names the choice of
   the Default device list in the sidebar, as in `Default device (System
   default)`, and while the highlight of the open menu rests on that option,

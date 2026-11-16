@@ -144,17 +144,6 @@ impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
             },
             look.background,
         );
-        // Arrow drawn by its right end as iced's pick list draws it, since
-        // it never changes apart from the box, which redraws around it
-        let arrow = Text {
-            font: Renderer::ICON_FONT,
-            align_x: text::Alignment::Right,
-            align_y: alignment::Vertical::Center,
-            shaping: text::Shaping::Basic,
-            ..label(Renderer::ARROW_DOWN_ICON.to_string(), bounds.width)
-        };
-        let end = Point::new(bounds.x + bounds.width - PADDING.right, bounds.center_y());
-        renderer.fill_text(arrow, end, look.handle_color, *viewport);
         let (name, color) = match self.chosen {
             Some(row) => (self.names[row].clone(), look.text_color),
             None => (
@@ -168,7 +157,26 @@ impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
             bounds.x + PADDING.left,
             bounds.center_y() - line_height() / 2.0,
         );
-        renderer.fill_text(name, start, color, *viewport);
+        // Arrow drawn by its right end as iced's pick list draws it, since
+        // it never changes apart from the box, which redraws around it
+        let arrow = Text {
+            font: Renderer::ICON_FONT,
+            align_x: text::Alignment::Right,
+            align_y: alignment::Vertical::Center,
+            shaping: text::Shaping::Basic,
+            ..label(Renderer::ARROW_DOWN_ICON.to_string(), bounds.width)
+        };
+        let end = Point::new(bounds.x + bounds.width - PADDING.right, bounds.center_y());
+        // The software renderer clips cached text to its layer alone, and a
+        // viewport as large as the layer never narrows that, so that a list
+        // across the edge of a scrollable would draw its text outside it.
+        // A layer of its own as large as the shown part of the list clips it.
+        if let Some(shown) = viewport.intersection(&bounds) {
+            renderer.with_layer(shown, |renderer| {
+                renderer.fill_text(arrow, end, look.handle_color, *viewport);
+                renderer.fill_text(name, start, color, *viewport);
+            });
+        }
     }
 
     /// Opens the menu on a click, or on Enter while the list has the
