@@ -15,11 +15,11 @@ use iced::{
     Rectangle, Task, Vector,
     advanced::widget::{
         Id, Operation, operate,
-        operation::{Focusable, Outcome, Scrollable, scrollable},
+        operation::{Focusable, Outcome, Scrollable},
     },
-    widget::operation::AbsoluteOffset,
 };
 
+use super::scroll::scrolled_to;
 use crate::front::{reveal, view};
 
 /// Scrolls the sends and the sidebar to show the field that has the
@@ -93,17 +93,8 @@ impl Operation for Revealing {
             return Outcome::None;
         };
         let top = field.y - origin;
-        let Some(offset) = reveal(top - self.label, top + field.height, scrolled, height) else {
-            return Outcome::None;
-        };
-        let to = AbsoluteOffset {
-            x: None,
-            y: Some(offset.max(0.0)),
-        };
-        Outcome::Chain(Box::new(scrollable::scroll_to(
-            Id::new(self.scrollable),
-            to,
-        )))
+        reveal(top - self.label, top + field.height, scrolled, height)
+            .map_or(Outcome::None, |offset| scrolled_to(self.scrollable, offset))
     }
 }
 

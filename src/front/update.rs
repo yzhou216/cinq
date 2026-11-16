@@ -23,6 +23,7 @@ mod operators;
 mod outputs;
 mod paging;
 mod reveal_focused;
+mod rows;
 mod scroll;
 mod search;
 mod select_focused;
@@ -43,6 +44,7 @@ use dispatch::on_own_thread;
 pub(super) use history::{History, Spot};
 use link::{edit_config, open_link, open_tutorial};
 pub(super) use paging::kept::{Measured, Measures};
+pub(super) use rows::Rows;
 pub(super) use search::{Search, Searched};
 pub(super) use show::{Keeper, Read, Reader, Saved, Show};
 pub(super) use stage::Stage;
@@ -57,10 +59,18 @@ impl App {
             // A key that moves the keyboard to another field ends the run of
             // edits to the field that it leaves, as a click there does
             Message::Focus(focus) => self.send(Command::EndRun).focused(focus),
-            // While the outputs show, the keys that move through and change
-            // cue rows act on outputs or on nothing, so that none of them
-            // reaches the cue list out of sight
-            message if self.outputs_shown && message.acts_on_rows() => self.in_outputs(message),
+            // While the outputs show, the keys that move through rows do the
+            // same to outputs, by the code that they share with cues, while
+            // the keys that change rows act on outputs by their own code, or
+            // on nothing, so that none of them reaches the cue list out of
+            // sight
+            message
+                if self.outputs_shown
+                    && message.acts_on_rows()
+                    && !message.moves_through_rows() =>
+            {
+                self.in_outputs(message)
+            }
             // Selection scrolls into view as it or the rows around it move,
             // and as the main window changes size
             Message::Select(id) => self
@@ -71,12 +81,12 @@ impl App {
             Message::Row(row) => self.jumping(|app| app.at_row(row)).revealed(),
             Message::Page(page, count) => self.paged(page, count),
             Message::Drawn(window) if self.main == Some(window) && self.unmeasured() => {
-                let measure = self.measure_cues();
+                let measure = self.measure_rows();
                 (self, measure)
             }
             Message::Remeasure => {
                 let app = self.remeasured();
-                let measure = app.measure_cues();
+                let measure = app.measure_rows();
                 (app, measure)
             }
             Message::Scroll(rows) => self.scrolled(rows),
@@ -84,7 +94,7 @@ impl App {
             Message::Place(height, count) => self.placed(height, count),
             Message::SwitchList(list) => self
                 .without_search()
-                .jumping(|app| app.showing_cues().switched_to(list))
+                .jumping(|app| app.showing_list(list))
                 .revealed(),
             Message::StepList(offset) => self.jumping(|app| app.stepped_list(offset)).revealed(),
             Message::Back(count) => self.walking(|app| app.went_back(count)),
@@ -148,13 +158,16 @@ impl App {
             }
             // Keys typed so far went already, as for any message
             Message::Cancel => self.cancelled(),
-            Message::ShowOutputs => self.showing_outputs().revealed(),
-            Message::InspectOutput(output) => Self {
-                output: Some(output),
-                ..self
-            }
-            .showing_outputs()
-            .revealed(),
+            Message::ShowOutputs => self.jumping(Self::showing_outputs).revealed(),
+            Message::InspectOutput(output) => self
+                .jumping(|app| {
+                    Self {
+                        output: Some(output),
+                        ..app
+                    }
+                    .showing_outputs()
+                })
+                .revealed(),
             // Buttons of the mouse go back and forward from the main window, as
             // the keys do, apart from the help page, which the keys leave be
             Message::SidePressed(window, mouse::Button::Back)

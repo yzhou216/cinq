@@ -10,12 +10,13 @@
 //! copies hold their files by absolute path, which pasting turns into the
 //! path from the directory of the show that takes them, and the cues that
 //! they target are kept only in the show they came from, whose identities
-//! those are.
+//! those are.  Their sends go by the names of the outputs that they had
+//! there, since the identity of an output is its place in a show file.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
 use crate::{
-    back::{Command, Cue, CueId, Place},
+    back::{Command, Cue, CueId, Output, OutputId, Place, Sends},
     front::{App, view::format},
 };
 
@@ -25,7 +26,7 @@ pub(super) const PASTE_LIMIT: usize = 1000;
 
 /// What the status bar tells when a paste finds nothing to paste, as Vim
 /// does with its E353
-const EMPTY: &str = "The clipboard is empty";
+pub(super) const EMPTY: &str = "The clipboard is empty";
 
 /// What the latest copy or cut told, which the status bar shows until the
 /// operator does anything else
@@ -40,8 +41,24 @@ pub struct Clipped {
 pub struct Clipboard {
     /// Serial number of the opening that brought the show the cues came
     /// from
-    show: u64,
-    cues: Vec<Cue>,
+    pub(super) show: u64,
+    pub(super) cues: Vec<Cue>,
+    /// Names of the outputs of that show when the cues were copied, by
+    /// identity, which the sends of the cues name
+    pub(super) output_names: BTreeMap<OutputId, String>,
+    /// Outputs copied or cut, in a register of their own, so that copying
+    /// an output keeps the cues that were copied
+    pub(super) outputs: Register,
+}
+
+/// Outputs that were copied or cut last
+#[derive(Default)]
+pub struct Register {
+    /// Serial number of the opening that brought the show they came from
+    pub(super) show: u64,
+    /// Whether they left the show, so that pasting them back restores them
+    pub(super) cut: bool,
+    pub(super) outputs: Vec<Output>,
 }
 
 impl App {
@@ -72,6 +89,13 @@ impl App {
             clipboard: Clipboard {
                 show: self.show.id(),
                 cues,
+                output_names: self
+                    .workspace
+                    .outputs()
+                    .iter()
+                    .map(|output| (output.id, output.name.clone()))
+                    .collect(),
+                ..self.clipboard
             },
             clipped: Some(clipped),
             ..self
@@ -95,7 +119,10 @@ impl App {
     /// selection, and selects the first cue pasted, as far as
     /// [`PASTE_LIMIT`] allows.  An empty clipboard pastes nothing and tells
     /// so.  Another show keeps no target of the cues but those that are
-    /// copied with it, which the paste points at their new copies.
+    /// copied with it, which the paste points at their new copies.  There,
+    /// each cue sends to the outputs that bear the names of those it sent
+    /// to, without a send whose output has no namesake, and a cue left with
+    /// no send plays on the first output, as a cue without sends does.
     pub(super) fn with_pasted(self, place: fn(CueId) -> Place, count: usize) -> Self {
         let copies = &self.clipboard.cues;
         let elsewhere = self.clipboard.show != self.show.id();
@@ -107,6 +134,12 @@ impl App {
                 target: cue
                     .target
                     .filter(|target| !elsewhere || copied.contains(target)),
+                sends: match cue.sends {
+                    Some(sends) if elsewhere && !sends.is_empty() => {
+                        Some(self.sends_by_name(sends)).filter(|named| !named.is_empty())
+                    }
+                    sends => sends,
+                },
                 ..cue
             })
             .collect();
@@ -123,5 +156,22 @@ impl App {
             at: self.selected_here().map_or(Place::End, place),
         };
         self.send(paste).showing(first, None)
+    }
+
+    /// Returns `sends` of a cue of the show of the clipboard as they go to
+    /// the outputs of this show of the same names, which are unique there
+    fn sends_by_name(&self, sends: Sends) -> Sends {
+        sends
+            .into_iter()
+            .filter_map(|(id, level)| {
+                let name = self.clipboard.output_names.get(&id)?;
+                let output = self
+                    .workspace
+                    .outputs()
+                    .iter()
+                    .find(|output| output.name == *name)?;
+                Some((output.id, level))
+            })
+            .collect()
     }
 }

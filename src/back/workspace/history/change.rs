@@ -44,12 +44,20 @@ pub enum Change {
     /// show, with those before and after
     Restored { before: Kept, after: Kept },
     /// Outputs added, deleted, moved, or edited, with all of them before
-    /// and after, and the output and the setting that an edit changed, by
-    /// which edits of one setting in a row make one change
+    /// and after, whether they were cut to the register of outputs or
+    /// pasted from it, the output and the setting that an edit changed, by
+    /// which edits of one setting in a row make one change, and the output
+    /// that was selected when outputs were added, pasted, or moved.  Undo of
+    /// an addition selects it again, as Vim's undo returns the cursor to where
+    /// the change was made, and where an output moved it is the output that
+    /// moved, which two neighbors that swap do not tell by themselves.
     Outputs {
         before: Vec<Output>,
         after: Vec<Output>,
         setting: Option<(OutputId, mem::Discriminant<OutputEdit>)>,
+        cut: bool,
+        pasted: bool,
+        anchor: Option<OutputId>,
     },
 }
 
@@ -157,10 +165,23 @@ impl Change {
             (Self::Moved { cue, from, .. }, Self::Moved { to, .. }) => {
                 Self::Moved { cue, from, to }
             }
-            (Self::Outputs { before, .. }, Self::Outputs { after, setting, .. }) => Self::Outputs {
+            (
+                Self::Outputs { before, .. },
+                Self::Outputs {
+                    after,
+                    setting,
+                    cut,
+                    pasted,
+                    anchor,
+                    ..
+                },
+            ) => Self::Outputs {
                 before,
                 after,
                 setting,
+                cut,
+                pasted,
+                anchor,
             },
             (_, next) => next,
         }

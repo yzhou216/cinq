@@ -5,10 +5,11 @@
 //! The places that jumps have left, which going back and forward walk along, as
 //! the jump list of Vim does
 //!
-//! A place is a cue list with a selected cue, or a cue list with none.  The
-//! history lives in the interface state only, so that neither the show file
-//! nor undo ever holds it.  A jump after going back moves the places ahead
-//! behind, in the order of the list of Vim, so that none is lost.
+//! A place is a cue list with a selected cue, or a cue list with none, or the
+//! outputs with a selected output, or with none.  The history lives in the
+//! interface state only, so that neither the show file nor undo ever holds
+//! it.  A jump after going back moves the places ahead behind, in the order
+//! of the list of Vim, so that none is lost.
 
 mod places;
 
@@ -23,8 +24,12 @@ pub(in crate::front) use places::{History, Spot};
 
 impl App {
     pub(super) fn spot(&self) -> Spot {
-        self.selected_here()
-            .map_or(Spot::List(self.list), Spot::Cue)
+        if self.outputs_shown {
+            self.output.map_or(Spot::Outputs, Spot::Output)
+        } else {
+            self.selected_here()
+                .map_or(Spot::List(self.list), Spot::Cue)
+        }
     }
 
     fn at(self, spot: Spot) -> Self {
@@ -35,6 +40,12 @@ impl App {
                 selected: None,
                 ..self.showing_cues()
             },
+            Spot::Output(output) => Self {
+                output: Some(output),
+                ..self
+            }
+            .showing_outputs(),
+            Spot::Outputs => self.showing_outputs(),
         }
     }
 
@@ -92,6 +103,9 @@ impl App {
         (app, Task::batch([revealing, leaving]))
     }
 
+    /// Goes back along the places that jumps have left.  The outputs view has
+    /// always a way out, even where no jump recorded one, as after opening a
+    /// show: the cue list that was showing, with the cue that was selected.
     pub(super) fn went_back(self, count: usize) -> Self {
         let here = self.spot();
         let back = self
@@ -99,6 +113,13 @@ impl App {
             .back(here, count, |spot| alive(&self.workspace, spot));
         match back {
             Some((spot, history)) => Self { history, ..self }.at(spot),
+            None if self.outputs_shown => {
+                let app = self.showing_cues();
+                Self {
+                    history: app.history.left(here),
+                    ..app
+                }
+            }
             None => self,
         }
     }
@@ -130,6 +151,7 @@ impl App {
         self.history
             .back(here, 1, |spot| alive(&self.workspace, spot))
             .map(|(spot, _)| spot)
+            .or_else(|| self.outputs_shown.then_some(Spot::List(self.list)))
     }
 
     /// Returns the place that going forward goes to

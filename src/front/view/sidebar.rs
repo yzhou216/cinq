@@ -76,11 +76,14 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
     } else {
         text::default
     });
-    let problems = workspace.problems().map(|(cue, problem)| {
-        button(text(format!("{cue}: {problem}")))
-            .on_press(Message::Select(cue.id))
-            .width(Fill)
-            .into()
+    let problems = workspace
+        .problems()
+        .map(|(cue, problem)| pressing(format!("{cue}: {problem}"), Message::Select(cue.id)));
+    let stranded = workspace.stranded().map(|cue| {
+        pressing(
+            format!("{cue}: sends to no output"),
+            Message::Select(cue.id),
+        )
     });
     scrollable(
         column![
@@ -107,6 +110,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
                     .chain(files)
                     .chain(settings)
                     .chain(problems)
+                    .chain(stranded)
             )
             .spacing(SPACING),
         ]

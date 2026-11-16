@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Scrolling the cue list so that the selected cue stays in view, along
+//! Scrolling the rows so that the selected row stays in view, along
 //! with a few rows around it
 //!
 //! The list measures the selected row as it is laid out, so a row that a
@@ -27,38 +27,25 @@ use crate::front::{App, Message, reveal, view};
 const MARGIN_ROWS: f32 = 3.0;
 
 impl App {
-    /// Scrolls the selected output into view while the outputs show, and
-    /// the selected cue otherwise.  The first row snaps the list back to
-    /// its start, as the window opened it, since the row itself begins a
-    /// separator below the start.
+    /// The first cue snaps the list back to its start, as the window opened
+    /// it, since the row itself begins a separator below the start.
     pub(super) fn revealed(self) -> (Self, Task<Message>) {
-        if self.outputs_shown {
-            let task = reveal_row(self.output_row(), view::OUTPUTS, view::SELECTED_OUTPUT);
-            return (self, task);
-        }
         // Scrolling moves the list away from the shape kept
         let app = self.remeasured();
-        let task = reveal_row(app.selected_row(), view::CUES, view::SELECTED);
-        let measure = app.measure_cues();
+        let (id, row) = (app.scrollable(), app.row());
+        let task = match row {
+            Some(0) => operation::snap_to(id, RelativeOffset::START),
+            Some(_) => operate(Measure::of(id)).discard(),
+            None => Task::none(),
+        };
+        let measure = app.measure_rows();
         (app, task.chain(measure))
     }
 }
 
-/// Returns the task that scrolls the list of the identity `list` to show the
-/// row `row`, whose container has the identity `selected`, with the first row
-/// at the very start, since the row itself begins a separator below it
-fn reveal_row(row: Option<usize>, list: &'static str, selected: &'static str) -> Task<Message> {
-    match row {
-        Some(0) => operation::snap_to(list, RelativeOffset::START),
-        Some(_) => operate(Measure::of(list, selected)).discard(),
-        None => Task::none(),
-    }
-}
-
 struct Measure {
-    /// Identity of the list, and of the container of its selected row
-    list_id: &'static str,
-    row_id: &'static str,
+    /// Identity of the scrollable that holds the rows
+    scrollable: &'static str,
     /// Top of the list content, how far the list has scrolled, and the
     /// height of the part in view
     list: Option<(f32, f32, f32)>,
@@ -66,10 +53,9 @@ struct Measure {
 }
 
 impl Measure {
-    fn of(list_id: &'static str, row_id: &'static str) -> Self {
+    fn of(scrollable: &'static str) -> Self {
         Self {
-            list_id,
-            row_id,
+            scrollable,
             list: None,
             row: None,
         }
@@ -89,13 +75,13 @@ impl Operation for Measure {
         translation: Vector,
         _state: &mut dyn Scrollable,
     ) {
-        if id == Some(&Id::new(self.list_id)) {
+        if id == Some(&Id::new(self.scrollable)) {
             self.list = Some((content_bounds.y, translation.y, bounds.height));
         }
     }
 
     fn container(&mut self, id: Option<&Id>, bounds: Rectangle) {
-        if id == Some(&Id::new(self.row_id)) {
+        if id == Some(&Id::new(view::SELECTED)) {
             self.row = Some(bounds);
         }
     }
@@ -110,18 +96,19 @@ impl Operation for Measure {
             height: row.height,
             margin,
         };
-        let Some(offset) = scrolling_to(span, scrolled, height) else {
-            return Outcome::None;
-        };
-        let offset = AbsoluteOffset {
-            x: None,
-            y: Some(offset.max(0.0)),
-        };
-        Outcome::Chain(Box::new(scrollable::scroll_to(
-            Id::new(self.list_id),
-            offset,
-        )))
+        scrolling_to(span, scrolled, height)
+            .map_or(Outcome::None, |offset| scrolled_to(self.scrollable, offset))
     }
+}
+
+/// Returns the operation that scrolls the scrollable to `offset`, or to its
+/// start when `offset` lies above it
+pub(super) fn scrolled_to(scrollable: &'static str, offset: f32) -> Outcome<()> {
+    let to = AbsoluteOffset {
+        x: None,
+        y: Some(offset.max(0.0)),
+    };
+    Outcome::Chain(Box::new(scrollable::scroll_to(Id::new(scrollable), to)))
 }
 
 /// The selected row, and the margin that the list keeps above and below it
@@ -132,7 +119,7 @@ pub(super) struct Span {
     pub(super) margin: f32,
 }
 
-/// Returns where the cue list scrolls to in order to show the row of `span`
+/// Returns where the rows scroll to in order to show the row of `span`
 /// and its margin: as little as it can, but to the middle of the view when
 /// the row lies far outside it, and `None` when it is in view.  The rule is
 /// the one of Vim's `update_topline` and `scroll_cursor_bot` (src/move.c,

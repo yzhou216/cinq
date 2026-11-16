@@ -4,16 +4,14 @@
 
 //! Tests of reaching and leaving the outputs and of the keys and messages there
 
-use super::{
-    super::{after, show},
-    names,
-};
+use super::super::{after, output_editing::names, show};
 use crate::{
     back::{CueId, OutputId, Place},
     front::{
         App, Message,
         keymap::Action,
         message::{Height, LineKey, Page},
+        update::Spot,
     },
 };
 
@@ -52,7 +50,8 @@ fn keys_of_cues_add_move_and_delete_outputs_while_they_show() {
     assert_eq!(deleted.output, Some(OutputId(1)), "the next output shows");
 }
 
-/// Returns what a message for the rows of a cue list could change in it
+/// Returns what a message for the rows could change in a cue list that is out
+/// of sight
 fn cue_list(app: &App) -> String {
     let lists: Vec<_> = app
         .workspace
@@ -65,15 +64,7 @@ fn cue_list(app: &App) -> String {
             )
         })
         .collect();
-    format!(
-        "{lists:?} {} {:?} {:?} {} {} {:?}",
-        app.list,
-        app.selected,
-        app.tab,
-        app.search.is_some(),
-        app.clipped.is_some(),
-        app.remark,
-    )
+    format!("{lists:?} {} {:?} {:?}", app.list, app.selected, app.tab)
 }
 
 #[test]
@@ -83,15 +74,13 @@ fn no_message_for_rows_reaches_the_cue_list_while_the_outputs_show() {
         Message::Row(2),
         Message::Page(Page::HalfDown, None),
         Message::Landed {
-            list: 0,
-            from: Some(CueId(3)),
+            from: Spot::Cue(CueId(3)),
             row: 5,
         },
         Message::Scroll(2),
         Message::InView(Height::Top, None),
         Message::Reached {
-            list: 0,
-            from: Some(CueId(3)),
+            from: Spot::Cue(CueId(3)),
             row: 5,
         },
         Message::Place(Height::Middle, None),
@@ -121,14 +110,20 @@ fn no_message_for_rows_reaches_the_cue_list_while_the_outputs_show() {
     });
 }
 
-#[test]
-fn showing_the_cue_list_again_remembers_the_place_that_going_back_returns_to() {
-    let outputs = after(
+/// Returns the interface with the outputs shown after list 2, cue 21 selected
+fn outputs_after_list_two() -> App {
+    after(
         show(Some(CueId(3))),
         [Message::Select(CueId(21)), Message::ShowOutputs],
-    );
-    let back = after(outputs, [Message::Back(1)]);
+    )
+}
+
+#[test]
+fn going_back_from_the_outputs_returns_to_the_cue_list_that_showed_before() {
+    let back = after(outputs_after_list_two(), [Message::Back(1)]);
     assert!(!back.outputs_shown);
+    assert_eq!((back.list, back.selected), (1, Some(CueId(21))));
+    let back = after(back, [Message::Back(1)]);
     assert_eq!((back.list, back.selected), (0, Some(CueId(3))));
     let switched = after(
         show(Some(CueId(3))),
@@ -136,6 +131,8 @@ fn showing_the_cue_list_again_remembers_the_place_that_going_back_returns_to() {
     );
     assert!(!switched.outputs_shown);
     let back = after(switched, [Message::Back(1)]);
+    assert!(back.outputs_shown);
+    let back = after(back, [Message::Back(1)]);
     assert_eq!((back.list, back.selected), (0, Some(CueId(3))));
 }
 
@@ -150,4 +147,25 @@ fn warning_about_an_output_shows_the_outputs_with_it_selected() {
     let inspected = after(back, [Message::InspectOutput(OutputId(2))]);
     assert!(inspected.outputs_shown);
     assert_eq!(inspected.output, Some(OutputId(2)));
+}
+
+#[test]
+fn leaving_the_outputs_for_the_list_that_showed_keeps_its_selected_cue() {
+    let previous = after(outputs_after_list_two(), [Message::StepList(-1)]);
+    assert!(!previous.outputs_shown);
+    assert_eq!((previous.list, previous.selected), (1, Some(CueId(21))));
+    let sidebar = after(outputs_after_list_two(), [Message::SwitchList(1)]);
+    assert_eq!((sidebar.list, sidebar.selected), (1, Some(CueId(21))));
+}
+
+#[test]
+fn leaving_the_outputs_for_another_list_selects_its_standby_cue() {
+    let other = after(outputs_after_list_two(), [Message::SwitchList(0)]);
+    assert_eq!(other.selected, other.workspace.lists()[0].standby);
+    let standing = after(show(Some(CueId(3))), [Message::SwitchList(0)]);
+    assert_eq!(
+        standing.selected,
+        standing.workspace.lists()[0].standby,
+        "switching to the list that shows still selects standby"
+    );
 }

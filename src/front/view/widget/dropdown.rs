@@ -43,6 +43,7 @@ use iced::{Color, Element, Padding, widget::button};
 use unicode_width::UnicodeWidthStr;
 
 use crate::front::{Message, keymap::Keymap, view::char_width};
+pub(in crate::front::view) use shorten::shortened;
 
 /// Padding of the list and of each option of its menu, as iced's pick list
 /// pads them

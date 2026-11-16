@@ -6,10 +6,7 @@
 
 use std::time::Instant;
 
-use super::{
-    super::{after, show},
-    names,
-};
+use super::super::{after, output_editing::names, show};
 use crate::{
     back::{CueId, OutputId, Place},
     front::{App, Focus, Message, Setting},

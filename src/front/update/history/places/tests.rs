@@ -5,6 +5,7 @@
 //! Tests of the history of places, which know nothing of the show
 
 use super::*;
+use crate::back::OutputId;
 
 fn cue(id: u32) -> Spot {
     Spot::Cue(CueId(id))
@@ -98,4 +99,17 @@ fn the_history_keeps_the_last_hundred_places() {
     // Going back remembers the place left, which still counts against the limit
     let (_, history) = back(history, cue(151), 1);
     assert_eq!(history.behind.len() + history.ahead.len(), 100);
+}
+
+#[test]
+fn a_way_back_that_no_jump_recorded_is_remembered_to_go_forward_to() {
+    let history = History::default().left(Spot::Output(OutputId(1)));
+    assert!(!history.can_go_back(cue(1), everywhere));
+    assert_eq!(forward(history, cue(1), 1).0, Spot::Output(OutputId(1)));
+}
+
+#[test]
+fn an_output_is_a_place_apart_from_a_cue_and_a_list() {
+    let history = jumped_from([Spot::Output(OutputId(1)), Spot::Outputs, Spot::List(0)]);
+    assert_eq!(history.behind.len(), 3);
 }

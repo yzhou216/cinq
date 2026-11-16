@@ -12,15 +12,19 @@ Major changes and improvements in each release of cinq, newest first.
 
 - `back` and `forward` go back and forward between the places that jumps left,
   as the jump list of Vim does: switching cue lists, `first`, `last`, selecting
-  a cue in another cue list, and searching are jumps.  The keys are `Control+o`
-  and `Control+i` in the vi keymap and `Alt+ArrowLeft` and `Alt+ArrowRight` in
-  the cua keymap, and the status bar names them while there is a place to go
-  to.  A jump after going back keeps the places ahead, as in Vim, going back or
-  forward in a text field moves the keyboard to the cue list, and the back and
-  forward buttons of the mouse do the same from the main window, unless the
-  help page is open.
+  a cue in another cue list, searching, and showing the outputs and leaving
+  them are jumps.  The keys are `Control+o` and `Control+i` in the vi keymap
+  and `Alt+ArrowLeft` and `Alt+ArrowRight` in the cua keymap, and the status
+  bar names them while there is a place to go to.  A jump after going back keeps
+  the places ahead, as in Vim, going back or forward in a text field moves the
+  keyboard to the cue list, and the back and forward buttons of the mouse do the
+  same from the main window, unless the help page is open.
 - The status bar says where the keys of back and forward go, as `Control+o:
-  back to Main` or `back to cue 3`.
+  back to Main`, `back to cue 3`, or `back to the outputs`, so that a pass
+  through an empty cue list on the way to the outputs is no surprise, and it
+  cuts the name of a long cue list short.  While the outputs show, it names the
+  keys that go back, add an output, and rename one, and the key that goes back
+  is the last of them to give way to a narrow bar.
 - In the vi keymap, the key of *open* is now `Control+l`, since `Control+o` is
   Vim's way back through the places jumped to, and Vim's `Control+l` only
   redraws the screen, which cinq never needs.  The cua keymap keeps
@@ -124,7 +128,9 @@ Major changes and improvements in each release of cinq, newest first.
   in both keymaps, as an exception to Vim's `?`.  As the text is typed, the
   selection moves to the first cue after it that holds the text, in any case,
   in any column that the list shows except the waits and the state, so that
-  `/rumble` finds the cue of `rumble.ogg`, as Vim's search matches a whole line.
+  `/rumble` finds the cue of `rumble.ogg`, as Vim's search matches a whole
+  line.  While the outputs show, it searches their name, device, channels, and
+  new cues, so that `/Dante` finds the outputs on that device.
 - `Enter` accepts a search, and on an empty line repeats the last one.
   `Escape`, `Backspace` on an empty line, a click, going back or forward,
   moving to another field, and opening a show close the line.  `n` and `N`, or
@@ -137,14 +143,14 @@ Major changes and improvements in each release of cinq, newest first.
   everything before it, and `ArrowUp` and `ArrowDown` recall the older and newer
   of the last fifty searches accepted that start with the text typed.  The keys
   act on the end of the text.
-- The vi keymap enters the name of the selected cue as Vim enters text: `i`,
-  `a`, and `A` put the caret at its end, `I` at its start, and `cc` and `S`
-  select all of it, so that typing replaces it.  The cua keymap selects the
-  whole name with `F2`, as desktop file managers do, and in both keymaps `Tab`
-  and `Shift+Tab` select the text of the field that they reach, while a click
-  puts the caret where it fell.  The new `edit_start` action has no key in the
-  cua keymap, `change_name` has `F2`, and `c` is no operator, so only `cc`
-  begins a change.
+- The vi keymap enters the name of the selected cue, or of the output, as Vim
+  enters text: `i`, `a`, and `A` put the caret at its end, `I` at its start, and
+  `cc` and `S` select all of it, so that typing replaces it.  The cua keymap
+  selects the whole name with `F2`, as desktop file managers do, and in both
+  keymaps `Tab` and `Shift+Tab` select the text of the field that they reach,
+  while a click puts the caret where it fell.  The new `edit_start` action has
+  no key in the cua keymap, `change_name` has `F2`, and `c` is no operator, so
+  only `cc` begins a change.
 - `Tab` from the cue list or the outputs goes first to the first field of the
   inspector, so that the settings of the selected cue are one key away.  It then
   goes on through the rest of the inspector, the toolbar, and the sidebar, and
@@ -277,6 +283,42 @@ Major changes and improvements in each release of cinq, newest first.
   the Dante Virtual Soundcard offers, asks Windows to schedule it for audio, as
   audio programs do there, so that a busy machine is less likely to break up the
   sound.
+- Going back from the outputs, or leaving them with the key of the previous cue
+  list or its entry in the sidebar, shows the cue list that showed before them
+  with the cue that was selected there and its inspector tab.  Where no jump
+  recorded a place, as after opening a show, it shows the cue list that was
+  showing, and any other cue list shows with its standby cue.
+- The keys that move through the rows of the cue list, such as `j`, `k`, `gg`,
+  and `G`, the keys of half and whole pages, the keys that scroll by a row or
+  select a row in view, and the keys that place the selected row, do the same to
+  the outputs while they show, and the key of the next cue list reaches them
+  past the last one.  The keys that act on cues alone, such as standby, do
+  nothing there, so that none of them changes a cue list out of sight.  The
+  outputs show their titles above the rows, as the cue list does.
+- The keys that edit cues edit outputs while they show: `o` and `O` add one, and
+  a count adds that many, up to 64, `dd`, `x`, and the motions such as `dj` cut
+  them, `yy` and `Y` copy them, `p` and `P` paste them, `Alt+j` and `Alt+k` move
+  one, and the keys of the name enter it.  Outputs have a register of their own
+  beside that of cues, and a show keeps at least one output.
+- A cut output pasted back into the same show takes back its identity, so that
+  the cues that sent to it send to it again, while a copy is a new output that
+  no cue sends to, and a copy of `House R 2` is `House R 3`.  The status bar
+  tells first where the cues that name no sends play when the first output
+  changes, and names the output that moved or was pasted.  Undo and redo select
+  the output that they changed, except that undoing an addition or a paste
+  selects the output that was selected when it was made, and undoing a change to
+  a cue shows the cue list, as a jump that going back returns from.
+- A cue pasted into another show sends to the outputs of the same names there,
+  and plays on the first output where that show has none of them.
+- A cue that sends only to outputs that a cut or a delete took away plays on
+  no output, which the status bar counts with the change, as in `1 cue now
+  sends nowhere`.  The State of such a cue reads `NO OUTPUT` in yellow, and the
+  sidebar lists it among the warnings, until undo or a paste brings the outputs
+  back.  A cue that names no sends still plays on the first output.
+- The box that lists the keys that can follow those typed, such as the ones
+  after `d`, names outputs where the outputs show, as in "Cut the selected
+  output and the next", and cues where a cue list shows.  The help page, which
+  lists each action once, names both.
 
 ## v0.1.4
 

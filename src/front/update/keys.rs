@@ -101,16 +101,19 @@ impl App {
         (app, Task::batch([reveal, operate(focusable::unfocus())]))
     }
 
-    /// Editing the name shows the Basics tab, which holds the Name field.  No
-    /// field takes the keyboard while the stage window has it, since the
-    /// keys typed there would never reach the field.
+    /// Editing the name shows the Basics tab, which holds the Name field, or
+    /// the Name field of the output while the outputs show.  No field takes
+    /// the keyboard while the stage window has it, since the keys typed there
+    /// would never reach the field.
     pub(super) fn focused(self, focus: Focus) -> (Self, Task<Message>) {
         match focus {
             Focus::Name(_) | Focus::Next | Focus::Previous if self.stage.has_keyboard() => {
                 (self, Task::none())
             }
-            Focus::Name(_) if self.outputs_shown && self.editable() && self.output.is_some() => {
-                (self, operation::focus(view::OUTPUT_NAME))
+            Focus::Name(caret)
+                if self.outputs_shown && self.editable() && self.output.is_some() =>
+            {
+                (self, in_field(view::OUTPUT_NAME, caret))
             }
             Focus::Name(_) if self.outputs_shown => (self, Task::none()),
             Focus::Name(caret) if self.editable() && self.selected.is_some() => (
@@ -118,15 +121,7 @@ impl App {
                     tab: Tab::Basics,
                     ..self
                 },
-                match caret {
-                    // Focusing puts the caret at the end, as Vim's `A` does
-                    Caret::End => operation::focus(view::NAME),
-                    Caret::Start => operation::focus(view::NAME)
-                        .chain(operation::move_cursor_to_front(view::NAME)),
-                    Caret::All => {
-                        operation::focus(view::NAME).chain(operation::select_all(view::NAME))
-                    }
-                },
+                in_field(view::NAME, caret),
             ),
             Focus::Name(_) => (self, Task::none()),
             Focus::Next => (self.without_search(), reached(move_focus(false))),
@@ -149,4 +144,15 @@ pub(super) fn key_press(event: keyboard::Event) -> Option<Message> {
 /// in one of them
 fn reached(moved: Task<Message>) -> Task<Message> {
     moved.chain(select_focused()).chain(reveal_focused())
+}
+
+/// Focuses the text field `id`, with the caret where the operator asked for
+/// it
+fn in_field(id: &'static str, caret: Caret) -> Task<Message> {
+    match caret {
+        // Focusing puts the caret at the end, as Vim's `A` does
+        Caret::End => operation::focus(id),
+        Caret::Start => operation::focus(id).chain(operation::move_cursor_to_front(id)),
+        Caret::All => operation::focus(id).chain(operation::select_all(id)),
+    }
 }

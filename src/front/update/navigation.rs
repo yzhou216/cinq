@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Moving the selection, along with standby as GO moves it, and switching
-//! the cue list on screen
+//! Standby as GO moves it, the selection of a cue, and switching the cue
+//! list on screen
 
 use crate::{
     back::{Command, CueId},
@@ -38,23 +38,6 @@ impl App {
         }
     }
 
-    pub(super) fn stepped(self, offset: isize) -> Self {
-        let cues = &self.current().cues;
-        let selected = step(self.selected_row(), offset, cues.len()).map(|row| cues[row].id);
-        Self { selected, ..self }
-    }
-
-    /// Selects the cue on a row counted from one, or the last cue for a row
-    /// past the end
-    pub(super) fn at_row(self, row: usize) -> Self {
-        let cues = &self.current().cues;
-        let selected = cues
-            .get(row.saturating_sub(1))
-            .or(cues.last())
-            .map(|cue| cue.id);
-        Self { selected, ..self }
-    }
-
     /// Shows a cue list with its standby cue selected, or its first cue
     /// when standby is past the end
     pub(super) fn switched_to(self, list: usize) -> Self {
@@ -69,6 +52,15 @@ impl App {
         }
     }
 
+    /// Shows a cue list in place of the outputs or another list.  The list
+    /// that the outputs took the place of comes back with the cue that was
+    /// selected, and any other list with its standby cue.
+    pub(super) fn showing_list(self, list: usize) -> Self {
+        let back = self.outputs_shown && list == self.list && self.selected_here().is_some();
+        let app = self.showing_cues();
+        if back { app } else { app.switched_to(list) }
+    }
+
     /// Steps through the cue lists and, past the last of them, to the
     /// outputs, as the sidebar lists them
     pub(super) fn stepped_list(self, offset: isize) -> Self {
@@ -78,11 +70,7 @@ impl App {
         match to {
             _ if to == from => self,
             _ if to == lists => self.showing_outputs(),
-            list => Self {
-                outputs_shown: false,
-                ..self
-            }
-            .switched_to(list),
+            list => self.showing_list(list),
         }
     }
 }

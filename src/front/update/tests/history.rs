@@ -217,3 +217,14 @@ fn the_places_that_back_and_forward_go_to_are_known_before_they_are_taken() {
     assert_eq!(back.back_to(), None);
     assert_eq!(back.forward_to(), Some(Spot::Cue(CueId(20))));
 }
+
+#[test]
+fn the_way_out_of_the_outputs_goes_to_the_list_that_showed_where_no_jump_left_one() {
+    let opened = show(cue(5));
+    assert_eq!(opened.back_to(), None);
+    let outputs = App {
+        outputs_shown: true,
+        ..opened
+    };
+    assert_eq!(outputs.back_to(), Some(Spot::List(0)));
+}

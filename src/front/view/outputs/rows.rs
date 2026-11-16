@@ -6,7 +6,7 @@
 
 use iced::{
     Element, Fill, padding,
-    widget::{container, mouse_area, radio, scrollable, table, text, text::Wrapping},
+    widget::{container, mouse_area, radio, space, table, text, text::Wrapping},
 };
 
 use super::{Column, fitting};
@@ -14,31 +14,43 @@ use crate::{
     back::{Fault, Output},
     front::{
         App, Message,
-        view::{OUTPUTS, SELECTED_OUTPUT, cue_table::ROW_PADDING, faults, marked_row},
+        view::{
+            OUTPUTS, SELECTED,
+            cue_table::{ROW_PADDING, scrolling},
+            faults, marked_row,
+        },
     },
 };
 
-pub(super) fn list(app: &App, room: f32) -> Element<'_, Message> {
+/// Returns the outputs with the titles of their columns above, which stay in
+/// place as the rows scroll, so that the rows are all that the scrollable
+/// holds, as in the cue list, and the keys that scroll and measure rows count
+/// them alone
+pub(super) fn list<'a>(app: &'a App, room: f32) -> Element<'a, Message> {
     let shown = fitting(app, room);
-    let columns = shown.iter().copied().map(|(column, width)| {
-        let title = container(text(<&str>::from(column))).padding(padding::vertical(ROW_PADDING));
-        table::column(title, move |(row, output): (usize, &Output)| {
-            cell(app, column, row, output)
-        })
-        .width(width)
-    });
-    let outputs = table::table(columns, app.workspace.outputs().iter().enumerate()).padding_y(0);
-    scrollable(marked_row(
-        outputs,
+    let table = |titled: bool, outputs: &'a [Output]| {
+        let columns = shown.iter().copied().map(|(column, width)| {
+            let title: Element<'_, Message> = if titled {
+                container(text(<&str>::from(column)))
+                    .padding(padding::vertical(ROW_PADDING))
+                    .into()
+            } else {
+                space().into()
+            };
+            table::column(title, move |(row, output): (usize, &Output)| {
+                cell(app, column, row, output)
+            })
+            .width(width)
+        });
+        table::table(columns, outputs.iter().enumerate()).padding_y(0)
+    };
+    let rows = marked_row(
+        table(false, app.workspace.outputs()),
         shown.len(),
         app.output_row(),
-        SELECTED_OUTPUT,
-    ))
-    // Bar beside the table, rather than over the state of each output
-    .spacing(0)
-    .id(OUTPUTS)
-    .height(Fill)
-    .into()
+        SELECTED,
+    );
+    scrolling(table(true, &[]), rows, OUTPUTS)
 }
 
 /// Returns the cell of `output` in `column`, padded inside rather than by

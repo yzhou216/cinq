@@ -52,7 +52,7 @@ impl Searched {
 
 impl App {
     /// Applies a key of the command line to the text of the search line,
-    /// which selects the cue that the new text matches, as typing does
+    /// which selects the row that the new text matches, as typing does
     pub(in crate::front::update) fn search_edited(self, key: LineKey) -> (Self, Task<Message>) {
         let Some(search) = &self.search else {
             return (self, Task::none());

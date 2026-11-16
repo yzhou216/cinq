@@ -14,6 +14,7 @@ mod inspector;
 pub(in crate::front) use cue_table::searchable as cue_texts;
 mod next_keys;
 mod outputs;
+pub(in crate::front) use outputs::searchable as output_texts;
 mod sidebar;
 pub(super) mod stage;
 mod status_bar;
@@ -48,13 +49,9 @@ pub const CUES: &str = "cues";
 /// scroll
 pub const SELECTED: &str = "selected";
 
-/// Identity of the outputs, through which the selected output scrolls into
-/// view
+/// Identity of the outputs list, through which the selected output scrolls
+/// into view
 pub const OUTPUTS: &str = "outputs";
-
-/// Identity of the selected output, through which the outputs find where
-/// to scroll
-pub const SELECTED_OUTPUT: &str = "selected output";
 
 /// Identity of the sends of a cue, through which the field that Tab reached
 /// scrolls into view
@@ -87,6 +84,16 @@ pub const SEARCH: &str = "search";
 /// What the search line and the status bar tell when no cue matches the text
 /// of a search
 pub const NO_MATCH: &str = "No cue matches";
+
+/// What the search line and the status bar tell when no output matches the
+/// text of a search while the outputs show
+const NO_OUTPUT_MATCH: &str = "No output matches";
+
+/// Returns what the search line tells when no row matches, for the rows that
+/// show
+pub fn no_match(outputs: bool) -> &'static str {
+    if outputs { NO_OUTPUT_MATCH } else { NO_MATCH }
+}
 
 /// Identity of the Name field of an output, which the key of the edit
 /// action gives the keyboard focus while the outputs show
@@ -197,6 +204,7 @@ fn char_width() -> f32 {
 /// Counts the warnings that the sidebar lists
 fn warnings(app: &App) -> usize {
     app.workspace.problems().count()
+        + app.workspace.stranded().count()
         + faults::warnings(app).len()
         + usize::from(app.file_problem.is_some())
         + usize::from(app.keep_problem.is_some())

@@ -40,11 +40,10 @@ impl App {
     /// counts the pages.
     pub(super) fn paged(self, page: Page, count: Option<usize>) -> (Self, Task<Message>) {
         let scroll = self.scrolling(page, count);
-        let (cues, current) = (self.current().cues.len(), self.selected_row());
-        let (list, from) = (self.list, self.selected);
+        let (rows, current, from) = (self.row_count(), self.row(), self.spot());
         Self { scroll, ..self }.landing(
-            move |row| Message::Landed { list, from, row },
-            move |shape| landing(page, count, scroll, shape, cues, current),
+            move |row| Message::Landed { from, row },
+            move |shape| landing(page, count, scroll, shape, rows, current),
         )
     }
 
@@ -173,16 +172,17 @@ pub(super) fn rows_fitting(view: f32, content: f32, cues: usize) -> usize {
     (view / (content / cues as f32)) as usize
 }
 
-/// Measures the cue list as it is laid out, then scrolls it to where `land`
-/// puts it for that shape and reports the row that `land` puts the selection
-/// on with the message that `arrive` makes
+/// Measures the scrollable `id`, which holds the rows, as it is laid out,
+/// then scrolls it to where `land` puts it for that shape and reports the row
+/// that `land` puts the selection on with the message that `arrive` makes
 pub(super) fn measured(
+    id: &'static str,
     arrive: impl Fn(usize) -> Message + Send + 'static,
     land: impl Fn(Shape) -> Option<Landing> + Send + 'static,
 ) -> Task<Message> {
-    operate(Viewport::of(view::CUES)).then(move |shape| {
+    operate(Viewport::of(id)).then(move |shape| {
         land(shape).map_or_else(Task::none, |landing| {
-            kept::scroll(landing.offset).chain(Task::done(arrive(landing.row)))
+            kept::scroll(id, landing.offset).chain(Task::done(arrive(landing.row)))
         })
     })
 }

@@ -5,6 +5,7 @@
 //! Text for back-end values, kept apart from the widgets that show it
 
 mod change;
+mod consequences;
 #[cfg(test)]
 mod tests;
 
@@ -12,8 +13,10 @@ use std::path::Path;
 
 use itertools::Itertools;
 
-use crate::back::{Active, Advance, Cue, CueList, Kind, Media, Phase, Workspace};
+use crate::back::{Active, Advance, Cue, CueList, Kind, Media, Output, Phase, Workspace};
 pub use change::change;
+use consequences::short;
+pub use consequences::{consequences, consequences_of, leading};
 
 /// Formats seconds as `m:ss.s`
 fn clock(seconds: f64) -> String {
@@ -149,6 +152,27 @@ pub fn clipped(verb: &str, cues: &[Cue]) -> String {
     match cues {
         [cue] => format!("{verb} cue {}", number(cue)),
         cues => format!("{verb} {} cues", cues.len()),
+    }
+}
+
+/// Tells what a copy or cut of outputs took with `verb`, in lower case, by the
+/// name of the output, or else by how many outputs, after `facts` of what it
+/// did to the cues, which leave out the words that name the output as one
+pub fn clipped_outputs(verb: &str, outputs: &[Output], facts: Option<String>) -> String {
+    let told = match outputs {
+        [output] => format!("{verb} {}", the_output(&output.name, facts.is_some())),
+        outputs => format!("{verb} {} outputs", outputs.len()),
+    };
+    leading(facts, &told)
+}
+
+/// Names an output as "the output Sub", or as "Sub" where `terse`, which
+/// leaves room for what a change did to the cues
+fn the_output(name: &str, terse: bool) -> String {
+    if terse {
+        short(name)
+    } else {
+        format!("the output {}", short(name))
     }
 }
 

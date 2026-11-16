@@ -25,7 +25,7 @@ use crate::{
 /// Interval at which the files that could not be played are tried again
 const RECHECK: Duration = Duration::from_secs(2);
 
-/// How long the search line tells that no cue matches
+/// How long the search line tells that no row matches
 const NO_MATCH: Duration = Duration::from_secs(2);
 
 /// Shortest wait for the next picture of a video cue, since a timer cannot

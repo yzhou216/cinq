@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Names that a list cuts short to fit its room
+//! Names cut short to fit their room, in a list, the status bar, or a notice
 
 #[cfg(test)]
 mod tests;
@@ -11,7 +11,7 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 /// Returns `name` cut short to `columns` columns of the font, which is
 /// monospace, with an ellipsis in place of the rest
-pub(super) fn shortened(name: &str, columns: usize) -> String {
+pub(in crate::front::view) fn shortened(name: &str, columns: usize) -> String {
     if name.width() <= columns {
         return name.to_owned();
     }

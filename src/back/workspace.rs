@@ -12,7 +12,8 @@
 //! live in [`playback`] and [`stopping`], those that change the cue lists
 //! in [`editing`] and [`pasting`], undo and redo in [`history`], show files
 //! in [`show`], the places of the files of cues in [`files`], and why cues
-//! cannot play in [`problems`].
+//! cannot play in [`problems`], and the cues that send to no output in
+//! [`stranded`].
 
 mod active;
 mod command;
@@ -26,6 +27,7 @@ mod playback;
 mod problems;
 mod show;
 mod stopping;
+mod stranded;
 #[cfg(test)]
 pub(super) mod tests;
 
@@ -203,8 +205,15 @@ impl Workspace {
             Command::Move { cue, by } => self.moved(cue, by),
             Command::Edit(id, edit) => self.edited(id, edit),
             Command::Restore(lists, outputs) => self.restored(lists, outputs),
-            Command::AddOutput { at } => self.added_output(at),
-            Command::DeleteOutput(id) => self.deleted_output(id),
+            Command::AddOutput { at, count, anchor } => self.added_output(at, count, anchor),
+            Command::DeleteOutputs(ids) => self.deleted_outputs(&ids, false),
+            Command::CutOutputs(ids) => self.deleted_outputs(&ids, true),
+            Command::PasteOutputs {
+                at,
+                outputs,
+                restore,
+                anchor,
+            } => self.pasted_outputs(at, outputs, restore, anchor),
             Command::MoveOutput { output, by } => self.moved_output(output, by),
             Command::EditOutput(id, edit) => self.edited_output(id, edit),
         }

@@ -19,7 +19,7 @@ fn app(devices: &[Device], faults: Vec<(OutputId, Fault)>) -> App {
             let added = if index == 0 {
                 workspace
             } else {
-                workspace.apply(Command::AddOutput { at: index })
+                workspace.apply(Command::add_output(index, 1))
             };
             let id = added.outputs()[index].id;
             added.apply(Command::EditOutput(id, OutputEdit::Device(device.clone())))

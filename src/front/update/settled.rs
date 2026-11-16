@@ -18,17 +18,17 @@ impl App {
     /// arms that leave the state as it is.
     pub(super) fn settled_by(self, message: Message) -> Self {
         match message {
-            Message::Landed { list, from, row } if self.list == list && self.selected == from => {
+            Message::Landed { from, row } if self.spot() == from => {
                 self.at_row(row.saturating_add(1))
             }
-            Message::Measured(Measured::Cues {
+            Message::Measured(Measured::Rows {
                 serial,
-                list,
-                cues,
+                rows,
+                count,
                 shape,
-            }) => self.with_measure(serial, list, cues, shape),
+            }) => self.with_measure(serial, rows, count, shape),
             Message::Measured(Measured::Help(view)) => self.with_help_measure(view),
-            Message::Reached { list, from, row } if self.list == list && self.selected == from => {
+            Message::Reached { from, row } if self.spot() == from => {
                 self.jumping(|app| app.at_row(row.saturating_add(1)))
             }
             Message::MenuOpen(open) => Self { menu: open, ..self },

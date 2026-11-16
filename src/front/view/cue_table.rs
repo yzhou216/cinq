@@ -11,6 +11,8 @@
 //! scroll, lines up with them.
 
 mod columns;
+#[cfg(test)]
+mod tests;
 
 use iced::{
     Element, Fill, Length, padding,
@@ -90,7 +92,6 @@ fn list<'a>(app: &'a App, room: f32) -> Element<'a, Message> {
             .padding_x(CELL_PADDING)
             .separator_x(SEPARATOR)
     };
-    let free = padding::right(SCROLL_BAR);
     let header = table(true, &[]).padding_y(ROW_PADDING);
     let cues = &app.current().cues;
     let rows = if cues.is_empty() {
@@ -99,6 +100,17 @@ fn list<'a>(app: &'a App, room: f32) -> Element<'a, Message> {
         let rows = table(false, cues).padding_y(0);
         marked_row(rows, fitting.len(), app.selected_row(), SELECTED)
     };
+    scrolling(header, rows, CUES)
+}
+
+/// Returns the `header` above the `rows`, which alone scroll in the
+/// scrollable `id`, whose bar takes the width that both leave free
+pub(super) fn scrolling<'a>(
+    header: impl Into<Element<'a, Message>>,
+    rows: impl Into<Element<'a, Message>>,
+    id: &'static str,
+) -> Element<'a, Message> {
+    let free = padding::right(SCROLL_BAR);
     column![
         container(header).padding(free),
         rule::horizontal(1),
@@ -108,7 +120,7 @@ fn list<'a>(app: &'a App, room: f32) -> Element<'a, Message> {
                     .width(SCROLL_BAR)
                     .scroller_width(SCROLL_BAR),
             ))
-            .id(CUES)
+            .id(id)
             .height(Fill),
     ]
     .into()

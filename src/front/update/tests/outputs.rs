@@ -8,13 +8,3 @@
 
 mod reaching;
 mod settings;
-
-use crate::front::App;
-
-pub(super) fn names(app: &App) -> Vec<&str> {
-    app.workspace
-        .outputs()
-        .iter()
-        .map(|output| output.name.as_str())
-        .collect()
-}

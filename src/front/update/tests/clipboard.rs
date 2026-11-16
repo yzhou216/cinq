@@ -9,7 +9,10 @@ mod targets;
 pub(in crate::front::update::tests) use targets::{fading, targets};
 
 use super::{operators::rows, *};
-use crate::back::{Cue, Kind};
+use crate::{
+    back::{Command, Cue, Kind, OutputEdit, OutputId, Sends},
+    front::update::clipboard::Clipboard,
+};
 
 #[test]
 fn copied_cue_pastes_below_the_selection_and_becomes_the_selection() {
@@ -165,4 +168,60 @@ fn a_clipboard_of_more_than_a_thousand_cues_pastes_a_thousand() {
     assert_eq!(rows(&app).len(), 1500 + 1000);
     let app = after(app, [Message::Paste(Place::After, 2)]);
     assert_eq!(rows(&app).len(), 1500 + 2000);
+}
+
+/// Returns a show of one empty list with outputs of the `names`, which take
+/// identities from one in that order
+fn with_outputs(cues: Vec<Cue>, names: &[&str]) -> Workspace {
+    names.iter().enumerate().fold(
+        Workspace::new(vec![CueList::new("Main", cues)])
+            .apply(Command::add_output(1, names.len() - 1)),
+        |workspace, (row, name)| {
+            let id = workspace.outputs()[row].id;
+            workspace.apply(Command::EditOutput(
+                id,
+                OutputEdit::Name((*name).to_owned()),
+            ))
+        },
+    )
+}
+
+/// Returns the cue that a cue sending to House and Sub becomes once it is
+/// copied and pasted into another show, one with outputs of the `names`
+fn pasted_elsewhere(names: &[&str]) -> Cue {
+    let sends: Sends = [(OutputId(1), -3.0), (OutputId(2), -6.0)].into();
+    let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
+        .sends(sends)
+        .build();
+    let copied = after(
+        App {
+            workspace: with_outputs(vec![cue], &["House", "Sub"]),
+            selected: Some(CueId(1)),
+            ..App::default()
+        },
+        [Message::Copy(1)],
+    );
+    let elsewhere = App {
+        workspace: with_outputs(Vec::new(), names),
+        clipboard: Clipboard {
+            show: copied.show.id().wrapping_add(1),
+            ..copied.clipboard
+        },
+        selected: None,
+        ..copied
+    };
+    let pasted = after(elsewhere, [Message::Paste(Place::After, 1)]);
+    pasted.workspace.lists()[0].cues[0].clone()
+}
+
+#[test]
+fn cue_pasted_in_another_show_sends_to_the_outputs_of_the_same_names() {
+    // Sub is there in the other show, first, while House is not
+    let sends = pasted_elsewhere(&["Sub", "Foyer"]).sends;
+    assert_eq!(sends, Some([(OutputId(1), -6.0)].into()));
+}
+
+#[test]
+fn cue_pasted_where_no_output_has_its_names_plays_on_the_first_output() {
+    assert_eq!(pasted_elsewhere(&["Foyer"]).sends, None);
 }

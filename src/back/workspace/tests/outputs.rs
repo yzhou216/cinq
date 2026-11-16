@@ -26,6 +26,10 @@ pub(super) fn rename_output(id: u32, name: &str) -> Command {
     edit_output(id, OutputEdit::Name(name.to_owned()))
 }
 
+pub(super) fn delete_outputs(ids: &[u32]) -> Command {
+    Command::DeleteOutputs(ids.iter().copied().map(OutputId).collect())
+}
+
 pub(super) fn sends(pairs: &[(u32, f32)]) -> Sends {
     pairs
         .iter()
@@ -37,9 +41,9 @@ pub(super) fn sends(pairs: &[(u32, f32)]) -> Sends {
 /// third, to which new cues send at 0 and -6 dB
 fn house_and_sub() -> Workspace {
     workspace(vec![audio(1)])
-        .apply(edit_output(1, OutputEdit::Name("House".to_owned())))
-        .apply(Command::AddOutput { at: 1 })
-        .apply(edit_output(2, OutputEdit::Name("Sub".to_owned())))
+        .apply(rename_output(1, "House"))
+        .apply(Command::add_output(1, 1))
+        .apply(rename_output(2, "Sub"))
         .apply(edit_output(2, OutputEdit::Channels(Channels::Mono(2))))
         .apply(edit_output(2, OutputEdit::NewCues(Some(-6.0))))
 }
@@ -55,8 +59,8 @@ fn show_starts_with_main_where_cues_that_name_no_outputs_send() {
 #[test]
 fn outputs_add_after_one_another_under_names_of_their_own_and_keep_one() {
     let added = workspace(Vec::new())
-        .apply(Command::AddOutput { at: usize::MAX })
-        .apply(Command::AddOutput { at: 1 });
+        .apply(Command::add_output(usize::MAX, 1))
+        .apply(Command::add_output(1, 1));
     assert_eq!(names(&added), ["Main", "Output 2", "Output 1"]);
     let renamed = added
         .apply(rename_output(2, "Main"))
@@ -69,7 +73,9 @@ fn outputs_add_after_one_another_under_names_of_their_own_and_keep_one() {
     assert_eq!(names(&moved), ["Output 2", "Output 1", "Main"]);
     let one = [MAIN, OutputId(2), OutputId(3)]
         .into_iter()
-        .fold(moved, |show, id| show.apply(Command::DeleteOutput(id)));
+        .fold(moved, |show, id| {
+            show.apply(Command::DeleteOutputs(vec![id]))
+        });
     assert_eq!(names(&one), ["Output 2"]);
 }
 
@@ -102,7 +108,7 @@ fn every_cue_of_a_counted_add_sends_where_the_outputs_say() {
 #[test]
 fn deleting_an_output_silences_its_sends_until_undo_brings_it_back() {
     let show = house_and_sub().apply(edit(1, Edit::Sends(Some(sends(&[(1, 0.0), (2, -3.0)])))));
-    let deleted = show.apply(Command::DeleteOutput(OutputId(2)));
+    let deleted = show.apply(delete_outputs(&[2]));
     let cue = |show: &Workspace| show.cue(CueId(1)).cloned().expect("the cue is there");
     assert_eq!(deleted.sends(&cue(&deleted)), sends(&[(1, 0.0)]));
     let undone = deleted.apply(Command::Undo);
@@ -163,6 +169,41 @@ fn show_file_with_outputs_that_cannot_play_cannot_be_read() {
             "{text}"
         );
     });
+}
+
+#[test]
+fn a_cue_whose_sends_all_name_outputs_that_are_gone_sends_nowhere() {
+    let show = house_and_sub().apply(Command::Edit(
+        CueId(1),
+        Edit::Sends(Some(sends(&[(2, 0.0)]))),
+    ));
+    let stranded = |show: &Workspace| show.stranded().count();
+    assert_eq!(stranded(&show), 0);
+    let gone = show.clone().apply(delete_outputs(&[2]));
+    assert_eq!(stranded(&gone), 1);
+    assert_eq!(gone.stranded_among(show.outputs()), 0);
+    assert_eq!(show.stranded_among(gone.outputs()), 1);
+    // Undo brings the output and the sound back
+    assert_eq!(stranded(&gone.apply(Command::Undo)), 0);
+}
+
+#[test]
+fn a_cue_that_sends_nowhere_by_choice_or_by_name_does_not_count() {
+    let show = house_and_sub();
+    let edited = |sends| {
+        show.clone()
+            .apply(Command::Edit(CueId(1), Edit::Sends(sends)))
+            .apply(delete_outputs(&[2]))
+            .stranded()
+            .count()
+    };
+    // No sends play on the first output, and cleared sends play nowhere on
+    // purpose
+    assert_eq!(edited(None), 0);
+    assert_eq!(edited(Some(Sends::new())), 0);
+    // One send that remains plays
+    assert_eq!(edited(Some(sends(&[(1, 0.0), (2, 0.0)]))), 0);
+    assert_eq!(edited(Some(sends(&[(2, 0.0)]))), 1);
 }
 
 #[test]

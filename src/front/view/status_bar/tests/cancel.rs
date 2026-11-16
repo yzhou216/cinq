@@ -7,7 +7,7 @@
 use iced::keyboard::{Key, Modifiers};
 use unicode_width::UnicodeWidthStr;
 
-use super::{super::status, fitted, hinted, opened};
+use super::{super::status, YIELDING, fitted, hinted, opened};
 use crate::{
     back::{Cue, CueId, CueList, Kind, Workspace},
     front::{
@@ -50,21 +50,20 @@ fn the_bar_hints_the_key_of_cancel_while_keys_wait() {
 
 #[test]
 fn the_key_of_cancel_stays_in_a_bar_of_1024_pixels_while_go_and_panic_give_way() {
-    let d = Press::from_key(&Key::Character("d".into()), Modifiers::empty()).expect("a key");
-    let shown = |told: &str| {
+    let shown = |remark: &'static str| {
         let app = App {
-            keys: vec![d],
-            told: Some(told.to_owned()),
+            keys: vec![press("d").expect("a key")],
+            remark: Some(remark),
             ..opened(Preset::Vi, false, false)
         };
         let taken: usize = status(&app).iter().map(|part| part.text.width()).sum();
-        fitted(&hinted(&app), COLUMNS - taken)
+        fitted(&hinted(&app), COLUMNS - taken, &YIELDING)
     };
     // GO gives way first, then Panic, while cancel stays
-    let short = shown("Saved the show");
+    let short = shown("Copied cue 1");
     assert!(short.contains("Control+c: cancel") && short.contains("Escape: Panic"));
     assert!(!short.contains("GO"));
-    let long = shown("Opened a show whose name holds the words that were typed");
+    let long = shown("Searched for a cue whose name holds the words that were typed");
     assert!(long.contains("Control+c: cancel"));
     assert!(!long.contains("GO") && !long.contains("Panic"));
 }
@@ -113,16 +112,18 @@ fn the_hints_of_leaving_a_field_give_way_after_the_help_page() {
         held: true,
         ..opened(Preset::Vi, false, false)
     };
-    let all = fitted(&hinted(&app), COLUMNS);
+    let all = fitted(&hinted(&app), COLUMNS, &YIELDING);
     assert_eq!(
         all,
         "Tab: next field | Control+c: leave | Space: GO | Escape: Panic | ?: help"
     );
-    let narrow = fitted(&hinted(&app), 45);
-    assert!(narrow.contains("Control+c: leave"), "{narrow}");
-    assert!(
-        !narrow.contains("GO") && !narrow.contains("Panic"),
-        "{narrow}"
+    assert_eq!(
+        fitted(&hinted(&app), 44, &YIELDING),
+        "Tab: next field | Control+c: leave | ?: help"
+    );
+    assert_eq!(
+        fitted(&hinted(&app), 43, &YIELDING),
+        "Tab: next field | Control+c: leave"
     );
 }
 

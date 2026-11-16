@@ -17,7 +17,7 @@ use super::{
     settle,
 };
 use crate::back::{
-    Audio, Channels, Command, Fault, OutputEdit, READY_AHEAD,
+    Audio, Channels, Command, Fault, OutputEdit, READY_AHEAD, Workspace,
     audio::{mixer::Mixer, opener::Opener, opening::RETRY},
 };
 
@@ -123,4 +123,80 @@ fn sync_never_waits_on_a_device_and_opens_each_device_once_at_a_time() {
     settle(&mut audio);
     assert_eq!(opened.load(Ordering::SeqCst), 2, "one open for each device");
     assert_eq!(audio.problems().len(), 2, "both tell once they answer");
+}
+
+#[test]
+fn moving_copying_cutting_and_pasting_outputs_open_only_the_devices_that_changed() {
+    let fake = Fake::default();
+    let opened = Arc::clone(&fake.opened);
+    let (mut audio, mut mix_a, mut mix_b) = open_on_both(fake);
+    let change = |audio: &mut Audio, workspace: &Workspace| {
+        audio.patched(patch(workspace));
+        settle(audio);
+    };
+    let moved = show(Channels::MAIN, Channels::Stereo(0, 1)).apply(Command::MoveOutput {
+        output: SUB,
+        by: -1,
+    });
+    change(&mut audio, &moved);
+    let sub = moved.output(SUB).cloned().expect("the show has Sub");
+    let copied = moved.apply(Command::PasteOutputs {
+        at: 0,
+        outputs: vec![sub.clone()],
+        restore: false,
+        anchor: None,
+    });
+    change(&mut audio, &copied);
+    assert_eq!(opened.load(Ordering::SeqCst), 0, "no device opens again");
+    assert_eq!(cues(&audio), [1, 2, 3]);
+    assert_eq!((sounds(&mut mix_a), sounds(&mut mix_b)), (2, 2));
+    // Cutting both outputs on device b closes it, and device a plays on
+    let copy = copied.outputs()[0].id;
+    let cut = copied.apply(Command::DeleteOutputs(vec![SUB, copy]));
+    change(&mut audio, &cut);
+    assert_eq!(opened.load(Ordering::SeqCst), 0);
+    assert!(is_open(&audio, "a") && !audio.mixers.contains_key(&Some("b".to_owned())));
+    assert_eq!(cues(&audio), [1]);
+    // Pasting one back opens device b alone
+    let back = cut.apply(Command::PasteOutputs {
+        at: 1,
+        outputs: vec![sub],
+        restore: true,
+        anchor: None,
+    });
+    change(&mut audio, &back);
+    assert_eq!(opened.load(Ordering::SeqCst), 1, "only device b opens");
+    assert!(is_open(&audio, "a"));
+    assert_eq!(cues(&audio), [1]);
+    assert_eq!(sounds(&mut mix_a), 1);
+}
+
+#[test]
+fn pasting_an_output_on_a_device_that_cannot_play_does_not_try_it_again() {
+    let fake = Fake::default();
+    let opened = Arc::clone(&fake.opened);
+    let mut audio = Audio::open(None);
+    audio.opener = Opener::with(fake);
+    let workspace = show(Channels::MAIN, Channels::Stereo(0, 1));
+    audio.patch = patch(&workspace);
+    let (a, _) = Mixer::bench(2, 2, 8000, 16);
+    audio.mixers.insert(Some("a".to_owned()), Ok(a));
+    let fault = Fault::Unplayable("no samples that cinq plays".to_owned());
+    audio
+        .mixers
+        .insert(Some("b".to_owned()), Err(fault.clone()));
+    let sub = workspace.output(SUB).cloned().expect("the show has Sub");
+    let copied = workspace.apply(Command::PasteOutputs {
+        at: 2,
+        outputs: vec![sub],
+        restore: false,
+        anchor: None,
+    });
+    audio.patched(patch(&copied));
+    settle(&mut audio);
+    assert_eq!(opened.load(Ordering::SeqCst), 0);
+    assert!(matches!(
+        audio.mixers.get(&Some("b".to_owned())),
+        Some(Err(Fault::Unplayable(_)))
+    ));
 }

@@ -24,6 +24,11 @@ mod matches;
 mod naming;
 mod operators;
 mod operators_pasting;
+mod output_editing;
+mod output_moves;
+mod output_places;
+mod output_rows;
+mod output_stranded;
 mod outputs;
 mod paging;
 mod scrolling;
@@ -79,6 +84,13 @@ pub(super) fn press(key: Key) -> Press {
 pub(super) fn told(app: &App) -> String {
     let (_, change) = app.workspace.latest_change().expect("a change");
     format::change(&app.workspace, change)
+}
+
+/// Returns the notice of the latest change led by what it means for the cues
+pub(super) fn noticed(app: &App) -> String {
+    let (_, change) = app.workspace.latest_change().expect("a change");
+    let facts = format::consequences_of(&app.workspace, change);
+    format::leading(facts, &format::change(&app.workspace, change))
 }
 
 /// Returns the state after the messages, which a test sends one at a time

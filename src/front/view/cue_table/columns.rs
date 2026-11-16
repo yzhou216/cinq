@@ -85,7 +85,8 @@ impl Column {
 /// Describes a cue in the State column, in the color of what it needs.  A
 /// file that is still loading stops the cue from playing, but it needs
 /// nothing but time.  The list of running cues tells more of each, such as
-/// where a paused cue stopped.
+/// where a paused cue stopped.  A cue that sends only to outputs that are gone
+/// reads in yellow that it has none, which GO does not skip.
 pub(super) fn state(
     workspace: &Workspace,
     list: &CueList,
@@ -100,6 +101,7 @@ pub(super) fn state(
         }
         (None, Some(active)) if active.paused => ("paused".to_owned(), text::warning),
         (None, Some(active)) => (format::phase(active), text::success),
+        (None, None) if workspace.sends_nowhere(cue) => ("NO OUTPUT".to_owned(), text::warning),
         (None, None) if list.standby == Some(cue.id) => ("NEXT".to_owned(), text::primary),
         (None, None) => (String::new(), text::default),
     }

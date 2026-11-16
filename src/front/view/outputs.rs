@@ -55,6 +55,20 @@ enum Yield {
     Name,
 }
 
+/// Returns the texts of an output that a search matches, which are those of the
+/// columns of the table apart from its number, which is no part of the output,
+/// and its state, which changes with the device
+pub(in crate::front) fn searchable(app: &App, output: &Output) -> Vec<String> {
+    [
+        Column::Name,
+        Column::Device,
+        Column::Channels,
+        Column::NewCues,
+    ]
+    .map(|column| column.text(app, 0, output))
+    .to_vec()
+}
+
 #[derive(Clone, Copy, PartialEq, VariantArray, IntoStaticStr)]
 enum Column {
     #[strum(serialize = "#")]

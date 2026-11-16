@@ -106,6 +106,37 @@ pub struct Output {
     pub new_cues: Option<f32>,
 }
 
+/// Returns the output that moved, where `after` holds the outputs of
+/// `before` in another order: of the two outputs at the first place where
+/// the orders differ, the one whose removal from both orders leaves the
+/// others in the same order.  Where both qualify, as when two neighbors swap,
+/// `prefer` is the one, if it is one of them, else the one that was there
+/// first.
+pub fn moved_output<'a>(
+    before: &[Output],
+    after: &'a [Output],
+    prefer: Option<OutputId>,
+) -> Option<&'a Output> {
+    let row = before
+        .iter()
+        .zip(after)
+        .position(|(was, now)| was.id != now.id)?;
+    let without = |outputs: &[Output], id: OutputId| -> Vec<OutputId> {
+        outputs
+            .iter()
+            .map(|output| output.id)
+            .filter(|other| *other != id)
+            .collect()
+    };
+    let candidates = [before[row].id, after[row].id];
+    prefer
+        .filter(|id| candidates.contains(id))
+        .into_iter()
+        .chain(candidates)
+        .find(|&id| without(after, id) == without(before, id))
+        .and_then(|id| after.iter().find(|output| output.id == id))
+}
+
 impl Output {
     /// Returns the output that a show has when its file names none
     pub fn main(id: OutputId) -> Self {

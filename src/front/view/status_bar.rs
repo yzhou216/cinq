@@ -11,39 +11,35 @@
 //! help page, and, while a text field or a drop-down list has the keyboard,
 //! the keys that go to the next field and that leave the field
 //!
-//! The bar keeps to one line.  When it is too narrow for all of it, the
-//! keys of going forward and back, of GO, of Panic, of saving, of the help
-//! page, of the next field, and of leaving it give way in turn, each one
-//! whole, and then the status gives way from its end, so that the keys typed
-//! so far, what the latest change told, and the key of cancel always show in
-//! full.
+//! The bar keeps to one line.  When it is too narrow for all of it, the keys
+//! of going forward and back, of GO, of Panic, of saving, of the help page, of
+//! the next field, and of leaving it give way in turn, each one whole, and then
+//! what the latest change told gives way, at a word, with an ellipsis, so that
+//! the status shows in full, while the keys typed so far and the key of cancel
+//! always show in full.
+//! While the outputs show, the bar names the keys that add and rename an
+//! output, and the key that goes back always, since it is the way out, so
+//! that the keys give way in another order: forward, add, rename, GO, Panic,
+//! saving, back, the help page, the next field, and leaving a field.
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
 
+mod fit;
+mod hints;
 #[cfg(test)]
 mod tests;
-
-use std::iter;
 
 use iced::{
     Center, Element, Fill, Padding,
     widget::{container, responsive, rich_text, row, span, text, text::Wrapping, text_input},
 };
-use itertools::Itertools;
 use unicode_width::UnicodeWidthStr;
 
 use super::{
-    LINE, NO_MATCH, SEARCH, SPACING, answered, char_width, format, giving_way, keep_keys,
-    line_height, line_keys, theme, warnings,
+    LINE, SEARCH, SPACING, char_width, format, giving_way, keep_keys, line_height, line_keys,
+    no_match, theme, warnings,
 };
-use crate::{
-    back::{Change, Turn},
-    front::{
-        App, Message, Search,
-        keymap::{Action, shown},
-        update::Spot,
-    },
-};
+use crate::front::{App, Message, Search, keymap::Action};
 
 /// Hints in turn of giving way, the first to go first
 const YIELDING: [Action; 10] = [
@@ -58,6 +54,34 @@ const YIELDING: [Action; 10] = [
     Action::CloseMenu,
     Action::Pick,
 ];
+
+/// Hints in turn of giving way while the outputs show, the first to go
+/// first.  The keys that add and rename an output go right after Forward,
+/// as they only teach, and Back stays until after GO, Panic, and Save,
+/// since it is the way out of the outputs, while the transport has buttons
+/// for GO and Panic.
+const YIELDING_IN_OUTPUTS: [Action; 12] = [
+    Action::Forward,
+    Action::AddBelow,
+    Action::Edit,
+    Action::Go,
+    Action::Panic,
+    Action::Save,
+    Action::Back,
+    Action::Help,
+    Action::NextField,
+    Action::Cancel,
+    Action::CloseMenu,
+    Action::Pick,
+];
+
+fn yielding(app: &App) -> &'static [Action] {
+    if app.outputs_shown {
+        &YIELDING_IN_OUTPUTS
+    } else {
+        &YIELDING
+    }
+}
 
 /// Mark that opens the search line, or the one that opens it for a search that
 /// goes up the list, as in Vim
@@ -86,7 +110,7 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
     let (left, taken) = match &app.search {
         Some(search) => (
             search_line(app, search),
-            search_columns(&search.text, search.warned),
+            search_columns(&search.text, search.warned, app.outputs_shown),
         ),
         None => {
             let status = status(app);
@@ -97,7 +121,12 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
             (shown.into(), columns)
         }
     };
-    let shown = fitted(&hints(app), room.saturating_sub(taken));
+    let shown = fit::shown(
+        |told| hints::hints_told(app, told),
+        hints::told(app),
+        room.saturating_sub(taken),
+        yielding(app),
+    );
     row![left, text(shown).wrapping(Wrapping::None)]
         .spacing(SPACING)
         .padding(SPACING)
@@ -105,10 +134,19 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
         .into()
 }
 
+/// Returns the columns of text that fit in the bar of `width` pixels
+fn columns(width: f32) -> usize {
+    ((width - 3.0 * SPACING) / char_width()).floor() as usize
+}
+
 /// Columns that the search line keeps for its text, and for what it tells,
 /// so that the hints never cover them
-fn search_columns(text: &str, warned: bool) -> usize {
-    let told = if warned { NO_MATCH.width() + 1 } else { 0 };
+fn search_columns(text: &str, warned: bool, outputs: bool) -> usize {
+    let told = if warned {
+        no_match(outputs).width() + 1
+    } else {
+        0
+    };
     (mark(false).width() + text.width() + told).max(SEARCH_ROOM)
 }
 
@@ -125,7 +163,7 @@ fn search_line<'a>(app: &'a App, search: &'a Search) -> Element<'a, Message> {
     let line = row![text(mark(search.backward)), field]
         .push(search.warned.then(|| {
             container(
-                text(NO_MATCH)
+                text(no_match(app.outputs_shown))
                     .color(theme::PALETTE.warning)
                     .wrapping(Wrapping::None),
             )
@@ -133,27 +171,6 @@ fn search_line<'a>(app: &'a App, search: &'a Search) -> Element<'a, Message> {
         }))
         .align_y(Center);
     keep_keys(line_keys(line), &app.config.keymap)
-}
-
-/// Returns the columns of text that fit in the bar of `width` pixels
-fn columns(width: f32) -> usize {
-    ((width - 3.0 * SPACING) / char_width()).floor() as usize
-}
-
-/// Returns the hints joined, each one whole, without as many of those
-/// that give way as it takes for the rest to fit in `room` columns
-fn fitted(hints: &[(Option<Action>, String)], room: usize) -> String {
-    giving_way(
-        &YIELDING,
-        |gone| {
-            hints
-                .iter()
-                .filter(|(action, _)| !action.is_some_and(|action| gone.contains(&action)))
-                .map(|(_, hint)| hint)
-                .join(LINE)
-        },
-        |hints| hints.width() <= room,
-    )
 }
 
 fn status(app: &App) -> Vec<text::Span<'_>> {
@@ -172,144 +189,4 @@ fn status(app: &App) -> Vec<text::Span<'_>> {
         span(format::count(count, "warning"))
             .color_maybe((count > 0).then_some(theme::PALETTE.warning)),
     ]
-}
-
-/// Returns the hints, each with the action whose keys it names when it can
-/// give way
-fn hints(app: &App) -> Vec<(Option<Action>, String)> {
-    let keymap = &app.config.keymap;
-    let key =
-        |action: Action, label: &str| keymap.hint(action, label).map(|hint| (Some(action), hint));
-    let typed = (!app.keys.is_empty()).then(|| (None, shown(&app.keys)));
-    let told = clipped(app)
-        .or_else(|| app.remark.map(str::to_owned))
-        .or_else(|| app.told.clone())
-        .or_else(|| notice(app))
-        .map(|told| (None, told));
-    let back = going(app, Action::Back, app.back_to());
-    let forward = going(app, Action::Forward, app.forward_to());
-    let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
-    // The page covers an open menu, and takes its keys.  Enter picks
-    // whichever key is bound to pick, so that it stands in where none is.
-    let in_menu = app.menu && !app.help;
-    let pick =
-        key(Action::Pick, "pick").or_else(|| Some((Some(Action::Pick), "Enter: pick".to_owned())));
-    let close = key(Action::CloseMenu, "close");
-    // Escape would panic, so that the key that only cancels is told while it
-    // can.  Cancelling keys typed or a search never gives way, while the
-    // hint of leaving a field does, as it only teaches.
-    let cancel = key(Action::Cancel, "cancel")
-        .filter(|_| !app.keys.is_empty() || app.search.is_some())
-        .map(|(_, hint)| (None, hint));
-    // A pick or a close by key, and a Tab, leave the keyboard on a field or a
-    // list, from which Escape would panic and no click is at hand
-    let in_field = app.held && !app.help && !in_menu && app.search.is_none();
-    let next_field = key(Action::NextField, "next field").filter(|_| in_field);
-    let leave = key(Action::Cancel, "leave").filter(|_| in_field && app.keys.is_empty());
-    // Tab skips the Choose button, so that Enter says how to reach the chooser
-    // while the empty File field has the keyboard
-    let choose = (in_field && app.file_held)
-        .then(|| app.selected.and_then(|id| app.workspace.cue(id)))
-        .flatten()
-        .filter(|cue| cue.file.is_empty())
-        .map(|_| (None, "Enter: choose a file".to_owned()));
-    typed
-        .into_iter()
-        .chain(told)
-        .chain(pick.filter(|_| in_menu))
-        .chain(close.filter(|_| in_menu))
-        .chain(cancel)
-        .chain(choose)
-        .chain(next_field)
-        .chain(leave)
-        .chain(back)
-        .chain(forward)
-        .chain(save)
-        .chain(key(Action::Go, "GO"))
-        .chain(key(Action::Panic, "Panic"))
-        .chain(key(Action::Help, Action::Help.name()))
-        .collect()
-}
-
-/// Names where a way back or forward goes: for a cue of the list on show,
-/// the cue, and otherwise the cue list
-fn place(app: &App, spot: Spot) -> String {
-    let list = |index: usize| {
-        app.workspace
-            .lists()
-            .get(index)
-            .map_or_else(String::new, |list| list.name.clone())
-    };
-    match spot {
-        Spot::List(index) => list(index),
-        Spot::Cue(id) => match app.workspace.list_of(id) {
-            Some(index) if index == app.list => app
-                .workspace
-                .cue(id)
-                .map_or_else(String::new, |cue| format!("cue {}", format::number(cue))),
-            Some(index) => list(index),
-            None => String::new(),
-        },
-    }
-}
-
-/// Hints the key of an action that goes to `spot`, with the place
-fn going(app: &App, action: Action, spot: Option<Spot>) -> Option<(Option<Action>, String)> {
-    let spot = spot?;
-    let label = format!("{} to {}", action.name(), place(app, spot));
-    app.config
-        .keymap
-        .hint(action, &label)
-        .map(|hint| (Some(action), hint))
-}
-
-/// Tells what the latest copy or cut took, with the key that pastes it and,
-/// for a cut, the key that takes it back
-fn clipped(app: &App) -> Option<String> {
-    let keymap = &app.config.keymap;
-    let clipped = app.clipped.as_ref()?;
-    let paste = keymap
-        .hint(Action::PasteBelow, "paste")
-        .filter(|_| app.editable());
-    let undo = keymap
-        .hint(Action::Undo, Action::Undo.name())
-        .filter(|_| clipped.cut && app.workspace.undoable().is_some());
-    Some(
-        iter::once(clipped.told.clone())
-            .chain(paste)
-            .chain(undo)
-            .join(LINE),
-    )
-}
-
-/// Tells the latest change to the show, with the key that takes it back,
-/// or that makes it again after an undo, while that key can act
-fn notice(app: &App) -> Option<String> {
-    let workspace = &app.workspace;
-    let (turn, change) = workspace.latest_change()?;
-    let told = format::change(workspace, change);
-    let (told, action, next) = match turn {
-        Turn::Done => (capitalized(&told), Action::Undo, workspace.undoable()),
-        Turn::Undone => (format!("Undid: {told}"), Action::Redo, workspace.redoable()),
-        Turn::Redone => (format!("Redid: {told}"), Action::Undo, workspace.undoable()),
-    };
-    // A cue just added bears a default name, which the key of renaming
-    // selects whole, so that typing names it
-    let renaming = matches!((turn, change), (Turn::Done, Change::Added { .. }))
-        .then(|| app.config.keymap.hint(Action::ChangeName, "rename"))
-        .flatten()
-        .filter(|_| app.editable());
-    let told = match renaming {
-        Some(hint) => format!("{told}{LINE}{hint}"),
-        None => told,
-    };
-    next.map(|_| answered(told, &app.config.keymap, action))
-}
-
-fn capitalized(text: &str) -> String {
-    text.chars()
-        .take(1)
-        .flat_map(char::to_uppercase)
-        .chain(text.chars().skip(1))
-        .collect()
 }

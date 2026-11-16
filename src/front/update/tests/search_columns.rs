@@ -3,11 +3,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Tests of a search matching the text of every column that the list shows
-//! of a cue, as Vim matches the whole line, but for the state
+//! of a row, as Vim matches the whole line, but for the state, in the cue
+//! list and in the outputs
 
-use super::search::searched;
+use super::{after, output_editing::on, output_rows::at, search::searched};
 use crate::{
-    back::{Advance, Command, Cue, CueId, CueList, Kind, Media, Workspace},
+    back::{
+        Advance, Channels, Command, Cue, CueId, CueList, Device, Kind, Media, OutputEdit, OutputId,
+        Workspace,
+    },
     front::{App, Message},
 };
 
@@ -74,4 +78,54 @@ fn a_search_leaves_out_the_waits_and_the_state() {
     assert_eq!(found("0:04"), Some(4), "post-wait");
     // Cue 1 is the standby of its list, which the state column tells
     assert_eq!(found("next"), Some(4), "state");
+}
+
+/// Returns the app with the outputs on screen, the first selected, the
+/// third on a device that this test names, the second with a level for new
+/// cues, and a search line open
+fn outputs() -> App {
+    let app = on(1);
+    let sub = app.workspace.outputs()[2].id;
+    let device = Device::Named {
+        id: "alsa:hw:USB".to_owned(),
+        name: "Studio USB".to_owned(),
+    };
+    let workspace = app
+        .workspace
+        .apply(Command::EditOutput(sub, OutputEdit::Device(device)))
+        .apply(Command::EditOutput(
+            OutputId(2),
+            OutputEdit::NewCues(Some(-6.0)),
+        ));
+    after(
+        App { workspace, ..app },
+        [Message::Search { backward: false }],
+    )
+}
+
+fn row(text: &str) -> usize {
+    at(&searched(outputs(), text))
+}
+
+#[test]
+fn a_search_matches_the_name_device_channels_and_new_cues_of_an_output() {
+    assert_eq!(row("monitor"), 4, "name");
+    assert_eq!(row("studio"), 3, "device");
+    assert_eq!(row("usb"), 3, "device");
+    assert_eq!(row("-6.0"), 2, "new cues");
+    // Channels read from one, as the table shows them
+    let mono = outputs().workspace.apply(Command::EditOutput(
+        OutputId(5),
+        OutputEdit::Channels(Channels::Mono(6)),
+    ));
+    let app = searched(
+        App {
+            workspace: mono,
+            ..outputs()
+        },
+        "7",
+    );
+    assert_eq!(at(&app), 5, "channels");
+    // Number of the row is no text of the output, nor is its state
+    assert_eq!(row("5"), 1, "no match leaves the selection");
 }

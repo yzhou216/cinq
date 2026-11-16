@@ -19,7 +19,7 @@ use itertools::Itertools;
 use strum::VariantArray;
 
 use super::{
-    Action, Keymap, Preset, Press, binding, config,
+    Action, Keymap, Preset, Press, Rows, binding, config,
     press::{sequence, shown, written},
     typing::Outcome,
 };

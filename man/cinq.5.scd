@@ -424,7 +424,8 @@ keys that type characters joined, as Vim does, such as *gg*.
 
 The keys of a sequence wait until the sequence is complete, and the status bar
 shows the keys typed so far, while a box above it lists the keys that can come
-next and what each of them does.
+next and what each of them does, naming outputs instead of cues while the
+outputs show.  The help page, which lists each action once, names both.
 A key that completes or continues no sequence is dropped together with the
 keys typed so far, as Vim beeps and drops them, so that a key mistyped halfway,
 such as the *x* of *d x*, never starts a sequence of its own.
@@ -511,6 +512,11 @@ A search up the list begins at the cue before the selected one.
 The search wraps around the list and ends on the selected cue, as a search of
 Vim does from the start of a line, so that the selected cue is the match only
 when no other cue holds the text.
+While the outputs show in place of the cue list, the search goes through the
+name, the device, the channels, and the new cues of the outputs, as the table
+shows them, in the same way, by the same rules, and never looks at the cues out
+of sight.
+The number of a row and the state are left out.
 Enter accepts the search and closes the line, and remembers the text and the
 direction for *next_match* and *previous_match*.
 *next_match* finds the next cue that holds the text in the direction of the
@@ -659,14 +665,71 @@ Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
 read-only buffer.
 
 The outputs of the show, which *Outputs* below the cue lists in the sidebar
-shows in place of the cue list, take some actions of cues: *next*,
-*previous*, *first*, and *last* select an output, which the inspector then
-edits, *edit* edits its name, *add_below* and *add_above* add an output,
-*move_down* and *move_up* move it, and *delete* deletes the selected output only,
-whatever the count.
-Every other action that moves through, scrolls, searches, or changes the rows
-of a cue list, such as *standby*, *half_page_down*, *search*, *cut*, *copy*,
-and *paste_below*, does nothing there, since the cue list is out of sight.
+shows in place of the cue list, take the actions that move through rows as
+the cue list takes them, by the same code: *next*, *previous*, *first*, and
+*last* select an output, which the inspector then edits, and so do the
+actions of half and whole pages, of scrolling by a row, of the rows in view,
+and of placing the selected row in view, which only matter once there are more
+outputs than rows in the view.
+*search*, *search_backward*, *next_match*, and *previous_match* search the
+columns of the outputs, in any case, with the rules of *SEARCHING*, and the
+line tells that no output matches.
+*first* and *last* with a count, and the searches, are jumps there, as they
+are for cues.
+The actions that edit cues edit the outputs in the same way while they show.
+*edit*, *edit_start*, and *change_name* enter the Name field of the output
+with the caret at its end, at its start, or with all of it selected, as *F2*
+does in the cua keymap.
+*next_field* and *previous_field* move among the fields and lists of the
+output and select the text of a field that they reach, as they do for a cue.
+*add_below* and *add_above* add an output on the default device and its first
+two channels, as many as the count says, at most 64, and select the last of
+them.
+*move_down* and *move_up* move the output.
+*cut*, *copy*, *paste_below*, and *paste_above*, and the keys of an operator
+with a motion, such as *d j* and *y G*, take the selected output and those
+below it, as many as the count says or the motion reaches, into a register of
+outputs, which is apart from the cues that were copied, or put the register
+back, as many times as the count says, at most 64 outputs, and select the
+first output pasted.
+*delete* deletes them without copying.
+A show keeps at least one output, so that a cut or a delete that reaches all
+of them does nothing and the status bar tells so.
+A cut output pasted back into the show that it came from takes back its
+identity, with the level of its new cues, so that the cues that sent to it send
+to it again, as a line that was cut and pasted back in Vim is the line that
+was.
+A copy, and anything pasted into another show, has an identity of its own, the
+name of the original, numbered from 2 on where another output has that name,
+no cue that sends to it, and new cues that do not send to it.
+A number that ends the name after a space gives way to the new one, so that a
+copy of *House R 2* is *House R 3*, not *House R 2 2*.
+Cues that name no sends play on the first output, so that cutting, adding,
+moving, or pasting at the first place changes where they play, which the
+status bar tells first, as in *Cues without sends play on Sub*, with the
+names of outputs cut to 10 columns so that it fits in the bar of a small
+window, where the key of *paste* gives way to it.
+A cue that sends only to outputs that a cut or a delete took away plays on no
+output, so that the status bar counts such cues with the change, its State
+reads *NO OUTPUT* in yellow, and the sidebar lists it among the warnings, until
+*undo* brings the outputs back or the cue sends elsewhere.
+A cue whose sends were all cleared plays nowhere by choice, and gets no
+warning.
+*undo* and *redo* select the output that the change touched, or the neighbor
+of one that it took away, except that undoing an addition or a paste selects
+the output that was selected when it was made, as the cursor of Vim returns to
+where a change was made.
+A change to a cue or to the cue lists leaves the outputs for the cue list in
+the same way as a jump, so that *back* returns to the outputs, and the change
+is undone or made again there, as are the changes that follow in the count.
+Show mode locks all of these but *copy*, and *undo* and *redo* do nothing
+there.
+Every other action that acts on cues, such as *standby*, does nothing, since
+the cue list is out of sight.
+While the outputs show, the status bar names the keys of *add_below*, *edit*,
+and *back*, and gives way, from the first to the last, to the key of *forward*,
+*add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that
+the key that leaves the outputs outlasts all but the help page.
 
 # ACTIONS
 
@@ -821,6 +884,9 @@ page.
 
 *previous_list*
 	Show the previous cue list, or the last one from the outputs of the show.
+	Where that is the cue list that the outputs took the place of, it comes back
+	with the cue that was selected, as does choosing it in the sidebar, and any
+	other cue list shows with its standby cue selected.
 
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,
@@ -833,10 +899,18 @@ page.
 *back*
 	Go back to the place before the last jump, as the jump list of Vim does
 	with its *Control+o*.
-	A place is a cue list with its selected cue.
+	A place is a cue list with its selected cue, or the outputs with their
+	selected output.
 	Switching cue lists, *first* and *last* with or without a count, and
 	selecting a cue in another cue list are jumps, and so are the searches
 	described under *SEARCHING*.
+	So is showing the outputs, with the sidebar, the Edit outputs button, a
+	warning that names an output, or *next_list* past the last cue list, and
+	so is leaving them for a cue list, so that *back* from the outputs returns
+	to the cue list that showed, with the cue and the inspector tab that it had.
+	Where no jump recorded a place, as after opening a show with the outputs
+	shown, *back* from the outputs shows the cue list that was showing, with
+	its selected cue, and *forward* returns to the outputs.
 	Moving the selection one row at a time, clicking a cue of the cue list
 	shown, GO moving the standby cue, adding, deleting, and moving cues,
 	undo, redo, changing the tab, and the help page are not.
@@ -852,7 +926,9 @@ page.
 	The history holds at most 100 places, each once, and ends when *cinq*
 	opens another show or quits.
 	The status bar names the key and where it goes, as in *Control+o: back to
-	Main* or *back to cue 3*, while there is a place to go back to.
+	Main*, *back to cue 3*, or *back to the outputs*, with the name of a cue
+	list cut short where it is long, while there is a place to go back to, and
+	always while the outputs show.
 	The back button of the mouse does the same from the main window, unless the
 	help page is open.
 

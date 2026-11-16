@@ -4,7 +4,7 @@
 
 //! Tests of which actions the help page lists
 
-use super::{bound, first_steps};
+use super::{bound, counts, first_steps};
 use crate::front::keymap::{Action, Keymap, Preset};
 
 #[test]
@@ -35,4 +35,10 @@ fn first_steps_name_the_keys_of_the_keymap_in_use_in_at_most_five_lines() {
     assert!(cua.contains("Control+n adds a cue") && cua.contains("Control+z undoes"));
     // Page is 960 pixels wide in a font 9 pixels wide
     assert!([&vi, &cua].iter().all(|steps| steps.len() <= 5 * 100));
+}
+
+#[test]
+fn the_count_paragraph_names_the_outputs_that_a_count_acts_on() {
+    let vi = counts(&Keymap::from(Preset::Vi));
+    assert!(vi.contains("adds that many cues or outputs") && vi.contains("as in 3 j"));
 }

@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Searching the cues of the list on screen by the text of their columns, as
-//! Vim searches text
+//! Searching the rows in the main window, the cues of the list on screen or
+//! the outputs, by the text of their columns, as Vim searches text
 //!
 //! The search line opens at the left of the status bar, and the selection
 //! follows the text typed, as with Vim's `incsearch`.  A search looks from
@@ -30,10 +30,7 @@ use iced::{
 };
 
 use super::history::Spot;
-use crate::{
-    back::CueId,
-    front::{App, Message, view},
-};
+use crate::front::{App, Message, view};
 use line::Recall;
 use matching::{found, wrapped};
 
@@ -55,7 +52,7 @@ pub(in crate::front) struct Search {
     /// Selection as it was when the line opened, where cancelling the search
     /// puts it back and where the search looks first
     began: Spot,
-    /// Whether no cue matches the text
+    /// Whether no row matches the text
     missed: bool,
     /// Whether the line tells so, which it does for a while
     pub warned: bool,
@@ -106,30 +103,16 @@ impl App {
         )
     }
 
-    /// Moves the selection to the cue of a search, which is the one place
+    /// Moves the selection to the row of a search, which is the one place
     /// where a search changes it.  It records nothing: the callers that
     /// make a jump remember the place that it left.
-    /// Returns the texts of each cue that a search matches: those that the
-    /// list shows in its columns, but for the state, as Vim searches a whole
-    /// line
-    pub(super) fn row_texts(&self) -> Vec<Vec<String>> {
-        self.current()
-            .cues
-            .iter()
-            .map(|cue| view::cue_texts(&self.workspace, self.current(), cue))
-            .collect()
-    }
-
-    fn searched_to(self, cue: Option<CueId>) -> Self {
-        Self {
-            selected: cue,
-            ..self
-        }
+    fn searched_to(self, row: Option<usize>) -> Self {
+        self.selecting(row)
     }
 
     /// Takes the text that the operator typed into the line, and selects
-    /// the first cue after where the search began that matches it, or else
-    /// the cue where the search began.  Backspace on a line with no text
+    /// the first row after where the search began that matches it, or else
+    /// the row where the search began.  Backspace on a line with no text
     /// closes it.
     pub(super) fn search_typed(self, text: String) -> (Self, Task<Message>) {
         let Some(search) = &self.search else {
@@ -139,12 +122,11 @@ impl App {
             return self.search_cancelled().revealed_unfocused();
         }
         let (began, backward) = (search.began, search.backward);
-        let row = began.cue().and_then(|began| self.current().position(began));
-        let cue =
-            found(&self.row_texts(), &text, row, backward).map(|row| self.current().cues[row].id);
-        let missed = !text.is_empty() && cue.is_none();
+        let row = self.row_of(began);
+        let matched = found(&self.row_texts(), &text, row, backward);
+        let missed = !text.is_empty() && matched.is_none();
         let went_round = row
-            .zip(cue.and_then(|cue| self.current().position(cue)))
+            .zip(matched)
             .is_some_and(|(from, to)| wrapped(from, to, backward));
         let app = Self {
             search: Some(Search {
@@ -158,13 +140,13 @@ impl App {
             remark: went_round.then(|| continued(backward)),
             ..self
         };
-        app.searched_to(cue.or(began.cue())).revealed()
+        app.searched_to(matched.or(row)).revealed()
     }
 
     /// Accepts the text of the line, and remembers it for the keys of the
     /// next and previous match.  A line with no text repeats the search
     /// accepted last, in the direction of the line, as Vim does, and one with
-    /// text that no cue matches stays open, so that it can tell so.
+    /// text that no row matches stays open, so that it can tell so.
     pub(super) fn search_accepted(self) -> (Self, Task<Message>) {
         let Some(search) = &self.search else {
             return (self, Task::none());
@@ -182,16 +164,14 @@ impl App {
         if search.missed {
             return (self.warned(true), Task::none());
         }
-        let (began, searched) = (
-            search.began,
-            self.searched
-                .clone()
-                .accepting(search.text.clone(), search.backward),
-        );
-        let went_round = began
-            .cue()
-            .and_then(|began| self.current().position(began))
-            .zip(self.selected_row())
+        let began = search.began;
+        let searched = self
+            .searched
+            .clone()
+            .accepting(search.text.clone(), search.backward);
+        let went_round = self
+            .row_of(began)
+            .zip(self.row())
             .is_some_and(|(from, to)| wrapped(from, to, searched.backward));
         let remark = went_round.then(|| continued(searched.backward));
         // Moves of the preview were no jumps, so the jump is the one from
@@ -217,10 +197,13 @@ impl App {
     /// the search began
     pub(super) fn search_cancelled(self) -> Self {
         match self.search.as_ref().map(|search| search.began) {
-            Some(began) => Self {
-                search: None,
-                ..self.searched_to(began.cue())
-            },
+            Some(began) => {
+                let row = self.row_of(began);
+                Self {
+                    search: None,
+                    ..self.searched_to(row)
+                }
+            }
             None => self,
         }
     }

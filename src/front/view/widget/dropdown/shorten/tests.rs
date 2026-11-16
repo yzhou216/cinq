@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the names that a list cuts short to fit its room
+//! Tests of the names cut short to fit their room
 
 use super::shortened;
 
@@ -14,6 +14,13 @@ fn name_too_long_ends_in_an_ellipsis_within_its_columns() {
         ("HDA Intel PCH, ALC256 Analog", 8, "HDA Int\u{2026}"),
         // Wide characters take two columns each
         ("\u{97f3}\u{97ff}\u{5353}", 4, "\u{97f3}\u{2026}"),
+        // Wide name that would end past an odd room stops a column short
+        (
+            "\u{65e5}\u{672c}\u{8a9e}\u{306e}\u{53f0}\u{672c}.cinq.toml",
+            9,
+            "\u{65e5}\u{672c}\u{8a9e}\u{306e}\u{2026}",
+        ),
+        ("show.cinq.toml", 1, "\u{2026}"),
         ("Default device", 0, "\u{2026}"),
     ];
     let wrong: Vec<_> = cases
