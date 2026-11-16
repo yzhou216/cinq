@@ -221,3 +221,29 @@ fn show_mode_locks_adding_deleting_and_pasting_outputs() {
     });
     assert_eq!(same(&pasted), before);
 }
+
+#[test]
+fn a_copy_of_a_numbered_name_takes_the_next_number_and_not_a_second_one() {
+    let show =
+        house_sub_and_lobby().apply(edit_output(2, OutputEdit::Name("House R 2".to_owned())));
+    let copies = cut(&show, &[2]);
+    let paste = |show: Workspace, outputs: Vec<Output>| {
+        show.apply(Command::PasteOutputs {
+            at: usize::MAX,
+            outputs,
+            restore: false,
+            anchor: None,
+        })
+    };
+    // Each paste, of the one output or of two of it, takes the lowest free
+    let one = paste(show.clone(), copies.clone());
+    assert_eq!(names(&one), ["House", "House R 2", "Lobby", "House R 3"]);
+    let again = paste(one, copies.clone());
+    assert_eq!(names(&again)[3..], ["House R 3", "House R 4"]);
+    let two = paste(show, [copies.clone(), copies].concat());
+    assert_eq!(names(&two)[3..], ["House R 3", "House R 4"]);
+    // A number that is the whole name stays, with the number added after it
+    let bare = house_sub_and_lobby().apply(edit_output(2, OutputEdit::Name("7".to_owned())));
+    let pasted = paste(bare.clone(), cut(&bare, &[2]));
+    assert_eq!(names(&pasted)[3], "7 2");
+}

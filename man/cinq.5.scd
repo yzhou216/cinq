@@ -666,6 +666,8 @@ was.
 A copy, and anything pasted into another show, has an identity of its own, the
 name of the original, numbered from 2 on where another output has that name,
 no cue that sends to it, and new cues that do not send to it.
+A number that ends the name after a space gives way to the new one, so that a
+copy of *House R 2* is *House R 3*, not *House R 2 2*.
 Cues that name no sends play on the first output, so that cutting, adding,
 moving, or pasting at the first place changes where they play, which the
 status bar tells first, as in *Cues without sends play on Sub*, with the

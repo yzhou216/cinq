@@ -94,7 +94,9 @@ impl Workspace {
     /// sent to it send to it again, as a line cut and pasted back in Vim is
     /// the line that was.  Every other output is a copy: it has an identity of
     /// its own, no cue sends to it, and no new cue sends to it either.  A name
-    /// that an output has gets the lowest number from 2 on that makes it free.
+    /// that an output has gets the lowest number from 2 on that makes it free,
+    /// after a number that the name ends in after a space gives way to the new
+    /// one, so that a copy of House R 2 is House R 3.
     pub(super) fn pasted_outputs(
         self,
         at: usize,
@@ -108,9 +110,10 @@ impl Workspace {
                 let back = restore
                     && self.output(output.id).is_none()
                     && pasted.iter().all(|placed| placed.id != output.id);
+                let base = numbered_from(&output.name);
                 let name = self.unused_name(&pasted, |number| match number {
                     1 => output.name.clone(),
-                    number => format!("{} {number}", output.name),
+                    number => format!("{base} {number}"),
                 });
                 let placed = if back {
                     Output { name, ..output }
@@ -248,4 +251,17 @@ impl Workspace {
             ..self
         }
     }
+}
+
+/// Returns `name` without the space and the number that end it, which a
+/// numbered copy replaces with its own, unless nothing but the number is
+/// left
+fn numbered_from(name: &str) -> &str {
+    name.rsplit_once(' ')
+        .filter(|(base, number)| {
+            !base.trim().is_empty()
+                && !number.is_empty()
+                && number.chars().all(|digit| digit.is_ascii_digit())
+        })
+        .map_or(name, |(base, _)| base)
 }
