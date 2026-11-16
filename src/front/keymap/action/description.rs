@@ -49,8 +49,10 @@ impl Action {
             Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
             Action::Back => "Go back to the place that the last jump left, or leave the outputs",
             Action::Forward => "Go forward again after going back",
-            Action::Search => "Search the cues, or the outputs, by name",
-            Action::SearchBackward => "Search the cues, or the outputs, by name, upwards",
+            Action::Search => "Search the cues, or the outputs, by the text of their columns",
+            Action::SearchBackward => {
+                "Search the cues, or the outputs, by the text of their columns, upwards"
+            }
             Action::NextMatch => "Select the next match of the search, in its direction",
             Action::PreviousMatch => {
                 "Select the next match of the search, in the opposite direction"

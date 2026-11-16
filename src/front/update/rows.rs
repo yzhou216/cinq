@@ -87,21 +87,21 @@ impl App {
         }
     }
 
-    /// Returns the texts of each row that a search matches: the name and the
-    /// number of a cue, or the name of an output
-    pub(super) fn row_texts(&self) -> Vec<Vec<&str>> {
+    /// Returns the texts of each row that a search matches: those that the row
+    /// shows in its columns, but for the state, as Vim searches a whole line
+    pub(super) fn row_texts(&self) -> Vec<Vec<String>> {
         match self.rows() {
             Rows::Cues(_) => self
                 .current()
                 .cues
                 .iter()
-                .map(|cue| vec![cue.name.as_str(), cue.number.as_str()])
+                .map(|cue| view::cue_texts(&self.workspace, self.current(), cue))
                 .collect(),
             Rows::Outputs => self
                 .workspace
                 .outputs()
                 .iter()
-                .map(|output| vec![output.name.as_str()])
+                .map(|output| view::output_texts(self, output))
                 .collect(),
         }
     }

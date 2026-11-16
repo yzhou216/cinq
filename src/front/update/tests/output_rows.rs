@@ -246,13 +246,13 @@ fn accepting_a_search_in_the_outputs_is_a_jump_and_next_and_previous_match_repea
         outputs(),
         [
             Message::Search { backward: false },
-            Message::Searching("o".to_owned()),
+            Message::Searching("r".to_owned()),
             Message::SearchAccepted,
         ],
     );
     assert!(accepted.search.is_none());
     assert_eq!(at(&accepted), 2);
-    // Names holding an o, after House R: Monitor, Front fill is no match
+    // Rows holding an r, after House R: Monitor, as Sub has none
     let next = after(accepted, [Message::SearchStep(1)]);
     assert_eq!(at(&next), 4);
     let previous = after(next, [Message::SearchStep(-1)]);

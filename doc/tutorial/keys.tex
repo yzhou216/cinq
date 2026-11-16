@@ -43,7 +43,7 @@ Move down a page & \key{Control+f} & \key{PageDown} \\
 Show the next inspector tab & \key{g t} & \key{Control+Tab} \\
 Go back to the place before the last jump, or leave the outputs & \key{Control+o} & \key{Alt+ArrowLeft} \\
 Go forward again & \key{Control+i} & \key{Alt+ArrowRight} \\
-Search the cues, or the outputs, by name & \key{/} & \key{Control+f} \\
+Search the cues, or the outputs, by their text & \key{/} & \key{Control+f} \\
 Select the next match & \key{n} & \key{F3} \\
 Show or hide the help & \key{F1} & \key{F1} \\
 Pick the highlighted option of an open menu & \key{Control+y} & \key{Enter} \\
@@ -114,7 +114,8 @@ A long cue list is easier to search than to scroll.
 \item Press the search key, \key{/} in the vi keymap, or \key{?} to search
   up the list.  The cua keymap uses \key{Control+f}.  A search line opens at
   the left of the status bar.
-\item Type part of a cue's name or number.  The selection moves to the first
+\item Type part of what the list shows of a cue, such as its name, its number,
+  or the file that it plays.  The selection moves to the first
   cue after the selection that holds the text, in any case, and the list
   scrolls to it.  The search wraps around the list and ends on the selection,
   so that the selection is the match only when no other cue holds the text.

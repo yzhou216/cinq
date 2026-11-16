@@ -265,7 +265,7 @@ fn descriptions_name_the_rows_that_show_and_never_both() {
     );
     assert_eq!(
         Action::Search.description_in(outputs),
-        "Search the outputs by name"
+        "Search the outputs by the text of their columns"
     );
     Action::VARIANTS.iter().for_each(|action| {
         [cues, outputs].into_iter().for_each(|rows| {

@@ -475,15 +475,22 @@ The key of *search* opens a search line at the left of the status bar, where
 the status stood, which reads a slash and then the text typed, and the key of
 *search_backward* opens it with a question mark for a search up the list.
 As the text changes, the selection moves to the first cue of the list on
-screen, from the cue after the selected one down, whose name or number holds
-the text, in any case, and the list scrolls to it.
+screen, from the cue after the selected one down, one of whose columns holds the
+text, in any case, and the list scrolls to it.
+The columns are the number, type, name, target, action, and then, as the list
+shows them, so that a search for *rumble* finds the cue of *rumble.ogg*, as a
+search of Vim finds the text of a whole line.
+The waits and the state are left out, since they are timings and what the
+show has made of a cue.
 A search up the list begins at the cue before the selected one.
 The search wraps around the list and ends on the selected cue, as a search of
 Vim does from the start of a line, so that the selected cue is the match only
 when no other cue holds the text.
 While the outputs show in place of the cue list, the search goes through the
-names of the outputs in the same way, by the same rules, and never looks at
-the cues out of sight.
+name, the device, the channels, and the new cues of the outputs, as the table
+shows them, in the same way, by the same rules, and never looks at the cues out
+of sight.
+The number of a row and the state are left out.
 Enter accepts the search and closes the line, and remembers the text and the
 direction for *next_match* and *previous_match*.
 *next_match* finds the next cue that holds the text in the direction of the
@@ -630,7 +637,7 @@ actions of half and whole pages, of scrolling by a row, of the rows in view,
 and of placing the selected row in view, which only matter once there are more
 outputs than rows in the view.
 *search*, *search_backward*, *next_match*, and *previous_match* search the
-names of the outputs, in any case, with the rules of *SEARCHING*, and the
+columns of the outputs, in any case, with the rules of *SEARCHING*, and the
 line tells that no output matches.
 *first* and *last* with a count, and the searches, are jumps there, as they
 are for cues.

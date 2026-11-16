@@ -4,8 +4,8 @@
 
 //! Which rows a search finds, and in what order
 //!
-//! A row is the texts that a search matches: the name and the number of a
-//! cue, or the name of an output.
+//! A row is the texts that a search matches: those that its columns show, but
+//! for the state.
 
 /// Returns the `count` rows that follow `row` down the list, wrapping around
 /// and ending on `row`, or up the list when `backward`.  Without a row they
@@ -34,7 +34,7 @@ pub(super) fn wrapped(from: usize, to: usize, backward: bool) -> bool {
 
 /// Returns whether one of the texts of a row holds `needle`, which is
 /// lowercase, in any case
-pub(super) fn matches(texts: &[&str], needle: &str) -> bool {
+pub(super) fn matches(texts: &[String], needle: &str) -> bool {
     !needle.is_empty()
         && texts
             .iter()
@@ -44,7 +44,7 @@ pub(super) fn matches(texts: &[&str], needle: &str) -> bool {
 /// Returns the first row after `row` that matches `text`, wrapping around,
 /// so that `row` is the last to match
 pub(super) fn found(
-    rows: &[Vec<&str>],
+    rows: &[Vec<String>],
     text: &str,
     row: Option<usize>,
     backward: bool,
@@ -54,7 +54,7 @@ pub(super) fn found(
 }
 
 /// Returns how many rows hold `text`
-pub(super) fn matching(rows: &[Vec<&str>], text: &str) -> usize {
+pub(super) fn matching(rows: &[Vec<String>], text: &str) -> usize {
     let needle = text.to_lowercase();
     rows.iter().filter(|texts| matches(texts, &needle)).count()
 }

@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Searching the rows in the main window, the cues of the list on screen by
-//! name and number or the outputs by name, as Vim searches text
+//! Searching the rows in the main window, the cues of the list on screen or
+//! the outputs, by the text of their columns, as Vim searches text
 //!
 //! The search line opens at the left of the status bar, and the selection
 //! follows the text typed, as with Vim's `incsearch`.  A search looks from

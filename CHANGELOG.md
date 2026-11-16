@@ -10,6 +10,12 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A search matches the text of every column that the list shows of a row, as
+  Vim's search matches the whole line, and no longer the name and number of a
+  cue or the name of an output alone: the number, type, name, target, action,
+  and then of a cue, and the name, device, channels, and new cues of an output,
+  but not the waits or the state.  `/rumble` finds the cue of `rumble.ogg`, and
+  `/Dante` the outputs on that device.
 - Each visit to a field, such as the name of a cue or of an output, is one step
   of undo, where two visits in a row, each ended by leaving the field, undid as
   one.  A click, or a move to a field, ends a visit as well.
@@ -186,7 +192,7 @@ Major changes and improvements in each release of cinq, newest first.
   G, the keys of half and whole pages, the keys that scroll by a row, select
   a row in view, or place the selected row, and the search keys, do the same
   to the outputs while they show, by the code that the two share, and the
-  search looks for the names of outputs.  The outputs now show their titles
+  search looks through the outputs.  The outputs now show their titles
   above the rows, as the cue list does.
 - Showing the outputs and leaving them are jumps, so that Control+o in the
   vi keymap, or Alt+ArrowLeft, goes back from the outputs to the cue list

@@ -32,6 +32,7 @@ mod outputs;
 mod paging;
 mod scrolling;
 mod search;
+mod search_columns;
 mod search_line;
 mod search_places;
 mod side_buttons;
