@@ -18,8 +18,11 @@ use iced::{
     widget::operation::{self, AbsoluteOffset, RelativeOffset},
 };
 
+use super::{
+    focus_order::move_focus, reveal_focused::reveal_focused, select_focused::select_focused,
+};
 use crate::front::{
-    App, Focus, Message, Tab,
+    App, Caret, Focus, Message, Tab,
     keymap::{Action, KeyPress, Press},
     view,
 };
@@ -103,19 +106,27 @@ impl App {
     /// keys typed there would never reach the field.
     pub(super) fn focused(self, focus: Focus) -> (Self, Task<Message>) {
         match focus {
-            Focus::Name | Focus::Next | Focus::Previous if self.stage.has_keyboard() => {
+            Focus::Name(_) | Focus::Next | Focus::Previous if self.stage.has_keyboard() => {
                 (self, Task::none())
             }
-            Focus::Name if self.editable() && self.selected.is_some() => (
+            Focus::Name(caret) if self.editable() && self.selected.is_some() => (
                 Self {
                     tab: Tab::Basics,
                     ..self
                 },
-                operation::focus(view::NAME),
+                match caret {
+                    // Focusing puts the caret at the end, as Vim's `A` does
+                    Caret::End => operation::focus(view::NAME),
+                    Caret::Start => operation::focus(view::NAME)
+                        .chain(operation::move_cursor_to_front(view::NAME)),
+                    Caret::All => {
+                        operation::focus(view::NAME).chain(operation::select_all(view::NAME))
+                    }
+                },
             ),
-            Focus::Name => (self, Task::none()),
-            Focus::Next => (self.without_search(), operation::focus_next()),
-            Focus::Previous => (self.without_search(), operation::focus_previous()),
+            Focus::Name(_) => (self, Task::none()),
+            Focus::Next => (self.without_search(), reached(move_focus(false))),
+            Focus::Previous => (self.without_search(), reached(move_focus(true))),
             Focus::Cues => (self, operate(focusable::unfocus())),
         }
     }
@@ -126,4 +137,11 @@ impl App {
 pub(super) fn key_press(event: keyboard::Event) -> Option<Message> {
     let KeyPress { press, repeat, .. } = KeyPress::of(&event)?;
     press.map(|press| Message::Typed { press, repeat })
+}
+
+/// Selects the text of the field that a move by key reached, so that typing
+/// replaces it as in desktop programs, while a click keeps the caret where
+/// it fell, and scrolls the sidebar to show the list if it is in it
+fn reached(moved: Task<Message>) -> Task<Message> {
+    moved.chain(select_focused()).chain(reveal_focused())
 }

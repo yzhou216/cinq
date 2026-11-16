@@ -23,12 +23,22 @@ pub use line::LineKey;
 pub use scrolling::{Height, Page};
 pub use tab::Tab;
 
+/// Where the caret lands in a field that a key focuses, and what it selects
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Caret {
+    End,
+    Start,
+    /// Every character selected, so that typing replaces them
+    All,
+}
+
 /// Text field that keys move the keyboard focus to, since iced itself
 /// moves it only on clicks
 #[derive(Debug, Clone)]
 pub enum Focus {
-    /// Name field of the inspector, for editing the selected cue
-    Name,
+    /// Name field of the inspector, for editing the selected cue, with the
+    /// caret where the operator asked for it
+    Name(Caret),
     /// Next field, or the first one when no field has focus
     Next,
     Previous,

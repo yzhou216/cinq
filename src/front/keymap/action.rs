@@ -4,15 +4,11 @@
 
 //! Actions that keys can be bound to
 
+mod message;
+
 use strum::{EnumString, IntoStaticStr, VariantArray};
 
-use crate::{
-    back::Place,
-    front::{
-        Focus, Message,
-        message::{Height, Page},
-    },
-};
+use crate::front::message::Page;
 
 /// [`Action::VARIANTS`] lists every action in the order of the help page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, IntoStaticStr, VariantArray)]
@@ -49,6 +45,8 @@ pub enum Action {
     Standby,
     Cancel,
     Edit,
+    EditStart,
+    ChangeName,
     NextField,
     PreviousField,
     AddBelow,
@@ -119,7 +117,9 @@ impl Action {
             Action::Cancel => {
                 "Drop the keys typed so far, close the search line, and leave a field"
             }
-            Action::Edit => "Edit the name of the selected cue",
+            Action::Edit => "Edit the name of the selected cue, with the caret at its end",
+            Action::EditStart => "Edit the name of the selected cue, with the caret at its start",
+            Action::ChangeName => "Change the name of the selected cue, selecting all of it",
             Action::NextField => "Move to the next field",
             Action::PreviousField => "Move to the previous field",
             Action::AddBelow => "Add a cue below the selection",
@@ -224,83 +224,5 @@ impl Action {
             Action::PageUp => Some(Page::WholeUp),
             _ => None,
         }
-    }
-
-    pub fn message(self, count: Option<usize>) -> Message {
-        let times = count.unwrap_or(1);
-        let step = isize::try_from(times).unwrap_or(isize::MAX);
-        match self {
-            Action::Go => Message::Go,
-            Action::Panic => Message::Panic,
-            Action::Next => Message::Step(step),
-            Action::Previous => Message::Step(-step),
-            Action::NextList => Message::StepList(step),
-            Action::PreviousList => Message::StepList(-step),
-            Action::First => Message::Row(times),
-            Action::Last => Message::Row(count.unwrap_or(usize::MAX)),
-            Action::HalfPageDown => Message::Page(Page::HalfDown, count),
-            Action::HalfPageUp => Message::Page(Page::HalfUp, count),
-            Action::PageDown => Message::Page(Page::WholeDown, count),
-            Action::PageUp => Message::Page(Page::WholeUp, count),
-            Action::ScrollDown => Message::Scroll(step),
-            Action::ScrollUp => Message::Scroll(-step),
-            Action::TopRow => Message::InView(Height::Top, count),
-            Action::MiddleRow => Message::InView(Height::Middle, count),
-            Action::BottomRow => Message::InView(Height::Bottom, count),
-            Action::RowToMiddle => Message::Place(Height::Middle, count),
-            Action::RowToTop => Message::Place(Height::Top, count),
-            Action::RowToBottom => Message::Place(Height::Bottom, count),
-            Action::NextTab => count.map_or(Message::StepTab(1), Message::ShowTab),
-            Action::PreviousTab => Message::StepTab(-step),
-            Action::Back => Message::Back(times),
-            Action::Forward => Message::Forward(times),
-            Action::Search => Message::Search { backward: false },
-            Action::SearchBackward => Message::Search { backward: true },
-            Action::NextMatch => Message::SearchStep(step),
-            Action::PreviousMatch => Message::SearchStep(-step),
-            Action::Standby => Message::StandbySelected,
-            Action::Cancel => Message::Cancel,
-            Action::Edit => Message::Focus(Focus::Name),
-            Action::NextField => Message::Focus(Focus::Next),
-            Action::PreviousField => Message::Focus(Focus::Previous),
-            Action::AddBelow => Message::Add(Place::After, times),
-            Action::AddAbove => Message::Add(Place::Before, times),
-            Action::MoveDown => Message::Move(step),
-            Action::MoveUp => Message::Move(-step),
-            Action::Delete => Message::Delete(times),
-            Action::Copy => Message::Copy(times),
-            Action::Cut => Message::Cut(times),
-            Action::PasteBelow => Message::Paste(Place::After, times),
-            Action::PasteAbove => Message::Paste(Place::Before, times),
-            Action::Undo => Message::Undo(times),
-            Action::Redo => Message::Redo(times),
-            Action::Open => Message::Open,
-            Action::Save => Message::Save,
-            Action::SaveAs => Message::SaveAs,
-            Action::Fullscreen => Message::ToggleFullscreen,
-            Action::Help => Message::ToggleHelp,
-            Action::CloseHelp => Message::CloseHelp,
-        }
-    }
-
-    /// Returns whether the action edits the show or fills the clipboard, which
-    /// the stage window leaves to the main window: the operator cannot see the
-    /// cue list from there, so a key held down by mistake would change cues
-    /// out of sight
-    pub fn edits_the_show(self) -> bool {
-        matches!(
-            self,
-            Action::AddBelow
-                | Action::AddAbove
-                | Action::Cut
-                | Action::Copy
-                | Action::PasteBelow
-                | Action::PasteAbove
-                | Action::Delete
-                | Action::MoveDown
-                | Action::MoveUp
-                | Action::Undo
-                | Action::Redo
-        )
     }
 }

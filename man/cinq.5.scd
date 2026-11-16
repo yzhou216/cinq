@@ -254,7 +254,13 @@ of the help page.
 :  Control+c
 :  none
 |  edit
-:  i
+:  i, a, A
+:  none
+|  edit_start
+:  I
+:  none
+|  change_name
+:  c c, S
 :  F2
 |  next_field
 :  Tab
@@ -505,14 +511,24 @@ A text field of the inspector, or a drop-down list
 	A click gives a text field the keyboard, and the keys of *next_field* and
 	*previous_field* move it from one text field or drop-down list to the
 	next, which shows a border in the color of focus.
+	A text field that these keys reach has its text selected, so that typing
+	replaces it, whereas a click puts the caret where it fell.
+	From the cue list, *next_field* goes first to the first field of the
+	inspector, so that the settings of what is selected are one key away, and
+	then on through the rest of the inspector, the toolbar, and the sidebar,
+	and round again, which *previous_field* does the other way.
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
 	*panic*, *cancel*, *next_field*, *previous_field*, *back*, *forward*, *open*,
 	*save*, and *save_as*, which act unless a text field takes them for typing.
 	A drop-down list that is closed lets the keys of *undo* and *redo* act as
 	well, since it has no text to undo, so that a change made from the list
 	can be taken back with the keyboard still there.
-	Enter leaves a text field, and opens the menu of a drop-down list, which
-	takes the keyboard from there.
+	A list of the sidebar, which scrolls in a low window, scrolls into view as
+	these keys reach it, with its title above it.
+	Enter in the empty File field of a cue opens the dialog that chooses the
+	file, as the Choose button does.
+	Anywhere else Enter leaves a text field, and opens the menu of a drop-down
+	list, which takes the keyboard from there.
 
 The help page
 	The page fills the main window, while the stage window keeps showing the
@@ -546,8 +562,9 @@ The menu of a drop-down list
 
 While the stage window has the keyboard, as the window manager may leave it
 once the stage window opens, and as each GO that makes it fullscreen gives
-it, *edit*, *next_field*, and *previous_field* do nothing, since the keys
-typed there would never reach a field of the main window.
+it, *edit*, *edit_start*, *change_name*, *next_field*, and *previous_field* do
+nothing, since the keys typed there would never reach a field of the main
+window.
 The keys that change the show or fill the clipboard do nothing there either:
 *add_below*, *add_above*, *cut*, *copy*, *paste_below*, *paste_above*,
 *delete*, *move_down*, *move_up*, *undo*, and *redo*, and the operators that
@@ -557,9 +574,10 @@ The keys of *go*, *panic*, and *standby*, and those that move the selection,
 act as before.
 A click on the main window gives it the keyboard.
 
-Show mode locks editing: *edit*, *add_below*, *add_above*, *move_down*,
-*move_up*, *delete*, *cut*, *paste_below*, and *paste_above* do nothing in it,
-and *undo* and *redo* only move standby back and forth.
+Show mode locks editing: *edit*, *edit_start*, *change_name*, *add_below*,
+*add_above*, *move_down*, *move_up*, *delete*, *cut*, *paste_below*, and
+*paste_above* do nothing in it, and *undo* and *redo* only move standby back
+and forth.
 Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
 read-only buffer.
 
@@ -769,7 +787,21 @@ page.
 	While keys wait or the search line is open, the status bar hints its key.
 
 *edit*
-	Edit the name of the selected cue.
+	Edit the name of the selected cue: show the Basics tab and put the caret
+	at the end of the name, as Vim's *a* and *A* do at the end of a line.
+
+*edit_start*
+	Edit the name of the selected cue with the caret at the start of the name,
+	as Vim's *I* does.
+
+*change_name*
+	Edit the name of the selected cue with all of it selected, so that typing
+	replaces it, as Vim's *c c* and *S* change a whole line.
+	In the cua keymap it is *F2*, which selects the name as a rename does in
+	desktop file managers.
+	Enter leaves the field with the name unchanged unless a key was typed.
+	Unlike in Vim, *c* is no operator, so only *c c* begins a change, and a *c*
+	before any other key is dropped with that key, as *TYPING* describes.
 
 *next_field*
 	Move the keyboard to the next field: a text field or drop-down list of the
@@ -857,6 +889,10 @@ page.
 	Undoing an addition or a paste, of all the cues that a count made, selects
 	the cue that it went below or above, as the cursor of Vim goes back to
 	where the change was made.
+	The keys typed into a field during one visit to it are one change, and a
+	visit that the keyboard ends by leaving the field, or that a click or a move
+	to a field begins again, is a change of its own, as each stay in insert mode
+	is in Vim.
 
 *redo*
 	Redo the change undone last, or as many changes as the count, stopping at

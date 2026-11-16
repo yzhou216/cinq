@@ -45,6 +45,10 @@ pub const CUES: &str = "cues";
 /// scroll
 pub const SELECTED: &str = "selected";
 
+/// Identity of the sidebar, through which the list that Tab reached scrolls
+/// into view
+pub const SIDEBAR_SCROLL: &str = "sidebar";
+
 /// Identity of the help page, which the keys that move the selection
 /// scroll while it is open
 pub const HELP: &str = "help";
@@ -52,6 +56,10 @@ pub const HELP: &str = "help";
 /// Identity of the Name field, through which the key of the edit action
 /// gives it the keyboard focus
 pub const NAME: &str = "name";
+
+/// Identity of the inspector, whose first field the first Tab from the cue
+/// list reaches
+pub const INSPECTOR: &str = "inspector";
 
 /// Identity of the search line in the status bar, through which the key of
 /// the search action gives it the keyboard focus
@@ -70,7 +78,7 @@ pub fn line_height() -> f32 {
     f32::from(LineHeight::default().to_absolute(TEXT_SIZE))
 }
 
-const SPACING: f32 = 10.0;
+pub const SPACING: f32 = 10.0;
 
 /// Widest that the sidebar grows
 const SIDEBAR: f32 = 300.0;

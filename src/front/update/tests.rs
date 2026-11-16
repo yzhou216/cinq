@@ -7,7 +7,7 @@
 //! window, the selection after deleting or undo takes the selected cue
 //! away, the selection that follows standby, the sound file chosen for a
 //! new cue, a level typed halfway, a link of the help page that fails to
-//! open, and the clipboard
+//! open, the clipboard, and the keys that enter the name of a cue
 
 mod adding;
 mod cancel;
@@ -15,11 +15,13 @@ mod clipboard;
 mod clipped;
 mod clock;
 mod counts;
+mod field_runs;
 mod help_page;
 mod history;
 mod inputs;
 mod loading;
 mod matches;
+mod naming;
 mod operators;
 mod operators_pasting;
 mod paging;
@@ -36,6 +38,7 @@ use std::ops::RangeInclusive;
 
 use iced::{
     Task,
+    advanced::widget::operation::{Focusable, TextInput},
     keyboard::{Key, Modifiers, key::Named},
 };
 
@@ -100,6 +103,55 @@ pub(super) fn typing_task(app: App, keys: &str) -> (App, Task<Message>) {
 /// Returns the state after the keys of [`typing_task`]
 pub(super) fn typing(app: App, keys: &str) -> App {
     typing_task(app, keys).0
+}
+
+/// Widget that can have the keyboard and select its text, which the tests of
+/// operations visit as iced does
+#[derive(Default)]
+pub(super) struct Field {
+    pub(super) focused: bool,
+    pub(super) selected: bool,
+}
+
+impl Field {
+    pub(super) fn new(focused: bool) -> Self {
+        Self {
+            focused,
+            ..Self::default()
+        }
+    }
+}
+
+impl Focusable for Field {
+    fn is_focused(&self) -> bool {
+        self.focused
+    }
+
+    fn focus(&mut self) {
+        self.focused = true;
+    }
+
+    fn unfocus(&mut self) {
+        self.focused = false;
+    }
+}
+
+impl TextInput for Field {
+    fn text(&self) -> &str {
+        ""
+    }
+
+    fn move_cursor_to_front(&mut self) {}
+
+    fn move_cursor_to_end(&mut self) {}
+
+    fn move_cursor_to(&mut self, _position: usize) {}
+
+    fn select_all(&mut self) {
+        self.selected = true;
+    }
+
+    fn select_range(&mut self, _start: usize, _end: usize) {}
 }
 
 /// Returns the keys that act in text fields, apart from those of GO and

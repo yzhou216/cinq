@@ -58,6 +58,15 @@ impl Workspace {
         }
     }
 
+    /// Returns the workspace with the run of edits in a row ended, so that the
+    /// next edit of the same setting is a change of its own
+    pub(in crate::back::workspace) fn run_ended(self) -> Self {
+        Self {
+            history: self.history.closed(),
+            ..self
+        }
+    }
+
     /// Returns the workspace after GO has moved the standby of a list on,
     /// so that undo no longer moves it back
     pub(in crate::back::workspace) fn played_from(self, list: usize) -> Self {

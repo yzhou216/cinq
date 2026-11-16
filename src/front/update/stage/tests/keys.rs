@@ -11,7 +11,7 @@ use super::{focusing, show};
 use crate::{
     back::{CueId, Kind},
     front::{
-        App, Focus, Message,
+        App, Caret, Focus,
         update::tests::{field_keys, press},
     },
 };
@@ -19,19 +19,16 @@ use crate::{
 #[test]
 fn no_field_takes_the_keyboard_while_the_stage_window_has_it() {
     let (open, _) = show(Kind::Video).staged();
-    let stage = open.stage.window().expect("the stage window opens");
-    let main = open.main.expect("the main window opens");
     let selected = App {
         selected: Some(CueId(1)),
         ..open
     };
-    let (staged, _) = selected.handled(Message::WindowFocused(stage));
-    let (staged, naming) = staged.focused(Focus::Name);
+    let staged = focusing(selected, true);
+    let (staged, naming) = staged.focused(Focus::Name(Caret::End));
     let (staged, next) = staged.focused(Focus::Next);
     let (staged, previous) = staged.focused(Focus::Previous);
     assert_eq!((naming.units(), next.units(), previous.units()), (0, 0, 0));
-    let (back, _) = staged.handled(Message::WindowFocused(main));
-    let (_, naming) = back.focused(Focus::Name);
+    let (_, naming) = focusing(staged, false).focused(Focus::Name(Caret::End));
     assert_eq!(naming.units(), 1);
 }
 

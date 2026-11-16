@@ -12,7 +12,7 @@ use iced::{
     widget::{column, progress_bar, radio, row, rule, scrollable, text},
 };
 
-use super::{SPACING, button, format, warnings};
+use super::{SIDEBAR_SCROLL, SPACING, button, format, warnings};
 use crate::{
     back::{Active, Cue},
     front::{App, Message},
@@ -88,6 +88,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         .width(Fill),
     )
     .spacing(0)
+    .id(SIDEBAR_SCROLL)
     .width(width)
     .height(Fill)
     .into()

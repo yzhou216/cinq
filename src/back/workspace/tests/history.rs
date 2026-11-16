@@ -189,3 +189,22 @@ fn change_names_the_cue_it_concerns_unless_it_concerns_none() {
     assert_eq!(cue(base().apply(add(0, Kind::Memo, Place::End))), new);
     assert_eq!(cue(base().apply(move_standby(3))), None);
 }
+
+#[test]
+fn an_ended_run_of_edits_leaves_the_next_edit_of_the_setting_a_change_of_its_own() {
+    let typed = workspace(vec![audio(1)])
+        .apply(rename(1, "S"))
+        .apply(rename(1, "St"))
+        .apply(Command::EndRun)
+        .apply(rename(1, "Sto"))
+        .apply(rename(1, "Storm"));
+    let first = typed.apply(Command::Undo);
+    assert_eq!(name(&first, 1), Some("St"));
+    assert_eq!(name(&first.apply(Command::Undo), 1), Some("Sound"));
+    // Ending a run that is not there changes nothing, and later edits join
+    let calm = workspace(vec![audio(1)])
+        .apply(Command::EndRun)
+        .apply(rename(1, "S"))
+        .apply(rename(1, "St"));
+    assert_eq!(name(&calm.apply(Command::Undo), 1), Some("Sound"));
+}

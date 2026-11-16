@@ -8,11 +8,14 @@ mod field;
 
 use iced::{
     Center, Element, Fill,
-    widget::{checkbox, column, progress_bar, radio, row, rule, slider, table, text, text_input},
+    widget::{
+        checkbox, column, container, progress_bar, radio, row, rule, slider, table, text,
+        text_input,
+    },
 };
 use strum::VariantArray;
 
-use super::{SPACING, char_width, format, keep_keys, theme};
+use super::{INSPECTOR, SPACING, char_width, format, keep_keys, theme};
 use crate::{
     back::{Cue, Edit, Kind, LEVELS, Media, parse_level},
     front::{App, Message, Tab},
@@ -51,10 +54,13 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         None => text("Select a cue to inspect it").into(),
     };
     keep_keys(
-        row![tabs, rule::vertical(1), body]
-            .spacing(SPACING)
-            .padding(SPACING)
-            .height(240),
+        container(
+            row![tabs, rule::vertical(1), body]
+                .spacing(SPACING)
+                .padding(SPACING)
+                .height(240),
+        )
+        .id(INSPECTOR),
         &app.config.keymap,
     )
 }

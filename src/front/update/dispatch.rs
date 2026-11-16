@@ -71,12 +71,21 @@ impl App {
         );
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);
+        // A field that the keyboard enters or leaves ends the run of edits to its
+        // text, so that each visit makes a change of its own to undo, as each
+        // stay in insert mode does in Vim
+        let ends = matches!(message, Message::Focus(_) | Message::Clicked);
+        let this = if ends {
+            self.send(Command::EndRun)
+        } else {
+            self
+        };
         let app = Self {
-            keys: if typing { self.keys } else { Vec::new() },
-            clipped: self.clipped.filter(|_| typing),
-            remark: self.remark.filter(|_| typing),
-            typed_level: self.typed_level.filter(|_| passive || clicked),
-            ..self
+            keys: if typing { this.keys } else { Vec::new() },
+            clipped: this.clipped.filter(|_| typing),
+            remark: this.remark.filter(|_| typing),
+            typed_level: this.typed_level.filter(|_| passive || clicked),
+            ..this
         };
         let (app, task) = app.handled(message);
         let app = Self {

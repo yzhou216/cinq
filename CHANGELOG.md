@@ -134,6 +134,26 @@ Major changes and improvements in each release of cinq, newest first.
   everything before it, and `ArrowUp` and `ArrowDown` recall the older and newer
   of the last fifty searches accepted that start with the text typed.  The keys
   act on the end of the text.
+- The vi keymap enters the name of the selected cue as Vim enters text: `i`,
+  `a`, and `A` put the caret at its end, `I` at its start, and `cc` and `S`
+  select all of it, so that typing replaces it.  The cua keymap selects the
+  whole name with `F2`, as desktop file managers do, and in both keymaps `Tab`
+  and `Shift+Tab` select the text of the field that they reach, while a click
+  puts the caret where it fell.  The new `edit_start` action has no key in the
+  cua keymap, `change_name` has `F2`, and `c` is no operator, so only `cc`
+  begins a change.
+- `Tab` from the cue list goes first to the first field of the inspector, so
+  that the settings of the selected cue are one key away.  It then goes on
+  through the rest of the inspector, the toolbar, and the sidebar, and round
+  again, and `Shift+Tab` goes the other way.
+- `Tab` onto a list of the sidebar scrolls it into view, with its title, where
+  a warning in a low window pushed the Audio device list out of sight.
+- Enter in the empty File field of an audio, video, or picture cue opens the
+  dialog that chooses the file, which Tab never reaches since it skips the
+  Choose button.
+- Each visit to a field, such as the name of a cue, is one step of undo, where
+  two visits in a row undid as one.  A click, or a move to a field, ends a
+  visit.
 
 ## v0.1.4
 
