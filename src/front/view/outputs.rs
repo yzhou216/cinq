@@ -49,6 +49,10 @@ const SQUEEZED: f32 = 12.0;
 /// before it does
 const DEVICE_ROOM: f32 = 20.0;
 
+/// Most columns that the Device column asks for to keep a name on one line,
+/// past which the name wraps as it does in a narrow table
+const DEVICE_WIDEST: f32 = 32.0;
+
 /// What gives way to the Device column, the first to go first
 #[derive(Clone, Copy, PartialEq)]
 enum Yield {
@@ -88,20 +92,24 @@ impl Column {
         }
     }
 
+    /// Returns the width of the widest text of the column, its title among
+    /// them
+    fn widest(self, app: &App) -> f32 {
+        app.workspace
+            .outputs()
+            .iter()
+            .enumerate()
+            .map(|(row, output)| self.text(app, row, output).width())
+            .fold(<&str>::from(self).width(), usize::max) as f32
+            * char_width()
+    }
+
     /// Returns the width of the column.  Devices take what the others
     /// leave, which fit their widest text, so that the state of an output
     /// keeps to one line, and names wrap past [`NAME_ROOM`], unless `gone`
     /// has them give way to the device.
     fn width(self, app: &App, gone: &[Yield]) -> Length {
-        let widest = || {
-            app.workspace
-                .outputs()
-                .iter()
-                .enumerate()
-                .map(|(row, output)| self.text(app, row, output).width())
-                .fold(<&str>::from(self).width(), usize::max) as f32
-                * char_width()
-        };
+        let widest = || self.widest(app);
         let squeezed = |gives: Yield, room: f32| {
             let room = if gone.contains(&gives) {
                 SQUEEZED
@@ -120,9 +128,19 @@ impl Column {
     }
 }
 
+/// Returns the width that the Device column needs to keep its widest text
+/// on one line, and no more than [`DEVICE_WIDEST`] columns, so that a name
+/// too long for any table does not drive the New cues column away
+fn device_wanted(app: &App) -> f32 {
+    Column::Device
+        .widest(app)
+        .clamp(DEVICE_ROOM * char_width(), DEVICE_WIDEST * char_width())
+}
+
 /// Returns the columns that show and their widths, as many as keep the
-/// device [`DEVICE_ROOM`] columns in `room`, with the others giving way in
-/// turn, or as few as they can
+/// device on one line, or [`DEVICE_ROOM`] columns once the New cues column
+/// has gone, in `room`, with the others giving way in turn, or as few as
+/// they can
 fn fitting(app: &App, room: f32) -> Vec<(Column, Length)> {
     giving_way(
         &[Yield::NewCues, Yield::State, Yield::Name],
@@ -135,7 +153,14 @@ fn fitting(app: &App, room: f32) -> Vec<(Column, Length)> {
                 .map(|&column| (column, column.width(app, gone)))
                 .collect::<Vec<_>>()
         },
-        |columns| device_room(columns, room) >= DEVICE_ROOM * char_width(),
+        |columns| {
+            let wanted = if columns.iter().any(|(column, _)| *column == Column::NewCues) {
+                device_wanted(app)
+            } else {
+                DEVICE_ROOM * char_width()
+            };
+            device_room(columns, room) >= wanted
+        },
     )
 }
 

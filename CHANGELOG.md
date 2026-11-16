@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The outputs table drops its New cues column once the Device column cannot
+  show its widest name on one line, as at 1024x768 beside a Dante Virtual
+  Soundcard, and keeps the column in a wider window, where it fits.  The
+  inspector keeps the value as New cues send.
 - The sidebar lists the warnings above the Default device list, which a show
   sets once, so that at 1024x768 the header and the whole button of a
   warning show, where the button of a failing device was cut off at the
