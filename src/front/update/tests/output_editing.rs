@@ -306,7 +306,7 @@ fn a_cut_of_the_first_output_tells_where_cues_with_no_sends_play_now() {
     let told = cut.clipped.as_ref().map(|clipped| clipped.told.clone());
     assert_eq!(
         told.as_deref(),
-        Some("Cut the output House L, so that cues with no sends play on House R")
+        Some("Cues without sends play on House R, cut House L")
     );
     // Not when the first output stays or no cue is left without sends
     let kept = typed(on(2), "dd");
@@ -320,27 +320,28 @@ fn a_cut_of_the_first_output_tells_where_cues_with_no_sends_play_now() {
 fn a_change_of_the_first_output_tells_it_in_the_notice_of_the_change() {
     let notice = |app: &App| {
         let (_, change) = app.workspace.latest_change().expect("a change");
-        format::change(&app.workspace, change)
+        let facts = format::consequences_of(&app.workspace, change);
+        format::leading(facts, &format::change(&app.workspace, change))
     };
     let moved = after(on(1), [Message::Move(1)]);
     assert_eq!(
         notice(&moved),
-        "moved the output House L, so that cues with no sends play on House R"
+        "Cues without sends play on House R, moved House L"
     );
     let added = after(on(1), [Message::Add(Place::Before, 1)]);
     assert_eq!(
         notice(&added),
-        "added the output Output 1, so that cues with no sends play on Output 1"
+        "Cues without sends play on Output 1, added Output 1"
     );
     let deleted = after(on(1), [Message::Delete(1)]);
     assert_eq!(
         notice(&deleted),
-        "deleted the output House L, so that cues with no sends play on House R"
+        "Cues without sends play on House R, deleted House L"
     );
     let calm = after(on(3), [Message::Move(1)]);
-    assert_eq!(notice(&calm), "moved the output Sub");
+    assert_eq!(notice(&calm), "Moved the output Sub");
     let counted = after(on(3), [Message::Add(Place::After, 3)]);
-    assert_eq!(notice(&counted), "added 3 outputs");
+    assert_eq!(notice(&counted), "Added 3 outputs");
 }
 
 #[test]

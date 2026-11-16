@@ -115,18 +115,23 @@ pub(super) fn notice(app: &App) -> Option<String> {
     let workspace = &app.workspace;
     let (turn, change) = workspace.latest_change()?;
     let told = format::change(workspace, change);
+    let facts = format::consequences_of(workspace, change);
     let (told, action, next) = match turn {
-        Turn::Done => (capitalized(&told), Action::Undo, workspace.undoable()),
-        Turn::Undone => (format!("Undid: {told}"), Action::Redo, workspace.redoable()),
-        Turn::Redone => (format!("Redid: {told}"), Action::Undo, workspace.undoable()),
+        Turn::Done => (
+            format::leading(facts, &told),
+            Action::Undo,
+            workspace.undoable(),
+        ),
+        Turn::Undone => (
+            format::leading(facts, &format!("undid: {told}")),
+            Action::Redo,
+            workspace.redoable(),
+        ),
+        Turn::Redone => (
+            format::leading(facts, &format!("redid: {told}")),
+            Action::Undo,
+            workspace.undoable(),
+        ),
     };
     next.map(|_| answered(told, &app.config.keymap, action))
-}
-
-fn capitalized(text: &str) -> String {
-    text.chars()
-        .take(1)
-        .flat_map(char::to_uppercase)
-        .chain(text.chars().skip(1))
-        .collect()
 }

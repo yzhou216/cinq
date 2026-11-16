@@ -232,7 +232,7 @@ fn the_help_hint_beside_an_open_menu_reads_f1_in_the_vi_keymap() {
 }
 
 #[test]
-fn a_notice_that_does_not_fit_gives_way_at_a_word_and_keeps_the_keys_after_it() {
+fn a_notice_that_does_not_fit_drops_the_key_that_teaches_then_gives_way_at_a_word() {
     let told = "Cut the output House L, so that cues play on House R | p: paste | u: undo";
     let with_go = |told: Option<String>| -> Vec<(Option<Action>, String)> {
         told.into_iter()
@@ -243,11 +243,32 @@ fn a_notice_that_does_not_fit_gives_way_at_a_word_and_keeps_the_keys_after_it() 
     let shown = |room| shown(with_go, Some(told.to_owned()), room, &YIELDING);
     assert_eq!(shown(85), format!("{told} | Space: GO"));
     assert_eq!(shown(73), told, "the key gives way first");
+    // The key that pastes gives way before the notice does, and the key that
+    // takes the change back stays
+    let lighter = "Cut the output House L, so that cues play on House R | u: undo";
+    assert_eq!(shown(62), lighter);
     assert_eq!(
         shown(50),
-        "Cut the output House L, so… | p: paste | u: undo",
+        "Cut the output House L, so that cues… | u: undo",
         "the comma is not left before the ellipsis, nor half a word"
     );
-    assert_eq!(shown(46), "Cut the output House L… | p: paste | u: undo",);
+    assert_eq!(
+        shown(33),
+        "Cut the output House L | u: undo",
+        "a cut at a comma ends a clause that is whole"
+    );
+    assert_eq!(shown(29), "Cut the output… | u: undo");
     assert_eq!(shown(5), told, "with no word to cut at, it shows whole");
+}
+
+#[test]
+fn a_notice_cut_where_a_name_ended_in_an_ellipsis_gets_no_second_one() {
+    let told = "Cues play on Dante Virtual S…, deleted the output Sub | u: undo";
+    let bare = |told: Option<String>| -> Vec<(Option<Action>, String)> {
+        told.into_iter().map(|told| (None, told)).collect()
+    };
+    assert_eq!(
+        shown(bare, Some(told.to_owned()), 45, &YIELDING),
+        "Cues play on Dante Virtual S… | u: undo"
+    );
 }

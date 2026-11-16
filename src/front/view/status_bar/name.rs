@@ -24,7 +24,7 @@ const KEPT: usize = 16;
 
 /// Returns `name` cut after as many characters as leave room for an ellipsis
 /// in `room` columns, or whole where it fits
-pub(super) fn cut(name: &str, room: usize) -> String {
+pub(in crate::front::view) fn cut(name: &str, room: usize) -> String {
     if name.width() <= room {
         return name.to_owned();
     }

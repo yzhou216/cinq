@@ -27,7 +27,7 @@
 
 mod fit;
 mod hints;
-mod name;
+pub(super) mod name;
 #[cfg(test)]
 mod tests;
 

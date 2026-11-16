@@ -39,7 +39,7 @@ impl App {
                     .collect()
             })
             .unwrap_or_default();
-        self.registered(outputs, "Copied", false)
+        self.registered(outputs, "copied", false, None)
     }
 
     /// Cuts as [`App::copied_outputs`] copies, and deletes the outputs
@@ -48,17 +48,24 @@ impl App {
         let before = self.workspace.outputs().to_vec();
         let (app, taken) = self.taking_outputs(count, true);
         let told = format::consequences(&app.workspace, &before, app.workspace.outputs());
-        app.registered(taken, "Cut", true).told_with(told)
+        app.registered(taken, "cut", true, told)
     }
 
     /// Puts `outputs` in the register, if there are any, and tells what went
-    /// there by the `verb` that the status bar starts with
-    fn registered(self, outputs: Vec<Output>, verb: &str, cut: bool) -> Self {
+    /// there by the `verb`, in lower case, after `facts` of what it did to the
+    /// cues
+    fn registered(
+        self,
+        outputs: Vec<Output>,
+        verb: &str,
+        cut: bool,
+        facts: Option<String>,
+    ) -> Self {
         if outputs.is_empty() {
             return self;
         }
         let clipped = Clipped {
-            told: format::clipped_outputs(verb, &outputs),
+            told: format::clipped_outputs(verb, &outputs, facts),
             cut,
         };
         Self {
@@ -68,21 +75,6 @@ impl App {
                 outputs,
             }),
             clipped: Some(clipped),
-            ..self
-        }
-    }
-
-    /// Adds to what the latest copy or cut told
-    fn told_with(self, more: Option<String>) -> Self {
-        Self {
-            clipped: self.clipped.map(|clipped| Clipped {
-                told: [Some(clipped.told), more]
-                    .into_iter()
-                    .flatten()
-                    .collect::<Vec<_>>()
-                    .join(", "),
-                ..clipped
-            }),
             ..self
         }
     }

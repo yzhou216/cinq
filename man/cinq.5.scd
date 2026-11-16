@@ -668,7 +668,9 @@ name of the original, numbered from 2 on where another output has that name,
 no cue that sends to it, and new cues that do not send to it.
 Cues that name no sends play on the first output, so that cutting, adding,
 moving, or pasting at the first place changes where they play, which the
-status bar tells with the change.
+status bar tells first, as in *Cues without sends play on Sub*, with the
+names of outputs cut to 10 columns so that it fits in the bar of a small
+window, where the key of *paste* gives way to it.
 A cue that sends only to outputs that a cut or a delete took away plays on no
 output, so that the status bar counts such cues with the change, its State
 reads *NO OUTPUT* in yellow, and the sidebar lists it among the warnings, until

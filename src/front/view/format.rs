@@ -16,7 +16,7 @@ use crate::back::{
     Active, Advance, Change, Cue, CueList, Edit, Kind, Media, Output, Phase, Workspace,
     moved_output,
 };
-pub use consequences::consequences;
+pub use consequences::{consequences, consequences_of, leading, short};
 
 /// Formats seconds as `m:ss.s`
 fn clock(seconds: f64) -> String {
@@ -202,18 +202,30 @@ pub fn clipped(verb: &str, cues: &[Cue]) -> String {
     }
 }
 
-/// Tells what a copy or cut of outputs took with `verb`, by the name of the
-/// output, or else by how many outputs
-pub fn clipped_outputs(verb: &str, outputs: &[Output]) -> String {
-    match outputs {
-        [output] => format!("{verb} the output {}", output.name),
+/// Tells what a copy or cut of outputs took with `verb`, in lower case, by the
+/// name of the output, or else by how many outputs, after `facts` of what it
+/// did to the cues, which leave out the words that name the output as one
+pub fn clipped_outputs(verb: &str, outputs: &[Output], facts: Option<String>) -> String {
+    let told = match outputs {
+        [output] => format!("{verb} {}", the_output(&output.name, facts.is_some())),
         outputs => format!("{verb} {} outputs", outputs.len()),
+    };
+    leading(facts, &told)
+}
+
+/// Names an output as "the output Sub", or as "Sub" where `terse`, which
+/// leaves room for what a change did to the cues
+fn the_output(name: &str, terse: bool) -> String {
+    if terse {
+        short(name)
+    } else {
+        format!("the output {}", short(name))
     }
 }
 
 /// Describes a change to the outputs by what differs between them before
-/// and after it, and where the cues that name no outputs play now, when that
-/// changed
+/// and after it, leaving the words that name an output as one where the
+/// change did something to the cues, which [`consequences`] tells first
 fn outputs(
     workspace: &Workspace,
     before: &[Output],
@@ -221,6 +233,8 @@ fn outputs(
     cut: bool,
     pasted: bool,
 ) -> String {
+    let terse = consequences(workspace, before, after).is_some();
+    let the = |name: &str| the_output(name, terse);
     let removed = if cut { "cut" } else { "deleted" };
     let added = if pasted { "pasted" } else { "added" };
     let pairs = || {
@@ -230,9 +244,9 @@ fn outputs(
         })
     };
     let edited = pairs().find_map(|(was, now)| {
-        let name = &now.name;
+        let name = &short(&now.name);
         if was.name != now.name {
-            Some(format!("renamed the output {} to {name}", was.name))
+            Some(format!("renamed the output {} to {name}", short(&was.name)))
         } else if was.device != now.device {
             Some(format!("changed the device of the output {name}"))
         } else if was.channels != now.channels {
@@ -243,14 +257,13 @@ fn outputs(
             None
         }
     });
-    let moved =
-        || moved_output(before, after, None).map(|now| format!("moved the output {}", now.name));
-    let described = match (
+    let moved = || moved_output(before, after, None).map(|now| format!("moved {}", the(&now.name)));
+    match (
         missing(after, before).as_slice(),
         missing(before, after).as_slice(),
     ) {
-        ([output], []) => Some(format!("{added} the output {}", output.name)),
-        ([], [output]) => Some(format!("{removed} the output {}", output.name)),
+        ([output], []) => Some(format!("{added} {}", the(&output.name))),
+        ([], [output]) => Some(format!("{removed} {}", the(&output.name))),
         (put, []) if !put.is_empty() => Some(format!("{added} {} outputs", put.len())),
         ([], gone) if !gone.is_empty() => Some(format!("{removed} {} outputs", gone.len())),
         (put, deleted) if !put.is_empty() || !deleted.is_empty() => {
@@ -258,11 +271,7 @@ fn outputs(
         }
         _ => edited.or_else(moved),
     }
-    .unwrap_or_else(|| "changed the outputs".to_owned());
-    [Some(described), consequences(workspace, before, after)]
-        .into_iter()
-        .flatten()
-        .join(", ")
+    .unwrap_or_else(|| "changed the outputs".to_owned())
 }
 
 fn number(cue: &Cue) -> String {

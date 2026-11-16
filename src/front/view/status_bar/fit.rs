@@ -42,7 +42,7 @@ pub(super) fn fitted(
 /// as [`fitted`] joins them in `room` columns, and where they still do not
 /// fit once every key has given way, with the notice cut after the longest
 /// of its words that lets them fit.  The keys that follow the notice after
-/// a separator stay whole.
+/// a separator give way first, but for the last.
 pub(super) fn shown(
     hints: impl Fn(Option<String>) -> Vec<(Option<Action>, String)>,
     told: Option<String>,
@@ -61,16 +61,31 @@ pub(super) fn shown(
         .unwrap_or(full)
 }
 
-/// Returns `told` cut after each word of its first part in turn, the
-/// longest first, with an ellipsis in place of the rest of the part
+/// Returns `told` with the keys after its first part that only teach given up,
+/// all but the last, which takes the change back, then cut after each word of
+/// its first part in turn, the longest first, with an ellipsis in place of the
+/// rest of the part, which a comma needs not, since the clause before it is whole
 fn shortened(told: &str) -> impl Iterator<Item = String> + '_ {
     let head = told.split(LINE).next().unwrap_or(told);
     let rest = &told[head.len()..];
-    head.match_indices(' ')
+    let last = told
+        .rsplit_once(LINE)
+        .filter(|(before, _)| before.len() > head.len());
+    let rest = last.map_or(rest.to_owned(), |(_, last)| format!("{LINE}{last}"));
+    let lighter = last.map(|_| format!("{head}{rest}"));
+    let cuts = head
+        .match_indices(' ')
         .map(|(end, _)| end)
         .rev()
         .map(move |end| {
+            let clause = head[..end].ends_with(',');
             let kept = head[..end].trim_end_matches([',', ':', ';']);
-            format!("{kept}{ELLIPSIS}{rest}")
-        })
+            let stop = if clause || kept.ends_with(ELLIPSIS) {
+                ""
+            } else {
+                ELLIPSIS
+            };
+            format!("{kept}{stop}{rest}")
+        });
+    lighter.into_iter().chain(cuts)
 }
