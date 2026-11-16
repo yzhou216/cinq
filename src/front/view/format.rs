@@ -13,7 +13,7 @@ use std::path::Path;
 use itertools::Itertools;
 
 use crate::back::{
-    Active, Advance, Change, Cue, CueList, Edit, Kind, Media, Output, Phase, Workspace,
+    Active, Advance, Change, Cue, CueList, Edit, Kind, Media, Output, OutputId, Phase, Workspace,
     moved_output,
 };
 pub use consequences::{consequences, consequences_of, leading, short};
@@ -188,8 +188,9 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
             after,
             cut,
             pasted,
+            anchor,
             ..
-        } => outputs(workspace, before, after, *cut, *pasted),
+        } => outputs(workspace, before, after, (*cut, *pasted), *anchor),
     }
 }
 
@@ -230,8 +231,8 @@ fn outputs(
     workspace: &Workspace,
     before: &[Output],
     after: &[Output],
-    cut: bool,
-    pasted: bool,
+    (cut, pasted): (bool, bool),
+    selected: Option<OutputId>,
 ) -> String {
     let terse = consequences(workspace, before, after).is_some();
     let the = |name: &str| the_output(name, terse);
@@ -257,7 +258,8 @@ fn outputs(
             None
         }
     });
-    let moved = || moved_output(before, after, None).map(|now| format!("moved {}", the(&now.name)));
+    let moved =
+        || moved_output(before, after, selected).map(|now| format!("moved {}", the(&now.name)));
     match (
         missing(after, before).as_slice(),
         missing(before, after).as_slice(),

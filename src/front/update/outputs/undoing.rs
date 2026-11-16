@@ -50,7 +50,12 @@ impl App {
                 let anchor = *anchor;
                 let before = app.workspace.outputs().to_vec();
                 let app = app.send(command.clone());
-                let touched = touched(app.workspace.outputs(), &before, app.output, anchor);
+                let touched = touched(
+                    app.workspace.outputs(),
+                    &before,
+                    anchor.or(app.output),
+                    anchor,
+                );
                 ControlFlow::Continue(Self {
                     output: touched.or(app.output),
                     ..app

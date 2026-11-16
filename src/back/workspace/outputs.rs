@@ -174,7 +174,7 @@ impl Workspace {
         let mut outputs = self.outputs.clone();
         let output = outputs.remove(from);
         outputs.insert(to, output);
-        self.with_outputs_recorded(outputs, None)
+        self.with_outputs_changed(outputs, None, false, false, Some(id))
     }
 
     /// Edits one setting of an output, apart from a name that is empty or

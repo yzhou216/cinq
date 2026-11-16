@@ -177,8 +177,8 @@ Major changes and improvements in each release of cinq, newest first.
   was made, and undoing a change to a cue shows the cue list, as a jump that
   going back returns from.
   A notice in the status bar that does not fit gives way at a word, ending in
-  an ellipsis, once the key of paste has given way, and a pasted output reads
-  as pasted, not as added.
+  an ellipsis, once the key of paste has given way, a pasted output reads as
+  pasted, not as added, and the notice of a move names the output that moved.
   In the cua keymap, F2 selects the name of an output, and Tab selects the
   text of the field that it reaches, as they do for a cue.
 - The keys that move through the rows of the cue list, such as j, k, g g,

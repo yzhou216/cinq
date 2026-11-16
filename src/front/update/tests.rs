@@ -24,6 +24,7 @@ mod naming;
 mod operators;
 mod operators_pasting;
 mod output_editing;
+mod output_moves;
 mod output_places;
 mod output_rows;
 mod output_stranded;
