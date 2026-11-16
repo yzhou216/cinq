@@ -14,8 +14,11 @@ use crate::{
 /// Returns the interface of a show of two outputs, Main and Output 1
 fn app() -> App {
     App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![])])
-            .apply(Command::AddOutput { at: 1, count: 1 }),
+        workspace: Workspace::new(vec![CueList::new("Main", vec![])]).apply(Command::AddOutput {
+            at: 1,
+            count: 1,
+            anchor: None,
+        }),
         ..App::default()
     }
 }

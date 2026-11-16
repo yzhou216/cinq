@@ -169,8 +169,10 @@ Major changes and improvements in each release of cinq, newest first.
   sent to it send to it again, while a copy is a new output that no cue
   sends to.  A show keeps at least one output, and the status bar tells first,
   in a few words, where the cues that name no sends play when the first output
-  changes.  Undo and redo select the output that they changed, and undoing a
-  change to a cue shows the cue list, as a jump that going back returns from.
+  changes.  Undo and redo select the output that they changed, except that
+  undoing an addition or a paste selects the output that was selected when it
+  was made, and undoing a change to a cue shows the cue list, as a jump that
+  going back returns from.
   A notice in the status bar that does not fit gives way at a word, ending in
   an ellipsis, once the key of paste has given way, and a pasted output reads
   as pasted, not as added.

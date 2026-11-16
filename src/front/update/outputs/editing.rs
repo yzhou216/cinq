@@ -34,7 +34,8 @@ impl App {
         }
         let at = self.insertion(above);
         let count = count.clamp(1, LIMIT);
-        let app = self.send(Command::AddOutput { at, count });
+        let anchor = self.output;
+        let app = self.send(Command::AddOutput { at, count, anchor });
         let last = app.workspace.outputs().len().saturating_sub(1);
         app.selecting(Some(at.saturating_add(count - 1).min(last)))
     }

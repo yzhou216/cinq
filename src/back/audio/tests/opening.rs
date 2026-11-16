@@ -150,6 +150,7 @@ fn moving_copying_cutting_and_pasting_outputs_open_only_the_devices_that_changed
         at: 0,
         outputs: vec![sub.clone()],
         restore: false,
+        anchor: None,
     });
     change(&mut audio, &copied);
     assert_eq!(opened.load(Ordering::SeqCst), 0, "no device opens again");
@@ -167,6 +168,7 @@ fn moving_copying_cutting_and_pasting_outputs_open_only_the_devices_that_changed
         at: 1,
         outputs: vec![sub],
         restore: true,
+        anchor: None,
     });
     change(&mut audio, &back);
     assert_eq!(opened.load(Ordering::SeqCst), 1, "only device b opens");
@@ -194,6 +196,7 @@ fn pasting_an_output_on_a_device_that_cannot_play_does_not_try_it_again() {
         at: 2,
         outputs: vec![sub],
         restore: false,
+        anchor: None,
     });
     audio.patched(patch(&copied));
     settle(&mut audio);

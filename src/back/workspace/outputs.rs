@@ -74,7 +74,7 @@ impl Workspace {
     /// end past them, as one change, each on the default device and its first
     /// two channels, under the first name of the form Output 1 that no output
     /// has
-    pub(super) fn added_output(self, at: usize, count: usize) -> Self {
+    pub(super) fn added_output(self, at: usize, count: usize, anchor: Option<OutputId>) -> Self {
         let added = (0..count).fold(Vec::<Output>::new(), |added, offset| {
             let id = OutputId(self.next_output + offset as u32);
             let name = self.unused_name(&added, |number| format!("Output {number}"));
@@ -85,7 +85,7 @@ impl Workspace {
             };
             [added, vec![output]].concat()
         });
-        self.inserted(at, added, false)
+        self.inserted(at, added, false, anchor)
     }
 
     /// Pastes `outputs` in a row at `at` among the outputs, as one change.
@@ -95,7 +95,13 @@ impl Workspace {
     /// the line that was.  Every other output is a copy: it has an identity of
     /// its own, no cue sends to it, and no new cue sends to it either.  A name
     /// that an output has gets the lowest number from 2 on that makes it free.
-    pub(super) fn pasted_outputs(self, at: usize, outputs: Vec<Output>, restore: bool) -> Self {
+    pub(super) fn pasted_outputs(
+        self,
+        at: usize,
+        outputs: Vec<Output>,
+        restore: bool,
+        anchor: Option<OutputId>,
+    ) -> Self {
         let (pasted, _) = outputs.into_iter().fold(
             (Vec::<Output>::new(), self.next_output),
             |(pasted, next), output| {
@@ -120,19 +126,25 @@ impl Workspace {
                 ([pasted, vec![placed]].concat(), next)
             },
         );
-        self.inserted(at, pasted, true)
+        self.inserted(at, pasted, true, anchor)
     }
 
     /// Puts `added` among the outputs at `at`, or at the end past them, as
     /// one change that tells whether they were `pasted`, and nothing when
     /// there is nothing to put
-    fn inserted(self, at: usize, added: Vec<Output>, pasted: bool) -> Self {
+    fn inserted(
+        self,
+        at: usize,
+        added: Vec<Output>,
+        pasted: bool,
+        anchor: Option<OutputId>,
+    ) -> Self {
         if added.is_empty() {
             return self;
         }
         let at = at.min(self.outputs.len());
         let outputs = [&self.outputs[..at], &added, &self.outputs[at..]].concat();
-        self.with_outputs_changed(outputs, None, false, pasted)
+        self.with_outputs_changed(outputs, None, false, pasted, anchor)
     }
 
     /// Deletes outputs as one change, unless that would leave the show none,
@@ -147,7 +159,7 @@ impl Workspace {
         if outputs.is_empty() || outputs.len() == self.outputs.len() {
             return self;
         }
-        self.with_outputs_changed(outputs, None, cut, false)
+        self.with_outputs_changed(outputs, None, cut, false, None)
     }
 
     /// Moves an output by a number of places, downwards when positive, as
@@ -198,7 +210,7 @@ impl Workspace {
         outputs: Vec<Output>,
         setting: Option<(OutputId, mem::Discriminant<OutputEdit>)>,
     ) -> Self {
-        self.with_outputs_changed(outputs, setting, false, false)
+        self.with_outputs_changed(outputs, setting, false, false, None)
     }
 
     fn with_outputs_changed(
@@ -207,6 +219,7 @@ impl Workspace {
         setting: Option<(OutputId, mem::Discriminant<OutputEdit>)>,
         cut: bool,
         pasted: bool,
+        anchor: Option<OutputId>,
     ) -> Self {
         let before = self.outputs.clone();
         let change = Change::Outputs {
@@ -215,6 +228,7 @@ impl Workspace {
             setting,
             cut,
             pasted,
+            anchor,
         };
         self.with_outputs(outputs).recorded(change)
     }

@@ -86,7 +86,11 @@ fn the_cue_list_keeps_its_order_of_giving_way() {
 #[test]
 fn a_cut_output_stays_a_cut_in_the_notice_and_in_undo_and_redo() {
     let sub = OutputId(2);
-    let show = Workspace::default().apply(Command::AddOutput { at: 1, count: 1 });
+    let show = Workspace::default().apply(Command::AddOutput {
+        at: 1,
+        count: 1,
+        anchor: None,
+    });
     let told = |workspace: Workspace| {
         notice(&App {
             workspace,
@@ -123,7 +127,11 @@ fn a_cue_that_sends_to_no_output_left_is_a_warning() {
         .file("rain.ogg")
         .build();
     let show = Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .apply(Command::AddOutput { at: 1, count: 1 })
+        .apply(Command::AddOutput {
+            at: 1,
+            count: 1,
+            anchor: None,
+        })
         .apply(Command::Edit(CueId(1), Edit::Sends(Some(sends))));
     let warnings = |workspace: Workspace| {
         crate::front::view::warnings(&App {
@@ -146,7 +154,11 @@ fn what_a_change_did_to_the_cues_comes_first_and_stays_whole_beside_long_names()
         .file("rain.ogg")
         .build();
     let base = Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .apply(Command::AddOutput { at: 1, count: 1 })
+        .apply(Command::AddOutput {
+            at: 1,
+            count: 1,
+            anchor: None,
+        })
         .apply(rename(2, long))
         .apply(rename(1, "Another long name"));
     // The bar of 1024 pixels with the mark of unsaved changes, which takes ten
@@ -181,7 +193,11 @@ fn what_a_change_did_to_the_cues_comes_first_and_stays_whole_beside_long_names()
         told(base.clone().apply(moved)),
         "Cues without sends play on Dante Vir…, moved… | u: undo"
     );
-    let added = Command::AddOutput { at: 0, count: 1 };
+    let added = Command::AddOutput {
+        at: 0,
+        count: 1,
+        anchor: None,
+    };
     assert_eq!(
         told(base.clone().apply(added)),
         "Cues without sends play on Output 1, added Output 1 | u: undo"
@@ -206,7 +222,11 @@ fn the_notice_of_a_cut_keeps_what_it_did_to_the_cues_whole_and_gives_up_the_key_
         .file("rain.ogg")
         .build();
     let before = Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .apply(Command::AddOutput { at: 1, count: 1 })
+        .apply(Command::AddOutput {
+            at: 1,
+            count: 1,
+            anchor: None,
+        })
         .apply(rename(2, "Sub"));
     let taken = before.outputs()[..1].to_vec();
     let workspace = before.clone().apply(Command::CutOutputs(vec![OutputId(1)]));
@@ -239,7 +259,11 @@ fn an_undo_that_moves_the_first_output_back_tells_where_cues_play_without_a_dang
         .file("rain.ogg")
         .build();
     let deleted = Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .apply(Command::AddOutput { at: 1, count: 1 })
+        .apply(Command::AddOutput {
+            at: 1,
+            count: 1,
+            anchor: None,
+        })
         .apply(Command::DeleteOutputs(vec![OutputId(1)]));
     let told = |workspace: Workspace, room| {
         let app = App {

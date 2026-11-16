@@ -34,7 +34,11 @@ fn sends(pairs: &[(u32, f32)]) -> Sends {
 fn house_and_sub() -> Workspace {
     workspace(vec![audio(1)])
         .apply(edit_output(1, OutputEdit::Name("House".to_owned())))
-        .apply(Command::AddOutput { at: 1, count: 1 })
+        .apply(Command::AddOutput {
+            at: 1,
+            count: 1,
+            anchor: None,
+        })
         .apply(edit_output(2, OutputEdit::Name("Sub".to_owned())))
         .apply(edit_output(2, OutputEdit::Channels(Channels::Mono(2))))
         .apply(edit_output(2, OutputEdit::NewCues(Some(-6.0))))
@@ -54,8 +58,13 @@ fn outputs_add_after_one_another_under_names_of_their_own_and_keep_one() {
         .apply(Command::AddOutput {
             at: usize::MAX,
             count: 1,
+            anchor: None,
         })
-        .apply(Command::AddOutput { at: 1, count: 1 });
+        .apply(Command::AddOutput {
+            at: 1,
+            count: 1,
+            anchor: None,
+        });
     assert_eq!(names(&added), ["Main", "Output 2", "Output 1"]);
     let renamed = added
         .apply(edit_output(2, OutputEdit::Name("Main".to_owned())))

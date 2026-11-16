@@ -56,8 +56,13 @@ pub enum Command {
     /// the show, as one change, as bringing back unsaved changes does
     Restore(Vec<CueList>, Vec<Output>),
     /// Adds a number of outputs in a row at a place among the outputs, counted
-    /// from zero, or at the end past them, as one change
-    AddOutput { at: usize, count: usize },
+    /// from zero, or at the end past them, as one change, next to the output
+    /// `anchor` that was selected, which undo selects again
+    AddOutput {
+        at: usize,
+        count: usize,
+        anchor: Option<OutputId>,
+    },
     /// Removes outputs as one change, unless that leaves none
     DeleteOutputs(Vec<OutputId>),
     /// Removes outputs as [`Command::DeleteOutputs`] does, and records that
@@ -66,11 +71,13 @@ pub enum Command {
     CutOutputs(Vec<OutputId>),
     /// Pastes outputs in a row at a place among the outputs as one change.
     /// With `restore`, an output whose identity is free takes it back, so that
-    /// the cues that sent to it send to it again.
+    /// the cues that sent to it send to it again.  The `anchor` is the output
+    /// that was selected, as for [`Command::AddOutput`].
     PasteOutputs {
         at: usize,
         outputs: Vec<Output>,
         restore: bool,
+        anchor: Option<OutputId>,
     },
     /// Moves an output by a number of places, downwards when positive
     MoveOutput { output: OutputId, by: isize },

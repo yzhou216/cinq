@@ -99,10 +99,12 @@ impl App {
         }
         let restore = register.cut && register.show == self.show.id();
         let at = self.insertion(above);
+        let anchor = self.output;
         let app = self.send(Command::PasteOutputs {
             at,
             outputs,
             restore,
+            anchor,
         });
         let row = at.min(app.workspace.outputs().len().saturating_sub(1));
         app.selecting(Some(row))

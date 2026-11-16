@@ -22,6 +22,7 @@ fn app(devices: &[Device], faults: Vec<(OutputId, Fault)>) -> App {
                 workspace.apply(Command::AddOutput {
                     at: index,
                     count: 1,
+                    anchor: None,
                 })
             };
             let id = added.outputs()[index].id;

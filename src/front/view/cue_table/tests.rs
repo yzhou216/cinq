@@ -25,7 +25,11 @@ fn show(sends: Option<Sends>) -> Workspace {
                 sound: Some(10.0),
             },
         })
-        .apply(Command::AddOutput { at: 1, count: 1 })
+        .apply(Command::AddOutput {
+            at: 1,
+            count: 1,
+            anchor: None,
+        })
         .apply(Command::Edit(CueId(1), Edit::Sends(sends)))
         .apply(Command::DeleteOutputs(vec![OutputId(2)]))
 }

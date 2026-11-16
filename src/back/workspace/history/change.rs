@@ -45,14 +45,17 @@ pub enum Change {
     Restored { before: Kept, after: Kept },
     /// Outputs added, deleted, moved, or edited, with all of them before
     /// and after, whether they were cut to the register of outputs or
-    /// pasted from it, and the output and the setting that an edit changed,
-    /// by which edits of one setting in a row make one change
+    /// pasted from it, the output and the setting that an edit changed, by
+    /// which edits of one setting in a row make one change, and the output
+    /// that was selected when outputs were added or pasted, which undo selects
+    /// again, as Vim's undo returns the cursor to where the change was made
     Outputs {
         before: Vec<Output>,
         after: Vec<Output>,
         setting: Option<(OutputId, mem::Discriminant<OutputEdit>)>,
         cut: bool,
         pasted: bool,
+        anchor: Option<OutputId>,
     },
 }
 
@@ -167,6 +170,7 @@ impl Change {
                     setting,
                     cut,
                     pasted,
+                    anchor,
                     ..
                 },
             ) => Self::Outputs {
@@ -175,6 +179,7 @@ impl Change {
                 setting,
                 cut,
                 pasted,
+                anchor,
             },
             (_, next) => next,
         }

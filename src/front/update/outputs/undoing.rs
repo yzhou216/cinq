@@ -6,11 +6,12 @@
 //!
 //! A change to the outputs selects the output that it touched: one that it
 //! brought back or added, one that it edited or moved, or the neighbor of one
-//! that it took away.  A change to a cue would happen out of sight, so that
-//! the cue list shows in place of the outputs, as a jump that going back
-//! returns from, and the changes that remain go on there.  Show mode takes
-//! back no change but those of standby, which are out of sight as well, so
-//! that undo and redo leave the outputs as they are there.
+//! that it took away, except that undoing an addition or a paste selects the
+//! output that was selected when it was made.  A change to a cue would happen
+//! out of sight, so that the cue list shows in place of the outputs, as a jump
+//! that going back returns from, and the changes that remain go on there.
+//! Show mode takes back no change but those of standby, which are out of
+//! sight as well, so that undo and redo leave the outputs as they are there.
 
 use std::ops::ControlFlow;
 
@@ -45,10 +46,11 @@ impl App {
             return self;
         }
         let flow = (0..count).try_fold(self, |app, done| match next(&app.workspace) {
-            Some(Change::Outputs { .. }) => {
+            Some(Change::Outputs { anchor, .. }) => {
+                let anchor = *anchor;
                 let before = app.workspace.outputs().to_vec();
                 let app = app.send(command.clone());
-                let touched = touched(app.workspace.outputs(), &before, app.output);
+                let touched = touched(app.workspace.outputs(), &before, app.output, anchor);
                 ControlFlow::Continue(Self {
                     output: touched.or(app.output),
                     ..app
@@ -68,9 +70,16 @@ impl App {
 
 /// Returns the output of `now` that a change touched, `was` being the
 /// outputs before the change.  An output that `was` lacked comes first, then
-/// the neighbor of the first that `now` lacks, then the first that differs,
-/// and then the one that moved, which is `prefer` where two fit.
-fn touched(now: &[Output], was: &[Output], prefer: Option<OutputId>) -> Option<OutputId> {
+/// where outputs that were added went away, the `anchor` that was selected
+/// when they were, as Vim's undo returns the cursor to where the change was
+/// made, then the neighbor of the first that `now` lacks, then the first that
+/// differs, and then the one that moved, which is `prefer` where two fit.
+fn touched(
+    now: &[Output],
+    was: &[Output],
+    prefer: Option<OutputId>,
+    anchor: Option<OutputId>,
+) -> Option<OutputId> {
     let absent = |from: &[Output], of: &[Output]| {
         from.iter()
             .position(|output| of.iter().all(|other| other.id != output.id))
@@ -79,7 +88,8 @@ fn touched(now: &[Output], was: &[Output], prefer: Option<OutputId>) -> Option<O
         return Some(now[row].id);
     }
     if let Some(row) = absent(was, now) {
-        return now.get(row).or(now.last()).map(|output| output.id);
+        let anchored = anchor.filter(|id| now.iter().any(|output| output.id == *id));
+        return anchored.or_else(|| now.get(row).or(now.last()).map(|output| output.id));
     }
     let differs = now
         .iter()

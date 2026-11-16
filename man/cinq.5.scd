@@ -678,7 +678,9 @@ reads *NO OUTPUT* in yellow, and the sidebar lists it among the warnings, until
 A cue whose sends were all cleared plays nowhere by choice, and gets no
 warning.
 *undo* and *redo* select the output that the change touched, or the neighbor
-of one that it took away.
+of one that it took away, except that undoing an addition or a paste selects
+the output that was selected when it was made, as the cursor of Vim returns to
+where a change was made.
 A change to a cue or to the cue lists leaves the outputs for the cue list in
 the same way as a jump, so that *back* returns to the outputs, and the change
 is undone or made again there, as are the changes that follow in the count.

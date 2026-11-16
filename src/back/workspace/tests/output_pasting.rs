@@ -40,7 +40,11 @@ fn edit_output(id: u32, edit: OutputEdit) -> Command {
 fn house_sub_and_lobby() -> Workspace {
     workspace(vec![audio(1)])
         .apply(edit_output(1, OutputEdit::Name("House".to_owned())))
-        .apply(Command::AddOutput { at: 1, count: 2 })
+        .apply(Command::AddOutput {
+            at: 1,
+            count: 2,
+            anchor: None,
+        })
         .apply(edit_output(2, OutputEdit::Name("Sub".to_owned())))
         .apply(edit_output(2, OutputEdit::NewCues(Some(-6.0))))
         .apply(edit_output(3, OutputEdit::Name("Lobby".to_owned())))
@@ -58,7 +62,11 @@ fn deleted(show: Workspace, ids: &[u32]) -> Workspace {
 
 #[test]
 fn a_counted_add_puts_the_outputs_in_a_row_as_one_change() {
-    let added = workspace(Vec::new()).apply(Command::AddOutput { at: 1, count: 3 });
+    let added = workspace(Vec::new()).apply(Command::AddOutput {
+        at: 1,
+        count: 3,
+        anchor: None,
+    });
     assert_eq!(names(&added), ["Main", "Output 1", "Output 2", "Output 3"]);
     assert_eq!(ids(&added), [1, 2, 3, 4]);
     let undone = added.apply(Command::Undo);
@@ -102,6 +110,7 @@ fn a_cut_output_pasted_back_takes_back_its_identity_and_the_cues_that_sent_to_it
         at: 1,
         outputs: taken,
         restore: true,
+        anchor: None,
     });
     assert_eq!(names(&back), ["House", "Sub", "Lobby"]);
     assert_eq!(ids(&back), [1, 2, 3]);
@@ -120,6 +129,7 @@ fn a_cut_output_pasted_at_the_top_is_the_first_output_again() {
         at: 0,
         outputs: taken,
         restore: true,
+        anchor: None,
     });
     assert_eq!(names(&back), ["Sub", "House", "Lobby"]);
     assert_eq!(ids(&back), [2, 1, 3]);
@@ -133,6 +143,7 @@ fn a_copy_gets_an_identity_a_free_name_and_no_new_cues_or_sends() {
         at: 2,
         outputs: copies,
         restore: false,
+        anchor: None,
     });
     assert_eq!(names(&pasted), ["House", "Sub", "Sub 2", "Lobby"]);
     assert_eq!(ids(&pasted), [1, 2, 4, 3]);
@@ -150,6 +161,7 @@ fn pasting_a_cut_output_twice_restores_it_once_and_copies_it_after() {
         at: 1,
         outputs: [taken.clone(), taken].concat(),
         restore: true,
+        anchor: None,
     });
     assert_eq!(names(&pasted), ["House", "Sub", "Sub 2", "Lobby"]);
     assert_eq!(ids(&pasted), [1, 2, 4, 3]);
@@ -164,6 +176,7 @@ fn a_restored_output_whose_name_is_taken_is_numbered_and_one_that_is_free_is_not
         at: 1,
         outputs: taken,
         restore: true,
+        anchor: None,
     });
     assert_eq!(names(&back), ["House", "Sub 2", "Sub"]);
     assert_eq!(ids(&back), [1, 2, 3]);
@@ -179,6 +192,7 @@ fn an_output_pasted_from_another_show_with_an_identity_here_is_a_copy() {
         at: 3,
         outputs: alien,
         restore: true,
+        anchor: None,
     });
     assert_eq!(names(&pasted), ["House", "Sub", "Lobby", "House 2"]);
     assert_eq!(ids(&pasted), [1, 2, 3, 4]);
@@ -191,7 +205,11 @@ fn show_mode_locks_adding_deleting_and_pasting_outputs() {
     let same = |show: &Workspace| names(show).join(",");
     let before = same(&show);
     assert_eq!(
-        same(&show.clone().apply(Command::AddOutput { at: 0, count: 2 })),
+        same(&show.clone().apply(Command::AddOutput {
+            at: 0,
+            count: 2,
+            anchor: None
+        })),
         before
     );
     assert_eq!(same(&deleted(show.clone(), &[1])), before);
@@ -199,6 +217,7 @@ fn show_mode_locks_adding_deleting_and_pasting_outputs() {
         at: 0,
         outputs: taken,
         restore: false,
+        anchor: None,
     });
     assert_eq!(same(&pasted), before);
 }

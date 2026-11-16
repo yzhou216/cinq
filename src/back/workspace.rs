@@ -204,14 +204,15 @@ impl Workspace {
             Command::Move { cue, by } => self.moved(cue, by),
             Command::Edit(id, edit) => self.edited(id, edit),
             Command::Restore(lists, outputs) => self.restored(lists, outputs),
-            Command::AddOutput { at, count } => self.added_output(at, count),
+            Command::AddOutput { at, count, anchor } => self.added_output(at, count, anchor),
             Command::DeleteOutputs(ids) => self.deleted_outputs(&ids, false),
             Command::CutOutputs(ids) => self.deleted_outputs(&ids, true),
             Command::PasteOutputs {
                 at,
                 outputs,
                 restore,
-            } => self.pasted_outputs(at, outputs, restore),
+                anchor,
+            } => self.pasted_outputs(at, outputs, restore, anchor),
             Command::MoveOutput { output, by } => self.moved_output(output, by),
             Command::EditOutput(id, edit) => self.edited_output(id, edit),
         }

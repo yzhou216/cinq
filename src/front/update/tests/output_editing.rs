@@ -354,10 +354,6 @@ fn undo_and_redo_select_the_output_that_the_change_touched() {
     // A restored output is selected, wherever the keys left the selection
     let far = typed(typed(on(3), "dd"), "5j");
     assert_eq!(at(&typed(far, "u")), 3);
-    // An addition that undo takes back leaves its neighbor selected
-    let added = typed(on(3), "o");
-    assert_eq!(at(&added), 4);
-    assert_eq!(at(&typed(added, "u")), 4);
     // A move selects the output that moved, both ways
     let moved = after(on(3), [Message::Move(2)]);
     let back = after(moved, [Message::Undo(1)]);
@@ -492,4 +488,27 @@ fn channels_typed_before_a_cut_apply_to_the_output_that_is_cut_and_pasted_back()
         .output(sub)
         .expect("the output took its identity back");
     assert_eq!(pasted.channels.to_string(), "5-6");
+}
+
+#[test]
+fn undoing_an_addition_or_a_paste_selects_the_output_that_it_was_made_next_to() {
+    let undone = |app: App, keys: &str| at(&typed(typed(app, keys), "u"));
+    // Below and above, as `o u`, `O u`, `p u`, and `P u` of Vim end, with
+    // counts, and at the first and the last place
+    assert_eq!(undone(on(3), "o"), 3);
+    assert_eq!(undone(on(3), "O"), 3);
+    assert_eq!(undone(on(3), "3o"), 3);
+    assert_eq!(undone(on(1), "O"), 1);
+    assert_eq!(undone(on(10), "o"), 10);
+    assert_eq!(undone(typed(on(3), "yy"), "p"), 3);
+    assert_eq!(undone(typed(on(3), "yj"), "2P"), 3);
+    // Wherever the selection went before the undo
+    let moved = typed(typed(on(3), "o"), "4j");
+    assert_eq!(at(&typed(moved, "u")), 3);
+    // Redo selects what was added again, and undo goes back to the anchor
+    let redone = after(typed(typed(on(3), "o"), "u"), [Message::Redo(1)]);
+    assert_eq!(at(&redone), 4);
+    assert_eq!(at(&typed(redone, "u")), 3);
+    // Undo of a delete still selects what it brought back
+    assert_eq!(at(&typed(typed(on(3), "dd"), "u")), 3);
 }
