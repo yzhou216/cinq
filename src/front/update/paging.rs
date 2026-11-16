@@ -129,7 +129,11 @@ pub(super) fn landing(
     let moved = rows(page, count, scroll, fit);
     let wanted = shape.scrolled + page.sign() as f32 * moved as f32 * row_height;
     let offset = wanted.clamp(0.0, (shape.content - shape.view).max(0.0));
-    let in_view = |row: f32| row as usize;
+    let (first_row, last_row) = Shape {
+        scrolled: offset,
+        ..shape
+    }
+    .rows_in_view(cues)?;
     let row = match page {
         Page::HalfDown | Page::HalfUp => {
             let by = isize::try_from(moved).unwrap_or(isize::MAX);
@@ -137,11 +141,8 @@ pub(super) fn landing(
         }
         Page::WholeDown if wanted >= shape.content - shape.view => last,
         Page::WholeUp if wanted <= 0.0 => 0,
-        Page::WholeDown => in_view((offset / row_height).ceil()).max(current.unwrap_or(0)),
-        Page::WholeUp => {
-            let bottom = in_view(((offset + shape.view) / row_height).floor());
-            bottom.saturating_sub(1).min(current.unwrap_or(last))
-        }
+        Page::WholeDown => first_row.max(current.unwrap_or(0)),
+        Page::WholeUp => last_row.min(current.unwrap_or(last)),
     };
     Some(Landing {
         offset,

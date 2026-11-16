@@ -14,9 +14,6 @@ use iced::Task;
 use super::paging::{Landing, viewport::Shape};
 use crate::front::{App, Message, message::Height};
 
-/// Slack for the rounding of a row height that is the quotient of a sum
-const SLACK: f32 = 0.001;
-
 impl App {
     /// Scrolls the cue list by `rows`, downwards when positive, and keeps
     /// the selection on its cue unless that leaves the view, when it moves to
@@ -31,20 +28,6 @@ impl App {
     }
 }
 
-/// Returns the first row, counted from zero, that is in view whole
-fn first_in_view(shape: Shape, row_height: f32) -> usize {
-    (shape.scrolled / row_height - SLACK).ceil().max(0.0) as usize
-}
-
-/// Returns the last row, counted from zero, that is in view whole, or the
-/// first when not even one row fits
-fn last_in_view(shape: Shape, row_height: f32) -> usize {
-    let bottom = ((shape.scrolled + shape.view) / row_height + SLACK).floor() as usize;
-    bottom
-        .saturating_sub(1)
-        .max(first_in_view(shape, row_height))
-}
-
 /// Returns where scrolling a list of `cues` rows by `rows` leaves the view
 /// and the selection on row `current`, stopping at either end of the list
 pub(super) fn scroll(
@@ -53,21 +36,17 @@ pub(super) fn scroll(
     cues: usize,
     current: Option<usize>,
 ) -> Option<Landing> {
-    let last = cues.checked_sub(1)?;
-    let row_height = shape.content / cues as f32;
+    let row_height = shape.content / cues.max(1) as f32;
     let wanted = shape.scrolled + rows as f32 * row_height;
     let offset = wanted.clamp(0.0, (shape.content - shape.view).max(0.0));
-    let moved = Shape {
+    let (first, last) = Shape {
         scrolled: offset,
         ..shape
-    };
-    let row = current.unwrap_or(0).clamp(
-        first_in_view(moved, row_height),
-        last_in_view(moved, row_height),
-    );
+    }
+    .rows_in_view(cues)?;
     Some(Landing {
         offset,
-        row: row.min(last),
+        row: current.unwrap_or(0).clamp(first, last),
     })
 }
 
@@ -96,10 +75,7 @@ pub(super) fn in_view(
     shape: Shape,
     cues: usize,
 ) -> Option<Landing> {
-    let last = cues.checked_sub(1)?;
-    let row_height = shape.content / cues as f32;
-    let first_row = first_in_view(shape, row_height).min(last);
-    let last_row = last_in_view(shape, row_height).min(last);
+    let (first_row, last_row) = shape.rows_in_view(cues)?;
     let from_edge = count.unwrap_or(1).saturating_sub(1);
     let row = match height {
         Height::Top => first_row.saturating_add(from_edge).min(last_row),

@@ -23,6 +23,23 @@ pub struct Shape {
     pub scrolled: f32,
 }
 
+impl Shape {
+    /// Returns the first and the last row, counted from zero, that are in
+    /// view in a list of `cues` rows, or `None` for no rows.  A row is in
+    /// view when more than half of it shows, so that the scroll offset, which
+    /// the list reports in whole pixels, never decides the rows that a key
+    /// moves between.  The rows are as tall as the average, since the rows
+    /// that a long name wraps are taller than the rest.  Not even one row
+    /// fitting leaves the first row as both.
+    pub(in crate::front::update) fn rows_in_view(self, cues: usize) -> Option<(usize, usize)> {
+        let last_cue = cues.checked_sub(1)?;
+        let row_height = self.content / cues as f32;
+        let first = ((self.scrolled / row_height + 0.5).floor() as usize).min(last_cue);
+        let bottom = ((self.scrolled + self.view) / row_height - 0.5).ceil() as usize;
+        Some((first, bottom.saturating_sub(1).clamp(first, last_cue)))
+    }
+}
+
 /// Finds the shape of a scrollable by its identity
 pub(super) struct Viewport {
     id: &'static str,
