@@ -83,6 +83,9 @@ pub enum Command {
     MoveOutput { output: OutputId, by: isize },
     /// Changes one setting of an output
     EditOutput(OutputId, OutputEdit),
+    /// Ends the run of edits to one setting in a row, so that the next edit
+    /// of it makes a change of its own, as leaving a field does
+    EndRun,
     /// Takes back the last change to the cues
     Undo,
     /// Makes again the change that undo took back last

@@ -1036,6 +1036,10 @@ page.
 	Undoing an addition or a paste, of all the cues that a count made, selects
 	the cue that it went below or above, as the cursor of Vim goes back to
 	where the change was made.
+	The keys typed into a field during one visit to it are one change, and a
+	visit that the keyboard ends by leaving the field, or that a click or a move
+	to a field begins again, is a change of its own, as each stay in insert mode
+	is in Vim.
 
 *redo*
 	Redo the change undone last, or as many changes as the count, stopping at

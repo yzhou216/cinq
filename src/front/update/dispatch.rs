@@ -88,13 +88,23 @@ impl App {
             Message::SettingTyped(..) | Message::SettingSubmitted
         );
         let kept = passive || clicked || in_field;
+        // A field that the keyboard enters or leaves ends the run of edits to its
+        // text, so that each visit makes a change of its own to undo, as each
+        // stay in insert mode does in Vim
+        let ends = matches!(message, Message::Focus(_) | Message::Clicked)
+            || (matches!(message, Message::Held(false)) && self.held);
+        let this = if ends {
+            self.send(Command::EndRun)
+        } else {
+            self
+        };
         // Field that the keyboard leaves takes its rejected text with it, so
         // that the status bar tells the reason, which the field no longer does
-        let unapplied = (!kept).then(|| self.unapplied()).flatten();
+        let unapplied = (!kept).then(|| this.unapplied()).flatten();
         let app = if passive || in_field {
-            self
+            this
         } else {
-            self.settled()
+            this.settled()
         };
         let app = Self {
             keys: if typing { app.keys } else { Vec::new() },

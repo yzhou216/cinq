@@ -10,6 +10,9 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Each visit to a field, such as the name of a cue or of an output, is one step
+  of undo, where two visits in a row, each ended by leaving the field, undid as
+  one.  A click, or a move to a field, ends a visit as well.
 - A cue that sends only to outputs that a cut or a delete took away plays on
   no output, which the status bar now counts with the change, as in `1 cue
   now sends nowhere`.  The State of such a cue reads `NO OUTPUT` in yellow,

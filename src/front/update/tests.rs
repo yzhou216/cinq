@@ -15,6 +15,7 @@ mod clipboard;
 mod clipped;
 mod clock;
 mod counts;
+mod field_runs;
 mod help_page;
 mod history;
 mod loading;

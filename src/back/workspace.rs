@@ -190,6 +190,7 @@ impl Workspace {
             Command::ShowMode(show_mode) => Self { show_mode, ..self },
             Command::Heard { cue, run, played } => self.heard(cue, run, played),
             Command::Loaded { cue, file, media } => self.loaded(cue, &file, media),
+            Command::EndRun => self.run_ended(),
             Command::Undo => self.undone(),
             Command::Redo => self.redone(),
             Command::Add {
