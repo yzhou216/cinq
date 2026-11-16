@@ -69,7 +69,8 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     let page = column![
         text(format!("Keys of the {} keymap", keymap.name())).size(24),
         bindings,
-        text(format!("A count typed before a key repeats a move{example}.  It goes that many places back or forward, deletes that many cues, and picks the row for the first and last cue.")),
+        text(format!("A count typed before a key repeats a move{example}.  It goes that many places back or forward, undoes or redoes that many changes, and deletes that many cues.  It picks the row for the first and last cue and the tab for the next tab.")),
+        text("The keys of a sequence are typed one after another with no Space between them, since Space is GO."),
         text("The keys of GO and Panic act at once, even halfway through another command."),
         source(&app.config.source),
         key_values,

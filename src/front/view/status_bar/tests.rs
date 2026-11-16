@@ -4,10 +4,14 @@
 
 //! Tests of the hints that fit in the status bar
 
+mod cancel;
 mod places;
 
-use super::fitted;
-use crate::front::keymap::Action;
+use super::{fitted, hints as hinted};
+use crate::front::{
+    App,
+    keymap::{Action, Keymap, Preset, config::Config},
+};
 
 fn owned<const N: usize>(hints: [(Option<Action>, &str); N]) -> Vec<(Option<Action>, String)> {
     hints
@@ -67,4 +71,13 @@ fn keys_of_going_forward_and_back_give_way_before_the_rest() {
         fitted(&hints, 62),
         "Added cue 1 | u: undo | Space: GO | Escape: Panic | ?: help"
     );
+}
+
+fn opened(preset: Preset) -> App {
+    let mut config = Config::default();
+    config.keymap = Keymap::from(preset);
+    App {
+        config,
+        ..App::default()
+    }
 }

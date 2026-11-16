@@ -6,35 +6,18 @@
 //! and the keys send, and the reports of the clock, of the configuration
 //! file's watch, and of the work done on threads of its own
 
+mod tab;
+
 use std::{ffi::OsString, path::PathBuf, time::Instant};
 
 use iced::{Size, mouse, window};
-use strum::{Display, VariantArray};
 
 use super::{
     keymap::{Press, config::Config},
     update::{Read, Saved},
 };
 use crate::back::{Command, CueId, Edit, Kind, Place};
-
-/// Page of the inspector, which goes by its name
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Display, VariantArray)]
-pub enum Tab {
-    #[default]
-    Basics,
-    #[strum(to_string = "Time & Loops")]
-    Time,
-    Levels,
-}
-
-impl Tab {
-    /// Returns the tab `offset` places to the right, wrapping around at
-    /// either end
-    pub fn stepped(self, offset: isize) -> Self {
-        let count = Self::VARIANTS.len() as isize;
-        Self::VARIANTS[(self as isize + offset).rem_euclid(count) as usize]
-    }
-}
+pub use tab::Tab;
 
 /// Text field that keys move the keyboard focus to, since iced itself
 /// moves it only on clicks
@@ -55,6 +38,9 @@ pub enum Focus {
 pub enum Message {
     Go,
     Panic,
+    /// Drops the keys typed so far and takes the keyboard out of a field,
+    /// without touching playback
+    Cancel,
     PauseAll,
     ResumeAll,
     Stop(CueId),
@@ -77,8 +63,12 @@ pub enum Message {
     Forward(usize),
     ShowMode(bool),
     Tab(Tab),
-    /// Shows the inspector tab a number of tabs to the right
+    /// Shows the inspector tab a number of tabs to the right, wrapping
+    /// around at either end
     StepTab(isize),
+    /// Shows the inspector tab with a number, counted from one, or the last
+    /// tab when there are fewer
+    ShowTab(usize),
     NewKind(Kind),
     /// Adds a cue next to the selection, on the side that the function
     /// picks
@@ -93,8 +83,10 @@ pub enum Message {
     /// Asks which file an audio, video, or picture cue plays or shows
     ChooseFile(CueId),
     FileChosen(CueId, PathBuf),
-    Undo,
-    Redo,
+    /// Undoes a number of changes, stopping at the oldest
+    Undo(usize),
+    /// Redoes a number of changes, stopping at the newest
+    Redo(usize),
     Focus(Focus),
     ToggleHelp,
     CloseHelp,

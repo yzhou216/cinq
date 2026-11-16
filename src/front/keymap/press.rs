@@ -19,7 +19,7 @@ use iced::keyboard::{self, Key, Modifiers};
 use itertools::Itertools;
 use keyboard_types::NamedKey;
 
-pub use notation::{sequence, written};
+pub use notation::{sequence, shown, written};
 
 /// Keys that the specification lists as modifier keys, which change the
 /// keys pressed with them rather than act alone.  Hyper and Super are
@@ -87,6 +87,17 @@ impl Press {
             alt: modifiers.alt(),
             shift,
         })
+    }
+
+    /// Returns whether Control or Alt is held, with which a character key
+    /// types nothing
+    pub(super) fn holds_control_or_alt(self) -> bool {
+        self.ctrl || self.alt
+    }
+
+    /// Returns whether the key types a character other than the space
+    fn types_character(self) -> bool {
+        matches!(self, Self { key: Name::Char(c), ctrl: false, alt: false, shift: false } if c != ' ')
     }
 
     pub(super) fn bare(self) -> Self {

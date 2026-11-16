@@ -25,6 +25,37 @@ Major changes and improvements in each release of cinq, newest first.
   Vim's way back through the places jumped to, and Vim's `Control+l` only
   redraws the screen, which cinq never needs.  The cua keymap keeps
   `Control+o`.
+- `Control+Home` and `Control+End` select the first and last cue as `gg` and
+  `G` do, each with a count.
+- A count typed before the keys of undo and redo turns that many changes, as
+  `3u` does in Vim, and stops at the oldest or newest.  A count before
+  `next_tab` shows the inspector tab of that number, as `2gt` does, and before
+  `previous_tab` goes back that many tabs.
+- A key that completes or continues no sequence of keys cancels what was typed
+  so far and does nothing itself, as Vim beeps and drops the keys, so that a
+  mistyped `dx` no longer deletes a cue, and `gj` and `gk` move the selection
+  down and up in the vi keymap, as they do in Vim.  The keys of GO and Panic
+  still act at once.
+- `Control+c` cancels in the vi keymap, as in Vim, through the new `cancel`
+  action, which has no key in the cua keymap, where `Control+c` copies.  It
+  drops the keys typed so far, takes the keyboard out of a text field, and never
+  stops playback, so that no one reaches for `Escape`, which is Panic.  The
+  status bar hints the key while keys wait, and a text field with a selection
+  still copies it first.
+- While the stage window has the keyboard, the keys that change the show, such
+  as `x`, `Delete`, `o`, and `u`, do nothing, as the keys of editing a name and
+  of the help page already did, so that a key held down there cannot change cues
+  out of sight.  GO, Panic, standby, and the moves still act.
+- The help page, the box of the keys that can follow, and the status bar write
+  a sequence of keys that type characters joined, as Vim does: `dd`, `gg`, and
+  `gt`, no longer `d d`, since a newcomer pressed the Space between them, which
+  is GO.  A sequence with a named key keeps its spaces, as does `config.toml`,
+  and the help page says that the keys of a sequence are typed with no Space
+  between them.
+- The keys of undo and redo act while a closed drop-down list has the keyboard,
+  as `Control+z` does in the cua keymap, where they did nothing and said
+  nothing.  A text field still keeps them, since the text typed there is typed
+  into it.
 
 ## v0.1.4
 

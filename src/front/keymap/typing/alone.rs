@@ -1,0 +1,60 @@
+// SPDX-FileCopyrightText: 2026 Yiyu Zhou <yiyu@yiyuzhou.io>
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! The actions of keys pressed alone, which act in fields, and those of GO and
+//! Panic, which act at once
+
+use super::{Action, Keymap, Press};
+
+impl Keymap {
+    pub fn acts_in_fields(&self, press: Press) -> bool {
+        self.alone(press).is_some_and(Action::acts_in_fields)
+    }
+
+    /// Returns whether a key acts while a closed drop-down list has the
+    /// keyboard: those that act in every field, and those of undo and redo,
+    /// since a list has no text to undo and no key of its own but Enter
+    pub fn acts_in_lists(&self, press: Press) -> bool {
+        self.alone(press).is_some_and(Action::acts_in_lists)
+    }
+
+    pub fn acts_at_once(&self, press: Press) -> bool {
+        self.alone(press).is_some_and(Action::acts_at_once)
+    }
+
+    /// Returns whether the key pressed alone is that of [`Action::Cancel`]
+    pub(in crate::front::keymap) fn cancels(&self, press: Press) -> bool {
+        self.alone(press) == Some(Action::Cancel)
+    }
+
+    /// Returns whether a key that a text field captured acts all the same.
+    /// A key of GO or Panic does when it is no character, and a key of
+    /// cancel does unless it types one, so that a letter that a user binds
+    /// to cancel still types in the field while Control+c, which iced takes
+    /// to copy a selection, cancels.  `character` tells whether the key is
+    /// a character or the space bar.
+    pub fn acts_when_captured(&self, press: Press, character: bool) -> bool {
+        (!character && self.acts_at_once(press))
+            || (self.cancels(press) && (!character || press.holds_control_or_alt()))
+    }
+
+    pub fn alone(&self, press: Press) -> Option<Action> {
+        self.at_once_bound(press)
+            .map(|(action, _)| action)
+            .or_else(|| self.find(&[press]))
+    }
+
+    /// Returns the action of [`Action::AT_ONCE`] whose key is pressed,
+    /// together with the key as it is bound: as pressed, or else without
+    /// the modifiers held, so that an action bound to the key with those
+    /// very modifiers takes it over one bound to the key alone
+    pub(in crate::front::keymap) fn at_once_bound(&self, press: Press) -> Option<(Action, Press)> {
+        [press, press.bare()].into_iter().find_map(|key| {
+            Action::AT_ONCE
+                .into_iter()
+                .find(|&action| self.keys(action).iter().any(|keys| keys[..] == [key]))
+                .map(|action| (action, key))
+        })
+    }
+}

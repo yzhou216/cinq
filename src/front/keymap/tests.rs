@@ -5,6 +5,8 @@
 //! Tests of the key bindings, with the helpers that read the keys they
 //! type
 
+mod cancel;
+mod dropping;
 mod file;
 mod manual;
 mod notation;
@@ -15,7 +17,7 @@ use strum::VariantArray;
 
 use super::{
     Action, Keymap, Preset, Press, binding, config,
-    press::{sequence, written},
+    press::{sequence, shown, written},
     typing::Outcome,
 };
 
@@ -35,9 +37,8 @@ fn listed(preset: Preset, action: Action) -> String {
     Keymap::from(preset).listed(action)
 }
 
-/// Returns what the last key amounts to
-fn typed(text: &str) -> Outcome {
-    let keymap = Keymap::default();
+/// Returns what the last key amounts to on a keymap
+fn typed_on(keymap: &Keymap, text: &str) -> Outcome {
     keys(text)
         .into_iter()
         .fold(Outcome::default(), |outcome, press| {
@@ -45,8 +46,18 @@ fn typed(text: &str) -> Outcome {
         })
 }
 
+fn typed(text: &str) -> Outcome {
+    typed_on(&Keymap::default(), text)
+}
+
 fn action(text: &str) -> Option<(Action, Option<usize>)> {
     typed(text).action
+}
+
+fn assert_actions(wanted: &[(&str, Action, Option<usize>)]) {
+    wanted.iter().for_each(|&(text, action, count)| {
+        assert_eq!(typed(text).action, Some((action, count)), "{text}");
+    });
 }
 
 #[test]

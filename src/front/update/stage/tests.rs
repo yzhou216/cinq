@@ -7,6 +7,7 @@
 //! it keeps, going fullscreen as GO fires a picture or video cue, and the
 //! keys while it has the keyboard
 
+mod editing;
 mod keys;
 
 use iced::{Size, window};

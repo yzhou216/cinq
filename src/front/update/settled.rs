@@ -5,7 +5,10 @@
 //! Messages that change the state and start no task
 
 use super::{App, Message};
-use crate::back::{Command, Edit, parse_level};
+use crate::{
+    back::{Command, Edit, parse_level},
+    front::Tab,
+};
 
 impl App {
     /// Applies a message that only changes state
@@ -77,6 +80,10 @@ impl App {
                 ..self
             },
             Message::Tab(tab) => Self { tab, ..self },
+            Message::ShowTab(number) => Self {
+                tab: Tab::numbered(number),
+                ..self
+            },
             Message::StepTab(offset) => Self {
                 tab: self.tab.stepped(offset),
                 ..self

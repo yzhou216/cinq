@@ -28,6 +28,7 @@ pub enum Action {
     Back,
     Forward,
     Standby,
+    Cancel,
     Edit,
     NextField,
     PreviousField,
@@ -61,11 +62,12 @@ impl Action {
             Action::PreviousList => "Show the previous cue list",
             Action::First => "Select the first cue, or the row counted",
             Action::Last => "Select the last cue, or the row counted",
-            Action::NextTab => "Show the next inspector tab",
-            Action::PreviousTab => "Show the previous inspector tab",
+            Action::NextTab => "Show the next inspector tab, or the tab counted",
+            Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
             Action::Back => "Go back to the place that the last jump left",
             Action::Forward => "Go forward again after going back",
             Action::Standby => "Put the selected cue on standby",
+            Action::Cancel => "Drop the keys typed so far and leave a field",
             Action::Edit => "Edit the name of the selected cue",
             Action::NextField => "Move to the next field",
             Action::PreviousField => "Move to the previous field",
@@ -74,8 +76,8 @@ impl Action {
             Action::MoveDown => "Move the selected cue down",
             Action::MoveUp => "Move the selected cue up",
             Action::Delete => "Delete the selected cue",
-            Action::Undo => "Undo the latest change to the show",
-            Action::Redo => "Redo the change undone last",
+            Action::Undo => "Undo the latest change to the show, or as many as counted",
+            Action::Redo => "Redo the change undone last, or as many as counted",
             Action::Open => "Open a show",
             Action::Save => "Save the show",
             Action::SaveAs => "Save the show in another file",
@@ -102,11 +104,18 @@ impl Action {
         self.acts_at_once() || self == Action::Fullscreen
     }
 
+    /// Returns whether a key of the action acts while a closed drop-down
+    /// list has the keyboard, beside those that act in every field
+    pub(super) fn acts_in_lists(self) -> bool {
+        self.acts_in_fields() || matches!(self, Action::Undo | Action::Redo)
+    }
+
     pub(super) fn acts_in_fields(self) -> bool {
         self.acts_at_once()
             || matches!(
                 self,
-                Action::NextField
+                Action::Cancel
+                    | Action::NextField
                     | Action::PreviousField
                     | Action::Back
                     | Action::Forward
@@ -135,11 +144,12 @@ impl Action {
             Action::PreviousList => Message::StepList(-step),
             Action::First => Message::Row(times),
             Action::Last => Message::Row(count.unwrap_or(usize::MAX)),
-            Action::NextTab => Message::StepTab(1),
-            Action::PreviousTab => Message::StepTab(-1),
+            Action::NextTab => count.map_or(Message::StepTab(1), Message::ShowTab),
+            Action::PreviousTab => Message::StepTab(-step),
             Action::Back => Message::Back(times),
             Action::Forward => Message::Forward(times),
             Action::Standby => Message::StandbySelected,
+            Action::Cancel => Message::Cancel,
             Action::Edit => Message::Focus(Focus::Name),
             Action::NextField => Message::Focus(Focus::Next),
             Action::PreviousField => Message::Focus(Focus::Previous),
@@ -148,8 +158,8 @@ impl Action {
             Action::MoveDown => Message::Move(step),
             Action::MoveUp => Message::Move(-step),
             Action::Delete => Message::Delete(times),
-            Action::Undo => Message::Undo,
-            Action::Redo => Message::Redo,
+            Action::Undo => Message::Undo(times),
+            Action::Redo => Message::Redo(times),
             Action::Open => Message::Open,
             Action::Save => Message::Save,
             Action::SaveAs => Message::SaveAs,
@@ -157,5 +167,21 @@ impl Action {
             Action::Help => Message::ToggleHelp,
             Action::CloseHelp => Message::CloseHelp,
         }
+    }
+
+    /// Returns whether the action edits the show, which the stage window
+    /// leaves to the main window: the operator cannot see the cue list from
+    /// there, so a key held down by mistake would change cues out of sight
+    pub fn edits_the_show(self) -> bool {
+        matches!(
+            self,
+            Action::AddBelow
+                | Action::AddAbove
+                | Action::Delete
+                | Action::MoveDown
+                | Action::MoveUp
+                | Action::Undo
+                | Action::Redo
+        )
     }
 }

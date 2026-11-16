@@ -33,7 +33,12 @@ impl App {
         };
         match outcome.action {
             Some((action, _)) if repeat && action.acts_once_a_press() => (app, Task::none()),
-            // The page opens in the main window, which the fullscreen stage
+            // Cue list is out of sight from the stage window, so that the keys
+            // that change the show wait for the main window
+            Some((action, _)) if app.stage.has_keyboard() && action.edits_the_show() => {
+                (app, Task::none())
+            }
+            // Page opens in the main window, which the fullscreen stage
             // window may cover, so that the page would open out of sight
             Some((Action::Help, _)) if app.stage.has_keyboard() => (app, Task::none()),
             Some((action @ (Action::Next | Action::Previous), count)) if app.help => {
@@ -56,6 +61,12 @@ impl App {
             }
             _ => (app, Task::none()),
         }
+    }
+
+    /// Takes the keyboard out of the field that has it, as Control+c does in
+    /// Vim.  Playback goes on, since it is no Panic.
+    pub(super) fn cancelled(self) -> (Self, Task<Message>) {
+        (self, operate(focusable::unfocus()))
     }
 
     /// Editing the name shows the Basics tab, which holds the Name field.  No

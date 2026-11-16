@@ -153,8 +153,8 @@ in its place, and follows it as it changes in the same way.
 
 *cua*
 	Keys of IBM's Common User Access, which most desktop programs follow: the
-	arrows, Home, and End move, Control with a letter edits, and F1 shows the
-	help page, which Control+w closes.
+	arrows, Home, and End move, Control with a letter edits, and F1 and ? show
+	the help page, which Control+w closes.
 
 Both keep GO on the space bar and Panic on Escape, as in QLab.
 The table lists the keys that each keymap binds to every action, in the order
@@ -170,10 +170,10 @@ of the help page.
 :  Escape
 :  Escape
 |  next
-:  j, ArrowDown, Control+n
+:  j, g j, ArrowDown, Control+n
 :  ArrowDown
 |  previous
-:  k, ArrowUp, Control+p
+:  k, g k, ArrowUp, Control+p
 :  ArrowUp
 |  next_list
 :  l, ArrowRight
@@ -182,10 +182,10 @@ of the help page.
 :  h, ArrowLeft
 :  Control+PageUp
 |  first
-:  g g
+:  g g, Control+Home
 :  Home
 |  last
-:  G
+:  G, Control+End
 :  End
 |  next_tab
 :  g t
@@ -202,6 +202,9 @@ of the help page.
 |  standby
 :  Enter
 :  Enter
+|  cancel
+:  Control+c
+:  none
 |  edit
 :  i
 :  F2
@@ -224,7 +227,7 @@ of the help page.
 :  Alt+k, Alt+ArrowUp
 :  Alt+ArrowUp
 |  delete
-:  d d
+:  d d, x, Delete
 :  Delete
 |  undo
 :  u
@@ -245,8 +248,8 @@ of the help page.
 :  F11
 :  F11
 |  help
-:  ?
-:  F1
+:  ?, F1
+:  F1, ?
 |  close_help
 :  q
 :  Control+w
@@ -280,25 +283,34 @@ alone, so a key cannot hold Meta or Super.
 
 A key sequence is one or more keys separated by spaces, which are typed one
 after another, as in *g g*.
+The spaces belong to the notation of the file and of this page: the keys
+are typed with no Space between them, since Space is GO, and the status bar,
+the box of the keys that can come next, and the help page write a sequence of
+keys that type characters joined, as Vim does, such as *gg*.
 
 # TYPING
 
 The keys of a sequence wait until the sequence is complete, and the status bar
 shows the keys typed so far, while a box above it lists the keys that can come
 next and what each of them does.
-A key that begins no sequence is dropped, but a key that breaks off a sequence
-typed halfway starts a new one, so that a stray key never swallows the next.
+A key that completes or continues no sequence is dropped together with the
+keys typed so far, as Vim beeps and drops them, so that a key mistyped halfway,
+such as the *x* of *d x*, never starts a sequence of its own.
 Anything done other than typing, such as a click, drops a sequence typed
 halfway, and so does a change to the file.
+The key of *cancel* drops it as well, without any other effect.
 
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
 *move_down*, *move_up*, *back*, and *forward*.
-It deletes as many cues for *delete*, and gives the row, counted from one,
-that *first* and *last* select.
+It deletes as many cues for *delete*, undoes or redoes as many changes for
+*undo* and *redo*, and goes back as many tabs for *previous_tab*.
+It gives the row, counted from one, that *first* and *last* select, and the
+tab, counted from one, that *next_tab* shows.
 Other actions leave the count unused.
 A count larger than what there is, such as *9 Control+o* with fewer places
-behind, makes cinq go as far as it can, where Vim would refuse it.
+behind, *9 g t* with fewer tabs, or *3 d d* on the last cue, makes *cinq* go as
+far as it can, where Vim would refuse it.
 Since digits count, no sequence can start with one.
 
 A key bound by itself to *go* or *panic* acts at once, even halfway through
@@ -320,8 +332,11 @@ A text field of the inspector, or a drop-down list
 	*previous_field* move it from one text field or drop-down list to the
 	next, which shows a border in the color of focus.
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
-	*panic*, *next_field*, *previous_field*, *back*, *forward*, *open*, *save*,
-	and *save_as*, which act unless a text field takes them for typing.
+	*panic*, *cancel*, *next_field*, *previous_field*, *back*, *forward*, *open*,
+	*save*, and *save_as*, which act unless a text field takes them for typing.
+	A drop-down list that is closed lets the keys of *undo* and *redo* act as
+	well, since it has no text to undo, so that a change made from the list
+	can be taken back with the keyboard still there.
 	Enter leaves a text field, and opens the menu of a drop-down list, which
 	takes the keyboard from there.
 
@@ -355,6 +370,12 @@ While the stage window has the keyboard, as the window manager may leave it
 once the stage window opens, and as each GO that makes it fullscreen gives
 it, *edit*, *next_field*, and *previous_field* do nothing, since the keys
 typed there would never reach a field of the main window.
+The keys that change the show do nothing there either: *add_below*,
+*add_above*, *delete*, *move_down*, *move_up*, *undo*, and *redo*, since the
+cue list is out of sight from that window and a held key could change cues
+unseen.
+The keys of *go*, *panic*, and *standby*, and those that move the selection,
+act as before.
 A click on the main window gives it the keyboard.
 
 Show mode locks editing: *edit*, *add_below*, *add_above*, *move_down*,
@@ -377,10 +398,13 @@ page.
 *next*
 	Select the next cue, move the highlight of an open menu down, or scroll
 	the help page down.
+	The vi keymap binds *g j* as well as *j*, since a user of Vim types *gj* to
+	move by a displayed line.
 
 *previous*
 	Select the previous cue, move the highlight of an open menu up, or
 	scroll the help page up.
+	The vi keymap binds *g k* as well as *k*, as it binds *g j*.
 
 *next_list*
 	Show the next cue list.
@@ -397,10 +421,12 @@ page.
 	of the help page.
 
 *next_tab*
-	Show the next tab of the inspector.
+	Show the next tab of the inspector, or the tab whose number the count gives,
+	counted from one, or the last tab when there are fewer.
 
 *previous_tab*
-	Show the previous tab of the inspector.
+	Show the previous tab of the inspector, or go back as many tabs as the count,
+	wrapping around at the first.
 
 *back*
 	Go back to the place before the last jump, as the jump list of Vim does
@@ -440,6 +466,16 @@ page.
 *standby*
 	Put the selected cue on standby, so that the next GO fires it.
 
+*cancel*
+	Drop the keys typed so far, and take the keyboard out of a text field or
+	drop-down list, as Control+c does in Vim.
+	It never touches playback, which is how it differs from Escape, so that it is
+	the key to reach for when no show should stop.
+	It acts in text fields, where a text field that has a selection still copies
+	it first.
+	The cua keymap binds no key to it, since Control+c copies there.
+	While keys wait, the status bar hints its key.
+
 *edit*
 	Edit the name of the selected cue.
 
@@ -471,10 +507,12 @@ page.
 	Delete the selected cue, or as many cues from it down as the count.
 
 *undo*
-	Undo the latest change to the show.
+	Undo the latest change to the show, or as many of the latest changes as the
+	count, stopping at the oldest.
 
 *redo*
-	Redo the change undone last.
+	Redo the change undone last, or as many changes as the count, stopping at
+	the newest.
 
 *open*
 	Open a show that the file chooser of the desktop picks.
@@ -504,7 +542,8 @@ page.
 
 *help*
 	Show the help page, or hide it.  It does nothing while the stage window
-	has the keyboard.
+	has the keyboard.  Both keymaps bind *?* and F1 to it, so that the most common
+	help key works everywhere.
 
 *close_help*
 	Hide the help page.

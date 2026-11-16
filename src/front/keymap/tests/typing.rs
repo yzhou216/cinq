@@ -6,6 +6,7 @@
 //! the keys of GO and Panic, and keys that act alone
 
 use super::*;
+use crate::front::Message;
 
 #[test]
 fn counts_repeat_motions() {
@@ -26,7 +27,7 @@ fn keys_act_alone_when_bound_by_themselves_or_to_go_and_panic() {
     assert_eq!(alone("Control+n"), Some(Action::Next));
     assert_eq!(alone("Shift+Escape"), Some(Action::Panic));
     assert_eq!(alone("g"), None);
-    assert_eq!(alone("x"), None);
+    assert_eq!(alone("z"), None);
 }
 
 #[test]
@@ -64,14 +65,6 @@ fn key_bound_with_the_modifiers_held_goes_to_its_own_action() {
 }
 
 #[test]
-fn key_that_breaks_off_a_command_starts_a_new_one() {
-    assert_eq!(action("d i"), Some((Action::Edit, None)));
-    assert_eq!(action("2 g j"), Some((Action::Next, None)));
-    assert_eq!(typed("g x"), typed("x"));
-    assert!(typed("4 x").pending.is_empty());
-}
-
-#[test]
 fn keys_typed_halfway_list_what_can_follow_them() {
     let keymap = Keymap::default();
     let next = |text: &str| -> Vec<(String, Action)> {
@@ -81,6 +74,8 @@ fn keys_typed_halfway_list_what_can_follow_them() {
             .collect()
     };
     let g = [
+        ("j".to_owned(), Action::Next),
+        ("k".to_owned(), Action::Previous),
         ("g".to_owned(), Action::First),
         ("t".to_owned(), Action::NextTab),
         ("T".to_owned(), Action::PreviousTab),
@@ -90,4 +85,86 @@ fn keys_typed_halfway_list_what_can_follow_them() {
     assert_eq!(next("2 d"), [("d".to_owned(), Action::Delete)]);
     assert!(next("3").is_empty());
     assert_eq!(keymap.continuations(&[]).count(), 0);
+}
+
+#[test]
+fn keys_of_vim_delete_help_first_and_last_take_counts_as_their_twins_do() {
+    assert_eq!(action("x"), Some((Action::Delete, None)));
+    assert_eq!(action("3 x"), Some((Action::Delete, Some(3))));
+    assert_eq!(action("2 Delete"), Some((Action::Delete, Some(2))));
+    assert_eq!(action("F1"), Some((Action::Help, None)));
+    assert_eq!(action("?"), Some((Action::Help, None)));
+    assert_eq!(action("4 Control+Home"), Some((Action::First, Some(4))));
+    assert_eq!(action("Control+End"), Some((Action::Last, None)));
+    assert_eq!(action("7 Control+End"), Some((Action::Last, Some(7))));
+}
+
+#[test]
+fn x_cuts_and_begins_no_other_command() {
+    let keymap = Keymap::default();
+    assert!(typed("x").pending.is_empty());
+    assert!(keymap.continuations(&keys("x")).next().is_none());
+    assert_eq!(
+        one("x").and_then(|press| keymap.alone(press)),
+        Some(Action::Delete)
+    );
+}
+
+#[test]
+fn keys_of_delete_and_help_stay_with_a_field_that_has_the_keyboard() {
+    assert!(!Action::Delete.acts_in_fields());
+    assert!(!Action::Help.acts_in_fields());
+}
+
+#[test]
+fn counts_of_cua_keys_act_as_those_of_vi_keys_do() {
+    let cua = Keymap::from(Preset::Cua);
+    [
+        ("3 Control+z", Action::Undo, 3),
+        ("2 Control+y", Action::Redo, 2),
+        ("2 Control+Tab", Action::NextTab, 2),
+        ("2 Control+Shift+Tab", Action::PreviousTab, 2),
+    ]
+    .into_iter()
+    .for_each(|(text, action, count)| {
+        assert_eq!(
+            typed_on(&cua, text).action,
+            Some((action, Some(count))),
+            "{text}"
+        );
+    });
+}
+
+#[test]
+fn counts_of_vi_keys_reach_undo_redo_and_the_tabs() {
+    assert_actions(&[
+        ("3 u", Action::Undo, Some(3)),
+        ("2 Control+r", Action::Redo, Some(2)),
+        ("2 g t", Action::NextTab, Some(2)),
+        ("2 g T", Action::PreviousTab, Some(2)),
+    ]);
+    assert!(matches!(Action::Undo.message(Some(3)), Message::Undo(3)));
+    assert!(matches!(Action::Redo.message(None), Message::Redo(1)));
+    assert!(matches!(
+        Action::NextTab.message(Some(2)),
+        Message::ShowTab(2)
+    ));
+    assert!(matches!(Action::NextTab.message(None), Message::StepTab(1)));
+    assert!(matches!(
+        Action::PreviousTab.message(Some(2)),
+        Message::StepTab(-2)
+    ));
+}
+
+#[test]
+fn undo_and_redo_act_in_a_closed_list_and_not_in_a_text_field() {
+    let cua = Keymap::from(Preset::Cua);
+    let vi = Keymap::from(Preset::Vi);
+    assert!(cua.acts_in_lists(press("Control+z")) && !cua.acts_in_fields(press("Control+z")));
+    assert!(cua.acts_in_lists(press("Control+y")) && cua.acts_in_lists(press("Control+Z")));
+    assert!(vi.acts_in_lists(press("u")) && vi.acts_in_lists(press("Control+r")));
+    // Keys of moving and of the other edits stay out of the list
+    assert!(!vi.acts_in_lists(press("j")) && !cua.acts_in_lists(press("Delete")));
+    // Keys that act in every field act in a list too
+    assert!(vi.acts_in_lists(press("Tab")) && vi.acts_in_lists(press("Control+c")));
 }

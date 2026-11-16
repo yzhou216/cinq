@@ -4,16 +4,16 @@
 
 //! Status of the show, most important first, then at the right the keys of
 //! a command typed so far, what the latest opening or saving told or else
-//! the latest change to the show with the key that takes it back, the keys
-//! that go back and forward between the places jumped to while there is a
-//! place to go to, the key that saves unsaved changes, and the keys of GO,
-//! Panic, and the help page
+//! the latest change to the show with the key that takes it back, the key
+//! that cancels while keys wait, the keys that go back and forward between
+//! the places jumped to while there is a place to go to, the key that saves
+//! unsaved changes, and the keys of GO, Panic, and the help page
 //!
 //! The bar keeps to one line.  When it is too narrow for all of it, the
 //! keys of going forward and back, of GO, of Panic, of saving, and of the
 //! help page give way in turn, each one whole, and then the status gives way
-//! from its end, so that the keys typed so far and what the latest change
-//! told always show in full.
+//! from its end, so that the keys typed so far, what the latest change told,
+//! and the key of cancel always show in full.
 
 #[cfg(test)]
 mod tests;
@@ -32,7 +32,7 @@ use crate::{
     back::Turn,
     front::{
         App, Message,
-        keymap::{Action, written},
+        keymap::{Action, shown},
         update::Spot,
     },
 };
@@ -59,7 +59,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 /// without moving the rest.
 fn bar(app: &App, width: f32) -> Element<'_, Message> {
     let status = status(app);
-    let room = ((width - 3.0 * SPACING) / char_width()).floor() as usize;
+    let room = columns(width);
     let status_columns: usize = status.iter().map(|part| part.text.width()).sum();
     let shown = fitted(&hints(app), room.saturating_sub(status_columns));
     let status = rich_text(status).wrapping(Wrapping::None);
@@ -71,6 +71,11 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
     .padding(SPACING)
     .align_y(Center)
     .into()
+}
+
+/// Returns the columns of text that fit in the bar of `width` pixels
+fn columns(width: f32) -> usize {
+    ((width - 3.0 * SPACING) / char_width()).floor() as usize
 }
 
 /// Returns the hints joined, each one whole, without as many of those
@@ -113,7 +118,7 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
     let keymap = &app.config.keymap;
     let key =
         |action: Action, label: &str| keymap.hint(action, label).map(|hint| (Some(action), hint));
-    let typed = (!app.keys.is_empty()).then(|| (None, written(&app.keys)));
+    let typed = (!app.keys.is_empty()).then(|| (None, shown(&app.keys)));
     let told = app
         .told
         .clone()
@@ -122,9 +127,15 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
     let back = going(app, Action::Back, app.back_to());
     let forward = going(app, Action::Forward, app.forward_to());
     let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
+    // Escape would panic, so that the key that only cancels is told while it
+    // can.  Cancelling keys typed never gives way.
+    let cancel = key(Action::Cancel, "cancel")
+        .filter(|_| !app.keys.is_empty())
+        .map(|(_, hint)| (None, hint));
     typed
         .into_iter()
         .chain(told)
+        .chain(cancel)
         .chain(back)
         .chain(forward)
         .chain(save)

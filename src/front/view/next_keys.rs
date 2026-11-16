@@ -12,7 +12,7 @@ use iced::{
 use unicode_width::UnicodeWidthStr;
 
 use super::{SPACING, theme};
-use crate::front::{App, Message, keymap::written};
+use crate::front::{App, Message, keymap::shown};
 
 pub(super) fn view(app: &App) -> Option<Element<'_, Message>> {
     if app.help {
@@ -22,7 +22,7 @@ pub(super) fn view(app: &App) -> Option<Element<'_, Message>> {
         .config
         .keymap
         .continuations(&app.keys)
-        .map(|(keys, action)| (written(keys), action.description()))
+        .map(|(keys, action)| (shown(keys), action.description()))
         .collect();
     let width = next.iter().map(|(keys, _)| keys.width()).max()?;
     // Monospace font lines the descriptions up after the padded keys, which

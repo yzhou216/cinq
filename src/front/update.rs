@@ -59,8 +59,8 @@ impl App {
             Message::Add(place) => self.with_new_cue(place).revealed(),
             Message::Move(by) => self.with_selected_moved(by).revealed(),
             Message::Delete(count) => self.without_selected(count).revealed(),
-            Message::Undo => self.undone().revealed(),
-            Message::Redo => self.redone().revealed(),
+            Message::Undo(count) => self.undone(count).revealed(),
+            Message::Redo(count) => self.redone(count).revealed(),
             Message::Resized(window, size) if self.main == Some(window) => {
                 self.resized(window, size).revealed()
             }
@@ -89,6 +89,8 @@ impl App {
                     gone.revealed()
                 }
             }
+            // Keys typed so far went already, as for any message
+            Message::Cancel => self.cancelled(),
             // Buttons of the mouse go back and forward from the main window, as
             // the keys do, apart from the help page, which the keys leave be
             Message::SidePressed(window, mouse::Button::Back)
@@ -127,6 +129,7 @@ impl App {
             | Message::ToggleHelp
             | Message::CloseHelp
             | Message::Tab(_)
+            | Message::ShowTab(_)
             | Message::StepTab(_)
             | Message::NewKind(_)) => (self.settled_by(message), Task::none()),
         }
