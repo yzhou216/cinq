@@ -19,7 +19,7 @@ use super::{
     settle, silent_file, waiting,
 };
 use crate::back::{
-    Audio, Channels, CueId,
+    Audio, Channels, CueId, Fault,
     audio::{Wanted, mixer::Mixer, opener::Opener, opening::RETRY},
 };
 
@@ -33,27 +33,30 @@ fn make_ready(audio: &mut Audio, wanted: &Wanted) {
 }
 
 /// Returns audio on the show of Main on the device `a` and Sub on the
-/// device `b`, whose devices have failed, with the sound of a cue made
-/// ready, and the file of the sound
-fn failed(fake: Fake) -> (Audio, TempDir) {
+/// device `b`, whose devices have failed as `faults` say, with the sound of
+/// a cue made ready, and the file of the sound
+fn failed(fake: Fake, faults: [Fault; 2]) -> (Audio, TempDir) {
     let (directory, wanted) = silent_file();
     let mut audio = Audio::open(None);
     audio.opener = Opener::with(fake);
     audio.patch = patch(&show(Channels::MAIN, Channels::Stereo(0, 1)));
-    ["a", "b"].into_iter().for_each(|key| {
-        let fault = "there is no audio device".to_owned();
-        audio.mixers.insert(Some(key.to_owned()), Err(fault));
-    });
+    let [a, b] = faults;
+    audio.mixers.insert(Some("a".to_owned()), Err(a));
+    audio.mixers.insert(Some("b".to_owned()), Err(b));
     make_ready(&mut audio, &wanted);
     overdue(&mut audio);
     (audio, directory)
+}
+
+fn missing() -> Fault {
+    Fault::Missing("there is no audio device".to_owned())
 }
 
 #[test]
 fn retrying_devices_that_are_not_there_keeps_the_sounds_made_ready() {
     let fake = Fake::default();
     let opened = Arc::clone(&fake.opened);
-    let (mut audio, _directory) = failed(fake);
+    let (mut audio, _directory) = failed(fake, [missing(), missing()]);
     assert!(audio.preloader.ready(CueId(1)), "the sound is made ready");
     audio.revived();
     settle(&mut audio);
@@ -74,6 +77,30 @@ fn retrying_a_device_that_a_run_plays_on_makes_its_sound_again() {
         "the run on device b ended"
     );
     assert_eq!(sounds(&mut mix_a), 1);
+}
+
+/// Returns how many opens a retry asks for when the devices `a` and `b`
+/// have failed as `faults` say
+fn retried(faults: [Fault; 2]) -> usize {
+    let fake = Fake::default();
+    let opened = Arc::clone(&fake.opened);
+    let (mut audio, _directory) = failed(fake, faults);
+    audio.revived();
+    settle(&mut audio);
+    opened.load(Ordering::SeqCst)
+}
+
+#[test]
+fn a_fault_that_the_show_must_mend_is_never_tried_again() {
+    let unplayable = || Fault::Unplayable("no samples that cinq plays".to_owned());
+    assert_eq!(retried([unplayable(), unplayable()]), 0);
+    assert_eq!(retried([missing(), unplayable()]), 1);
+}
+
+#[test]
+fn faults_that_may_pass_are_tried_again() {
+    let refused = Fault::Refused("the device is busy".to_owned());
+    assert_eq!(retried([refused, Fault::Stopped("it went".to_owned())]), 2);
 }
 
 #[test]

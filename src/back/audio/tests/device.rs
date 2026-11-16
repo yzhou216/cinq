@@ -6,11 +6,13 @@
 //! device, since no host of cpal is named cinq
 
 use super::settle;
-use crate::back::{Audio, Channels, Command, Device, OutputEdit, OutputId, READY_AHEAD, Workspace};
+use crate::back::{
+    Audio, Channels, Command, Device, Fault, OutputEdit, OutputId, READY_AHEAD, Workspace,
+};
 
 const MAIN: OutputId = OutputId(1);
 
-fn problems(audio: &mut Audio, workspace: Workspace) -> Vec<(OutputId, String)> {
+fn problems(audio: &mut Audio, workspace: Workspace) -> Vec<(OutputId, Fault)> {
     audio.sync(workspace, READY_AHEAD);
     settle(audio);
     audio.problems()
@@ -21,7 +23,10 @@ fn output_on_a_device_that_is_not_there_tells_why_nothing_is_heard() {
     let mut audio = Audio::open(Some("cinq:none"));
     assert_eq!(
         problems(&mut audio, Workspace::default()),
-        [(MAIN, "there is no audio device cinq:none".to_owned())]
+        [(
+            MAIN,
+            Fault::Missing("there is no audio device cinq:none".to_owned())
+        )]
     );
 }
 
@@ -32,7 +37,10 @@ fn routing_to_another_device_opens_it() {
     audio.route(Some("cinq:second"));
     assert_eq!(
         problems(&mut audio, Workspace::default()),
-        [(MAIN, "there is no audio device cinq:second".to_owned())]
+        [(
+            MAIN,
+            Fault::Missing("there is no audio device cinq:second".to_owned())
+        )]
     );
 }
 
@@ -51,7 +59,10 @@ fn output_on_a_named_device_goes_by_its_name_where_the_id_finds_none() {
     let mut audio = Audio::open(None);
     assert_eq!(
         problems(&mut audio, workspace),
-        [(MAIN, "there is no audio device Desk".to_owned())]
+        [(
+            MAIN,
+            Fault::Missing("there is no audio device Desk".to_owned())
+        )]
     );
 }
 

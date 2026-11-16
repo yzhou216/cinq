@@ -18,6 +18,7 @@
 //! cinq's own plays each device, since kira mixes in stereo alone.
 
 mod device;
+mod fault;
 mod feed;
 mod mixer;
 mod opener;
@@ -37,6 +38,7 @@ use kira::sound::{FromFileError, streaming::StreamingSoundData};
 
 use super::{CueId, OutputId, Workspace, load::unreadable};
 pub use device::devices;
+pub use fault::Fault;
 use mixer::Mixer;
 use opener::Opener;
 use patch::Patch;
@@ -117,24 +119,22 @@ impl Audio {
     /// channels lie past those of the device.  An output whose device is
     /// being opened for the first time tells nothing until the device
     /// answers, or for five seconds.
-    pub fn problems(&self) -> Vec<(OutputId, String)> {
+    pub fn problems(&self) -> Vec<(OutputId, Fault)> {
         self.patch
             .outputs()
             .iter()
             .filter_map(|patched| {
                 if self.opener.unanswered(&patched.key) {
-                    return Some((patched.id, "the device does not answer".to_owned()));
+                    return Some((patched.id, Fault::Unanswered));
                 }
-                let problem = match self.mixers.get(&patched.key)? {
-                    Err(problem) => problem.clone(),
-                    Ok(mixer) => mixer.failure().or_else(|| {
+                let fault = match self.mixers.get(&patched.key)? {
+                    Err(fault) => fault.clone(),
+                    Ok(mixer) => mixer.failure().map(Fault::Stopped).or_else(|| {
                         let channels = mixer.channels();
-                        (patched.channels.needs() > channels).then(|| {
-                            format!("its channels lie past the {channels} that the device has")
-                        })
+                        (patched.channels.needs() > channels).then_some(Fault::Channels(channels))
                     })?,
                 };
-                Some((patched.id, problem))
+                Some((patched.id, fault))
             })
             .collect()
     }

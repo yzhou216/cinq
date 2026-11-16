@@ -589,8 +589,9 @@ A text field of the inspector, or a drop-down list
 	A drop-down list that is closed lets the keys of *undo* and *redo* act as
 	well, since it has no text to undo, so that a change made from the list
 	can be taken back with the keyboard still there.
-	A list of the sidebar, which scrolls in a low window, scrolls into view as
-	these keys reach it, with its title above it.
+	One of the sends of a cue, which scroll on the Levels tab, and a list of the
+	sidebar, which scrolls in a low window, scroll into view as these keys reach
+	it, with the name of the send or the title of the list above it.
 	Enter in the empty File field of a cue opens the dialog that chooses the
 	file, as the Choose button does, and the status bar hints it.
 	Anywhere else Enter leaves a text field, and opens the menu of a drop-down

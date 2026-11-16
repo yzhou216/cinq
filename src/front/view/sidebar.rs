@@ -12,7 +12,11 @@ use iced::{
     widget::{column, progress_bar, radio, row, rule, scrollable, text},
 };
 
-use super::{SIDEBAR_SCROLL, SPACING, button, format, warnings};
+use super::{
+    SIDEBAR_SCROLL, SPACING, button,
+    faults::{self, Warning},
+    format, outputs, warnings,
+};
 use crate::{
     back::{Active, Cue},
     front::{App, Message},
@@ -37,13 +41,26 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         .active()
         .iter()
         .filter_map(|active| workspace.cue(active.id).map(|cue| active_cue(active, cue)));
-    let device = app.audio_problems.iter().map(|(output, problem)| {
-        let name = workspace
-            .output(*output)
-            .map_or("Output", |output| &output.name);
-        text(format!("{name}: {problem}"))
-            .style(text::danger)
-            .into()
+    let device = faults::warnings(app).into_iter().map(|warning| {
+        let told = match &warning {
+            Warning::Device {
+                device,
+                fault,
+                outputs: affected,
+            } => {
+                let state = fault.state().to_lowercase();
+                let reason = fault
+                    .reason()
+                    .map(|reason| format!(": {reason}"))
+                    .unwrap_or_default();
+                let count = format::count(affected.len(), "output");
+                format!("{}: {state} ({count}){reason}", outputs::device(device))
+            }
+            Warning::Channels { output, fault } => {
+                format!("{}: {}", output.name, fault.state().to_lowercase())
+            }
+        };
+        pressing(told, Message::InspectOutput(warning.output()))
     });
     let files = [&app.file_problem, &app.keep_problem, &app.device_problem]
         .into_iter()
@@ -102,6 +119,11 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
     .width(width)
     .height(Fill)
     .into()
+}
+
+/// Returns a warning that `message` answers when it is pressed
+fn pressing(told: String, message: Message) -> Element<'static, Message> {
+    button(text(told)).on_press(message).width(Fill).into()
 }
 
 fn active_cue<'a>(active: &Active, cue: &Cue) -> Element<'a, Message> {

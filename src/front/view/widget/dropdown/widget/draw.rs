@@ -91,14 +91,14 @@ impl Dropdown<'_> {
         let end = Point::new(bounds.x + bounds.width - PADDING.right, bounds.center_y());
         renderer.fill_text(arrow, end, look.handle_color, *viewport);
         let (name, color) = match self.chosen {
-            Some(row) => (self.names[row].clone(), look.text_color),
+            Some(row) => (self.names[row].as_str(), look.text_color),
             None => (
-                self.placeholder.clone().unwrap_or_default(),
-                look.placeholder_color,
+                self.placeholder.as_deref().unwrap_or_default(),
+                self.placeholder_color.unwrap_or(look.placeholder_color),
             ),
         };
         let room = bounds.width - PADDING.x() - ARROW;
-        let name = label(shortened(&name, (room / char_width()) as usize), room);
+        let name = label(shortened(name, (room / char_width()) as usize), room);
         let start = Point::new(
             bounds.x + PADDING.left,
             bounds.center_y() - line_height() / 2.0,

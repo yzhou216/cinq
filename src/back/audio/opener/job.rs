@@ -10,6 +10,7 @@ use std::sync::mpsc::Sender;
 use kira::backend::cpal::cpal::Stream;
 
 use crate::back::audio::{
+    Fault,
     mixer::Mixer,
     patch::{Key, Need},
 };
@@ -32,7 +33,7 @@ pub(super) enum Job {
 pub(in crate::back::audio) enum Answer {
     Opened {
         key: Key,
-        result: Result<Mixer, String>,
+        result: Result<Mixer, Fault>,
     },
     Offered {
         key: Key,
@@ -60,7 +61,7 @@ pub(in crate::back::audio) trait Make: Send + Sync + 'static {
     type Stream: Send + 'static;
 
     /// Opens the device of `need`, and returns the mixer with its stream
-    fn open(&self, need: &Need) -> Result<(Mixer, Self::Stream), String>;
+    fn open(&self, need: &Need) -> Result<(Mixer, Self::Stream), Fault>;
 
     fn offers(&self, need: &Need) -> Option<u16>;
 }
@@ -71,7 +72,7 @@ pub(super) struct Devices;
 impl Make for Devices {
     type Stream = Stream;
 
-    fn open(&self, need: &Need) -> Result<(Mixer, Stream), String> {
+    fn open(&self, need: &Need) -> Result<(Mixer, Stream), Fault> {
         Mixer::open(need.key.as_deref(), need.name.as_deref(), need.channels)
     }
 

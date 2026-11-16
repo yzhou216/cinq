@@ -149,8 +149,11 @@ Major changes and improvements in each release of cinq, newest first.
   inspector, so that the settings of the selected cue are one key away.  It then
   goes on through the rest of the inspector, the toolbar, and the sidebar, and
   round again, and `Shift+Tab` goes the other way.
-- `Tab` onto a list of the sidebar scrolls it into view, with its title, where
-  a warning in a low window pushed the Default device list out of sight.
+- `Tab` onto a send on the Levels tab of a cue scrolls it into view, with the
+  name of its output above it, where it stayed out of sight below or above the
+  part of the sends that showed.  `Tab` onto a list of the sidebar does the
+  same, with its title, where a warning in a low window pushed the Default
+  device list out of sight.
 - Enter in the empty File field of an audio, video, or picture cue opens the
   dialog that chooses the file, which Tab never reaches since it skips the
   Choose button, and the status bar hints `Enter: choose a file` while the
@@ -204,9 +207,9 @@ Major changes and improvements in each release of cinq, newest first.
   thread of its own, so that a sound can reach any channel of a device and a
   slow device, as a Dante Virtual Soundcard that restarts, holds up no window,
   clock, GO, or other device.  An output shows no warning until its device has
-  answered, and tells that the device does not answer once five seconds have
-  passed without an answer.  A device whose stream stops says so among the
-  warnings, where the sound once moved to the default device.
+  answered, and reads not answering, in yellow, once five seconds have passed
+  without an answer.  A device whose stream stops says so among the warnings,
+  where the sound once moved to the default device.
 - A show has outputs, the named places that its cues send their sound to, each
   on one channel or two of an audio device, such as the house speakers on the
   first two channels of a desk and the subwoofer on its third.  Each audio and
@@ -219,16 +222,24 @@ Major changes and improvements in each release of cinq, newest first.
   An output that cannot play says why among the warnings, and the cues play on
   the others.
 - The Outputs entry below the cue lists in the sidebar shows the outputs of the
-  show in place of the cue list, each with its device, its channels, and why it
-  cannot play where it cannot.
-- The inspector edits the selected output.  A name or a level applies as it is
+  show in place of the cue list, each with its device, its channels, and in a
+  few words why it cannot play where it cannot: in yellow where cinq tries its
+  device again by itself, and in red where the output must change.  The Device
+  column keeps at least 20 columns, the others giving way to it.  The outputs on
+  a device that fails share one warning in the sidebar, which shows them when
+  pressed.
+- The inspector edits the selected output, whose Device list reads not found,
+  in yellow, while its device is not there.  A name or a level applies as it is
   typed, and channels once Enter, which leaves the field as in every other, is
   pressed or the field is left, since a device opens again for them.
 - The Audio device list of the sidebar is now Default device, since it chooses
   the device of the outputs that name none, and its first option reads System
   default.
 - The Levels tab of an audio or video cue sets the level at which the cue sends
-  to each output of the show, and a field left empty sends nothing there.
+  to each output of the show, and a field left empty sends nothing there.  The
+  fields scroll, so that every output stays in reach.  The names of the outputs
+  that cannot play show in yellow, or in red where the output must change,
+  beside how many of those that the cue sends to cannot.
 - The tutorial has a chapter on outputs, in which the reader sends the sound of
   a cue to each speaker of the computer in turn, and its first chapter names the
   outputs and the default device among what the sidebar shows.

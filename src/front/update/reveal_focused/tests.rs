@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of scrolling the sidebar to the list that Tab reached
+//! Tests of scrolling the sends to the field that Tab reached
 
 use iced::{
     Point, Size,
@@ -80,13 +80,12 @@ fn scrolling_in(
     list.0
 }
 
-/// Title above a list and the gap that the column puts below it
-fn title() -> f32 {
-    view::line_height() + view::SPACING
+fn sends_label() -> f32 {
+    view::line_height() + view::SPACING / 2.0
 }
 
 fn scrolling(outside: bool, field_y: f32, scrolled: f32) -> Option<f32> {
-    scrolling_in(view::SIDEBAR_SCROLL, title(), outside, field_y, scrolled)
+    scrolling_in(view::SENDS, sends_label(), outside, field_y, scrolled)
 }
 
 #[test]
@@ -94,19 +93,21 @@ fn the_sends_scroll_only_to_a_field_of_theirs_that_lies_out_of_view() {
     // Field 450 pixels down is 150 below the start of the content, and
     // ends at 180, which a view of 100 shows from 80 on
     assert_eq!(scrolling(false, 450.0, 0.0), Some(80.0));
-}
-
-#[test]
-fn a_field_above_the_view_scrolls_down_to_its_name() {
-    assert_eq!(scrolling(false, 350.0, 200.0), Some(50.0 - title()));
-}
-
-#[test]
-fn a_field_in_view_leaves_the_sidebar_where_it_is() {
-    assert_eq!(scrolling(false, 300.0 + title() + 10.0, 0.0), None);
-}
-
-#[test]
-fn a_field_outside_the_sidebar_leaves_it_where_it_is() {
+    // Above the view, the field scrolls down to its name
+    assert_eq!(scrolling(false, 350.0, 200.0), Some(50.0 - sends_label()));
+    // In view, or outside the sends, they stay where they are
+    assert_eq!(scrolling(false, 300.0 + sends_label() + 10.0, 0.0), None);
     assert_eq!(scrolling(true, 450.0, 0.0), None);
+}
+
+#[test]
+fn a_list_of_the_sidebar_below_the_view_scrolls_the_sidebar_to_its_title() {
+    // Title and the gap below it show with the list, which leaves the same
+    // 80 pixels as for any field below the view
+    let title = view::line_height() + view::SPACING;
+    let sidebar =
+        |field_y, scrolled| scrolling_in(view::SIDEBAR_SCROLL, title, false, field_y, scrolled);
+    assert_eq!(sidebar(450.0, 0.0), Some(80.0));
+    assert_eq!(sidebar(350.0, 200.0), Some(50.0 - title));
+    assert_eq!(sidebar(300.0 + title + 10.0, 0.0), None, "in view");
 }

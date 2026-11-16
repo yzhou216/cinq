@@ -6,22 +6,56 @@
 //! once the sidebar or the keys that step through the lists choose them
 //!
 //! Each row shows an output with the device and the channels it plays on,
-//! the level at which new cues send to it, and why it cannot play where it
-//! cannot.  A click selects the output, which the inspector then edits.
+//! the level at which new cues send to it, and, in a few words, why it
+//! cannot play where it cannot: in yellow where cinq tries its device again
+//! by itself, and in red where the output must change.  A click selects the
+//! output, which the inspector then edits.
 
 mod rows;
+#[cfg(test)]
+mod tests;
 
-use iced::{Element, Fill, Length};
+use iced::{Element, Fill, Length, widget::responsive};
 use strum::{IntoStaticStr, VariantArray};
 use unicode_width::UnicodeWidthStr;
 
-use super::{char_width, cue_table::RADIO};
+use super::{
+    char_width,
+    cue_table::{CELL_SPACE, RADIO, SCROLL_BAR},
+    giving_way,
+};
 use crate::{
-    back::{Device, Output},
-    front::{App, Message, view::format},
+    back::{Device, Fault, Output},
+    front::{
+        App, Message,
+        view::{faults, format},
+    },
 };
 
-#[derive(Clone, Copy, VariantArray, IntoStaticStr)]
+/// Columns that the names of outputs take at most before they wrap, so
+/// that a long name leaves the device room
+const NAME_ROOM: f32 = 24.0;
+
+/// Columns that a name and a state keep once they have to give way
+const SQUEEZED: f32 = 12.0;
+
+/// Fewest columns that the Device column keeps, since a device told in a
+/// few characters a line is of no use, and the other columns give way
+/// before it does
+const DEVICE_ROOM: f32 = 20.0;
+
+/// What gives way to the Device column, the first to go first
+#[derive(PartialEq)]
+enum Yield {
+    /// The New cues column goes
+    NewCues,
+    /// The state wraps within [`SQUEEZED`] columns
+    State,
+    /// The name wraps within [`SQUEEZED`] columns
+    Name,
+}
+
+#[derive(Clone, Copy, PartialEq, VariantArray, IntoStaticStr)]
 enum Column {
     #[strum(serialize = "#")]
     Number,
@@ -45,17 +79,15 @@ impl Column {
                 || "off".to_owned(),
                 |level| format!("{} dB", format::decibels(level)),
             ),
-            Column::State => app
-                .audio_problems
-                .iter()
-                .find(|(id, _)| *id == output.id)
-                .map_or_else(String::new, |(_, problem)| problem.clone()),
+            Column::State => faults::fault(app, output.id).map_or_else(String::new, Fault::state),
         }
     }
 
-    /// Returns the width of the column.  Names, devices, and problems share
-    /// what the others leave, which fit their widest text.
-    fn width(self, app: &App) -> Length {
+    /// Returns the width of the column.  Devices take what the others
+    /// leave, which fit their widest text, so that the state of an output
+    /// keeps to one line, and names wrap past [`NAME_ROOM`], unless `gone`
+    /// has them give way to the device.
+    fn width(self, app: &App, gone: &[Yield]) -> Length {
         let widest = || {
             app.workspace
                 .outputs()
@@ -65,16 +97,56 @@ impl Column {
                 .fold(<&str>::from(self).width(), usize::max) as f32
                 * char_width()
         };
+        let squeezed = |gives: Yield, room: f32| {
+            let room = if gone.contains(&gives) {
+                SQUEEZED
+            } else {
+                room
+            };
+            Length::Fixed(widest().min(room * char_width()))
+        };
         match self {
-            Column::Name | Column::Device | Column::State => Fill,
+            Column::Device => Fill,
+            Column::Name => squeezed(Yield::Name, NAME_ROOM),
             Column::Number => Length::Fixed(widest() + RADIO),
+            Column::State => squeezed(Yield::State, f32::INFINITY),
             Column::Channels | Column::NewCues => Length::Fixed(widest()),
         }
     }
 }
 
+/// Returns the columns that show and their widths, as many as keep the
+/// device [`DEVICE_ROOM`] columns in `room`, with the others giving way in
+/// turn, or as few as they can
+fn fitting(app: &App, room: f32) -> Vec<(Column, Length)> {
+    giving_way(
+        &[Yield::NewCues, Yield::State, Yield::Name],
+        |gone| {
+            Column::VARIANTS
+                .iter()
+                .filter(|&&column| column != Column::NewCues || !gone.contains(&Yield::NewCues))
+                .map(|&column| (column, column.width(app, gone)))
+                .collect::<Vec<_>>()
+        },
+        |columns| device_room(columns, room) >= DEVICE_ROOM * char_width(),
+    )
+}
+
+/// Returns the width that the Device column has in `room` beside the other
+/// `columns`, and the space between the columns
+fn device_room(columns: &[(Column, Length)], room: f32) -> f32 {
+    let fixed: f32 = columns
+        .iter()
+        .filter_map(|(_, width)| match width {
+            Length::Fixed(width) => Some(*width),
+            _ => None,
+        })
+        .sum();
+    room - fixed - CELL_SPACE * columns.len() as f32
+}
+
 pub(super) fn view(app: &App) -> Element<'_, Message> {
-    rows::list(app)
+    responsive(move |size| rows::list(app, size.width - SCROLL_BAR)).into()
 }
 
 /// Returns the name that an output goes by for its device

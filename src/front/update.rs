@@ -149,6 +149,12 @@ impl App {
             // Keys typed so far went already, as for any message
             Message::Cancel => self.cancelled(),
             Message::ShowOutputs => self.showing_outputs().revealed(),
+            Message::InspectOutput(output) => Self {
+                output: Some(output),
+                ..self
+            }
+            .showing_outputs()
+            .revealed(),
             // Buttons of the mouse go back and forward from the main window, as
             // the keys do, apart from the help page, which the keys leave be
             Message::SidePressed(window, mouse::Button::Back)

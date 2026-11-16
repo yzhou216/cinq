@@ -7,6 +7,7 @@
 
 mod cue_table;
 mod devices;
+mod faults;
 pub(super) mod format;
 mod help;
 mod inspector;
@@ -54,6 +55,10 @@ pub const OUTPUTS: &str = "outputs";
 /// Identity of the selected output, through which the outputs find where
 /// to scroll
 pub const SELECTED_OUTPUT: &str = "selected output";
+
+/// Identity of the sends of a cue, through which the field that Tab reached
+/// scrolls into view
+pub const SENDS: &str = "sends";
 
 /// Identity of the sidebar, through which the list that Tab reached scrolls
 /// into view
@@ -192,7 +197,7 @@ fn char_width() -> f32 {
 /// Counts the warnings that the sidebar lists
 fn warnings(app: &App) -> usize {
     app.workspace.problems().count()
-        + app.audio_problems.len()
+        + faults::warnings(app).len()
         + usize::from(app.file_problem.is_some())
         + usize::from(app.keep_problem.is_some())
         + usize::from(app.device_problem.is_some())

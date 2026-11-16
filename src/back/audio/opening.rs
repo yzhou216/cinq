@@ -17,7 +17,7 @@ use std::time::{Duration, Instant};
 use itertools::Itertools;
 
 use super::{
-    Audio,
+    Audio, Fault,
     opener::Answer,
     patch::{Key, Need, Patch},
     preload::Preloader,
@@ -90,14 +90,14 @@ impl Audio {
     }
 
     /// Opens again each device that is absent or has stopped, once every
-    /// [`RETRY`] after its latest answer.  Also looks at each device that
-    /// opened with fewer channels than the outputs need, to open it once it
-    /// offers more.  The other devices play on unbroken.  A device that
-    /// offers no more is looked at ever more seldom, as [`probes`] tells.
-    /// The runs that had a sound on a device that stopped start again on all
-    /// of theirs, from where they are, as the next part of the sync starts
-    /// them, and so do those that come to play on a device that opens at
-    /// last.
+    /// [`RETRY`] after its latest answer, unless its fault is one that the
+    /// show must mend.  Also looks at each device that opened with fewer
+    /// channels than the outputs need, to open it once it offers more.  The
+    /// other devices play on unbroken.  A device that offers no more is
+    /// looked at ever more seldom, as [`probes`] tells.  The runs that had
+    /// a sound on a device that stopped start again on all of theirs, from
+    /// where they are, as the next part of the sync starts them, and so do
+    /// those that come to play on a device that opens at last.
     pub(super) fn revived(&mut self) {
         let due = self.tried.elapsed() >= RETRY;
         let (failed, rest): (Vec<Need>, Vec<Need>) = self
@@ -107,7 +107,7 @@ impl Audio {
             .filter(|need| !self.opener.opening(&need.key))
             .partition(|need| match self.mixers.get(&need.key) {
                 Some(Ok(mixer)) => mixer.failure().is_some(),
-                Some(Err(_)) => true,
+                Some(Err(fault)) => fault.retried(),
                 None => false,
             });
         // Dante Virtual Soundcard offers more channels once they are raised
@@ -160,7 +160,7 @@ impl Audio {
         keys.iter().for_each(|key| {
             let fault = match self.mixers.remove(key) {
                 Some(Err(fault)) => Some(fault),
-                Some(Ok(mixer)) => mixer.failure(),
+                Some(Ok(mixer)) => mixer.failure().map(Fault::Stopped),
                 None => None,
             };
             if let Some(fault) = fault.filter(|_| !gone.contains(key)) {

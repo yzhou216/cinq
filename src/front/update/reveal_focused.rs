@@ -2,12 +2,14 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Scrolling the sidebar so that the list that Tab reached shows
+//! Scrolling the sends of a cue and the sidebar so that the field that Tab
+//! reached shows
 //!
-//! The lists of the sidebar scroll within it when the window is low, so Tab
-//! can reach a list that lies below the part in view, or above it.  An
-//! operation finds the focused field among those inside the sidebar, and
-//! scrolls to show the list with its title above it.
+//! The fields of the sends scroll within the inspector, and the lists of the
+//! sidebar scroll within it when the window is low, so Tab can reach a field
+//! that lies below the part in view, or above it.  One operation per
+//! scrollable finds the focused field among those inside it, and scrolls to
+//! show the field with the name above it.
 
 use iced::{
     Rectangle, Task, Vector,
@@ -20,13 +22,14 @@ use iced::{
 
 use crate::front::{reveal, view};
 
-/// Scrolls the sidebar to show the list that has the keyboard, if it lies out
-/// of view
+/// Scrolls the sends and the sidebar to show the field that has the
+/// keyboard, if it is in one of them and lies out of view
 pub(super) fn reveal_focused<T: Send + 'static>() -> Task<T> {
-    // Title above a list of the sidebar, with the gap that the column puts
-    // between them and below
+    // Name of an output above its send, and the title above a list of the
+    // sidebar, each with the gap that the column puts between them and below
+    let sends = Revealing::new(view::SENDS, view::line_height() + view::SPACING / 2.0);
     let sidebar = Revealing::new(view::SIDEBAR_SCROLL, view::line_height() + view::SPACING);
-    operate(sidebar).discard()
+    Task::batch([operate(sends).discard(), operate(sidebar).discard()])
 }
 
 /// Finds a scrollable and the field in it that has the keyboard

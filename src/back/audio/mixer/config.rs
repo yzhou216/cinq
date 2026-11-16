@@ -8,6 +8,8 @@ use kira::backend::cpal::cpal::{
     BufferSize, Device, ErrorKind, SampleFormat, StreamConfig, traits::DeviceTrait,
 };
 
+use super::Fault;
+
 /// Samples that a device can take, those that kira renders first, then
 /// integers from the widest, as ASIO drivers, the hw devices of ALSA, and
 /// Inferno's Dante device take
@@ -26,27 +28,27 @@ pub(super) const FORMATS: [SampleFormat; 4] = [
 pub(super) fn config(
     device: &Device,
     channels: u16,
-) -> Result<(StreamConfig, SampleFormat), String> {
+) -> Result<(StreamConfig, SampleFormat), Fault> {
     let id = device.id().map(|id| id.to_string()).unwrap_or_default();
     let rate = device
         .default_output_config()
         .map_err(|error| match error.kind() {
-            ErrorKind::UnsupportedConfig => unplayable(&id),
-            _ => error.to_string(),
+            ErrorKind::UnsupportedConfig => Fault::Unplayable(unplayable(&id)),
+            _ => Fault::Refused(error.to_string()),
         })?
         .sample_rate();
     let offered: Vec<_> = device
         .supported_output_configs()
-        .map_err(|error| error.to_string())?
+        .map_err(|error| Fault::Refused(error.to_string()))?
         .filter(|range| (range.min_sample_rate()..=range.max_sample_rate()).contains(&rate))
         .map(|range| (range.sample_format(), range.channels()))
         .collect();
     let (format, count) = chosen(&offered, channels).ok_or_else(|| {
-        if offered.is_empty() {
+        Fault::Unplayable(if offered.is_empty() {
             format!("it offers no stream at {rate} Hz")
         } else {
             unplayable(&id)
-        }
+        })
     })?;
     let config = StreamConfig {
         channels: count,

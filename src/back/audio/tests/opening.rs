@@ -17,7 +17,7 @@ use super::{
     settle,
 };
 use crate::back::{
-    Audio, Channels, Command, OutputEdit, READY_AHEAD,
+    Audio, Channels, Command, Fault, OutputEdit, READY_AHEAD,
     audio::{mixer::Mixer, opener::Opener, opening::RETRY},
 };
 
@@ -41,7 +41,7 @@ fn output_that_needs_more_channels_opens_its_device_again_and_no_other() {
     assert!(is_open(&audio, "a"));
     assert!(matches!(
         audio.mixers.get(&Some("b".to_owned())),
-        Some(Err(_))
+        Some(Err(Fault::Missing(_)))
     ));
     assert_eq!(cues(&audio), [1], "only the sound on device a plays on");
     assert_eq!(sounds(&mut mix_a), 1, "the sound of the other cues goes");

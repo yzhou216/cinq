@@ -8,32 +8,34 @@ use iced::{
     Element, Fill, padding,
     widget::{container, mouse_area, radio, scrollable, table, text, text::Wrapping},
 };
-use strum::VariantArray;
 
-use super::Column;
+use super::{Column, fitting};
 use crate::{
-    back::Output,
+    back::{Fault, Output},
     front::{
         App, Message,
-        view::{OUTPUTS, SELECTED_OUTPUT, cue_table::ROW_PADDING, marked_row},
+        view::{OUTPUTS, SELECTED_OUTPUT, cue_table::ROW_PADDING, faults, marked_row},
     },
 };
 
-pub(super) fn list(app: &App) -> Element<'_, Message> {
-    let columns = Column::VARIANTS.iter().map(|&column| {
+pub(super) fn list(app: &App, room: f32) -> Element<'_, Message> {
+    let shown = fitting(app, room);
+    let columns = shown.iter().copied().map(|(column, width)| {
         let title = container(text(<&str>::from(column))).padding(padding::vertical(ROW_PADDING));
         table::column(title, move |(row, output): (usize, &Output)| {
             cell(app, column, row, output)
         })
-        .width(column.width(app))
+        .width(width)
     });
     let outputs = table::table(columns, app.workspace.outputs().iter().enumerate()).padding_y(0);
     scrollable(marked_row(
         outputs,
-        Column::VARIANTS.len(),
+        shown.len(),
         app.output_row(),
         SELECTED_OUTPUT,
     ))
+    // Bar beside the table, rather than over the state of each output
+    .spacing(0)
     .id(OUTPUTS)
     .height(Fill)
     .into()
@@ -45,7 +47,12 @@ fn cell<'a>(app: &'a App, column: Column, row: usize, output: &'a Output) -> Ele
     let shown = column.text(app, row, output);
     let content: Element<'a, Message> = match column {
         Column::Number => radio(shown, output.id, app.output, Message::SelectOutput).into(),
-        Column::State => text(shown).style(text::danger).into(),
+        Column::State => {
+            let retried = faults::fault(app, output.id).is_some_and(Fault::retried);
+            text(shown)
+                .style(if retried { text::warning } else { text::danger })
+                .into()
+        }
         _ => text(shown).wrapping(Wrapping::WordOrGlyph).into(),
     };
     let cell = container(content)

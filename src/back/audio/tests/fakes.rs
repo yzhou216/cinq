@@ -17,7 +17,7 @@ use itertools::Itertools;
 
 use super::voice::opened;
 use crate::back::{
-    Audio, Channels, Command, CueId, Device, OutputEdit, OutputId, Workspace,
+    Audio, Channels, Command, CueId, Device, Fault, OutputEdit, OutputId, Workspace,
     audio::{
         mixer::{Mix, Mixer},
         opener::{Make, Opener},
@@ -104,10 +104,10 @@ pub(super) struct Fake {
 impl Make for Fake {
     type Stream = ();
 
-    fn open(&self, _: &Need) -> Result<(Mixer, ()), String> {
+    fn open(&self, _: &Need) -> Result<(Mixer, ()), Fault> {
         self.opened.fetch_add(1, Ordering::SeqCst);
         self.gate.pass();
-        Err("there is no audio device".to_owned())
+        Err(Fault::Missing("there is no audio device".to_owned()))
     }
 
     fn offers(&self, _: &Need) -> Option<u16> {

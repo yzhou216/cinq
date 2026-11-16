@@ -145,7 +145,8 @@ pub(super) fn key_press(event: keyboard::Event) -> Option<Message> {
 
 /// Selects the text of the field that a move by key reached, so that typing
 /// replaces it as in desktop programs, while a click keeps the caret where
-/// it fell, and scrolls the sidebar to show the list if it is in it
+/// it fell, and scrolls the sends or the sidebar to show the field if it is
+/// in one of them
 fn reached(moved: Task<Message>) -> Task<Message> {
     moved.chain(select_focused()).chain(reveal_focused())
 }

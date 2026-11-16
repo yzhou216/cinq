@@ -20,7 +20,7 @@ use super::{
     settle, waiting,
 };
 use crate::back::{
-    Audio, Channels, Command, OutputEdit, READY_AHEAD, Workspace,
+    Audio, Channels, Command, Fault, OutputEdit, READY_AHEAD, Workspace,
     audio::{
         mixer::Mixer,
         opener::{Make, Opener},
@@ -63,7 +63,7 @@ struct Recording {
 impl Make for Recording {
     type Stream = Stream;
 
-    fn open(&self, need: &Need) -> Result<(Mixer, Stream), String> {
+    fn open(&self, need: &Need) -> Result<(Mixer, Stream), Fault> {
         let id = self.next.fetch_add(1, Ordering::SeqCst);
         note(&self.events, format!("open {id}"));
         self.gate.pass();
@@ -160,11 +160,11 @@ struct Hanging {
 impl Make for Hanging {
     type Stream = ();
 
-    fn open(&self, need: &Need) -> Result<(Mixer, ()), String> {
+    fn open(&self, need: &Need) -> Result<(Mixer, ()), Fault> {
         if need.key.as_deref() == Some("a") {
             self.asked.fetch_add(1, Ordering::SeqCst);
             let _ = self.release.lock().expect("no test panics").recv();
-            return Err("there is no audio device".to_owned());
+            return Err(Fault::Missing("there is no audio device".to_owned()));
         }
         let (mixer, _) = Mixer::bench(need.channels, need.channels, 8000, 16);
         Ok((mixer, ()))
@@ -189,36 +189,20 @@ fn hanging() -> (Audio, Sender<()>, Arc<AtomicUsize>) {
 
 #[test]
 fn device_that_never_answers_holds_up_no_other_and_tells_so_after_a_while() {
-    let (mut audio, release, _) = hanging();
-    audio.sync(show(Channels::MAIN, Channels::Stereo(0, 1)), READY_AHEAD);
-    assert_eq!(audio.problems(), [], "nothing is told at first");
-    until(&mut audio, |audio| is_open(audio, "b"));
-    until(&mut audio, |audio| !audio.problems().is_empty());
-    assert_eq!(
-        audio.problems(),
-        [(MAIN, "the device does not answer".to_owned())]
-    );
-    // Syncs go on and ask for no second open of the device
-    audio.sync(show(Channels::MAIN, Channels::Stereo(0, 1)), READY_AHEAD);
-    release.send(()).expect("the device waits");
-    until(&mut audio, |audio| !audio.opener.busy());
-    assert_eq!(
-        audio.problems(),
-        [(MAIN, "there is no audio device".to_owned())]
-    );
-}
-
-#[test]
-fn device_that_never_answers_is_not_asked_a_second_time() {
     let (mut audio, release, asked) = hanging();
     let workspace = show(Channels::MAIN, Channels::Stereo(0, 1));
     audio.sync(workspace.clone(), READY_AHEAD);
-    until(&mut audio, |audio| {
-        matches!(audio.mixers.get(&Some("b".to_owned())), Some(Ok(_)))
-    });
+    assert_eq!(audio.problems(), [], "nothing is told at first");
+    until(&mut audio, |audio| is_open(audio, "b"));
     until(&mut audio, |audio| !audio.problems().is_empty());
+    assert_eq!(audio.problems(), [(MAIN, Fault::Unanswered)]);
+    // Syncs go on and ask for no second open of the device
     audio.sync(workspace, READY_AHEAD);
     release.send(()).expect("the device waits");
-    until(&mut audio, |audio| !audio.opener.busy());
-    assert_eq!(asked.load(Ordering::SeqCst), 1);
+    settle(&mut audio);
+    assert!(matches!(
+        audio.problems().as_slice(),
+        [(MAIN, Fault::Missing(_))]
+    ));
+    assert_eq!(asked.load(Ordering::SeqCst), 1, "no second open was asked");
 }

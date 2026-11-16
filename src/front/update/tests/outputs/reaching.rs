@@ -138,3 +138,16 @@ fn showing_the_cue_list_again_remembers_the_place_that_going_back_returns_to() {
     let back = after(switched, [Message::Back(1)]);
     assert_eq!((back.list, back.selected), (0, Some(CueId(3))));
 }
+
+#[test]
+fn warning_about_an_output_shows_the_outputs_with_it_selected() {
+    let added = after(
+        show(None),
+        [Message::ShowOutputs, Message::Add(Place::After, 1)],
+    );
+    let back = after(added, [Message::StepList(-1)]);
+    assert!(!back.outputs_shown);
+    let inspected = after(back, [Message::InspectOutput(OutputId(2))]);
+    assert!(inspected.outputs_shown);
+    assert_eq!(inspected.output, Some(OutputId(2)));
+}
