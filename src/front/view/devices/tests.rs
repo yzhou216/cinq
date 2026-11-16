@@ -4,8 +4,11 @@
 
 //! Tests of the labels of the audio devices
 
-use super::{choices, chosen};
-use crate::back::Device;
+use super::{choices, chosen, default_label};
+use crate::{
+    back::Device,
+    front::{App, keymap::config::Config},
+};
 
 fn device(id: &str, name: &str) -> (String, String) {
     (id.to_owned(), name.to_owned())
@@ -68,4 +71,23 @@ fn output_chooses_its_device_by_id_or_else_by_its_only_name() {
     // Name of two devices, which no list can tell apart
     assert_eq!(id(&named("alsa:hw:CARD=2,DEV=0", "USB Audio")), None);
     assert_eq!(id(&named("coreaudio:gone", "Gone")), None);
+}
+
+#[test]
+fn the_default_option_of_an_output_names_the_device_that_the_sidebar_chooses() {
+    let app = |chosen: Option<&str>| App {
+        audio_devices: vec![device("alsa:pipewire", "PipeWire Sound Server")],
+        config: Config::default().with_audio_device(chosen.map(str::to_owned)),
+        ..App::default()
+    };
+    assert_eq!(default_label(&app(None)), "Default device (System default)");
+    assert_eq!(
+        default_label(&app(Some("alsa:pipewire"))),
+        "Default device (PipeWire Sound Server)"
+    );
+    assert_eq!(
+        default_label(&app(Some("alsa:gone"))),
+        "Default device (alsa:gone)",
+        "a choice that is not there goes by its ID, as in the sidebar"
+    );
 }

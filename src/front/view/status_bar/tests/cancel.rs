@@ -56,7 +56,10 @@ fn the_key_of_cancel_stays_in_a_bar_of_1024_pixels_while_go_and_panic_give_way()
             remark: Some(remark),
             ..opened(Preset::Vi, false, false)
         };
-        let taken: usize = status(&app).iter().map(|part| part.text.width()).sum();
+        let taken: usize = status(&app, app.show.name().into_owned())
+            .iter()
+            .map(|part| part.text.width())
+            .sum();
         fitted(&hinted(&app), COLUMNS - taken, &YIELDING)
     };
     // GO gives way first, then Panic, while cancel stays

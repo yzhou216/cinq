@@ -33,7 +33,7 @@ fn show(sends: Option<Sends>) -> Workspace {
 fn shown(workspace: &Workspace) -> (String, bool) {
     let list = &workspace.lists()[0];
     let cue = &list.cues[0];
-    let (state, style) = state(workspace, list, cue);
+    let (state, style) = state(workspace, list, cue, false);
     let theme = theme::modus_vivendi();
     let yellow = style(&theme).color == text::warning(&theme).color;
     (state, yellow)

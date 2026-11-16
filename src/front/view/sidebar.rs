@@ -2,8 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Cue lists, running cues, the audio device, and warnings, all visible at
-//! the same time
+//! Cue lists, running cues, warnings, and the audio device, all visible at
+//! the same time, with the warnings above the audio device, which a show sets
+//! once, so that the first warning shows whole at the least height of the
+//! window
 
 mod devices;
 
@@ -25,6 +27,10 @@ use crate::{
 /// Thickness of the progress bars of running cues, thin enough that several
 /// running cues fit in the sidebar at once
 const BAR: f32 = 10.0;
+
+/// Most warnings that the sidebar lists, so that the Default device list
+/// below them stays in view, the rest being counted in a line of their own
+const WARNINGS: usize = 3;
 
 pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
     let workspace = &app.workspace;
@@ -85,6 +91,14 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             Message::Select(cue.id),
         )
     });
+    let everything: Vec<Element<'_, Message>> = device
+        .chain(files)
+        .chain(settings)
+        .chain(problems)
+        .chain(stranded)
+        .collect();
+    let (shown, left) = limited(everything);
+    let more = (left > 0).then(|| text(format!("and {left} more")).style(text::warning).into());
     scrollable(
         column![
             text("Cue lists"),
@@ -100,19 +114,11 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             text(format!("Active ({})", workspace.active().len())),
             column(active).spacing(SPACING),
             rule::horizontal(1),
+            warned,
+            column(shown.into_iter().chain(more)).spacing(SPACING),
+            rule::horizontal(1),
             text("Default device"),
             devices::view(app),
-            rule::horizontal(1),
-            warned,
-            column(
-                device
-                    .into_iter()
-                    .chain(files)
-                    .chain(settings)
-                    .chain(problems)
-                    .chain(stranded)
-            )
-            .spacing(SPACING),
         ]
         .spacing(SPACING)
         .padding(SPACING)
@@ -146,4 +152,23 @@ fn active_cue<'a>(active: &Active, cue: &Cue) -> Element<'a, Message> {
     ]
     .spacing(SPACING / 2.0)
     .into()
+}
+
+/// Splits `warnings` into the first that the sidebar lists and how many it
+/// leaves out
+fn limited<T>(warnings: Vec<T>) -> (Vec<T>, usize) {
+    let left = warnings.len().saturating_sub(WARNINGS);
+    (warnings.into_iter().take(WARNINGS).collect(), left)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::limited;
+
+    #[test]
+    fn the_sidebar_lists_three_warnings_and_counts_the_rest() {
+        assert_eq!(limited(vec![1, 2, 3]), (vec![1, 2, 3], 0));
+        assert_eq!(limited(vec![1, 2, 3, 4, 5, 6, 7, 8]), (vec![1, 2, 3], 5));
+        assert_eq!(limited(Vec::<u8>::new()), (Vec::new(), 0));
+    }
 }

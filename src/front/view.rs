@@ -12,6 +12,7 @@ pub(super) mod format;
 mod help;
 mod inspector;
 pub(in crate::front) use cue_table::searchable as cue_texts;
+pub(in crate::front) use inspector::rejection;
 mod next_keys;
 mod outputs;
 pub(in crate::front) use outputs::searchable as output_texts;
@@ -40,7 +41,7 @@ use super::{
     App, Message,
     keymap::{Action, Keymap},
 };
-use widget::{button, dropdown, hide, keep_keys, line_keys, marked_row};
+use widget::{button, dropdown, dropdown_width, hide, keep_keys, line_keys, marked_row};
 
 /// Identity of the cue list, through which the selection scrolls into view
 pub const CUES: &str = "cues";

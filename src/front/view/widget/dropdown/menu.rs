@@ -53,6 +53,9 @@ pub(super) struct Shared {
     /// Whether a key picked an option or closed the menu without a pick, which
     /// gives the keyboard back to the list, until the list takes it
     returning: Cell<bool>,
+    /// Option that the interface was last told the highlight rests on, which
+    /// it is told again only when that changes
+    told: Cell<Option<usize>>,
     /// Keys of a motion typed halfway, such as the first `g` of `g g`
     waiting: Cell<Vec<Press>>,
 }
@@ -92,6 +95,17 @@ impl<'b> Choice<'b> {
         self.shared.highlight.get().or(self.dropdown.chosen)
     }
 
+    /// Tells the interface which option the highlight rests on, if the list
+    /// asks to hear and the option is not the one that it was told last
+    pub(super) fn report(&self, shell: &mut Shell<'_, Message>) {
+        let row = self.highlighted();
+        if let Some(tell) = &self.dropdown.on_highlight
+            && self.shared.told.replace(row) != row
+        {
+            shell.publish(tell(row));
+        }
+    }
+
     /// Opens the menu with the highlight on the selected option, unless
     /// there is no option to choose
     pub(super) fn open(&self, shell: &mut Shell<'_, Message>) {
@@ -101,6 +115,7 @@ impl<'b> Choice<'b> {
             self.shared.reveal.set(true);
             self.shared.waiting.take();
             shell.publish(Message::MenuOpen(true));
+            self.report(shell);
         }
         if let Some(message) = &self.dropdown.on_open {
             shell.publish(message.clone());
@@ -157,6 +172,7 @@ impl<'b> Choice<'b> {
     /// keeps the key from acting on anything behind the menu
     fn highlight(&self, row: Option<usize>, shell: &mut Shell<'_, Message>) {
         self.shared.highlight.set(row);
+        self.report(shell);
         self.shared.reveal.set(true);
         shell.capture_event();
     }
@@ -184,6 +200,11 @@ impl<'b> Choice<'b> {
     pub(super) fn close(&self, shell: &mut Shell<'_, Message>) {
         self.shared.open.set(false);
         self.shared.waiting.take();
+        if let Some(tell) = &self.dropdown.on_highlight
+            && self.shared.told.take().is_some()
+        {
+            shell.publish(tell(None));
+        }
         shell.publish(Message::MenuOpen(false));
     }
 }

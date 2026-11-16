@@ -7,6 +7,7 @@
 
 mod adding;
 mod cancel;
+mod name;
 mod outputs;
 mod places;
 
@@ -120,15 +121,25 @@ fn a_cut_names_the_keys_that_paste_and_undo_while_a_copy_names_only_the_paste_ke
 }
 
 #[test]
-fn what_a_key_remarked_shows_in_the_bar_before_anything_else() {
-    let app = App {
+fn what_a_key_remarked_or_why_a_field_was_not_applied_shows_in_the_bar_before_anything_else() {
+    let told = |app: App| {
+        hinted(&app)
+            .into_iter()
+            .find_map(|(action, hint)| action.is_none().then_some(hint))
+    };
+    let remarked = App {
         remark: Some("The clipboard is empty"),
         ..App::default()
     };
-    let told = hinted(&app)
-        .into_iter()
-        .find_map(|(action, hint)| action.is_none().then_some(hint));
-    assert_eq!(told.as_deref(), Some("The clipboard is empty"));
+    assert_eq!(told(remarked).as_deref(), Some("The clipboard is empty"));
+    let unapplied = App {
+        unapplied: Some("Not applied: the name is empty".to_owned()),
+        ..App::default()
+    };
+    assert_eq!(
+        told(unapplied).as_deref(),
+        Some("Not applied: the name is empty")
+    );
 }
 
 #[test]

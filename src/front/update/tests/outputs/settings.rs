@@ -108,10 +108,11 @@ fn editing_a_send_keeps_the_sends_to_outputs_that_have_gone() {
 }
 
 #[test]
-fn enter_in_a_field_that_reads_no_value_leaves_it() {
+fn enter_in_a_field_that_reads_no_value_leaves_it_and_tells_why() {
     let main = OutputId(1);
     let app = typed(outputs_shown(), Setting::Channels(main), "x");
     let app = app.next(Message::Focus(Focus::Cues)).0;
     assert_eq!(channels(&app), "1-2");
     assert_eq!(app.typed, None);
+    assert!(app.unapplied.is_some());
 }

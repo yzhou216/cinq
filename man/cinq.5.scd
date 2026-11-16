@@ -110,6 +110,11 @@ _tutorial.pdf_
 	by a tab, one device to a line.
 	The *Default device* list in the sidebar of the main window chooses a
 	device as well, and *cinq* writes the choice here.
+	The Device list of an output names that choice in its default option, as
+	*Default device (System default)*, and while the highlight of its open menu
+	rests on that option, the *Default device* list in the sidebar takes the
+	color of the highlight, so that the output and the setting that decides its
+	device show as one.
 	It changes only the line of this setting, adds the line before the first
 	setting of the file, or takes the line out for the system default, and
 	leaves the rest as it is.
@@ -582,7 +587,7 @@ the keyboard, apart from the keys typed while one of these has the keyboard:
 A text field of the inspector, or a drop-down list
 	A click gives a text field the keyboard, and the keys of *next_field* and
 	*previous_field* move it from one text field or drop-down list to the
-	next, which shows a border in the color of focus.
+	next, which shows a border in the color of focus, twice as thick as at rest.
 	A text field that these keys reach has its text selected, so that typing
 	replaces it, whereas a click puts the caret where it fell.
 	From the cue list, or the outputs, *next_field* goes first to the first field
@@ -676,6 +681,12 @@ columns of the outputs, in any case, with the rules of *SEARCHING*, and the
 line tells that no output matches.
 *first* and *last* with a count, and the searches, are jumps there, as they
 are for cues.
+The inspector of an output has a line of help beside each field, which says
+what the field takes and what it does, and which turns red and says why where
+the value typed is not applied, as for a name that another output has,
+channels that are neither one nor two, or a level out of range.
+Where the keyboard leaves a field that holds such a value, the status bar
+tells the reason, since the field shows the value that holds again.
 The actions that edit cues edit the outputs in the same way while they show.
 *edit*, *edit_start*, and *change_name* enter the Name field of the output
 with the caret at its end, at its start, or with all of it selected, as *F2*
@@ -730,6 +741,8 @@ While the outputs show, the status bar names the keys of *add_below*, *edit*,
 and *back*, and gives way, from the first to the last, to the key of *forward*,
 *add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that
 the key that leaves the outputs outlasts all but the help page.
+In every view, the name of the show in the status bar gives way before any of
+these keys do, cut short at its end with an ellipsis, down to 16 columns.
 
 # ACTIONS
 
@@ -1132,6 +1145,9 @@ page.
 Problems with the file show among the warnings in the sidebar, each after
 *config.toml:*, or after *config.toml:3:* for a problem that lies on line 3 of
 the file, and the status bar counts them.
+The sidebar lists at most three warnings, of every kind, and a line below them
+says how many more there are, as in *and 5 more*, while the status bar keeps
+the whole count.
 Each time *cinq* reads the file, as it starts and after each change, it writes
 the problems to standard error as well, quoting the lines of the file around
 each problem that lies in a part of it, with that part marked.

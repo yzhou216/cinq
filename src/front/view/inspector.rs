@@ -7,6 +7,7 @@
 
 mod field;
 mod output;
+pub(in crate::front) use output::rejection;
 mod sends;
 
 use iced::{

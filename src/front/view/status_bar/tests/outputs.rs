@@ -4,14 +4,8 @@
 
 //! Tests of the hints that the outputs view shows
 
-use unicode_width::UnicodeWidthStr;
-
 use super::{
-    super::{
-        fit::shown as fitted_to,
-        hints::{hints_told, notice, told},
-        status, yielding,
-    },
+    super::{hints::notice, name, yielding},
     cancel::COLUMNS,
     fitted, hinted, opened,
 };
@@ -35,18 +29,6 @@ fn in_outputs(preset: Preset) -> App {
 /// Returns the hints that fit in `room` columns
 fn shown(app: &App, room: usize) -> String {
     fitted(&hinted(app), room, yielding(app))
-}
-
-/// Returns the hints beside the status of `app` in a bar of `room` columns,
-/// with what the latest change told cut to fit, as the bar shows them
-fn barred(app: &App, room: usize) -> String {
-    let taken: usize = status(app).iter().map(|part| part.text.width()).sum();
-    fitted_to(
-        |text| hints_told(app, text),
-        told(app),
-        room.saturating_sub(taken),
-        yielding(app),
-    )
 }
 
 #[test]
@@ -134,19 +116,32 @@ fn a_cut_output_stays_a_cut_in_the_notice_and_in_undo_and_redo() {
     );
 }
 
-#[test]
-fn a_cue_that_sends_to_no_output_left_is_a_warning() {
-    let sends: Sends = [(OutputId(2), 0.0)].into();
+/// Returns a show of one cue that plays a file, with a second output
+fn rain() -> Workspace {
     let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
         .file("rain.ogg")
         .build();
-    let show = Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .apply(Command::AddOutput {
-            at: 1,
-            count: 1,
-            anchor: None,
-        })
-        .apply(Command::Edit(CueId(1), Edit::Sends(Some(sends))));
+    Workspace::new(vec![CueList::new("Main", vec![cue])]).apply(Command::add_output(1, 1))
+}
+
+fn rename(id: u32, name: &str) -> Command {
+    Command::EditOutput(OutputId(id), OutputEdit::Name(name.to_owned()))
+}
+
+/// Returns the hints beside the status of the app that shows `workspace`,
+/// which `room` columns hold
+fn told(workspace: Workspace, room: usize) -> String {
+    let app = App {
+        workspace,
+        ..App::default()
+    };
+    name::shown(&app, room).1
+}
+
+#[test]
+fn a_cue_that_sends_to_no_output_left_is_a_warning() {
+    let sends: Sends = [(OutputId(2), 0.0)].into();
+    let show = rain().apply(Command::Edit(CueId(1), Edit::Sends(Some(sends))));
     let warnings = |workspace: Workspace| {
         crate::front::view::warnings(&App {
             workspace,
@@ -161,42 +156,25 @@ fn a_cue_that_sends_to_no_output_left_is_a_warning() {
 
 #[test]
 fn what_a_change_did_to_the_cues_comes_first_and_stays_whole_beside_long_names() {
-    let long = "Dante Virtual Soundcard Left Main Speaker";
-    let rename =
-        |id: u32, name: &str| Command::EditOutput(OutputId(id), OutputEdit::Name(name.to_owned()));
-    let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
-        .file("rain.ogg")
-        .build();
-    let base = Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .apply(Command::AddOutput {
-            at: 1,
-            count: 1,
-            anchor: None,
-        })
-        .apply(rename(2, long))
+    let base = rain()
+        .apply(rename(2, "Dante Virtual Soundcard Left Main Speaker"))
         .apply(rename(1, "Another long name"));
     // The bar of 1024 pixels with the mark of unsaved changes, which takes ten
     // columns of the status
-    let told = |workspace: Workspace| {
-        let app = App {
-            workspace,
-            ..App::default()
-        };
-        barred(&app, COLUMNS - 10)
-    };
+    let in_bar = |workspace| told(workspace, COLUMNS - 10);
     let deleted = base
         .clone()
         .apply(Command::DeleteOutputs(vec![OutputId(1)]));
     assert_eq!(
-        told(deleted.clone()),
+        in_bar(deleted.clone()),
         "Cues without sends play on Dante Vir…, deleted… | u: undo"
     );
     assert_eq!(
-        told(deleted.clone().apply(Command::Undo)),
+        in_bar(deleted.clone().apply(Command::Undo)),
         "Cues without sends play on Another l… | Control+r: redo"
     );
     assert_eq!(
-        told(deleted.apply(Command::Undo).apply(Command::Redo)),
+        in_bar(deleted.apply(Command::Undo).apply(Command::Redo)),
         "Cues without sends play on Dante Vir…, redid… | u: undo"
     );
     let moved = Command::MoveOutput {
@@ -204,12 +182,12 @@ fn what_a_change_did_to_the_cues_comes_first_and_stays_whole_beside_long_names()
         by: 1,
     };
     assert_eq!(
-        told(base.clone().apply(moved)),
+        in_bar(base.clone().apply(moved)),
         "Cues without sends play on Dante Vir…, moved… | u: undo"
     );
     let added = Command::add_output(0, 1);
     assert_eq!(
-        told(base.clone().apply(added)),
+        in_bar(base.clone().apply(added)),
         "Cues without sends play on Output 1, added Output 1 | u: undo"
     );
     // A change that leaves the first output alone tells itself, with its names
@@ -219,25 +197,14 @@ fn what_a_change_did_to_the_cues_comes_first_and_stays_whole_beside_long_names()
         OutputEdit::Channels(crate::back::Channels::Mono(1)),
     );
     assert_eq!(
-        told(base.apply(calm)),
+        in_bar(base.apply(calm)),
         "Changed the channels of the output Another l… | u: undo"
     );
 }
 
 #[test]
 fn the_notice_of_a_cut_keeps_what_it_did_to_the_cues_whole_and_gives_up_the_key_to_paste() {
-    let rename =
-        |id: u32, name: &str| Command::EditOutput(OutputId(id), OutputEdit::Name(name.to_owned()));
-    let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
-        .file("rain.ogg")
-        .build();
-    let before = Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .apply(Command::AddOutput {
-            at: 1,
-            count: 1,
-            anchor: None,
-        })
-        .apply(rename(2, "Sub"));
+    let before = rain().apply(rename(2, "Sub"));
     let taken = before.outputs()[..1].to_vec();
     let workspace = before.clone().apply(Command::CutOutputs(vec![OutputId(1)]));
     let facts = format::consequences(&workspace, before.outputs(), workspace.outputs());
@@ -251,7 +218,7 @@ fn the_notice_of_a_cut_keeps_what_it_did_to_the_cues_whole_and_gives_up_the_key_
     };
     // The bar of 1024 pixels, with the mark of unsaved changes and a warning
     // in the status
-    let shown = |room| barred(&app, room);
+    let shown = |room| name::shown(&app, room).1;
     assert_eq!(
         shown(COLUMNS - 10),
         "Cues without sends play on Sub, cut Main | p: paste | u: undo"
@@ -265,23 +232,7 @@ fn the_notice_of_a_cut_keeps_what_it_did_to_the_cues_whole_and_gives_up_the_key_
 
 #[test]
 fn an_undo_that_moves_the_first_output_back_tells_where_cues_play_without_a_dangling_ellipsis() {
-    let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
-        .file("rain.ogg")
-        .build();
-    let deleted = Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .apply(Command::AddOutput {
-            at: 1,
-            count: 1,
-            anchor: None,
-        })
-        .apply(Command::DeleteOutputs(vec![OutputId(1)]));
-    let told = |workspace: Workspace, room| {
-        let app = App {
-            workspace,
-            ..App::default()
-        };
-        barred(&app, room)
-    };
+    let deleted = rain().apply(Command::DeleteOutputs(vec![OutputId(1)]));
     let undone = deleted.apply(Command::Undo);
     assert_eq!(
         told(undone.clone(), COLUMNS),

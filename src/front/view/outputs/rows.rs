@@ -17,7 +17,7 @@ use crate::{
         view::{
             OUTPUTS, SELECTED,
             cue_table::{ROW_PADDING, scrolling},
-            faults, marked_row,
+            faults, marked_row, theme,
         },
     },
 };
@@ -62,7 +62,11 @@ fn cell<'a>(app: &'a App, column: Column, row: usize, output: &'a Output) -> Ele
         Column::State => {
             let retried = faults::fault(app, output.id).is_some_and(Fault::retried);
             text(shown)
-                .style(if retried { text::warning } else { text::danger })
+                .style(if retried {
+                    text::warning
+                } else {
+                    theme::danger(app.output == Some(output.id))
+                })
                 .into()
         }
         _ => text(shown).wrapping(Wrapping::WordOrGlyph).into(),

@@ -170,6 +170,10 @@ struct App {
     /// What the latest key found to say that is no change, such as an empty
     /// clipboard, until the operator does anything else
     remark: Option<&'static str>,
+    /// Why the text that the operator left in a field was not applied, which
+    /// the field forgets once the keyboard has left it, until the operator
+    /// does anything else
+    unapplied: Option<String>,
     /// Kind of cue that Add cue creates
     new_kind: Kind,
     /// Time of the last clock tick, or `None` while the clock is stopped
@@ -192,6 +196,10 @@ struct App {
     /// Whether the File field of a cue has the keyboard, which the status bar
     /// hints Enter for while it is empty
     file_held: bool,
+    /// Whether the highlight of the open menu of the Device list of an
+    /// output rests on its default, which the Default device list of the
+    /// sidebar tells in color
+    default_highlighted: bool,
     /// Why the link that the help page opened last failed to open, which
     /// the page shows while it stays open
     link_problem: Option<String>,

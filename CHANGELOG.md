@@ -243,9 +243,10 @@ Major changes and improvements in each release of cinq, newest first.
   default.
 - The Levels tab of an audio or video cue sets the level at which the cue sends
   to each output of the show, and a field left empty sends nothing there.  The
-  fields scroll, so that every output stays in reach.  The names of the outputs
-  that cannot play show in yellow, or in red where the output must change,
-  beside how many of those that the cue sends to cannot.
+  fields scroll, so that every output stays in reach.  The name of an output
+  that cannot play says what is wrong in words, as `House L (not found)` or
+  `Lobby (past its channels)`, in yellow, or in red where the output must
+  change, beside how many of those that the cue sends to cannot.
 - The tutorial has a chapter on outputs, in which the reader sends the sound of
   a cue to each speaker of the computer in turn, and its first chapter names the
   outputs and the default device among what the sidebar shows.
@@ -319,6 +320,46 @@ Major changes and improvements in each release of cinq, newest first.
   after `d`, names outputs where the outputs show, as in "Cut the selected
   output and the next", and cues where a cue list shows.  The help page, which
   lists each action once, names both.
+- The fields of an output in the inspector are as wide as what they hold, and a
+  line of help beside each says what it takes and what it does.  The line turns
+  red and tells why where a value is not applied, as for a name that another
+  output has, channels that are neither one nor two, or a level out of range,
+  and an output whose device is not there also tells what to do.  Where the
+  keyboard leaves a field that holds a value that was not applied, the status
+  bar tells why, as `Not applied: another output has this name`, since the field
+  shows the old value again.
+- The default option of the Device list of an output names the choice of the
+  Default device list in the sidebar, as in `Default device (System default)`,
+  and while the highlight of the open menu rests on that option, by the mouse or
+  the keys, the Default device list in the sidebar turns the blue of the
+  highlight, which shows where the default is set.  An output on the Default
+  device whose device is not there keeps its name in its list, as in `Default
+  device (Studio), not found`, and its help says to connect it or to set the
+  default device in the sidebar.
+- The sidebar lists the warnings above the Default device list, which a show
+  sets once, and at most three of them, then a line such as `and 5 more`, so
+  that at 1024x768 the whole button of a warning shows and the Default device
+  list stays in reach without a scrollbar.  The warnings count in the title and
+  in the status bar is still the whole count.
+- The outputs table drops its New cues column once the Device column cannot
+  show its widest name on one line, as at 1024x768 beside a Dante Virtual
+  Soundcard, and keeps the column in a wider window, where it fits.  The
+  inspector keeps the value as New cues send.
+- A long name of the show gives way first in the status bar: it is cut short at
+  its end with an ellipsis, down to 16 columns, before any key hint goes, so
+  that the mode and the warning count stay, and the keys of GO and Panic as well
+  while no notice shows.
+- The border of a field or a list that has the keyboard is two pixels thick,
+  in the same blue, where it was one, so that it stands out from the fields at
+  rest at a glance.  A field that holds a rejected value keeps its red border,
+  thick while it has the keyboard.
+- Red text on the selected row of the outputs table and the cue table is a
+  lighter red, with a contrast of 4.9 to 1 against the row where the red of the
+  rest of the window had 3.9 to 1, below the 4.5 to 1 that text needs.
+- The text of a drop-down list that lies across the lower edge of the sidebar,
+  as the Default device list does at 1024 by 768 pixels with a notice in the
+  status bar, no longer draws below the sidebar, over the inspector, where the
+  software renderer let it spill.
 
 ## v0.1.4
 

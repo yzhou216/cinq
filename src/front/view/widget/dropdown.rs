@@ -58,6 +58,12 @@ pub struct Dropdown<'a> {
     /// Message that each opening of the menu sends, such as one that asks
     /// for the options afresh
     on_open: Option<Message>,
+    /// Makes the message that tells which option the highlight of the open
+    /// menu rests on, or none once the menu closes
+    on_highlight: Option<Box<dyn Fn(Option<usize>) -> Message + 'a>>,
+    /// Whether the list wears the colors of the highlight of a menu, which
+    /// tells that an option of another menu depends on this list
+    lit: bool,
     placeholder: Option<String>,
     /// Color of the placeholder, where it tells more than that nothing is
     /// chosen, as that the device chosen is not there
@@ -79,13 +85,15 @@ pub fn dropdown<'a, T: ToString + PartialEq + Clone + 'a>(
             .position(|option| Some(option) == selected.as_ref()),
         pick: Box::new(move |row| options.get(row).cloned().map(&on_select)),
         on_open: None,
+        on_highlight: None,
+        lit: false,
         placeholder: None,
         placeholder_color: None,
         keymap,
     }
 }
 
-impl Dropdown<'_> {
+impl<'a> Dropdown<'a> {
     pub fn placeholder(self, placeholder: impl Into<String>) -> Self {
         Self {
             placeholder: Some(placeholder.into()),
@@ -107,6 +115,21 @@ impl Dropdown<'_> {
         }
     }
 
+    /// Has the open menu tell, with the message that `tell` makes, which
+    /// option its highlight rests on whenever that changes, and that it rests
+    /// on none once the menu closes
+    pub fn on_highlight(self, tell: impl Fn(Option<usize>) -> Message + 'a) -> Self {
+        Self {
+            on_highlight: Some(Box::new(tell)),
+            ..self
+        }
+    }
+
+    /// Draws the list in the colors of the highlight of a menu where `lit`
+    pub fn lit(self, lit: bool) -> Self {
+        Self { lit, ..self }
+    }
+
     /// Returns the width of the longest name, the placeholder among them,
     /// by the columns of the font, which is monospace
     fn widest(&self) -> f32 {
@@ -126,4 +149,10 @@ impl<'a> From<Dropdown<'a>> for Element<'a, Message> {
     fn from(dropdown: Dropdown<'a>) -> Self {
         Element::new(dropdown)
     }
+}
+
+/// Returns the width of a list that shows `columns` columns of a name, with
+/// its padding and its arrow
+pub fn width(columns: f32) -> f32 {
+    columns * char_width() + PADDING.x() + widget::ARROW
 }

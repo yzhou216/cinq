@@ -11,12 +11,13 @@
 //! help page, and, while a text field or a drop-down list has the keyboard,
 //! the keys that go to the next field and that leave the field
 //!
-//! The bar keeps to one line.  When it is too narrow for all of it, the keys
-//! of going forward and back, of GO, of Panic, of saving, of the help page, of
-//! the next field, and of leaving it give way in turn, each one whole, and then
-//! what the latest change told gives way, at a word, with an ellipsis, so that
-//! the status shows in full, while the keys typed so far and the key of cancel
-//! always show in full.
+//! The bar keeps to one line.  When it is too narrow for all of it, the name
+//! of the show is cut short at its end with an ellipsis, down to 16 columns,
+//! and then the keys of going forward and back, of GO, of Panic, of saving,
+//! of the help page, of the next field, and of leaving it give way in turn,
+//! each one whole, and then what the latest change told gives way, at a word,
+//! with an ellipsis, so that the status shows in full, while the keys typed so
+//! far and the key of cancel always show in full.
 //! While the outputs show, the bar names the keys that add and rename an
 //! output, and the key that goes back always, since it is the way out, so
 //! that the keys give way in another order: forward, add, rename, GO, Panic,
@@ -26,6 +27,7 @@
 
 mod fit;
 mod hints;
+mod name;
 #[cfg(test)]
 mod tests;
 
@@ -107,31 +109,37 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 /// status, as Vim's command line does, and the hints give way to its text.
 fn bar(app: &App, width: f32) -> Element<'_, Message> {
     let room = columns(width);
-    let (left, taken) = match &app.search {
-        Some(search) => (
-            search_line(app, search),
-            search_columns(&search.text, search.warned, app.outputs_shown),
-        ),
+    let (left, shown) = match &app.search {
+        Some(search) => {
+            let taken = search_columns(&search.text, search.warned, app.outputs_shown);
+            (
+                search_line(app, search),
+                hints_in(app, room.saturating_sub(taken)),
+            )
+        }
         None => {
-            let status = status(app);
-            let columns = status.iter().map(|part| part.text.width()).sum();
-            let shown = container(rich_text(status).wrapping(Wrapping::None))
+            let (name, shown) = name::shown(app, room);
+            let status = container(rich_text(status(app, name)).wrapping(Wrapping::None))
                 .width(Fill)
                 .clip(true);
-            (shown.into(), columns)
+            (status.into(), shown)
         }
     };
-    let shown = fit::shown(
-        |told| hints::hints_told(app, told),
-        hints::told(app),
-        room.saturating_sub(taken),
-        yielding(app),
-    );
     row![left, text(shown).wrapping(Wrapping::None)]
         .spacing(SPACING)
         .padding(SPACING)
         .align_y(Center)
         .into()
+}
+
+/// Returns the hints that fit in `room` columns
+fn hints_in(app: &App, room: usize) -> String {
+    fit::shown(
+        |told| hints::hints_told(app, told),
+        hints::told(app),
+        room,
+        yielding(app),
+    )
 }
 
 /// Returns the columns of text that fit in the bar of `width` pixels
@@ -173,7 +181,8 @@ fn search_line<'a>(app: &'a App, search: &'a Search) -> Element<'a, Message> {
     keep_keys(line_keys(line), &app.config.keymap)
 }
 
-fn status(app: &App) -> Vec<text::Span<'_>> {
+/// Returns the status of the show with `name` for the name of its file
+fn status(app: &App, name: String) -> Vec<text::Span<'_>> {
     let count = warnings(app);
     let mode = if app.editable() {
         "Edit mode"
@@ -181,7 +190,7 @@ fn status(app: &App) -> Vec<text::Span<'_>> {
         "Show mode"
     };
     vec![
-        span(app.show.name()),
+        span(name),
         span(app.show.mark()).color(theme::PALETTE.warning),
         span(LINE),
         span(mode).color_maybe((!app.editable()).then_some(theme::PALETTE.primary)),

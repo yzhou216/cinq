@@ -29,7 +29,9 @@ pub use cue::{
     Advance, Cue, CueId, CueList, Edit, Kind, LEVELS, LOUDEST, Media, Problem, SILENCE, parse_level,
 };
 pub use load::{Load, load_files};
-pub use output::{Channels, Device, Output, OutputEdit, OutputId, Sends, moved_output};
+pub use output::{
+    Channels, DEVICE_CHANNELS, Device, Output, OutputEdit, OutputId, Sends, moved_output,
+};
 pub use video::{PICTURE_FILES, Picture, VIDEO_FILES, Video};
 pub use workspace::{Active, Change, Command, Phase, Place, Turn, Workspace};
 

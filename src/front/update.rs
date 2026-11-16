@@ -191,6 +191,7 @@ impl App {
             | Message::MenuOpen(_)
             | Message::Held(_)
             | Message::FileHeld(_)
+            | Message::DefaultHighlighted(_)
             | Message::Copy(_)
             | Message::PauseAll
             | Message::ResumeAll

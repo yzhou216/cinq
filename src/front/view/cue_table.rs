@@ -194,7 +194,7 @@ fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue) -> Element<'a, Message> 
             .wrapping(Wrapping::WordOrGlyph)
             .into(),
         Column::State => {
-            let (state, style) = state(&app.workspace, list, cue);
+            let (state, style) = state(&app.workspace, list, cue, app.selected == Some(cue.id));
             text(state).style(style).into()
         }
         _ => text(column.text(&app.workspace, list, cue)).into(),

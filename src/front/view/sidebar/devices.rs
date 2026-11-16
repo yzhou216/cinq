@@ -31,6 +31,10 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     )
     // Device that is not there goes by its ID, which the warnings name
     .placeholder(chosen.unwrap_or_default())
-    .on_open(Message::ListAudioDevices);
+    .on_open(Message::ListAudioDevices)
+    // Outputs on the default device play on the device that this list
+    // chooses, which the Device list of an output tells in blue while its
+    // highlight rests on the default
+    .lit(app.menu && app.default_highlighted);
     keep_keys(list, keymap)
 }

@@ -44,6 +44,18 @@ impl Fault {
         }
     }
 
+    /// Returns what the fault does to the output in as few words as follow
+    /// its name, such as `not found`
+    pub fn brief(&self) -> &'static str {
+        match self {
+            Fault::Missing(_) => "not found",
+            Fault::Refused(_) | Fault::Unplayable(_) => "cannot open",
+            Fault::Stopped(_) => "stopped",
+            Fault::Unanswered => "not answering",
+            Fault::Channels(_) => "past its channels",
+        }
+    }
+
     /// Returns why the device fails, where it fails for a reason beyond
     /// its absence or its channels
     pub fn reason(&self) -> Option<&str> {

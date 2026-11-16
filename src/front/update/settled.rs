@@ -31,9 +31,20 @@ impl App {
             Message::Reached { from, row } if self.spot() == from => {
                 self.jumping(|app| app.at_row(row.saturating_add(1)))
             }
-            Message::MenuOpen(open) => Self { menu: open, ..self },
+            // Menu reports where its highlight rests right after it opens, so
+            // that a flag left by another menu, or by a list that left the
+            // view while open, never lights the sidebar
+            Message::MenuOpen(open) => Self {
+                menu: open,
+                default_highlighted: false,
+                ..self
+            },
             Message::Held(held) => Self { held, ..self },
             Message::FileHeld(file_held) => Self { file_held, ..self },
+            Message::DefaultHighlighted(highlighted) => Self {
+                default_highlighted: highlighted,
+                ..self
+            },
             Message::Copy(count) => self.with_copied(count),
             Message::PauseAll => self.send(Command::Pause(true)),
             Message::ResumeAll => self.send(Command::Pause(false)),
