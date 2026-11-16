@@ -8,7 +8,9 @@
 //! stays the only record of what should be heard, so a sound that cannot
 //! start goes back to it as a file that cannot be played.  A thread of its
 //! own makes ready the sounds that runs may start next, so that GO waits on
-//! no file.  The sound of a video file plays from the file's sound track,
+//! no file.  A thread for each audio device opens it and tries again if it
+//! fails, so that a device that is slow to answer never stops the
+//! window.  The sound of a video file plays from the file's sound track,
 //! along with the silence that AAC encoders put around the sound, since the
 //! decoder reads no edit list, which marks that silence for players to
 //! skip.  Each cue plays on the outputs that it sends to, which play on
@@ -19,10 +21,12 @@ mod device;
 mod fault;
 mod feed;
 mod mixer;
+mod opener;
 mod opening;
 mod patch;
 mod play;
 mod preload;
+mod probes;
 #[cfg(test)]
 mod tests;
 mod voice;
@@ -36,8 +40,10 @@ use super::{CueId, OutputId, Workspace, load::unreadable};
 pub use device::devices;
 pub use fault::Fault;
 use mixer::Mixer;
+use opener::Opener;
 use patch::Patch;
 use preload::{Ask, Preloader, Wanted};
+use probes::Probes;
 use voice::{Mixers, Voice};
 
 /// Endings of the names of the sound files that the sound output plays,
@@ -55,10 +61,15 @@ pub struct Audio {
     /// Where the outputs play, as the mixers opened for them
     patch: Patch,
     mixers: Mixers,
+    /// Thread that opens the devices, which answers once each is open
+    opener: Opener,
     voices: HashMap<CueId, Voice>,
     preloader: Preloader,
-    /// When the devices that failed were last tried again
+    /// When a device last answered an open, from which the devices that
+    /// failed are tried again
     tried: Instant,
+    /// When to look at the devices that have fewer channels than needed
+    probes: Probes,
 }
 
 impl Audio {
@@ -72,9 +83,11 @@ impl Audio {
             default: default.map(str::to_owned),
             patch: Patch::default(),
             mixers: HashMap::new(),
+            opener: Opener::new(),
             voices: HashMap::new(),
             preloader: Preloader::new(),
             tried: Instant::now(),
+            probes: Probes::default(),
         }
     }
 
@@ -86,18 +99,34 @@ impl Audio {
     /// from the sound made ready for that GO.
     pub fn route(&mut self, default: Option<&str>) {
         if self.default.as_deref() != default {
-            *self = Self::open(default);
+            self.default = default.map(str::to_owned);
+            self.patch = Patch::default();
+            self.voices.clear();
+            self.preloader = Preloader::new();
+            // Old streams close first, which frees a device that a new one
+            // may open again
+            self.mixers.clear();
+            // The threads of the devices go on, so that none opens one
+            // device twice at once
+            self.opener.restart();
+            self.probes.clear();
+            self.tried = Instant::now();
         }
     }
 
     /// Returns why each output that cannot play cannot: its device is not
-    /// there, cannot be opened, or has stopped, or its channels lie past
-    /// those of the device
+    /// there, cannot be opened, does not answer, or has stopped, or its
+    /// channels lie past those of the device.  An output whose device is
+    /// being opened for the first time tells nothing until the device
+    /// answers, or for five seconds.
     pub fn problems(&self) -> Vec<(OutputId, Fault)> {
         self.patch
             .outputs()
             .iter()
             .filter_map(|patched| {
+                if self.opener.unanswered(&patched.key) {
+                    return Some((patched.id, Fault::Unanswered));
+                }
                 let fault = match self.mixers.get(&patched.key)? {
                     Err(fault) => fault.clone(),
                     Ok(mixer) => mixer.failure().map(Fault::Stopped).or_else(|| {
@@ -116,6 +145,7 @@ impl Audio {
     /// theirs, unless there is no audio device to hear them on.
     pub fn sync(&mut self, workspace: Workspace, ahead: f64) -> Workspace {
         self.patched(Patch::of(workspace.outputs(), &self.default));
+        self.arrived();
         self.revived();
         self.preloader.collect();
         self.mixers

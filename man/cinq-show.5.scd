@@ -75,8 +75,12 @@ So does an output on channels past those of its device, while the other outputs
 of the device play.
 *cinq* tries such a device again every two seconds, so that a device plugged in,
 or a Dante Virtual Soundcard started, plays with nothing for the operator to do.
-A device that has fewer channels than an output names is tried again as well,
-so that a Dante Virtual Soundcard whose channels are raised plays them.
+A device that has fewer channels than an output names is looked at again as well,
+so that a Dante Virtual Soundcard whose channels are raised plays them, ever
+more seldom while it offers no more, up to every thirty seconds.
+A device that does not answer when it is opened, as an ASIO driver that waits
+for a dialog does not, is shown as not answering after five seconds, and it
+holds up no other device.
 Changing an output opens again only the devices that the change touches, so
 that the sound on the others plays on.
 A device that stops while cues play on it, as one unplugged or a Dante Virtual

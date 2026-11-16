@@ -13,8 +13,11 @@
 //! a typo in the channels of one output silences that output alone.  The
 //! mix itself runs on the thread of the stream, as [`mix`] tells.
 
+#[cfg(test)]
+mod bench;
 mod config;
 mod mix;
+mod stall;
 mod stream;
 #[cfg(test)]
 mod tests;
@@ -37,10 +40,11 @@ use kira::backend::{
 };
 use rtrb::{Consumer, Producer, RingBuffer};
 
-use super::{Fault, device};
+use super::{Fault, device, opener::Hold};
 use config::config;
 use mix::{Command, Gone};
 pub(super) use mix::{Gains, Mix};
+use stall::stalled;
 use stream::{Tells, stream};
 
 /// Commands that can wait for the stream at once, far more than one
@@ -51,19 +55,11 @@ const COMMANDS: usize = 4096;
 /// the thread of the stream
 const SOUNDS: usize = 1024;
 
-/// Time without a call for sound after which a stream that has called
-/// counts as stopped, longer than the 1.9 seconds that a new stream on the
-/// ALSA plugin of PulseAudio waits after its first calls
-const STALL: Duration = Duration::from_secs(3);
-
-/// Time that a new stream has for its first call for sound, longer than a
-/// device that is slow to wake, as a Bluetooth sink that sleeps, takes
-const STARTING: Duration = Duration::from_secs(10);
-
 pub(super) struct Mixer {
-    /// Stream of the device, which plays as long as the mixer is kept
-    /// Absent only in a test, which plays through a mix that it renders
-    _stream: Option<Stream>,
+    /// Hold on the stream of the device, which plays as long as the mixer
+    /// is kept, and which is absent only in a test that plays through a mix
+    /// that it renders
+    _hold: Option<Hold>,
     commands: Producer<Command>,
     gone: Consumer<Gone>,
     sample_rate: u32,
@@ -93,7 +89,7 @@ impl Mixer {
         device: Option<&str>,
         name: Option<&str>,
         channels: u16,
-    ) -> Result<Self, Fault> {
+    ) -> Result<(Self, Stream), Fault> {
         let found = match device {
             Some(id) => device::find(id, name).map_err(Fault::Missing)?,
             None => cpal::default_host()
@@ -116,7 +112,7 @@ impl Mixer {
             .map(|(config, _)| config.channels)
     }
 
-    fn start(found: &Device, channels: u16) -> Result<Self, Fault> {
+    fn start(found: &Device, channels: u16) -> Result<(Self, Stream), Fault> {
         let (config, format) = config(found, channels)?;
         let (commands, taken) = RingBuffer::new(COMMANDS);
         let (handed, gone) = RingBuffer::new(COMMANDS);
@@ -147,8 +143,8 @@ impl Mixer {
         stream
             .play()
             .map_err(|error| Fault::Refused(error.to_string()))?;
-        Ok(Self {
-            _stream: Some(stream),
+        let mixer = Self {
+            _hold: None,
             commands,
             gone,
             sample_rate: config.sample_rate,
@@ -159,7 +155,17 @@ impl Mixer {
             started,
             called,
             next: 0,
-        })
+        };
+        Ok((mixer, stream))
+    }
+
+    /// Returns the mixer with `hold` on the stream that plays it, which
+    /// closes the stream once the mixer goes
+    pub(super) fn held(self, hold: Hold) -> Self {
+        Self {
+            _hold: Some(hold),
+            ..self
+        }
     }
 
     pub(super) fn sample_rate(&self) -> u32 {
@@ -199,7 +205,7 @@ impl Mixer {
     }
 
     /// Returns why the stream stopped, if it has told an error after which
-    /// it must be built anew, or has asked for no sound for [`STALL`]: the
+    /// it must be built anew, or has asked for no sound for [`stall::STALL`]: the
     /// latest error that it told, if any.  Errors of the first kind tell at
     /// once, since an ASIO driver that asks to be reset may play on, and a
     /// device that goes or takes another sample rate need not hold the
@@ -226,45 +232,5 @@ impl Mixer {
         self.commands
             .push(command)
             .map_err(|_| "the mixer of the device has more to do than it can take".to_owned())
-    }
-}
-
-/// Returns whether a stream that started `elapsed` ago has stalled, as it
-/// asked for no sound for [`STALL`] since its latest call at `called`, or
-/// for [`STARTING`] since it started if it has not called yet
-fn stalled(elapsed: Duration, called: Option<Duration>) -> bool {
-    match called {
-        Some(called) => elapsed.saturating_sub(called) >= STALL,
-        None => elapsed >= STARTING,
-    }
-}
-
-#[cfg(test)]
-impl Mixer {
-    /// Returns a mixer without a device, whose ring of commands holds
-    /// `capacity`, and the mix that the stream of a device would run
-    pub(super) fn bench(
-        channels: u16,
-        asked: u16,
-        sample_rate: u32,
-        capacity: usize,
-    ) -> (Self, Mix) {
-        let (commands, taken) = RingBuffer::new(capacity);
-        let (handed, gone) = RingBuffer::new(COMMANDS);
-        let mix = Mix::new(usize::from(channels), sample_rate, 8, taken, handed);
-        let mixer = Self {
-            _stream: None,
-            commands,
-            gone,
-            sample_rate,
-            channels,
-            asked,
-            error: Arc::default(),
-            lost: Arc::default(),
-            started: Instant::now(),
-            called: Arc::default(),
-            next: 0,
-        };
-        (mixer, mix)
     }
 }

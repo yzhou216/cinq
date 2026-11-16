@@ -19,6 +19,9 @@ pub enum Fault {
     Unplayable(String),
     /// The device has stopped while it played, and why
     Stopped(String),
+    /// The device has not answered an open for some seconds, as an ASIO
+    /// driver that waits for a dialog does not
+    Unanswered,
     /// The channels of the output lie past the count that the device has
     Channels(u16),
 }
@@ -36,6 +39,7 @@ impl Fault {
             Fault::Refused(_) => "Cannot open, retrying".to_owned(),
             Fault::Unplayable(_) => "Cannot open".to_owned(),
             Fault::Stopped(_) => "Stopped, retrying".to_owned(),
+            Fault::Unanswered => "Not answering, retrying".to_owned(),
             Fault::Channels(count) => format!("Past its {count} channels"),
         }
     }
@@ -47,7 +51,7 @@ impl Fault {
             Fault::Refused(reason) | Fault::Unplayable(reason) | Fault::Stopped(reason) => {
                 Some(reason)
             }
-            Fault::Missing(_) | Fault::Channels(_) => None,
+            Fault::Missing(_) | Fault::Unanswered | Fault::Channels(_) => None,
         }
     }
 }
@@ -60,6 +64,7 @@ impl fmt::Display for Fault {
                 write!(formatter, "cannot open: {reason}")
             }
             Fault::Stopped(reason) => write!(formatter, "stopped: {reason}"),
+            Fault::Unanswered => formatter.write_str("the device does not answer"),
             Fault::Channels(count) => {
                 write!(
                     formatter,

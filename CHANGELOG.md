@@ -83,6 +83,14 @@ Major changes and improvements in each release of cinq, newest first.
   mode of the Dante Virtual Soundcard offers, asks Windows to schedule it
   for audio, as audio programs do there, so that a busy machine is less
   likely to break up the sound.
+- Each audio device opens on a thread of its own, so that one that is slow to
+  answer, as a Dante Virtual Soundcard that restarts, or one that fails and
+  is tried again every two seconds, no longer holds up the window, the
+  clock, GO, or the other devices while it does.  An output shows no warning
+  until its device has answered, and reads not answering, in yellow, once
+  five seconds have passed without an answer.  A device that has fewer
+  channels than an output names is looked at ever more seldom, up to every
+  thirty seconds, until what it offers changes.
 - In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
   rename does in desktop file managers, and no key puts the caret at the end
   of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and
