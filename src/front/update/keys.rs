@@ -18,6 +18,7 @@ use iced::{
     widget::operation::{self, AbsoluteOffset, RelativeOffset},
 };
 
+use super::select_focused::select_focused;
 use crate::front::{
     App, Caret, Focus, Message, Tab,
     keymap::{Action, KeyPress, Press},
@@ -122,8 +123,8 @@ impl App {
                 },
             ),
             Focus::Name(_) => (self, Task::none()),
-            Focus::Next => (self.without_search(), operation::focus_next()),
-            Focus::Previous => (self.without_search(), operation::focus_previous()),
+            Focus::Next => (self.without_search(), reached(operation::focus_next())),
+            Focus::Previous => (self.without_search(), reached(operation::focus_previous())),
             Focus::Cues => (self, operate(focusable::unfocus())),
         }
     }
@@ -134,4 +135,11 @@ impl App {
 pub(super) fn key_press(event: keyboard::Event) -> Option<Message> {
     let KeyPress { press, repeat, .. } = KeyPress::of(&event)?;
     press.map(|press| Message::Typed { press, repeat })
+}
+
+/// Selects the text of the field that a move by key reached, so that typing
+/// replaces it as in desktop programs, while a click keeps the caret where
+/// it fell
+fn reached(moved: Task<Message>) -> Task<Message> {
+    moved.chain(select_focused())
 }

@@ -10,6 +10,9 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The keys of `next_field` and `previous_field` select the text of the text
+  field that they move to, so that typing replaces it, as in desktop programs.
+  A click into a field still puts the caret where it fell.
 - A move or jump that leaves the selected cue far outside the cue list, such
   as `G`, `n`, or going back, scrolls the list to put it in the middle, much
   as Vim does, with its thresholds: seven rows above the view and 13 rows

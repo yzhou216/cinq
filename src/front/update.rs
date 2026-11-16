@@ -21,6 +21,7 @@ mod operators;
 mod paging;
 mod scroll;
 mod search;
+mod select_focused;
 mod show;
 mod stage;
 mod subscription;
