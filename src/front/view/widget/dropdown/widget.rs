@@ -35,7 +35,7 @@ use crate::front::{
     Message,
     keymap::KeyPress,
     view::{
-        FONT, TEXT_SIZE, char_width, line_height,
+        FONT, TEXT_SIZE, char_width, line_height, theme,
         widget::{key_pressed, pointer_over, pressed},
     },
 };
@@ -114,8 +114,11 @@ impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
         // Border of a focused list is that of a focused text field
         let border = if state.focused {
             let focused = text_input::Status::Focused { is_hovered };
-            look.border
-                .color(text_input::default(theme, focused).border.color)
+            theme::focused(
+                look.border
+                    .color(text_input::default(theme, focused).border.color),
+                focused,
+            )
         } else {
             look.border
         };

@@ -14,13 +14,14 @@
 //! The exceptions are [`button`], since iced draws disabled buttons half
 //! transparent, so buttons get a style of their own, which [`go`] and
 //! [`panic`](fn@panic) paint green and red, [`field`], since iced has no
-//! style for a field that holds a mistake, [`line`], which drops the border
+//! style for a field that holds a mistake and draws the border of a field that
+//! has the keyboard no thicker than any other, [`line`], which drops the border
 //! of the search line so that it fits the status bar, and [`LINK`] and
 //! [`SELECTION`],
 //! since iced has no role for links or for the selected row of a table.
 
 use iced::{
-    Color, color,
+    Border, Color, color,
     theme::{
         Palette, Theme,
         palette::{Background, Danger, Extended, Pair, Primary, Secondary, Success, Warning},
@@ -30,6 +31,9 @@ use iced::{
         text_input,
     },
 };
+
+#[cfg(test)]
+mod tests;
 
 const BG_MAIN: Color = color!(0x000000);
 const BG_DIM: Color = color!(0x1e1e1e);
@@ -138,8 +142,32 @@ pub(super) fn panic(theme: &Theme, status: Status) -> Style {
     painted(theme, status, BG_RED_INTENSE)
 }
 
+/// Thickness of the border of a field or a list that has the keyboard, twice
+/// that of one at rest, so that a change of 2.7 to 1 in the color of the
+/// border is no longer the only sign of where the keyboard is
+pub(super) const FOCUS_WIDTH: f32 = 2.0;
+
 pub(super) fn field(valid: bool) -> fn(&Theme, text_input::Status) -> text_input::Style {
-    if valid { text_input::default } else { invalid }
+    if valid { focusable } else { invalid }
+}
+
+/// Returns `border` as it draws for a field in `status`, thicker while the
+/// field has the keyboard
+pub(super) fn focused(border: Border, status: text_input::Status) -> Border {
+    match status {
+        text_input::Status::Focused { .. } => border.width(FOCUS_WIDTH),
+        _ => border,
+    }
+}
+
+/// Draws a field in iced's default style, with a thicker border while it
+/// has the keyboard
+fn focusable(theme: &Theme, status: text_input::Status) -> text_input::Style {
+    let style = text_input::default(theme, status);
+    text_input::Style {
+        border: focused(style.border, status),
+        ..style
+    }
 }
 
 /// Draws a field with neither border nor padding of its own, so that the
@@ -154,11 +182,12 @@ pub(super) fn line(theme: &Theme, status: text_input::Status) -> text_input::Sty
     }
 }
 
-/// Draws the border in red, so that a mistake shows as it is typed
+/// Draws the border in red, so that a mistake shows as it is typed, and
+/// thicker while the field has the keyboard
 fn invalid(theme: &Theme, status: text_input::Status) -> text_input::Style {
     let style = text_input::default(theme, status);
     text_input::Style {
-        border: style.border.color(RED),
+        border: focused(style.border.color(RED), status),
         ..style
     }
 }

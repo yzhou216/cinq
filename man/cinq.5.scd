@@ -544,7 +544,7 @@ the keyboard, apart from the keys typed while one of these has the keyboard:
 A text field of the inspector, or a drop-down list
 	A click gives a text field the keyboard, and the keys of *next_field* and
 	*previous_field* move it from one text field or drop-down list to the
-	next, which shows a border in the color of focus.
+	next, which shows a border in the color of focus, twice as thick as at rest.
 	A text field that these keys reach has its text selected, so that typing
 	replaces it, whereas a click puts the caret where it fell.
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,

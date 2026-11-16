@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The border of a field or a list that has the keyboard is two pixels thick,
+  in the same blue, where it was one, so that it stands out from the
+  fields at rest at a glance.  A field that holds a rejected value keeps its
+  red border, thick while it has the keyboard.
 - A long name of the show gives way first in the status bar: it is cut short
   at its end with an ellipsis, down to 16 columns, before any key hint goes,
   so that the mode and the warning count stay, and the keys of GO and Panic
