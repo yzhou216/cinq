@@ -10,7 +10,7 @@ use super::{
     fitted, hinted, opened,
 };
 use crate::{
-    back::{Command, OutputId, Workspace},
+    back::{Command, Cue, CueId, CueList, Edit, Kind, OutputId, Sends, Workspace},
     front::{
         App,
         keymap::{Action, Preset},
@@ -112,4 +112,25 @@ fn a_cut_output_stays_a_cut_in_the_notice_and_in_undo_and_redo() {
         told(deleted).as_deref(),
         Some("Deleted the output Output 1 | u: undo")
     );
+}
+
+#[test]
+fn a_cue_that_sends_to_no_output_left_is_a_warning() {
+    let sends: Sends = [(OutputId(2), 0.0)].into();
+    let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
+        .file("rain.ogg")
+        .build();
+    let show = Workspace::new(vec![CueList::new("Main", vec![cue])])
+        .apply(Command::AddOutput { at: 1, count: 1 })
+        .apply(Command::Edit(CueId(1), Edit::Sends(Some(sends))));
+    let warnings = |workspace: Workspace| {
+        crate::front::view::warnings(&App {
+            workspace,
+            ..App::default()
+        })
+    };
+    let counted = warnings(show.clone());
+    let stranded = show.apply(Command::DeleteOutputs(vec![OutputId(2)]));
+    assert_eq!(warnings(stranded.clone()), counted + 1);
+    assert_eq!(warnings(stranded.apply(Command::Undo)), counted);
 }

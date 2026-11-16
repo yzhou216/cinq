@@ -24,7 +24,7 @@ use crate::{
 };
 
 /// Types the keys one after the other, each a character without modifiers
-fn typed(app: App, keys: &str) -> App {
+pub(super) fn typed(app: App, keys: &str) -> App {
     keys.chars().fold(app, |app, key| {
         app.typed(press(letter(&key.to_string())), false).0
     })
@@ -40,7 +40,7 @@ fn names(app: &App) -> Vec<&str> {
 
 /// Returns the app with the outputs showing and the row counted from one
 /// selected
-fn on(row: usize) -> App {
+pub(super) fn on(row: usize) -> App {
     after(outputs(), [Message::Row(row)])
 }
 

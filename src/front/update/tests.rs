@@ -25,6 +25,7 @@ mod operators_pasting;
 mod output_editing;
 mod output_places;
 mod output_rows;
+mod output_stranded;
 mod outputs;
 mod paging;
 mod scrolling;

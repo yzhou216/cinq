@@ -12,7 +12,8 @@
 //! live in [`playback`] and [`stopping`], those that change the cue lists
 //! in [`editing`] and [`pasting`], undo and redo in [`history`], show files
 //! in [`show`], the places of the files of cues in [`files`], and why cues
-//! cannot play in [`problems`].
+//! cannot play in [`problems`], and the cues that send to no output in
+//! [`stranded`].
 
 mod active;
 mod command;
@@ -26,6 +27,7 @@ mod playback;
 mod problems;
 mod show;
 mod stopping;
+mod stranded;
 #[cfg(test)]
 pub(super) mod tests;
 

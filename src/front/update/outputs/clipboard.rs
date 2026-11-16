@@ -47,7 +47,7 @@ impl App {
     pub(in crate::front::update) fn cut_outputs(self, count: usize) -> Self {
         let before = self.workspace.outputs().to_vec();
         let (app, taken) = self.taking_outputs(count, true);
-        let told = format::rerouting(&app.workspace, &before, app.workspace.outputs());
+        let told = format::consequences(&app.workspace, &before, app.workspace.outputs());
         app.registered(taken, "Cut", true).told_with(told)
     }
 

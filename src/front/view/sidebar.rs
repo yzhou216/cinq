@@ -87,6 +87,12 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             .width(Fill)
             .into()
     });
+    let stranded = workspace.stranded().map(|cue| {
+        button(text(format!("{cue}: sends to no output")))
+            .on_press(Message::Select(cue.id))
+            .width(Fill)
+            .into()
+    });
     scrollable(
         column![
             text("Cue lists"),
@@ -109,6 +115,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
                     .chain(files)
                     .chain(settings)
                     .chain(problems)
+                    .chain(stranded)
             )
             .spacing(SPACING),
             rule::horizontal(1),

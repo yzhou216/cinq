@@ -10,6 +10,12 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A cue that sends only to outputs that a cut or a delete took away plays on
+  no output, which the status bar now counts with the change, as in `1 cue
+  now sends nowhere`.  The State of such a cue reads `NO OUTPUT` in yellow,
+  and the sidebar lists it among the warnings, until undo or a paste brings
+  the outputs back.  Cues that name no sends play on the first output, as
+  before.
 - The text of a drop-down list that lies across the lower edge of the
   sidebar, as the Default device list does at 1024 by 768 pixels with a
   notice in the status bar, no longer draws below the sidebar, over the

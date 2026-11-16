@@ -4,6 +4,7 @@
 
 //! Text for back-end values, kept apart from the widgets that show it
 
+mod consequences;
 #[cfg(test)]
 mod tests;
 
@@ -15,6 +16,7 @@ use crate::back::{
     Active, Advance, Change, Cue, CueList, Edit, Kind, Media, Output, Phase, Workspace,
     moved_output,
 };
+pub use consequences::consequences;
 
 /// Formats seconds as `m:ss.s`
 fn clock(seconds: f64) -> String {
@@ -257,19 +259,10 @@ fn outputs(
         _ => edited.or_else(moved),
     }
     .unwrap_or_else(|| "changed the outputs".to_owned());
-    [Some(described), rerouting(workspace, before, after)]
+    [Some(described), consequences(workspace, before, after)]
         .into_iter()
         .flatten()
         .join(", ")
-}
-
-/// Tells where the cues that name no outputs play, when a change to the
-/// outputs made another output the first, and some cue names none
-pub fn rerouting(workspace: &Workspace, before: &[Output], after: &[Output]) -> Option<String> {
-    let first = after.first()?;
-    let moved = before.first().is_none_or(|was| was.id != first.id);
-    let unrouted = workspace.cues().any(|cue| cue.sends.is_none());
-    (moved && unrouted).then(|| format!("so that cues with no sends play on {}", first.name))
 }
 
 fn number(cue: &Cue) -> String {

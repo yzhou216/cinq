@@ -669,6 +669,12 @@ no cue that sends to it, and new cues that do not send to it.
 Cues that name no sends play on the first output, so that cutting, adding,
 moving, or pasting at the first place changes where they play, which the
 status bar tells with the change.
+A cue that sends only to outputs that a cut or a delete took away plays on no
+output, so that the status bar counts such cues with the change, its State
+reads *NO OUTPUT* in yellow, and the sidebar lists it among the warnings, until
+*undo* brings the outputs back or the cue sends elsewhere.
+A cue whose sends were all cleared plays nowhere by choice, and gets no
+warning.
 *undo* and *redo* select the output that the change touched, or the neighbor
 of one that it took away.
 A change to a cue or to the cue lists leaves the outputs for the cue list in

@@ -11,6 +11,8 @@
 //! scroll, lines up with them.
 
 mod columns;
+#[cfg(test)]
+mod tests;
 
 use iced::{
     Element, Fill, Length, padding,

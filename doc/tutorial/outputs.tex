@@ -80,8 +80,10 @@ many.  \key{d d} cuts the selected output, \key{p} puts it back below the
 selected one, and \key{u} takes the cut back.  An output that is cut and
 pasted back into the same show is the output that it was, so that the cues
 that sent to it send to it again, while \key{y y} and \key{p} make a copy
-that no cue sends to.  A show keeps at least one output.  \key{i} edits the
-name of the output.
+that no cue sends to.  A show keeps at least one output.  A cue
+that sent only to the outputs that were cut sends to no output, which the status
+bar counts, and its state reads \texttt{NO OUTPUT} in yellow until \key{u}
+takes the cut back.  \key{i} edits the name of the output.
 
 \section{Sending a cue}
 
