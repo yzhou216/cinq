@@ -20,6 +20,7 @@ mod navigation;
 mod operators;
 mod outputs;
 mod paging;
+mod reveal_focused;
 mod rows;
 mod scroll;
 mod search;

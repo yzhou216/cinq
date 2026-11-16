@@ -550,6 +550,9 @@ A text field of the inspector, or a drop-down list
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
 	*panic*, *cancel*, *next_field*, *previous_field*, *back*, *forward*, *open*,
 	*save*, and *save_as*, which act unless a text field takes them for typing.
+	One of the sends of a cue, which scroll on the Levels tab, and a list of the
+	sidebar, which scrolls in a low window, scroll into view as these keys reach
+	it, with the name of the send or the title of the list above it.
 	Enter leaves a text field, and opens the menu of a drop-down list, which
 	takes the keyboard from there.
 

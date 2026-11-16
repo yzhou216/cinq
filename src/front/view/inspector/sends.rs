@@ -27,7 +27,7 @@ use crate::{
     back::{Cue, Fault, Sends, parse_level},
     front::{
         App, Message, Setting,
-        view::{SPACING, button, char_width, faults, format, theme},
+        view::{SENDS, SPACING, button, char_width, faults, format, theme},
     },
 };
 
@@ -105,6 +105,7 @@ pub(super) fn view<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         // Bar beside the fields, rather than over the last of each row
         scrollable(row(outputs).spacing(2.0 * SPACING).wrap())
             .spacing(SPACING)
+            .id(SENDS)
             .height(Fill)
     ]
     .spacing(SPACING)

@@ -52,6 +52,14 @@ pub const SELECTED: &str = "selected";
 /// into view
 pub const OUTPUTS: &str = "outputs";
 
+/// Identity of the sends of a cue, through which the field that Tab reached
+/// scrolls into view
+pub const SENDS: &str = "sends";
+
+/// Identity of the sidebar, through which the list that Tab reached scrolls
+/// into view
+pub const SIDEBAR_SCROLL: &str = "sidebar";
+
 /// Identity of the help page, which the keys that move the selection
 /// scroll while it is open
 pub const HELP: &str = "help";
@@ -91,7 +99,7 @@ pub fn line_height() -> f32 {
     f32::from(LineHeight::default().to_absolute(TEXT_SIZE))
 }
 
-const SPACING: f32 = 10.0;
+pub const SPACING: f32 = 10.0;
 
 /// Widest that the sidebar grows
 const SIDEBAR: f32 = 300.0;

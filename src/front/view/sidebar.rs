@@ -15,7 +15,7 @@ use iced::{
 };
 
 use super::{
-    SPACING, button,
+    SIDEBAR_SCROLL, SPACING, button,
     faults::{self, Warning},
     format, outputs, warnings,
 };
@@ -120,6 +120,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         .width(Fill),
     )
     .spacing(0)
+    .id(SIDEBAR_SCROLL)
     .width(width)
     .height(Fill)
     .into()

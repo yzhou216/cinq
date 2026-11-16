@@ -18,7 +18,7 @@ use iced::{
     widget::operation::{self, AbsoluteOffset, RelativeOffset},
 };
 
-use super::select_focused::select_focused;
+use super::{reveal_focused::reveal_focused, select_focused::select_focused};
 use crate::front::{
     App, Caret, Focus, Message, Tab,
     keymap::{Action, KeyPress, Press},
@@ -139,9 +139,10 @@ pub(super) fn key_press(event: keyboard::Event) -> Option<Message> {
 
 /// Selects the text of the field that a move by key reached, so that typing
 /// replaces it as in desktop programs, while a click keeps the caret where
-/// it fell
+/// it fell, and scrolls the sends or the sidebar to show the field if it is
+/// in one of them
 fn reached(moved: Task<Message>) -> Task<Message> {
-    moved.chain(select_focused())
+    moved.chain(select_focused()).chain(reveal_focused())
 }
 
 /// Focuses the text field `id`, with the caret where the operator asked for

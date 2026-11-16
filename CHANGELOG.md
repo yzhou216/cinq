@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Tab onto a send on the Levels tab of a cue scrolls it into view, with the
+  name of its output above it, where it stayed out of sight below or above
+  the part of the sends that showed.  Tab onto a list of the sidebar does the
+  same, with its title, where a warning in a low window pushed the Default
+  device list out of sight.
 - Red text on the selected row of the outputs table and the cue table is a
   lighter red, with a contrast of 4.9 to 1 against the row where the red of
   the rest of the window had 3.9 to 1, below the 4.5 to 1 that text needs.
