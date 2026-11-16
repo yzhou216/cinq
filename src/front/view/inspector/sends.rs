@@ -10,9 +10,9 @@
 //! scroll within the inspector, so that every output stays in reach, as
 //! the 32 outputs of a Dante Virtual Soundcard need.  The name of an output
 //! that cannot play now shows in yellow where cinq tries its device again
-//! by itself, and in red where the output must change, and the header
-//! tells how many of the outputs that the cue sends to cannot, so that the
-//! color is never the only sign.
+//! by itself, and in red where the output must change, followed in words by
+//! what is wrong with it, and the header tells how many of the outputs that
+//! the cue sends to cannot, so that the color is never the only sign.
 
 #[cfg(test)]
 mod tests;
@@ -42,6 +42,16 @@ fn silent<'a>(app: &'a App, sends: &Sends) -> Vec<&'a Fault> {
         .collect()
 }
 
+/// Returns the name of an output with its fault, if it has one, in words,
+/// as `House L (not found)`, so that the color of the name is not the only
+/// sign
+fn named(name: &str, fault: Option<&Fault>) -> String {
+    match fault {
+        Some(fault) => format!("{name} ({})", fault.brief()),
+        None => name.to_owned(),
+    }
+}
+
 pub(super) fn view<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
     let sends = app.workspace.sends(cue);
     let editable = app.editable();
@@ -59,7 +69,8 @@ pub(super) fn view<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
             .on_input_maybe(editable.then_some(move |text| Message::SettingTyped(setting, text)))
             .width(char_width() * LEVEL_ROOM + text_input::DEFAULT_PADDING.x())
             .style(theme::field(fits));
-        let name = text(&output.name).style(match faults::fault(app, output.id) {
+        let fault = faults::fault(app, output.id);
+        let name = text(named(&output.name, fault)).style(match fault {
             Some(fault) if fault.retried() => text::warning,
             Some(_) => text::danger,
             None => text::default,

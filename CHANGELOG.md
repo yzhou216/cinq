@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- On the Levels tab, the name of an output that cannot play now says what is
+  wrong with it in words, as `House L (not found)` or `Lobby (past its
+  channels)`, beside its yellow or red, so that the color is no longer the
+  only sign.
 - The fields of an output in the inspector are as wide as what they hold,
   and a line of help beside each says what it takes and what it does.  The
   line turns red and tells why where a value is not applied, as for a name
