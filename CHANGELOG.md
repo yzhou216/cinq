@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- Leaving the outputs for the cue list that showed before them, with the key
+  of the previous cue list or its entry in the sidebar, keeps the cue that
+  was selected there, where it selected the standby cue.  Any other cue list
+  still shows with its standby cue.
 - Sounds play through a mixer of cinq's own, which opens each audio device
   itself, so that a sound can reach any channel of a device.  A device whose
   stream stops, as one unplugged, says so among the warnings, where the sound

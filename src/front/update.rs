@@ -105,7 +105,7 @@ impl App {
             Message::SwitchList(list) => {
                 return self
                     .without_search()
-                    .jumping(|app| app.showing_cues().switched_to(list))
+                    .jumping(|app| app.showing_list(list))
                     .revealed();
             }
             Message::StepList(offset) => {

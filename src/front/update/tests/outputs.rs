@@ -252,3 +252,31 @@ fn warning_about_an_output_shows_the_outputs_with_it_selected() {
     assert!(inspected.outputs_shown);
     assert_eq!(inspected.output, Some(OutputId(2)));
 }
+
+fn outputs_after_list_two() -> App {
+    after(
+        show(Some(CueId(3))),
+        [Message::Select(CueId(21)), Message::ShowOutputs],
+    )
+}
+
+#[test]
+fn leaving_the_outputs_for_the_list_that_showed_keeps_its_selected_cue() {
+    let previous = after(outputs_after_list_two(), [Message::StepList(-1)]);
+    assert!(!previous.outputs_shown);
+    assert_eq!((previous.list, previous.selected), (1, Some(CueId(21))));
+    let sidebar = after(outputs_after_list_two(), [Message::SwitchList(1)]);
+    assert_eq!((sidebar.list, sidebar.selected), (1, Some(CueId(21))));
+}
+
+#[test]
+fn leaving_the_outputs_for_another_list_selects_its_standby_cue() {
+    let other = after(outputs_after_list_two(), [Message::SwitchList(0)]);
+    assert_eq!(other.selected, other.workspace.lists()[0].standby);
+    let standing = after(show(Some(CueId(3))), [Message::SwitchList(0)]);
+    assert_eq!(
+        standing.selected,
+        standing.workspace.lists()[0].standby,
+        "switching to the list that shows still selects standby"
+    );
+}

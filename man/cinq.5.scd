@@ -813,6 +813,9 @@ page.
 
 *previous_list*
 	Show the previous cue list, or the last one from the outputs of the show.
+	Where that is the cue list that the outputs took the place of, it comes back
+	with the cue that was selected, as does choosing it in the sidebar, and any
+	other cue list shows with its standby cue selected.
 
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,
