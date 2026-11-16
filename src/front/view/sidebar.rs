@@ -2,8 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Cue lists, running cues, the audio device, and warnings, all visible at
-//! the same time
+//! Cue lists, running cues, warnings, and the audio device, all visible at
+//! the same time, with the warnings above the audio device, which a show sets
+//! once, so that the first warning shows whole at the least height of the
+//! window
 
 mod devices;
 
@@ -100,9 +102,6 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             text(format!("Active ({})", workspace.active().len())),
             column(active).spacing(SPACING),
             rule::horizontal(1),
-            text("Default device"),
-            devices::view(app),
-            rule::horizontal(1),
             warned,
             column(
                 device
@@ -112,6 +111,9 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
                     .chain(problems)
             )
             .spacing(SPACING),
+            rule::horizontal(1),
+            text("Default device"),
+            devices::view(app),
         ]
         .spacing(SPACING)
         .padding(SPACING)

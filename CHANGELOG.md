@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The sidebar lists the warnings above the Default device list, which a show
+  sets once, so that at 1024x768 the header and the whole button of a
+  warning show, where the button of a failing device was cut off at the
+  bottom edge.
 - The box that lists the keys that can follow those typed, such as the ones
   after `d`, names outputs where the outputs show, as in "Cut the selected
   output and the next", and cues where a cue list shows, where it named both
