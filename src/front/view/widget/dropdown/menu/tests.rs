@@ -86,6 +86,14 @@ fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
         (Preset::Vi, letter("q"), none, Reply::Keep),
         (Preset::Vi, letter("n"), none, Reply::Keep),
         (Preset::Vi, letter("d"), none, Reply::Keep),
+        (Preset::Vi, letter("o"), ctrl, Reply::Keep),
+        (Preset::Vi, letter("i"), ctrl, Reply::Keep),
+        (
+            Preset::Cua,
+            named(Named::ArrowLeft),
+            Modifiers::ALT,
+            Reply::Keep,
+        ),
     ];
     let wrong: Vec<_> = cases
         .into_iter()

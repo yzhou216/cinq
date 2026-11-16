@@ -6,11 +6,12 @@
 //! open, the help page that comes and goes without touching the main
 //! window, the selection after deleting or undo takes the selected cue
 //! away, the selection that follows standby, the sound file chosen for a
-//! new cue, a level typed halfway, a link of the help page that fails to
-//! open, loading the files of the show, and the window drawn before a show
-//! has opened
+//! new cue, a level typed halfway, and a link of the help page that fails to
+//! open
 
 mod clock;
+mod history;
+mod loading;
 
 use std::ops::RangeInclusive;
 
@@ -21,8 +22,11 @@ use iced::{
 };
 
 use crate::{
-    back::{CueId, CueList, Load, Place, Workspace, audio, load_files},
-    front::{App, MAIN_SIZE, Message, Tab, keymap::Press},
+    back::{CueId, CueList, Place, Workspace, audio},
+    front::{
+        App, MAIN_SIZE, Message, Tab,
+        keymap::{Press, sequence},
+    },
 };
 
 /// Returns the state of the interface with `selected` selected in a show of
@@ -48,15 +52,43 @@ pub(super) fn press(key: Key) -> Press {
     chord(key, Modifiers::empty())
 }
 
+/// Returns the state after the messages, which a test sends one at a time
+pub(super) fn after(app: App, messages: impl IntoIterator<Item = Message>) -> App {
+    messages
+        .into_iter()
+        .fold(app, |app, message| app.next(message).0)
+}
+
+/// Types the keys one after another, as the window delivers them, and returns
+/// the state with the task that the last key started.  The keys are written as
+/// the configuration file writes a sequence, apart by spaces, as in `3 o` or
+/// `Control+r`.
+pub(super) fn typing_task(app: App, keys: &str) -> (App, Task<Message>) {
+    sequence(keys)
+        .expect("keys in the tests are valid")
+        .into_iter()
+        .fold((app, Task::none()), |(app, _), press| {
+            app.typed(press, false)
+        })
+}
+
+/// Returns the state after the keys of [`typing_task`]
+pub(super) fn typing(app: App, keys: &str) -> App {
+    typing_task(app, keys).0
+}
+
 /// Returns the keys that act in text fields, apart from those of GO and
-/// Panic: those that move between fields, and open and save shows
-pub(super) fn field_keys() -> [Press; 5] {
+/// Panic: those that open and save shows, go back and forward, and move
+/// between fields
+pub(super) fn field_keys() -> [Press; 7] {
     let tab = || Key::Named(Named::Tab);
     let control = |key: &str| chord(Key::Character(key.into()), Modifiers::CTRL);
     [
-        control("o"),
+        control("l"),
         control("s"),
         control("S"),
+        control("o"),
+        control("i"),
         press(tab()),
         chord(tab(), Modifiers::SHIFT),
     ]
@@ -111,7 +143,7 @@ fn keys_that_act_in_fields_do_nothing_over_the_help_page_but_go_still_fires() {
     // Keys of opening and saving would build a file chooser, which rfd
     // builds only on the main thread on Darwin, so only the moves between
     // fields are fired with the page shut
-    field_keys()[3..].iter().for_each(|&key| {
+    field_keys()[5..].iter().for_each(|&key| {
         let (_, acting) = typed(false, key);
         assert_eq!(acting.units(), 1, "{key:?}");
     });
@@ -224,24 +256,4 @@ fn link_that_fails_to_open_shows_until_the_help_page_closes() {
     assert_eq!(closed.link_problem, None);
     let (unseen, _) = closed.next(failure());
     assert_eq!(unseen.link_problem, None);
-}
-
-#[test]
-fn one_load_runs_at_a_time_until_what_it_found_comes_back() {
-    let app = show(None);
-    let found = load_files(Load::all(&app.workspace, app.workspace.unloaded()));
-    let (loading, first) = app.load();
-    let (still, again) = loading.load();
-    assert_eq!(first.units(), 1);
-    assert_eq!(again.units(), 0);
-    assert!(still.loading);
-    let show = still.show.id();
-    let done = still.loaded(show, found);
-    assert!(!done.loading);
-    assert_eq!(done.workspace.unloaded().count(), 0);
-}
-
-#[test]
-fn window_draws_before_a_show_has_opened() {
-    let _ = crate::front::view::view(&App::default());
 }

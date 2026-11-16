@@ -55,7 +55,7 @@ fn file_that_is_not_a_show_leaves_the_show_on_screen() {
 
 #[test]
 fn opening_another_show_tells_where_the_unsaved_changes_went() {
-    let told = "Kept the unsaved changes to storm.cinq.toml | Control+o: open";
+    let told = "Kept the unsaved changes to storm.cinq.toml | Control+l: open";
     let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
     assert_eq!(app.told.as_deref(), Some(told));
     // Also when the show opened brings back unsaved changes of its own
@@ -105,4 +105,16 @@ fn failure_to_keep_takes_back_the_note_that_changes_were_kept() {
     assert!(app.with_keep_problem(None).told.is_some());
     let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
     assert_eq!(app.with_keep_problem(Some("late".to_owned())).told, None);
+}
+
+#[test]
+fn opening_another_show_clears_the_places_to_go_back_to() {
+    let lists = SHOW.replace("Main", "Main\"\n\n[[list]]\nname = \"Preshow");
+    let app = App::default()
+        .opened(found(Some(STORM), Some(&lists), None))
+        .next(Message::SwitchList(1))
+        .0;
+    assert!(app.can_go_back());
+    let app = app.opened(found(Some(CALM), Some(SHOW), None));
+    assert!(!app.can_go_back() && !app.can_go_forward());
 }

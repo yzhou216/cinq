@@ -193,6 +193,12 @@ of the help page.
 |  previous_tab
 :  g T
 :  Control+Shift+Tab
+|  back
+:  Control+o
+:  Alt+ArrowLeft
+|  forward
+:  Control+i
+:  Alt+ArrowRight
 |  standby
 :  Enter
 :  Enter
@@ -227,7 +233,7 @@ of the help page.
 :  Control+r
 :  Control+y, Control+Z
 |  open
-:  Control+o
+:  Control+l
 :  Control+o
 |  save
 :  Control+s
@@ -287,9 +293,12 @@ halfway, and so does a change to the file.
 
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
-*move_down*, and *move_up*, deletes as many cues for *delete*, and gives the
-row, counted from one, that *first* and *last* select.
+*move_down*, *move_up*, *back*, and *forward*.
+It deletes as many cues for *delete*, and gives the row, counted from one,
+that *first* and *last* select.
 Other actions leave the count unused.
+A count larger than what there is, such as *9 Control+o* with fewer places
+behind, makes cinq go as far as it can, where Vim would refuse it.
 Since digits count, no sequence can start with one.
 
 A key bound by itself to *go* or *panic* acts at once, even halfway through
@@ -311,8 +320,8 @@ A text field of the inspector, or a drop-down list
 	*previous_field* move it from one text field or drop-down list to the
 	next, which shows a border in the color of focus.
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
-	*panic*, *next_field*, *previous_field*, *open*, *save*, and *save_as*,
-	which act unless a text field takes them for typing.
+	*panic*, *next_field*, *previous_field*, *back*, *forward*, *open*, *save*,
+	and *save_as*, which act unless a text field takes them for typing.
 	Enter leaves a text field, and opens the menu of a drop-down list, which
 	takes the keyboard from there.
 
@@ -392,6 +401,41 @@ page.
 
 *previous_tab*
 	Show the previous tab of the inspector.
+
+*back*
+	Go back to the place before the last jump, as the jump list of Vim does
+	with its *Control+o*.
+	A place is a cue list with its selected cue.
+	Switching cue lists, *first* and *last* with or without a count, and
+	selecting a cue in another cue list are jumps.
+	Moving the selection one row at a time, clicking a cue of the cue list
+	shown, GO moving the standby cue, adding, deleting, and moving cues,
+	undo, redo, changing the tab, and the help page are not.
+	A count goes that many places back, or to the oldest.
+	Going back remembers the place left, so that *forward* returns to it.
+	A jump after going back moves the places ahead behind the place left, in
+	the order that the jump list of Vim keeps them, so that going back again
+	still visits them.
+	When a text field has the keyboard, going back acts there as well, and
+	moves the keyboard to the cue list, so that what is typed next cannot
+	rename the cue that it went to.
+	A cue that was deleted leaves no place to go to.
+	The history holds at most 100 places, each once, and ends when cinq opens
+	another show or quits.
+	The status bar names the key and where it goes, as in *Control+o: back to
+	Main* or *back to cue 3*, while there is a place to go back to.
+	The back button of the mouse does the same from the main window, unless the
+	help page is open.
+
+*forward*
+	Go forward again to the place that *back* left, as many places as the
+	count.
+	In Vim, Tab is the same key as Control+i, while in cinq Tab moves between
+	fields and Control+i goes forward.
+	In a text field it acts as well, and moves the keyboard to the cue list.
+	The status bar names the key while there is a place ahead.
+	The forward button of the mouse does the same from the main window, unless
+	the help page is open.
 
 *standby*
 	Put the selected cue on standby, so that the next GO fires it.

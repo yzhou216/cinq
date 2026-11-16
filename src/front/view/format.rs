@@ -170,7 +170,7 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
     }
 }
 
-fn number(cue: &Cue) -> String {
+pub(in crate::front::view) fn number(cue: &Cue) -> String {
     if cue.number.trim().is_empty() {
         format!("\"{}\"", cue.name)
     } else {

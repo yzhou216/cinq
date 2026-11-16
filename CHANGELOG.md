@@ -10,6 +10,22 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- `back` and `forward` go back and forward between the places that jumps left,
+  as the jump list of Vim does: switching cue lists, `first`, `last`, and
+  selecting a cue in another cue list are jumps.  The keys are `Control+o` and
+  `Control+i` in the vi keymap and `Alt+ArrowLeft` and `Alt+ArrowRight` in the
+  cua keymap, and the status bar names them while there is a place to go to.  A
+  jump after going back keeps the places ahead, as in Vim, going back or
+  forward in a text field moves the keyboard to the cue list, and the back and
+  forward buttons of the mouse do the same from the main window, unless the
+  help page is open.
+- The status bar says where the keys of back and forward go, as `Control+o:
+  back to Main` or `back to cue 3`.
+- In the vi keymap, the key of *open* is now `Control+l`, since `Control+o` is
+  Vim's way back through the places jumped to, and Vim's `Control+l` only
+  redraws the screen, which cinq never needs.  The cua keymap keeps
+  `Control+o`.
+
 ## v0.1.4
 
 - While the problems of `config.toml` take a screen of their own on a

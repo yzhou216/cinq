@@ -19,6 +19,8 @@ use strum::VariantArray;
 
 pub use action::Action;
 pub use preset::Preset;
+#[cfg(test)]
+pub use press::sequence;
 pub use press::{KeyPress, Press, written};
 
 #[derive(Debug, Clone)]

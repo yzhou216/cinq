@@ -10,11 +10,13 @@ mod cinq;
 mod clock;
 mod device;
 mod editing;
+mod history;
 mod keys;
 mod link;
 mod loading;
 mod navigation;
 mod scroll;
+mod settled;
 mod show;
 mod stage;
 mod subscription;
@@ -23,10 +25,11 @@ mod tests;
 
 use std::thread;
 
-use iced::{Task, futures::channel::oneshot};
+use iced::{Task, futures::channel::oneshot, mouse};
 
 use super::{App, Message};
-use crate::back::{Command, Edit, parse_level};
+use crate::back::Command;
+pub(super) use history::{History, Spot};
 use link::{edit_config, open_link};
 pub(super) use show::{Keeper, Read, Reader, Saved, Show};
 pub(super) use stage::Stage;
@@ -37,119 +40,96 @@ impl App {
         (self, task)
     }
 
+    /// Applies a message that starts a task or changes what the rows show
+    ///
+    /// Any other message only changes state, which [`Self::settled_by`] does.
     fn handled(self, message: Message) -> (Self, Task<Message>) {
-        let app = match message {
-            Message::Typed { press, repeat } => return self.typed(press, repeat),
-            Message::Focus(focus) => return self.focused(focus),
+        match message {
+            Message::Typed { press, repeat } => self.typed(press, repeat),
+            Message::Focus(focus) => self.focused(focus),
             // Selection scrolls into view as it or the rows around it move,
             // and as the main window changes size
-            Message::Select(id) => return self.with_selection(id).revealed(),
-            Message::Step(offset) => return self.stepped(offset).revealed(),
-            Message::Row(row) => return self.at_row(row).revealed(),
-            Message::SwitchList(list) => return self.switched_to(list).revealed(),
-            Message::StepList(offset) => return self.stepped_list(offset).revealed(),
-            Message::Add(place) => return self.with_new_cue(place).revealed(),
-            Message::Move(by) => return self.with_selected_moved(by).revealed(),
-            Message::Delete(count) => return self.without_selected(count).revealed(),
-            Message::Undo => return self.undone().revealed(),
-            Message::Redo => return self.redone().revealed(),
+            Message::Select(id) => self.crossing(|app| app.with_selection(id)).revealed(),
+            Message::Step(offset) => self.stepped(offset).revealed(),
+            Message::Row(row) => self.jumping(|app| app.at_row(row)).revealed(),
+            Message::SwitchList(list) => self.jumping(|app| app.switched_to(list)).revealed(),
+            Message::StepList(offset) => self.jumping(|app| app.stepped_list(offset)).revealed(),
+            Message::Back(count) => self.walking(|app| app.went_back(count)),
+            Message::Forward(count) => self.walking(|app| app.went_forward(count)),
+            Message::Add(place) => self.with_new_cue(place).revealed(),
+            Message::Move(by) => self.with_selected_moved(by).revealed(),
+            Message::Delete(count) => self.without_selected(count).revealed(),
+            Message::Undo => self.undone().revealed(),
+            Message::Redo => self.redone().revealed(),
             Message::Resized(window, size) if self.main == Some(window) => {
-                return self.resized(window, size).revealed();
+                self.resized(window, size).revealed()
             }
-            Message::Recheck => return self.recheck(),
-            Message::Open => return self.with_task(Self::choose_show),
-            Message::Opened(read) => return self.opened(*read).revealed(),
-            Message::Save => return self.with_task(Self::save),
-            Message::SaveAs => return self.with_task(Self::choose_file),
-            Message::SaveTo(file) => return self.with_task(|app| app.save_to(file)),
-            Message::ChooseFile(id) => return self.with_task(|app| app.choose_cue_file(id)),
-            Message::OpenLink(target) => return self.opening(move || open_link(&target)),
-            Message::EditConfig(file) => return self.opening(move || edit_config(&file)),
-            Message::ToggleFullscreen => return self.with_task(Self::toggle_fullscreen),
-            Message::Closed(window) => return self.closed(window),
-            Message::ListAudioDevices => return self.with_task(|_| device::listing()),
-            Message::ChooseAudioDevice(device) => return self.chose_audio_device(device),
+            Message::Recheck => self.recheck(),
+            Message::Open => self.with_task(Self::choose_show),
+            Message::Opened(read) => self.opened(*read).revealed(),
+            Message::Save => self.with_task(Self::save),
+            Message::SaveAs => self.with_task(Self::choose_file),
+            Message::SaveTo(file) => self.with_task(|app| app.save_to(file)),
+            Message::ChooseFile(id) => self.with_task(|app| app.choose_cue_file(id)),
+            Message::OpenLink(target) => self.opening(move || open_link(&target)),
+            Message::EditConfig(file) => self.opening(move || edit_config(&file)),
+            Message::ToggleFullscreen => self.with_task(Self::toggle_fullscreen),
+            Message::Closed(window) => self.closed(window),
+            Message::ListAudioDevices => self.with_task(|_| device::listing()),
+            Message::ChooseAudioDevice(device) => self.chose_audio_device(device),
             // GO and Panic close the help page, so that the show is in view
             // as it runs or stops, and a selection that GO moves scrolls
             // into view, while the list stays put otherwise
             Message::Go => {
                 let selected = self.selected;
                 let gone = self.gone();
-                return if gone.selected == selected {
+                if gone.selected == selected {
                     (gone, Task::none())
                 } else {
                     gone.revealed()
-                };
-            }
-            Message::Panic => Self {
-                help: false,
-                ..self.send(Command::Panic)
-            },
-            Message::PauseAll => self.send(Command::Pause(true)),
-            Message::ResumeAll => self.send(Command::Pause(false)),
-            Message::Stop(id) => self.send(Command::Stop(id)),
-            Message::Tick(now) => self.ticked(now),
-            // Nothing without a selected cue, as the toolbar's button does
-            Message::StandbySelected => {
-                let standby = self.selected_here().map(|cue| Command::Standby {
-                    list: self.list,
-                    cue: Some(cue),
-                });
-                self.send_all(standby)
-            }
-            Message::ShowMode(show_mode) => self.send(Command::ShowMode(show_mode)),
-            Message::Loaded(show, found) => self.loaded(show, found),
-            Message::Rechecked(show, found) => self.rechecked(show, found),
-            Message::Saved(saved) => self.saved(saved),
-            // Keys typed halfway went by the bindings before, so the update
-            // drops them, as it does for most messages
-            Message::Reconfigured(config) => Self { config, ..self },
-            Message::LinkOpened(result) => Self {
-                link_problem: result.err(),
-                ..self
-            },
-            Message::AudioDevicesListed(listed) => self.with_audio_devices(listed),
-            Message::AudioDeviceKept(kept) => Self {
-                device_problem: kept.err(),
-                ..self
-            },
-            Message::Clicked => self,
-            // Stage window holds no cue list to keep in view
-            Message::Resized(window, size) => self.resized(window, size),
-            Message::WindowFocused(window) => Self {
-                stage: self.stage.with_keyboard_in(window),
-                ..self
-            },
-            Message::Edit(id, edit) => self.send(Command::Edit(id, edit)),
-            Message::LevelTyped(cue, text) => {
-                let edit = parse_level(&text).map(|level| Command::Edit(cue, Edit::Level(level)));
-                Self {
-                    typed_level: Some((cue, text)),
-                    ..self
                 }
-                .send_all(edit)
             }
-            Message::FileChosen(id, path) => {
-                let file = self.workspace.file_name_of(&path);
-                let playing = self.workspace.cue(id).map(|cue| cue.playing(file));
-                self.send_all(playing.map(|edit| Command::Edit(id, edit)))
+            // Buttons of the mouse go back and forward from the main window, as
+            // the keys do, apart from the help page, which the keys leave be
+            Message::SidePressed(window, mouse::Button::Back)
+                if self.main == Some(window) && !self.help =>
+            {
+                self.walking(|app| app.went_back(1))
             }
-            Message::ToggleHelp => Self {
-                help: !self.help,
-                ..self
-            },
-            Message::CloseHelp => Self {
-                help: false,
-                ..self
-            },
-            Message::Tab(tab) => Self { tab, ..self },
-            Message::StepTab(offset) => Self {
-                tab: self.tab.stepped(offset),
-                ..self
-            },
-            Message::NewKind(new_kind) => Self { new_kind, ..self },
-        };
-        (app, Task::none())
+            Message::SidePressed(window, mouse::Button::Forward)
+                if self.main == Some(window) && !self.help =>
+            {
+                self.walking(|app| app.went_forward(1))
+            }
+            // Naming each variant here, with no wildcard, keeps the compiler
+            // checking that a new message is handled by one part or the other
+            message @ (Message::SidePressed(..)
+            | Message::Panic
+            | Message::PauseAll
+            | Message::ResumeAll
+            | Message::Stop(_)
+            | Message::Tick(_)
+            | Message::StandbySelected
+            | Message::ShowMode(_)
+            | Message::Loaded(..)
+            | Message::Rechecked(..)
+            | Message::Saved(_)
+            | Message::Reconfigured(_)
+            | Message::LinkOpened(_)
+            | Message::AudioDevicesListed(_)
+            | Message::AudioDeviceKept(_)
+            | Message::Clicked
+            | Message::Resized(..)
+            | Message::WindowFocused(_)
+            | Message::Edit(..)
+            | Message::LevelTyped(..)
+            | Message::FileChosen(..)
+            | Message::ToggleHelp
+            | Message::CloseHelp
+            | Message::Tab(_)
+            | Message::StepTab(_)
+            | Message::NewKind(_)) => (self.settled_by(message), Task::none()),
+        }
     }
 
     /// Hands a command to the back end, and brings the show as its file

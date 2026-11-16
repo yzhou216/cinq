@@ -28,7 +28,7 @@ use iced::{Size, window};
 use crate::back::{Audio, CueId, CueList, Kind, Video, Workspace};
 use keymap::{Press, config::Config};
 use message::{Focus, Message, Tab};
-use update::{Keeper, Reader, Show, Stage};
+use update::{History, Keeper, Reader, Show, Stage};
 
 /// Opens the main window with the show in `show`, or a new show without
 /// one, and runs the interface until the main window closes.  The key
@@ -140,6 +140,8 @@ struct App {
     /// last, until it keeps another
     device_problem: Option<String>,
     list: usize,
+    /// Places that jumps have left, for going back to them
+    history: History,
     /// Cue shown in the inspector
     selected: Option<CueId>,
     /// Level of a cue as the operator types it, which its field shows in

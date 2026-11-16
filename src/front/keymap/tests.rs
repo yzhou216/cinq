@@ -10,6 +10,7 @@ mod manual;
 mod notation;
 mod typing;
 
+use itertools::Itertools;
 use strum::VariantArray;
 
 use super::{
@@ -24,6 +25,14 @@ fn keys(text: &str) -> Vec<Press> {
 
 fn one(text: &str) -> Option<Press> {
     keys(text).first().copied()
+}
+
+fn press(text: &str) -> Press {
+    one(text).expect("a key")
+}
+
+fn listed(preset: Preset, action: Action) -> String {
+    Keymap::from(preset).listed(action)
 }
 
 /// Returns what the last key amounts to
@@ -59,6 +68,17 @@ fn shipped_keymaps_are_valid_and_hide_no_binding() {
 }
 
 #[test]
+fn open_is_control_l_in_vi_and_control_o_in_cua() {
+    let opens = |preset: Preset| {
+        Keymap::from(preset)
+            .key(Action::Open)
+            .expect("both keymaps bind open")
+    };
+    assert_eq!(opens(Preset::Vi), "Control+l");
+    assert_eq!(opens(Preset::Cua), "Control+o");
+}
+
+#[test]
 fn keys_of_go_and_panic_hide_every_other_sequence_that_holds_them() {
     let keymap = Keymap::default()
         .with(Action::Panic, vec![keys("Escape"), keys("Shift+Escape")])
@@ -73,4 +93,31 @@ fn keys_of_go_and_panic_hide_every_other_sequence_that_holds_them() {
             "`Space` acts at once as go, so `g Space` can never be typed",
         ]
     );
+}
+
+#[test]
+fn back_and_forward_keys_follow_vim_and_the_browsers_and_act_in_fields() {
+    assert_eq!(listed(Preset::Vi, Action::Back), "Control+o");
+    assert_eq!(listed(Preset::Vi, Action::Forward), "Control+i");
+    assert_eq!(listed(Preset::Cua, Action::Back), "Alt+ArrowLeft");
+    assert_eq!(listed(Preset::Cua, Action::Forward), "Alt+ArrowRight");
+    let acting = |preset: Preset, text: &str| Keymap::from(preset).acts_in_fields(press(text));
+    assert!(acting(Preset::Vi, "Control+o") && acting(Preset::Vi, "Control+i"));
+    assert!(acting(Preset::Cua, "Alt+ArrowLeft") && acting(Preset::Cua, "Alt+ArrowRight"));
+    assert!(!acting(Preset::Cua, "Control+i"));
+}
+
+#[test]
+fn no_key_is_bound_twice_in_a_shipped_keymap() {
+    let twice: Vec<_> = Preset::VARIANTS
+        .iter()
+        .flat_map(|preset| {
+            Action::VARIANTS
+                .iter()
+                .flat_map(|&action| preset.keys(action))
+                .duplicates()
+                .map(|keys| (preset.name(), *keys))
+        })
+        .collect();
+    assert!(twice.is_empty(), "{twice:?}");
 }
