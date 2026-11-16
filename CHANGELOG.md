@@ -10,6 +10,10 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- In the `cua` keymap, `F2` selects the whole name of the selected cue, as a
+  rename does in desktop file managers, and no key puts the caret at the end
+  of the name.  The `vi` keymap keeps the caret at the end for `i`, `a`, and
+  `A`, as Vim does.
 - The keys of `next_field` and `previous_field` select the text of the text
   field that they move to, so that typing replaces it, as in desktop programs.
   A click into a field still puts the caret where it fell.

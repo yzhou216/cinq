@@ -254,13 +254,13 @@ of the help page.
 :  Shift+F3
 |  edit
 :  i, a, A
-:  F2
+:  none
 |  edit_start
 :  I
 :  none
 |  change_name
 :  c c, S
-:  none
+:  F2
 |  next_field
 :  Tab
 :  Tab
@@ -796,6 +796,8 @@ page.
 *change_name*
 	Edit the name of the selected cue with all of it selected, so that typing
 	replaces it, as Vim's *c c* and *S* change a whole line.
+	In the cua keymap it is *F2*, which selects the name as a rename does in
+	desktop file managers.
 	Enter leaves the field with the name unchanged unless a key was typed.
 	Unlike in Vim, *c* is no operator, so only *c c* begins a change, and a *c*
 	before any other key is dropped with that key, as *TYPING* describes.
