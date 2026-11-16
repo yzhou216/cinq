@@ -624,6 +624,12 @@ names of the outputs, in any case, with the rules of *SEARCHING*, and the
 line tells that no output matches.
 *first* and *last* with a count, and the searches, are jumps there, as they
 are for cues.
+The inspector of an output has a line of help beside each field, which says
+what the field takes and what it does, and which turns red and says why where
+the value typed is not applied, as for a name that another output has,
+channels that are neither one nor two, or a level out of range.
+Where the keyboard leaves a field that holds such a value, the status bar
+tells the reason, since the field shows the value that holds again.
 The actions that edit cues edit the outputs in the same way while they show.
 *edit*, *edit_start*, and *change_name* enter the Name field of the output
 with the caret at its end, at its start, or with all of it selected, as *F2*

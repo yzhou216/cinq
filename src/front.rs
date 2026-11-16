@@ -170,6 +170,10 @@ struct App {
     /// What the latest key found to say that is no change, such as an empty
     /// clipboard, until the operator does anything else
     remark: Option<&'static str>,
+    /// Why the text that the operator left in a field was not applied, which
+    /// the field forgets once the keyboard has left it, until the operator
+    /// does anything else
+    unapplied: Option<String>,
     /// Kind of cue that Add cue creates
     new_kind: Kind,
     /// Time of the last clock tick, or `None` while the clock is stopped

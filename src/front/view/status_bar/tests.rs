@@ -156,6 +156,18 @@ fn in_menu(app: App) -> Vec<String> {
         .collect()
 }
 
+#[test]
+fn why_a_field_was_not_applied_shows_in_the_bar_like_what_a_key_remarked() {
+    let app = App {
+        unapplied: Some("Not applied: the name is empty".to_owned()),
+        ..App::default()
+    };
+    let told = hinted(&app)
+        .into_iter()
+        .find_map(|(action, hint)| action.is_none().then_some(hint));
+    assert_eq!(told.as_deref(), Some("Not applied: the name is empty"));
+}
+
 fn opened(preset: Preset, menu: bool, help: bool) -> App {
     let mut config = Config::default();
     config.keymap = Keymap::from(preset);

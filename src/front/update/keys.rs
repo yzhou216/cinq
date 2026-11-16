@@ -33,6 +33,7 @@ impl App {
             keys: outcome.pending,
             clipped: self.clipped.filter(|_| outcome.action.is_none()),
             remark: self.remark.filter(|_| outcome.action.is_none()),
+            unapplied: self.unapplied.filter(|_| outcome.action.is_none()),
             ..self
         };
         if let Some((operator, motion, count)) = across {

@@ -26,11 +26,13 @@ pub(super) fn hints(app: &App) -> Vec<(Option<Action>, String)> {
     hints_told(app, told(app))
 }
 
-/// Tells what a key remarked, or the latest copy or cut, opening or saving,
-/// or change to the show told, whichever is latest
+/// Tells what a key remarked, why a field was left unapplied, or the latest
+/// copy or cut, opening or saving, or change to the show told, whichever is
+/// latest
 pub(super) fn told(app: &App) -> Option<String> {
     clipped(app)
         .or_else(|| app.remark.map(str::to_owned))
+        .or_else(|| app.unapplied.clone())
         .or_else(|| app.told.clone())
         .or_else(|| notice(app))
 }

@@ -32,6 +32,7 @@ mod search;
 mod search_line;
 mod search_places;
 mod side_buttons;
+mod unapplied;
 mod viewing;
 
 use std::ops::RangeInclusive;

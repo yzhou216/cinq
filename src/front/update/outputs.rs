@@ -19,7 +19,7 @@ use iced::Task;
 
 use crate::{
     back::{Channels, Command, CueId, Edit, OutputEdit, OutputId, Place, parse_level},
-    front::{App, Message, Setting},
+    front::{App, Message, Setting, view},
 };
 
 impl App {
@@ -102,8 +102,24 @@ impl App {
     /// the field of `setting`
     pub(super) fn settled_but(self, setting: Setting) -> Self {
         match &self.typed {
-            Some((typed, _)) if *typed != setting => self.settled(),
+            Some((typed, _)) if *typed != setting => self.leaving_unapplied().settled(),
             _ => self,
+        }
+    }
+
+    /// Returns why the text that the operator typed into the field and did
+    /// not take back does not apply, as the status bar tells it
+    pub(super) fn unapplied(&self) -> Option<String> {
+        let (setting, text) = self.typed.as_ref()?;
+        view::rejection(self, *setting, text).map(|reason| format!("Not applied: {reason}"))
+    }
+
+    /// Keeps the reason that the text of the field about to be left does not
+    /// apply, since the field shows the value that holds once it is left
+    pub(super) fn leaving_unapplied(self) -> Self {
+        Self {
+            unapplied: self.unapplied().or(self.unapplied.clone()),
+            ..self
         }
     }
 

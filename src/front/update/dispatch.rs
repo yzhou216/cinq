@@ -80,6 +80,9 @@ impl App {
             Message::SettingTyped(..) | Message::SettingSubmitted
         );
         let kept = passive || clicked || in_field;
+        // Field that the keyboard leaves takes its rejected text with it, so
+        // that the status bar tells the reason, which the field no longer does
+        let unapplied = (!kept).then(|| self.unapplied()).flatten();
         let app = if passive || in_field {
             self
         } else {
@@ -89,6 +92,7 @@ impl App {
             keys: if typing { app.keys } else { Vec::new() },
             clipped: app.clipped.filter(|_| typing),
             remark: app.remark.filter(|_| typing),
+            unapplied: app.unapplied.filter(|_| typing),
             typed_level: app.typed_level.filter(|_| passive || clicked),
             typed: app.typed.filter(|_| kept),
             ..app
@@ -96,6 +100,7 @@ impl App {
         let (app, task) = app.handled(message);
         let app = Self {
             link_problem: app.link_problem.filter(|_| app.help),
+            unapplied: unapplied.or(app.unapplied),
             ..app
         };
         (app, task)

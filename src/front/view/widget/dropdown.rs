@@ -121,3 +121,9 @@ impl<'a> From<Dropdown<'a>> for Element<'a, Message> {
         Element::new(dropdown)
     }
 }
+
+/// Returns the width of a list that shows `columns` columns of a name, with
+/// its padding and its arrow
+pub fn width(columns: f32) -> f32 {
+    columns * char_width() + PADDING.x() + widget::ARROW
+}

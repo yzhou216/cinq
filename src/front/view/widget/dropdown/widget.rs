@@ -41,7 +41,7 @@ use crate::front::{
 };
 
 /// Room for the arrow, which is about as wide as the text is high
-const ARROW: f32 = TEXT_SIZE.0 + PADDING.left;
+pub(super) const ARROW: f32 = TEXT_SIZE.0 + PADDING.left;
 
 /// Returns a label on one line in the default font and size.  It goes by
 /// its top left corner, where iced's own pick list goes by its middle,

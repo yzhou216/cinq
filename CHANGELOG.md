@@ -10,6 +10,15 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The fields of an output in the inspector are as wide as what they hold,
+  and a line of help beside each says what it takes and what it does.  The
+  line turns red and tells why where a value is not applied, as for a name
+  that another output has, channels that are neither one nor two, or a level
+  out of range, where only the border of the field turned red.  An output
+  whose device is not there also tells what to do.  Where the keyboard
+  leaves a field that holds a value that was not applied, the status bar
+  tells why, as `Not applied: another output has this name`, since the field
+  shows the old value again.
 - Leaving the outputs for the cue list that showed before them, with the key
   of the previous cue list or its entry in the sidebar, keeps the cue that
   was selected there, where it selected the standby cue.  Any other cue list
