@@ -190,6 +190,9 @@ struct App {
     /// Whether the menu of a drop-down list is open, which the status bar
     /// hints the keys of
     menu: bool,
+    /// Whether a text field or a drop-down list has the keyboard, which the
+    /// status bar hints how to leave
+    held: bool,
     /// Why the link that the help page opened last failed to open, which
     /// the page shows while it stays open
     link_problem: Option<String>,

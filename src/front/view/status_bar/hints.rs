@@ -61,15 +61,25 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     let pick =
         key(Action::Pick, "pick").or_else(|| Some((Some(Action::Pick), "Enter: pick".to_owned())));
     let close = key(Action::CloseMenu, "close");
-    // Escape would panic, so that the key that only cancels is told while it can
-    let cancel =
-        key(Action::Cancel, "cancel").filter(|_| !app.keys.is_empty() || app.search.is_some());
+    // Escape would panic, so that the key that only cancels is told while it
+    // can.  Cancelling keys typed or a search never gives way, while the
+    // hint of leaving a field does, as it only teaches.
+    let cancel = key(Action::Cancel, "cancel")
+        .filter(|_| !app.keys.is_empty() || app.search.is_some())
+        .map(|(_, hint)| (None, hint));
+    // A pick or a close by key, and a Tab, leave the keyboard on a field or a
+    // list, from which Escape would panic and no click is at hand
+    let in_field = app.held && !app.help && !in_menu && app.search.is_none();
+    let next_field = key(Action::NextField, "next field").filter(|_| in_field);
+    let leave = key(Action::Cancel, "leave").filter(|_| in_field && app.keys.is_empty());
     typed
         .into_iter()
         .chain(told)
         .chain(pick.filter(|_| in_menu))
         .chain(close.filter(|_| in_menu))
         .chain(cancel)
+        .chain(next_field)
+        .chain(leave)
         .chain(teaching.into_iter().flatten().flatten())
         .chain(back)
         .chain(forward)

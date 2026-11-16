@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- After a choice in a drop-down list made with the keys, or a menu closed
+  with the key of close, the keyboard stays on the list, so that Tab goes on
+  to the next field from it.  While a text field or a drop-down list has the
+  keyboard, the status bar hints the keys of the next field and, in the `vi`
+  keymap, of leaving it.
 - Tab onto a send on the Levels tab of a cue scrolls it into view, with the
   name of its output above it, where it stayed out of sight below or above
   the part of the sends that showed.  Tab onto a list of the sidebar does the

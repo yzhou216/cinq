@@ -253,6 +253,9 @@ pub enum Message {
     /// Window changed size, to no size at all while it is minimized
     Resized(window::Id, Size),
     WindowFocused(window::Id),
+    /// Whether a text field or a drop-down list has the keyboard, as the
+    /// widgets told after the latest thing that the operator did
+    Held(bool),
     /// Toggles the stage window between fullscreen and a window
     ToggleFullscreen,
     /// Window closed, as the operator closes it

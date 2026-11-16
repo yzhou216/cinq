@@ -176,6 +176,12 @@ impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
     ) {
         let state = tree.state.downcast_mut::<State>();
         let over = cursor.is_over(layout.bounds());
+        // A pick or a close by key leaves the keyboard on the list, so that
+        // Tab goes on to the next field from it
+        if !state.shared.is_open() && state.shared.take_returning() {
+            state.focused = true;
+            shell.request_redraw();
+        }
         if pressed(event) && state.focused {
             state.focused = false;
             shell.request_redraw();

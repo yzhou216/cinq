@@ -13,6 +13,7 @@ mod device;
 mod dispatch;
 mod editing;
 mod history;
+mod keyboard;
 mod keys;
 mod link;
 mod loading;
@@ -103,6 +104,7 @@ impl App {
             Message::Reached { .. } => self,
             Message::Place(height, count) => return self.placed(height, count),
             Message::MenuOpen(open) => Self { menu: open, ..self },
+            Message::Held(held) => Self { held, ..self },
             Message::SwitchList(list) => {
                 return self
                     .without_search()

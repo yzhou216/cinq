@@ -7,20 +7,21 @@
 //! the latest change to the show with the key that takes it back, the key
 //! that cancels while keys wait or the search line is open, the keys that go
 //! back and forward between the places jumped to while there is a place to
-//! go to, the key that saves unsaved changes, and the keys of GO, Panic, and
-//! the help page
+//! go to, the key that saves unsaved changes, the keys of GO, Panic, and the
+//! help page, and, while a text field or a drop-down list has the keyboard,
+//! the keys that go to the next field and that leave the field
 //!
 //! The bar keeps to one line.  When it is too narrow for all of it, the name
 //! of the show is cut short at its end with an ellipsis, down to 16 columns,
 //! and then the keys of going forward and back, of GO, of Panic, of saving,
-//! and of the help page give way in turn, each one whole, and then what the
-//! latest change told gives way, at a word, with an ellipsis, so that the
-//! status shows in full, while the keys typed so far and the key of cancel
-//! always show in full.
+//! of the help page, of the next field, and of leaving it give way in turn,
+//! each one whole, and then what the latest change told gives way, at a word,
+//! with an ellipsis, so that the status shows in full, while the keys typed so
+//! far and the key of cancel always show in full.
 //! While the outputs show, the bar names the keys that add and rename an
 //! output, and the key that goes back always, since it is the way out, so
 //! that the keys give way in another order: forward, add, rename, GO, Panic,
-//! saving, back, and the help page.
+//! saving, back, the help page, the next field, and leaving a field.
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
 
@@ -42,13 +43,15 @@ use super::{
 };
 use crate::front::{App, Message, Search, keymap::Action};
 
-const YIELDING: [Action; 8] = [
+const YIELDING: [Action; 10] = [
     Action::Forward,
     Action::Back,
     Action::Go,
     Action::Panic,
     Action::Save,
     Action::Help,
+    Action::NextField,
+    Action::Cancel,
     Action::CloseMenu,
     Action::Pick,
 ];
@@ -57,7 +60,7 @@ const YIELDING: [Action; 8] = [
 /// and rename an output go first, as they only teach, and the key that goes
 /// back goes last but one, since it is the way out of the outputs, which
 /// GO and Panic do not need, as the transport has buttons for them.
-const YIELDING_IN_OUTPUTS: [Action; 10] = [
+const YIELDING_IN_OUTPUTS: [Action; 12] = [
     Action::Forward,
     Action::AddBelow,
     Action::Edit,
@@ -66,6 +69,8 @@ const YIELDING_IN_OUTPUTS: [Action; 10] = [
     Action::Save,
     Action::Back,
     Action::Help,
+    Action::NextField,
+    Action::Cancel,
     Action::CloseMenu,
     Action::Pick,
 ];

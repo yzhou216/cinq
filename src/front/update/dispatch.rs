@@ -15,6 +15,32 @@ use crate::{
     front::{App, Message},
 };
 
+/// Returns whether `message` reports something that happened without the
+/// operator, which changes nothing that the operator was in the middle of,
+/// and moves no keyboard
+pub(super) fn passive(message: &Message) -> bool {
+    matches!(
+        message,
+        Message::Tick(_)
+            | Message::Loaded(..)
+            | Message::Recheck
+            | Message::Rechecked(..)
+            | Message::LinkOpened(_)
+            | Message::AudioDevicesListed(_)
+            | Message::AudioDeviceKept(_)
+            | Message::Saved(_)
+            | Message::SearchSettled
+            | Message::Resized(..)
+            | Message::WindowFocused(_)
+            | Message::Held(_)
+            | Message::Landed { .. }
+            | Message::Measured(_)
+            | Message::Remeasure
+            | Message::Drawn(_)
+            | Message::Reached { .. }
+    )
+}
+
 impl App {
     pub(super) fn with_task(
         self,
@@ -52,25 +78,7 @@ impl App {
     /// A link that failed to open is forgotten once the help page that holds
     /// it closes.
     pub(super) fn next(self, message: Message) -> (Self, Task<Message>) {
-        let passive = matches!(
-            message,
-            Message::Tick(_)
-                | Message::Loaded(..)
-                | Message::Recheck
-                | Message::Rechecked(..)
-                | Message::LinkOpened(_)
-                | Message::AudioDevicesListed(_)
-                | Message::AudioDeviceKept(_)
-                | Message::Saved(_)
-                | Message::SearchSettled
-                | Message::Resized(..)
-                | Message::WindowFocused(_)
-                | Message::Landed { .. }
-                | Message::Measured(_)
-                | Message::Remeasure
-                | Message::Drawn(_)
-                | Message::Reached { .. }
-        );
+        let passive = passive(&message);
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);
         // Typing into a field, or pressing Enter in it, keeps its text,

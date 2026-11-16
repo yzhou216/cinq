@@ -55,6 +55,9 @@ pub(super) struct Shared {
     /// Options that the open menu shows at once, or none before it is laid
     /// out, which the keys of a page move the highlight by
     fit: Cell<usize>,
+    /// Whether a key picked an option or closed the menu without a pick, which
+    /// gives the keyboard back to the list, until the list takes it
+    returning: Cell<bool>,
     /// Keys of a motion typed halfway, such as the first `g` of `g g`
     waiting: Cell<Vec<Press>>,
 }
@@ -62,6 +65,18 @@ pub(super) struct Shared {
 impl Shared {
     pub(super) fn is_open(&self) -> bool {
         self.open.get()
+    }
+
+    /// Returns whether a key has closed the menu and the list has not taken
+    /// the keyboard back yet
+    pub(super) fn is_returning(&self) -> bool {
+        self.returning.get()
+    }
+
+    /// Returns whether a key has closed the menu since the last call, so that
+    /// the list takes the keyboard back and Tab goes on from it
+    pub(super) fn take_returning(&self) -> bool {
+        self.returning.take()
     }
 }
 
@@ -114,9 +129,13 @@ impl<'b> Choice<'b> {
             Reply::Page(sign) => self.highlight(self.stepped(sign * self.page()), shell),
             Reply::First => self.highlight((!self.dropdown.names.is_empty()).then_some(0), shell),
             Reply::Last => self.highlight(self.dropdown.names.len().checked_sub(1), shell),
-            Reply::Pick => self.pick(self.highlighted(), shell),
+            Reply::Pick => {
+                self.shared.returning.set(true);
+                self.pick(self.highlighted(), shell);
+            }
             Reply::Close => self.close(shell),
             Reply::Dismiss => {
+                self.shared.returning.set(true);
                 self.close(shell);
                 shell.capture_event();
             }

@@ -585,7 +585,8 @@ The menu of a drop-down list
 	PageDown, PageUp, Home, and End do so as well, as they do in the popup menu
 	of Vim, whether or not the keymap binds them.
 	Enter and the key of *pick* pick the highlighted option, and the key of
-	*close_menu* closes the menu without picking one.
+	*close_menu* closes the menu without picking one, and either leaves the
+	keyboard on the list, so that *next_field* goes on to the field after it.
 	The keys of *go* and *panic* act as they do everywhere and close the menu
 	as well.
 	The key of *help* opens the help page and leaves the menu open, hidden
@@ -706,6 +707,9 @@ page.
 	it first.
 	The cua keymap binds no key to it, since Control+c copies there.
 	While keys wait or the search line is open, the status bar hints its key.
+	While a text field or a drop-down list has the keyboard, it hints the key
+	of *next_field* and this key as the one that leaves, so that the way out is
+	told where Escape would panic.
 
 *next*
 	Select the next cue, move the highlight of an open menu down, or scroll

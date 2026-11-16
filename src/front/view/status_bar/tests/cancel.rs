@@ -22,7 +22,8 @@ pub(super) const COLUMNS: usize = 103;
 fn cancel_hint(app: &App) -> Option<String> {
     hinted(app)
         .into_iter()
-        .find_map(|(action, hint)| (action == Some(Action::Cancel)).then_some(hint))
+        .map(|(_, hint)| hint)
+        .find(|hint| hint.ends_with(": cancel"))
 }
 
 #[test]
@@ -64,4 +65,61 @@ fn the_key_of_cancel_stays_in_a_bar_of_1024_pixels_while_go_and_panic_give_way()
     let long = shown("Searched for a cue whose name holds the words that were typed");
     assert!(long.contains("Control+c: cancel"));
     assert!(!long.contains("GO") && !long.contains("Panic"));
+}
+
+/// Returns the hints that tell how to leave a field
+fn leaving(preset: Preset, held: bool) -> Vec<String> {
+    let app = App {
+        held,
+        ..opened(preset, false, false)
+    };
+    hinted(&app)
+        .into_iter()
+        .filter(|(action, _)| matches!(action, Some(Action::NextField | Action::Cancel)))
+        .map(|(_, hint)| hint)
+        .collect()
+}
+
+#[test]
+fn the_bar_hints_how_to_leave_a_field_that_has_the_keyboard() {
+    assert_eq!(leaving(Preset::Vi, false), Vec::<String>::new());
+    assert_eq!(
+        leaving(Preset::Vi, true),
+        ["Tab: next field", "Control+c: leave"]
+    );
+    // Cua binds no key to cancel, and gets no new one
+    assert_eq!(leaving(Preset::Cua, true), ["Tab: next field"]);
+}
+
+#[test]
+fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
+    let told = |menu, help| {
+        let app = App {
+            held: true,
+            ..opened(Preset::Vi, menu, help)
+        };
+        hinted(&app).iter().any(|(_, hint)| hint.contains("leave"))
+    };
+    assert!(told(false, false));
+    assert!(!told(true, false), "a menu has its own keys");
+    assert!(!told(false, true), "the page covers the field");
+}
+
+#[test]
+fn the_hints_of_leaving_a_field_give_way_after_the_help_page() {
+    let app = App {
+        held: true,
+        ..opened(Preset::Vi, false, false)
+    };
+    let all = fitted(&hinted(&app), COLUMNS, &YIELDING);
+    assert_eq!(
+        all,
+        "Tab: next field | Control+c: leave | Space: GO | Escape: Panic | F1: help"
+    );
+    let narrow = fitted(&hinted(&app), 45, &YIELDING);
+    assert!(narrow.contains("Control+c: leave"), "{narrow}");
+    assert!(
+        !narrow.contains("GO") && !narrow.contains("Panic"),
+        "{narrow}"
+    );
 }

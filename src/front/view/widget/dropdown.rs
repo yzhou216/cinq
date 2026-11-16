@@ -21,7 +21,9 @@
 //! takes the keys from there, unless Enter is bound to GO or Panic, which
 //! act as everywhere.  The list hands the keyboard to its menu as it
 //! opens, so that the keys act on the cue list again once the menu closes,
-//! as they do after Enter leaves a text field.
+//! as they do after Enter leaves a text field.  A pick or a close by key hands
+//! the keyboard back to the list, so that the key that moves on goes to the
+//! field after it.
 //!
 //! A list with less room than its longest name cuts the name it shows
 //! short, and its menu grows as wide as that name, so that a list in the
