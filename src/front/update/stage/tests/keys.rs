@@ -51,14 +51,7 @@ fn help_key_opens_the_page_from_the_main_window_only() {
     // may cover
     let typed = |in_stage: bool| {
         let (open, _) = show(Kind::Video).staged();
-        let stage = open.stage.window().expect("the stage window opens");
-        let window = if in_stage {
-            stage
-        } else {
-            open.main.expect("the main window opens")
-        };
-        let (keyboard, _) = open.handled(Message::WindowFocused(window));
-        let (next, task) = keyboard.typed(press(Key::Character("?".into())), false);
+        let (next, task) = focusing(open, in_stage).typed(press(Key::Named(Named::F1)), false);
         (next.help, task.units())
     };
     assert_eq!(typed(false), (true, 0));
@@ -72,7 +65,7 @@ fn other_help_page_keys_act_from_the_stage_window_so_that_it_closes() {
     let (open, _) = show(Kind::Video).staged();
     let keyboard = focusing(App { help: true, ..open }, true);
     let keys = [
-        press(Key::Character("?".into())),
+        press(Key::Named(Named::F1)),
         press(Key::Character("j".into())),
     ]
     .into_iter()

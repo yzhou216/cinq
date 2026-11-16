@@ -9,6 +9,7 @@ mod cue_table;
 pub(super) mod format;
 mod help;
 mod inspector;
+pub(in crate::front) use cue_table::searchable as cue_texts;
 mod next_keys;
 mod sidebar;
 pub(super) mod stage;
@@ -35,7 +36,7 @@ use super::{
     App, Message,
     keymap::{Action, Keymap},
 };
-use widget::{button, dropdown, hide, keep_keys, marked_row};
+use widget::{button, dropdown, hide, keep_keys, line_keys, marked_row};
 
 /// Identity of the cue list, through which the selection scrolls into view
 pub const CUES: &str = "cues";
@@ -51,6 +52,14 @@ pub const HELP: &str = "help";
 /// Identity of the Name field, through which the key of the edit action
 /// gives it the keyboard focus
 pub const NAME: &str = "name";
+
+/// Identity of the search line in the status bar, through which the key of
+/// the search action gives it the keyboard focus
+pub const SEARCH: &str = "search";
+
+/// What the search line and the status bar tell when no cue matches the text
+/// of a search
+pub const NO_MATCH: &str = "No cue matches";
 
 /// Monospace, so that columns of text line up
 pub const FONT: Font = Font::MONOSPACE;

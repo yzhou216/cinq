@@ -11,11 +11,11 @@ Major changes and improvements in each release of cinq, newest first.
 ## Unreleased
 
 - `back` and `forward` go back and forward between the places that jumps left,
-  as the jump list of Vim does: switching cue lists, `first`, `last`, and
-  selecting a cue in another cue list are jumps.  The keys are `Control+o` and
-  `Control+i` in the vi keymap and `Alt+ArrowLeft` and `Alt+ArrowRight` in the
-  cua keymap, and the status bar names them while there is a place to go to.  A
-  jump after going back keeps the places ahead, as in Vim, going back or
+  as the jump list of Vim does: switching cue lists, `first`, `last`, selecting
+  a cue in another cue list, and searching are jumps.  The keys are `Control+o`
+  and `Control+i` in the vi keymap and `Alt+ArrowLeft` and `Alt+ArrowRight` in
+  the cua keymap, and the status bar names them while there is a place to go
+  to.  A jump after going back keeps the places ahead, as in Vim, going back or
   forward in a text field moves the keyboard to the cue list, and the back and
   forward buttons of the mouse do the same from the main window, unless the
   help page is open.
@@ -39,15 +39,16 @@ Major changes and improvements in each release of cinq, newest first.
   act at once.
 - `Control+c` cancels in the vi keymap, as in Vim, through the new `cancel`
   action, which has no key in the cua keymap, where `Control+c` copies.  It
-  drops the keys typed so far, takes the keyboard out of a text field, and never
-  stops playback, so that no one reaches for `Escape`, which is Panic.  The
-  status bar hints the key while keys wait, and a text field with a selection
-  still copies it first.
+  drops the keys typed so far, closes the search line with the selection going
+  back to where the search began, takes the keyboard out of a text field, and
+  never stops playback, so that no one reaches for `Escape`, which is Panic.
+  The status bar hints the key while keys wait or the search line is open, and a
+  text field with a selection still copies it first.
 - While the stage window has the keyboard, the keys that change the show or fill
   the clipboard, such as `x`, `Delete`, `o`, `u`, `p`, and the operators, do
-  nothing, as the keys of editing a name and of the help page already did, so
-  that a key held down there cannot change cues out of sight.  GO, Panic,
-  standby, and the moves still act.
+  nothing, as the keys of editing a name, of searching, and of the help page
+  already did, so that a key held down there cannot change cues out of sight.
+  GO, Panic, standby, and the moves still act.
 - The help page, the box of the keys that can follow, and the status bar write
   a sequence of keys that type characters joined, as Vim does: `dd`, `gg`,
   `gt`, and `zz`, no longer `d d`, since a newcomer pressed the Space between
@@ -81,8 +82,8 @@ Major changes and improvements in each release of cinq, newest first.
   Vim, through the new `row_to_middle`, `row_to_top`, and `row_to_bottom`
   actions.  A count selects that row first, as `{count}zt` does.  The selection
   stays on its cue, and the view stops at the ends of the list.
-- A move or jump that leaves the selected cue far outside the view, such as `G`
-  or going back, scrolls the list to put it in the middle, with Vim's
+- A move or jump that leaves the selected cue far outside the view, such as `G`,
+  `n`, or going back, scrolls the list to put it in the middle, with Vim's
   thresholds: seven rows above the view and 13 rows below it in a view of 23
   rows.  A move to a row near the view still scrolls by the least, as does GO
   moving the standby a row.
@@ -114,6 +115,25 @@ Major changes and improvements in each release of cinq, newest first.
 - Undoing the addition of a cue or a paste below a cue selects the cue that was
   selected when it was made, as the cursor of Vim goes back to where a change
   was made, in place of the cue that follows.
+- A search line opens with `/` in the vi keymap and `Control+f` in the cua
+  keymap, and `search_backward` opens one for a search up the list on a key
+  that a keymap in `config.toml` gives it.  `?` and `F1` both show the help page
+  in both keymaps, as an exception to Vim's `?`.  As the text is typed, the
+  selection moves to the first cue after it that holds the text, in any case,
+  in any column that the list shows except the waits and the state, so that
+  `/rumble` finds the cue of `rumble.ogg`, as Vim's search matches a whole line.
+- `Enter` accepts a search, and on an empty line repeats the last one.
+  `Escape`, `Backspace` on an empty line, a click, going back or forward,
+  moving to another field, and opening a show close the line.  `n` and `N`, or
+  `F3` and `Shift+F3`, find the next match in the direction of the last search
+  and in the other, a count goes round the matches at most once, and the status
+  bar says when a step wrapped around or found none.
+- Searches are jumps, so that `back` returns to where a search began or to the
+  cue before a step to the next match.  The search line takes the keys of Vim's
+  command line: `Control+w` deletes the word before the cursor, `Control+u`
+  everything before it, and `ArrowUp` and `ArrowDown` recall the older and newer
+  of the last fifty searches accepted that start with the text typed.  The keys
+  act on the end of the text.
 
 ## v0.1.4
 

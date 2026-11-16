@@ -14,21 +14,35 @@ fn everywhere(_: Spot) -> bool {
     true
 }
 
-/// Returns the history that jumps from each of `places` in turn leave
+/// Returns the history after a jump that leaves each of `places` in turn
 fn jumped_from(places: impl IntoIterator<Item = Spot>) -> History {
     places.into_iter().fold(History::default(), History::jumped)
+}
+
+/// Goes `count` places back from `here`, where there is a place behind
+fn back(history: History, here: Spot, count: usize) -> (Spot, History) {
+    history
+        .back(here, count, everywhere)
+        .expect("a place behind")
+}
+
+/// Goes `count` places forward from `here`, where there is a place ahead
+fn forward(history: History, here: Spot, count: usize) -> (Spot, History) {
+    history
+        .forward(here, count, everywhere)
+        .expect("a place ahead")
 }
 
 #[test]
 fn back_and_forward_retrace_the_places() {
     let history = jumped_from([cue(1), cue(2), cue(3)]);
-    let (spot, history) = history.back(cue(4), 1, everywhere).expect("a place behind");
+    let (spot, history) = back(history, cue(4), 1);
     assert_eq!(spot, cue(3));
-    let (spot, history) = history.back(spot, 2, everywhere).expect("places behind");
+    let (spot, history) = back(history, spot, 2);
     assert_eq!(spot, cue(1));
-    let (spot, history) = history.forward(spot, 1, everywhere).expect("a place ahead");
+    let (spot, history) = forward(history, spot, 1);
     assert_eq!(spot, cue(2));
-    let (spot, history) = history.forward(spot, 5, everywhere).expect("places ahead");
+    let (spot, history) = forward(history, spot, 5);
     assert_eq!(spot, cue(4));
     assert_eq!(history.forward(spot, 1, everywhere), None);
     assert!(history.can_go_back(spot, everywhere));
@@ -37,8 +51,7 @@ fn back_and_forward_retrace_the_places() {
 
 #[test]
 fn a_count_past_the_oldest_place_goes_to_the_oldest() {
-    let history = jumped_from([cue(1), cue(2), cue(3)]);
-    let (spot, _) = history.back(cue(4), 50, everywhere).expect("places behind");
+    let (spot, _) = back(jumped_from([cue(1), cue(2), cue(3)]), cue(4), 50);
     assert_eq!(spot, cue(1));
 }
 
@@ -50,8 +63,7 @@ fn a_place_is_remembered_once() {
 
 #[test]
 fn a_jump_after_going_back_keeps_the_places_ahead_behind() {
-    let history = jumped_from([cue(1), cue(2)]);
-    let (spot, history) = history.back(cue(3), 1, everywhere).expect("a place behind");
+    let (spot, history) = back(jumped_from([cue(1), cue(2)]), cue(3), 1);
     assert!(history.can_go_forward(spot, everywhere));
     let history = history.jumped(spot);
     assert_eq!(history.ahead, []);
@@ -61,18 +73,11 @@ fn a_jump_after_going_back_keeps_the_places_ahead_behind() {
 #[test]
 fn going_back_after_a_jump_visits_what_vim_visits() {
     // 10G 20G Control+o 30G Control+o Control+o, from the first line
-    let history = jumped_from([cue(1), cue(10)]);
-    let (spot, history) = history
-        .back(cue(20), 1, everywhere)
-        .expect("a place behind");
+    let (spot, history) = back(jumped_from([cue(1), cue(10)]), cue(20), 1);
     assert_eq!(spot, cue(10));
-    let history = history.jumped(spot);
-    let (spot, history) = history
-        .back(cue(30), 1, everywhere)
-        .expect("a place behind");
+    let (spot, history) = back(history.jumped(spot), cue(30), 1);
     assert_eq!(spot, cue(10));
-    let (spot, _) = history.back(spot, 1, everywhere).expect("a place behind");
-    assert_eq!(spot, cue(20));
+    assert_eq!(back(history, spot, 1).0, cue(20));
 }
 
 #[test]
@@ -91,8 +96,6 @@ fn the_history_keeps_the_last_hundred_places() {
     assert_eq!(history.behind.len(), 100);
     assert_eq!(history.behind.first(), Some(&cue(51)));
     // Going back remembers the place left, which still counts against the limit
-    let (_, history) = history
-        .back(cue(151), 1, everywhere)
-        .expect("places behind");
+    let (_, history) = back(history, cue(151), 1);
     assert_eq!(history.behind.len() + history.ahead.len(), 100);
 }

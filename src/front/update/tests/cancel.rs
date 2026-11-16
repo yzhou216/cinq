@@ -2,10 +2,14 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the key that cancels: the keys typed so far and the field with
-//! the keyboard, never playback
+//! Tests of the key that cancels: the keys typed so far, the search line,
+//! and the field with the keyboard, never playback
 
-use super::{chord, press, show};
+use super::{
+    chord, press,
+    search::{opened, typed},
+    show,
+};
 use crate::{
     back::{CueId, loaded, sound},
     front::{App, Message, keymap::Press},
@@ -24,6 +28,21 @@ fn control_c_drops_the_keys_typed_so_far_and_does_nothing_else() {
     assert!(cancelled.keys.is_empty());
     assert_eq!(cancelled.selected, Some(CueId(2)));
     assert!(cancelled.workspace.latest_change().is_none());
+}
+
+#[test]
+fn cancel_closes_the_search_line_and_puts_the_selection_back_where_the_search_began() {
+    let searching = typed(opened(2), "wind");
+    assert_eq!(searching.selected, Some(CueId(5)));
+    let (cancelled, _) = searching.handled(Message::Cancel);
+    assert!(cancelled.search.is_none());
+    assert_eq!(cancelled.selected, Some(CueId(2)));
+    // Key does the same
+    let (by_key, _) = typed(opened(2), "wind").typed(control_c(), false);
+    assert!(by_key.search.is_none());
+    assert_eq!(by_key.selected, Some(CueId(2)));
+    // And nothing was accepted
+    assert_eq!(by_key.searched.text, "");
 }
 
 #[test]

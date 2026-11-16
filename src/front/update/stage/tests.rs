@@ -9,6 +9,7 @@
 
 mod editing;
 mod keys;
+mod search;
 
 use iced::{Size, window};
 

@@ -6,6 +6,7 @@
 //! and the keys send, and the reports of the clock, of the configuration
 //! file's watch, and of the work done on threads of its own
 
+mod line;
 mod scrolling;
 mod tab;
 
@@ -18,6 +19,7 @@ use super::{
     update::{Measured, Read, Saved},
 };
 use crate::back::{Command, CueId, Edit, Kind, Place};
+pub use line::LineKey;
 pub use scrolling::{Height, Page};
 pub use tab::Tab;
 
@@ -40,8 +42,8 @@ pub enum Focus {
 pub enum Message {
     Go,
     Panic,
-    /// Drops the keys typed so far and takes the keyboard out of a field,
-    /// without touching playback
+    /// Drops the keys typed so far, gives up the search line, and takes the
+    /// keyboard out of a field, without touching playback
     Cancel,
     PauseAll,
     ResumeAll,
@@ -101,6 +103,22 @@ pub enum Message {
     Back(usize),
     /// Goes a number of places forward again after going back
     Forward(usize),
+    /// Opens the search line, which selects the cues that its text matches,
+    /// searching up the list when `backward`
+    Search {
+        backward: bool,
+    },
+    /// Text of the search line, as typed so far
+    Searching(String),
+    /// Edits the text of the search line with a key of Vim's command line
+    SearchKey(LineKey),
+    /// Accepts the text of the search line
+    SearchAccepted,
+    /// Selects the cue a number of matches of the last search further on in
+    /// the direction that it went, or the other way when negative
+    SearchStep(isize),
+    /// Time that the search line has told that no cue matches has passed
+    SearchSettled,
     ShowMode(bool),
     Tab(Tab),
     /// Shows the inspector tab a number of tabs to the right, wrapping

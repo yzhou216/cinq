@@ -24,14 +24,26 @@ use strum::VariantArray;
 
 use super::{CUES, SELECTED, char_width, giving_way, marked_row};
 use crate::{
-    back::Cue,
+    back::{Cue, CueList, Workspace},
     front::{App, Message, keymap::Action},
 };
 use columns::{Column, state};
 
-/// Width of the scroll bar, which the list leaves free at its right, so
-/// that the bar covers no text and the rows keep the width of the header
-/// with or without the bar
+/// Returns the texts of a cue that a search matches, which are those of the
+/// columns of the list apart from the waits, which are timings, and the
+/// state, which changes as the show runs, so that a search finds what the list
+/// shows of the cue, as Vim finds the text of a line
+pub(in crate::front) fn searchable(
+    workspace: &Workspace,
+    list: &CueList,
+    cue: &Cue,
+) -> Vec<String> {
+    use Column::{Action, Name, Number, Target, Then, Type};
+    [Number, Type, Name, Target, Action, Then]
+        .map(|column| column.text(workspace, list, cue))
+        .to_vec()
+}
+
 const SCROLL_BAR: f32 = 10.0;
 
 /// iced's own vertical padding of table cells

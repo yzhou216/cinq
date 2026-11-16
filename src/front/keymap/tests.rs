@@ -134,3 +134,17 @@ fn no_key_is_bound_twice_in_a_shipped_keymap() {
         .collect();
     assert!(twice.is_empty(), "{twice:?}");
 }
+
+#[test]
+fn question_mark_and_f1_show_the_help_in_both_keymaps_and_search_up_has_no_key() {
+    assert_eq!(listed(Preset::Vi, Action::Help), "?, F1");
+    assert_eq!(listed(Preset::Cua, Action::Help), "F1, ?");
+    assert_eq!(listed(Preset::Vi, Action::SearchBackward), "none");
+    assert_eq!(listed(Preset::Cua, Action::SearchBackward), "none");
+    Preset::VARIANTS.iter().for_each(|&preset| {
+        let keymap = Keymap::from(preset);
+        assert_eq!(keymap.alone(press("?")), Some(Action::Help), "{preset:?}");
+        assert!(!keymap.acts_in_fields(press("?")), "{preset:?}");
+        assert!(!keymap.acts_when_captured(press("?"), true), "{preset:?}");
+    });
+}

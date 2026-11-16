@@ -5,15 +5,18 @@
 //! Status of the show, most important first, then at the right the keys of
 //! a command typed so far, what the latest opening or saving told or else
 //! the latest change to the show with the key that takes it back, the key
-//! that cancels while keys wait, the keys that go back and forward between
-//! the places jumped to while there is a place to go to, the key that saves
-//! unsaved changes, and the keys of GO, Panic, and the help page
+//! that cancels while keys wait or the search line is open, the keys that go
+//! back and forward between the places jumped to while there is a place to
+//! go to, the key that saves unsaved changes, and the keys of GO, Panic, and
+//! the help page
 //!
 //! The bar keeps to one line.  When it is too narrow for all of it, the
 //! keys of going forward and back, of GO, of Panic, of saving, and of the
 //! help page give way in turn, each one whole, and then the status gives way
 //! from its end, so that the keys typed so far, what the latest change told,
 //! and the key of cancel always show in full.
+//! An open search line takes the place of the status, and the hints give way
+//! to its text as well.
 
 #[cfg(test)]
 mod tests;
@@ -21,19 +24,20 @@ mod tests;
 use std::iter;
 
 use iced::{
-    Center, Element, Fill,
-    widget::{container, responsive, rich_text, row, span, text, text::Wrapping},
+    Center, Element, Fill, Padding,
+    widget::{container, responsive, rich_text, row, span, text, text::Wrapping, text_input},
 };
 use itertools::Itertools;
 use unicode_width::UnicodeWidthStr;
 
 use super::{
-    LINE, SPACING, answered, char_width, format, giving_way, line_height, theme, warnings,
+    LINE, NO_MATCH, SEARCH, SPACING, answered, char_width, format, giving_way, keep_keys,
+    line_height, line_keys, theme, warnings,
 };
 use crate::{
     back::Turn,
     front::{
-        App, Message,
+        App, Message, Search,
         keymap::{Action, shown},
         update::Spot,
     },
@@ -48,6 +52,16 @@ const YIELDING: [Action; 6] = [
     Action::Help,
 ];
 
+/// Mark that opens the search line, or the one that opens it for a search that
+/// goes up the list, as in Vim
+fn mark(backward: bool) -> &'static str {
+    if backward { "?" } else { "/" }
+}
+
+/// Fewest columns that the search line keeps for itself, which the hints
+/// give way to
+const SEARCH_ROOM: usize = 24;
+
 pub(super) fn view(app: &App) -> Element<'_, Message> {
     // Bar is one line of text high with the gap around it, since a
     // responsive widget fills all the height it is given
@@ -58,21 +72,60 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 }
 
 /// Hints grow to the left, so that the keys typed so far come and go
-/// without moving the rest.
+/// without moving the rest.  An open search line takes the place of the
+/// status, as Vim's command line does, and the hints give way to its text.
 fn bar(app: &App, width: f32) -> Element<'_, Message> {
-    let status = status(app);
     let room = columns(width);
-    let status_columns: usize = status.iter().map(|part| part.text.width()).sum();
-    let shown = fitted(&hints(app), room.saturating_sub(status_columns));
-    let status = rich_text(status).wrapping(Wrapping::None);
-    row![
-        container(status).width(Fill).clip(true),
-        text(shown).wrapping(Wrapping::None)
-    ]
-    .spacing(SPACING)
-    .padding(SPACING)
-    .align_y(Center)
-    .into()
+    let (left, taken) = match &app.search {
+        Some(search) => (
+            search_line(app, search),
+            search_columns(&search.text, search.warned),
+        ),
+        None => {
+            let status = status(app);
+            let columns = status.iter().map(|part| part.text.width()).sum();
+            let shown = container(rich_text(status).wrapping(Wrapping::None))
+                .width(Fill)
+                .clip(true);
+            (shown.into(), columns)
+        }
+    };
+    let shown = fitted(&hints(app), room.saturating_sub(taken));
+    row![left, text(shown).wrapping(Wrapping::None)]
+        .spacing(SPACING)
+        .padding(SPACING)
+        .align_y(Center)
+        .into()
+}
+
+/// Columns that the search line keeps for its text, and for what it tells,
+/// so that the hints never cover them
+fn search_columns(text: &str, warned: bool) -> usize {
+    let told = if warned { NO_MATCH.width() + 1 } else { 0 };
+    (mark(false).width() + text.width() + told).max(SEARCH_ROOM)
+}
+
+/// Search line: its mark, the text typed, and a note that no cue matches
+/// for a while after a search finds none.  It keeps the keys typed into
+/// it, as the fields of the inspector do.
+fn search_line<'a>(app: &'a App, search: &'a Search) -> Element<'a, Message> {
+    let field = text_input("", &search.text)
+        .id(SEARCH)
+        .on_input(Message::Searching)
+        .on_submit(Message::SearchAccepted)
+        .padding(0)
+        .style(theme::line);
+    let line = row![text(mark(search.backward)), field]
+        .push(search.warned.then(|| {
+            container(
+                text(NO_MATCH)
+                    .color(theme::PALETTE.warning)
+                    .wrapping(Wrapping::None),
+            )
+            .padding(Padding::ZERO.right(SPACING))
+        }))
+        .align_y(Center);
+    keep_keys(line_keys(line), &app.config.keymap)
 }
 
 /// Returns the columns of text that fit in the bar of `width` pixels
@@ -130,9 +183,9 @@ fn hints(app: &App) -> Vec<(Option<Action>, String)> {
     let forward = going(app, Action::Forward, app.forward_to());
     let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
     // Escape would panic, so that the key that only cancels is told while it
-    // can.  Cancelling keys typed never gives way.
+    // can.  Cancelling keys typed or a search never gives way.
     let cancel = key(Action::Cancel, "cancel")
-        .filter(|_| !app.keys.is_empty())
+        .filter(|_| !app.keys.is_empty() || app.search.is_some())
         .map(|(_, hint)| (None, hint));
     typed
         .into_iter()

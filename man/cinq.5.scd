@@ -235,6 +235,18 @@ of the help page.
 |  forward
 :  Control+i
 :  Alt+ArrowRight
+|  search
+:  /
+:  Control+f
+|  search_backward
+:  none
+:  none
+|  next_match
+:  n
+:  F3
+|  previous_match
+:  N
+:  Shift+F3
 |  standby
 :  Enter
 :  Enter
@@ -350,7 +362,8 @@ The key of *cancel* drops it as well, without any other effect.
 
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
-*move_down*, *move_up*, *scroll_down*, *scroll_up*, *back*, and *forward*.
+*move_down*, *move_up*, *scroll_down*, *scroll_up*, *back*, *forward*,
+*next_match*, and *previous_match*.
 It copies, cuts, deletes, or adds as many cues for *copy*, *cut*, *delete*,
 *add_below*, and *add_above*, pastes as many times for *paste_below* and
 *paste_above*, undoes or redoes as many changes for *undo* and *redo*, and
@@ -408,14 +421,72 @@ not cut a panic short.
 So does holding a key of *fullscreen*, which would otherwise toggle the stage
 window back and forth, while every other key repeats as it is held.
 
+# SEARCHING
+
+The key of *search* opens a search line at the left of the status bar, where
+the status stood, which reads a slash and then the text typed, and the key of
+*search_backward*, which neither keymap binds, opens it with a question mark
+for a search up the list.
+As the text changes, the selection moves to the first cue of the list on
+screen, from the cue after the selected one down, one of whose columns holds the
+text, in any case, and the list scrolls to it.
+A search looks at the number, type, name, target, action, and *Then* columns,
+with the text that the list shows in each, so that a search for *rumble* finds
+the cue of *rumble.ogg*, as a search of Vim finds the text of a whole line.
+The waits and the state are left out, since they are timings and what the
+show has made of a cue.
+A search up the list begins at the cue before the selected one.
+The search wraps around the list and ends on the selected cue, as a search of
+Vim does from the start of a line, so that the selected cue is the match only
+when no other cue holds the text.
+Enter accepts the search and closes the line, and remembers the text and the
+direction for *next_match* and *previous_match*.
+*next_match* finds the next cue that holds the text in the direction of the
+search accepted last, and *previous_match* in the other direction, as *n* and
+*N* do in Vim, wrapping around at either end.
+When a search or a step wraps around, the status bar says that it continued at
+the top or at the bottom, as Vim says that the search hit the bottom, and says
+that no cue matches when a step finds none, until the next action.
+Enter on an empty line repeats the search accepted last in the direction of
+the line.
+Backspace on an empty line closes it, and so does Escape, which is also
+*panic*, and so does the key of *cancel*, which stops no playback.
+Each puts the selection back where it was when the line opened.
+Any press of a mouse button closes the line and keeps the selection where it
+is, and a press on a cue selects that cue.
+Going *back* or *forward*, with the keys or the buttons of the mouse, moving
+to another field with *next_field* or *previous_field*, and opening a show
+close the line as well, and keep the selection where the search put it.
+When no cue holds the text, the selection stays where it was when the line
+opened and the line says so for a few seconds, and Enter then leaves the line
+open.
+Searches are jumps for *back*, as they are in Vim: accepting a search with
+Enter, when it moved the selection, remembers the place where the search
+began, and *next_match* and *previous_match* remember the place that they
+leave.
+The moves made while typing, and cancelling, remember nothing.
+A count for *next_match* or *previous_match* goes round the matches at most
+once, so that a count equal to the number of matches comes back to the same
+cue.
+The line takes the keys of Vim's command line as well: Control+w deletes the
+word before the cursor and Control+u everything before it, and ArrowUp and
+ArrowDown recall the older and the newer of the last fifty searches accepted,
+which start with the text typed, as the arrows of the command line do.
+The keys act on the end of the text, since the text field does not tell where
+its cursor is, and leave the cursor there, as Vim does after a recall.
+The history is kept until *cinq* quits.
+The line keeps the keys typed into it, like a text field, and the hints at
+the right of the status bar give way to its text.
+The stage window cannot open it by keys while it has the keyboard.
+
 # SCROLLING
 
 The cue list scrolls to keep the selected cue in view, with three rows around
 it where there is room, and by the least that does it, as when *next* or *go*
 moves the selection a row.
 A move or jump that leaves the selected row far outside the view, such as
-*last* or *back*, puts it in the middle of the view instead, much as Vim does
-after a jump that far.
+*last*, *next_match*, or *back*, puts it in the middle of the view instead,
+much as Vim does after a jump that far.
 Above the view, the row goes to the middle once it, with its three rows of
 margin, lies half the view less one row above the top of the view, which is
 seven rows above it in a view of 23 rows.
@@ -629,7 +700,8 @@ page.
 	with its *Control+o*.
 	A place is a cue list with its selected cue.
 	Switching cue lists, *first* and *last* with or without a count, and
-	selecting a cue in another cue list are jumps.
+	selecting a cue in another cue list are jumps, and so are the searches
+	described under *SEARCHING*.
 	Moving the selection one row at a time, clicking a cue of the cue list
 	shown, GO moving the standby cue, adding, deleting, and moving cues,
 	undo, redo, changing the tab, and the help page are not.
@@ -642,8 +714,8 @@ page.
 	moves the keyboard to the cue list, so that what is typed next cannot
 	rename the cue that it went to.
 	A cue that was deleted leaves no place to go to.
-	The history holds at most 100 places, each once, and ends when cinq opens
-	another show or quits.
+	The history holds at most 100 places, each once, and ends when *cinq*
+	opens another show or quits.
 	The status bar names the key and where it goes, as in *Control+o: back to
 	Main* or *back to cue 3*, while there is a place to go back to.
 	The back button of the mouse does the same from the main window, unless the
@@ -652,25 +724,49 @@ page.
 *forward*
 	Go forward again to the place that *back* left, as many places as the
 	count.
-	In Vim, Tab is the same key as Control+i, while in cinq Tab moves between
+	In Vim, Tab is the same key as Control+i, while in *cinq* Tab moves between
 	fields and Control+i goes forward.
 	In a text field it acts as well, and moves the keyboard to the cue list.
 	The status bar names the key while there is a place ahead.
 	The forward button of the mouse does the same from the main window, unless
 	the help page is open.
 
+*search*
+	Open the search line at the left of the status bar, as described under
+	*SEARCHING*.
+
+*search_backward*
+	Open the search line for a search up the list, which begins at the cue
+	before the selected one, as described under *SEARCHING*.  Neither keymap
+	binds it, since *?* shows the help page, so a keymap in *config.toml*
+	binds it to a key.
+
+*next_match*
+	Select the next cue that matches the search accepted last, in the
+	direction of that search, wrapping around at the end of the list, or as
+	many matches further as the count, going around the matches at most once.
+	It is a jump for *back*.
+	It does nothing before a search.
+
+*previous_match*
+	Select the next cue that matches the search accepted last in the opposite
+	direction, wrapping around at the top of the list, or as many matches back
+	as the count, going around the matches at most once.
+	It is a jump for *back*.
+
 *standby*
 	Put the selected cue on standby, so that the next GO fires it.
 
 *cancel*
-	Drop the keys typed so far, and take the keyboard out of a text field or
-	drop-down list, as Control+c does in Vim.
+	Drop the keys typed so far, close the search line, with the selection going
+	back to where the search began, as Escape does there, and take the keyboard
+	out of a text field or drop-down list, as Control+c does in Vim.
 	It never touches playback, which is how it differs from Escape, so that it is
 	the key to reach for when no show should stop.
 	It acts in text fields, where a text field that has a selection still copies
 	it first.
 	The cua keymap binds no key to it, since Control+c copies there.
-	While keys wait, the status bar hints its key.
+	While keys wait or the search line is open, the status bar hints its key.
 
 *edit*
 	Edit the name of the selected cue.
@@ -794,8 +890,10 @@ page.
 
 *help*
 	Show the help page, or hide it.  It does nothing while the stage window
-	has the keyboard.  Both keymaps bind *?* and F1 to it, so that the most common
-	help key works everywhere.
+	has the keyboard.  Both keymaps bind *?* and F1 to it.  The vi keymap
+	departs from Vim here, where *?* searches up the list, so that the most
+	common help key works everywhere.  *?* types in a text field and in the
+	search line, as any character does.
 
 *close_help*
 	Hide the help page.

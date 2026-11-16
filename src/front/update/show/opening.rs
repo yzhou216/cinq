@@ -109,5 +109,6 @@ impl App {
             ..opened
         }
         .switched_to(0)
+        .without_search()
     }
 }

@@ -32,14 +32,11 @@ impl App {
                 self.jumping(|app| app.at_row(row.saturating_add(1)))
             }
             Message::Copy(count) => self.with_copied(count),
-            Message::Panic => Self {
-                help: false,
-                ..self.send(Command::Panic)
-            },
             Message::PauseAll => self.send(Command::Pause(true)),
             Message::ResumeAll => self.send(Command::Pause(false)),
             Message::Stop(id) => self.send(Command::Stop(id)),
             Message::Tick(now) => self.ticked(now),
+            Message::SearchSettled => self.search_settled(),
             // Nothing without a selected cue, as the toolbar's button does
             Message::StandbySelected => {
                 let standby = self.selected_here().map(|cue| Command::Standby {
@@ -64,7 +61,9 @@ impl App {
                 device_problem: kept.err(),
                 ..self
             },
-            Message::Clicked => self,
+            // Click on blank space would leave the search line open with no
+            // way to close it but Panic
+            Message::Clicked => self.without_search(),
             // Stage window holds no cue list to keep in view
             Message::WindowFocused(window) => Self {
                 stage: self.stage.with_keyboard_in(window),

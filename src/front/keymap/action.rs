@@ -42,6 +42,10 @@ pub enum Action {
     PreviousTab,
     Back,
     Forward,
+    Search,
+    SearchBackward,
+    NextMatch,
+    PreviousMatch,
     Standby,
     Cancel,
     Edit,
@@ -105,8 +109,16 @@ impl Action {
             Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
             Action::Back => "Go back to the place that the last jump left",
             Action::Forward => "Go forward again after going back",
+            Action::Search => "Search the cues by the text of their columns",
+            Action::SearchBackward => "Search the cues by the text of their columns, upwards",
+            Action::NextMatch => "Select the next match of the search, in its direction",
+            Action::PreviousMatch => {
+                "Select the next match of the search, in the opposite direction"
+            }
             Action::Standby => "Put the selected cue on standby",
-            Action::Cancel => "Drop the keys typed so far and leave a field",
+            Action::Cancel => {
+                "Drop the keys typed so far, close the search line, and leave a field"
+            }
             Action::Edit => "Edit the name of the selected cue",
             Action::NextField => "Move to the next field",
             Action::PreviousField => "Move to the previous field",
@@ -242,6 +254,10 @@ impl Action {
             Action::PreviousTab => Message::StepTab(-step),
             Action::Back => Message::Back(times),
             Action::Forward => Message::Forward(times),
+            Action::Search => Message::Search { backward: false },
+            Action::SearchBackward => Message::Search { backward: true },
+            Action::NextMatch => Message::SearchStep(step),
+            Action::PreviousMatch => Message::SearchStep(-step),
             Action::Standby => Message::StandbySelected,
             Action::Cancel => Message::Cancel,
             Action::Edit => Message::Focus(Focus::Name),

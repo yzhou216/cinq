@@ -172,3 +172,11 @@ fn a_fade_pasted_into_another_show_with_its_target_targets_the_copy() {
         .collect();
     assert_eq!(targets, [(1, None), (2, Some(1)), (3, None), (4, Some(3))]);
 }
+
+#[test]
+fn opening_a_show_closes_the_search_line() {
+    let (searching, _) = storm().searching(true);
+    assert!(searching.search.is_some());
+    let app = searching.opened(found(Some(CALM), Some(SHOW), None));
+    assert!(app.search.is_none());
+}

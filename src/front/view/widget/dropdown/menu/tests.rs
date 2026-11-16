@@ -81,7 +81,9 @@ fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
         (Preset::Vi, named(Named::Enter), none, Reply::Pick),
         (Preset::Vi, named(Named::Escape), none, Reply::Close),
         (Preset::Vi, named(Named::Space), none, Reply::Close),
+        (Preset::Vi, named(Named::F1), none, Reply::Pass),
         (Preset::Vi, letter("?"), none, Reply::Pass),
+        (Preset::Cua, letter("?"), none, Reply::Pass),
         (Preset::Cua, named(Named::F1), none, Reply::Pass),
         (Preset::Vi, letter("q"), none, Reply::Keep),
         (Preset::Vi, letter("n"), none, Reply::Keep),
@@ -144,8 +146,9 @@ fn enter_picks_the_highlight_and_go_closes_the_menu_without_keeping_its_key() {
 #[test]
 fn help_acts_through_the_menu_and_leaves_it_open_on_its_row() {
     let letter = |text: &str| Key::Character(text.into());
+    let help = Key::Named(Named::F1);
     assert_eq!(
-        pressed(&[letter("?")]),
+        pressed(std::slice::from_ref(&help)),
         Outcome {
             open: true,
             captured: false,
@@ -153,7 +156,7 @@ fn help_acts_through_the_menu_and_leaves_it_open_on_its_row() {
         }
     );
     let highlight = outcome(|choice, shell| {
-        [letter("j"), letter("?")]
+        [letter("j"), help.clone()]
             .iter()
             .for_each(|key| choice.press(key, Press::from_key(key, Modifiers::empty()), shell));
         assert_eq!(choice.shared.highlight.get(), Some(1));

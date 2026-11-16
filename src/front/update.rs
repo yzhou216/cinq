@@ -10,6 +10,7 @@ mod cinq;
 mod clipboard;
 mod clock;
 mod device;
+mod dispatch;
 mod editing;
 mod history;
 mod keys;
@@ -19,6 +20,7 @@ mod navigation;
 mod operators;
 mod paging;
 mod scroll;
+mod search;
 mod settled;
 mod show;
 mod stage;
@@ -27,25 +29,20 @@ mod subscription;
 mod tests;
 mod viewing;
 
-use std::thread;
-
-use iced::{Task, futures::channel::oneshot, mouse};
+use iced::{Task, mouse};
 
 use super::{App, Message};
 use crate::back::Command;
 pub(super) use clipboard::{Clipboard, Clipped};
+use dispatch::on_own_thread;
 pub(super) use history::{History, Spot};
 use link::{edit_config, open_link};
 pub(super) use paging::kept::{Measured, Measures};
+pub(super) use search::{Search, Searched};
 pub(super) use show::{Keeper, Read, Reader, Saved, Show};
 pub(super) use stage::Stage;
 
 impl App {
-    fn with_task(self, task: impl FnOnce(&Self) -> Task<Message>) -> (Self, Task<Message>) {
-        let task = task(&self);
-        (self, task)
-    }
-
     /// Applies a message that starts a task or changes what the rows show
     ///
     /// Any other message only changes state, which [`Self::settled_by`] does.
@@ -55,7 +52,10 @@ impl App {
             Message::Focus(focus) => self.focused(focus),
             // Selection scrolls into view as it or the rows around it move,
             // and as the main window changes size
-            Message::Select(id) => self.crossing(|app| app.with_selection(id)).revealed(),
+            Message::Select(id) => self
+                .without_search()
+                .crossing(|app| app.with_selection(id))
+                .revealed(),
             Message::Step(offset) => self.stepped(offset).revealed(),
             Message::Row(row) => self.jumping(|app| app.at_row(row)).revealed(),
             Message::Page(page, count) => self.paged(page, count),
@@ -71,7 +71,10 @@ impl App {
             Message::Scroll(rows) => self.scrolled(rows),
             Message::InView(height, count) => self.in_view(height, count),
             Message::Place(height, count) => self.placed(height, count),
-            Message::SwitchList(list) => self.jumping(|app| app.switched_to(list)).revealed(),
+            Message::SwitchList(list) => self
+                .without_search()
+                .jumping(|app| app.switched_to(list))
+                .revealed(),
             Message::StepList(offset) => self.jumping(|app| app.stepped_list(offset)).revealed(),
             Message::Back(count) => self.walking(|app| app.went_back(count)),
             Message::Forward(count) => self.walking(|app| app.went_forward(count)),
@@ -83,6 +86,11 @@ impl App {
             Message::Across(operator, motion, count) => {
                 self.across(operator, motion, count).revealed()
             }
+            Message::Search { backward } => self.searching(backward),
+            Message::Searching(text) => self.search_typed(text),
+            Message::SearchKey(key) => self.search_edited(key),
+            Message::SearchAccepted => self.search_accepted(),
+            Message::SearchStep(offset) => self.search_stepped(offset),
             Message::Undo(count) => self.undone(count).revealed(),
             Message::Redo(count) => self.redone(count).revealed(),
             Message::Resized(window, size) => self.resized(window, size),
@@ -111,6 +119,21 @@ impl App {
                     gone.revealed()
                 }
             }
+            // Escape leaves a text field, so it gives up a search as well,
+            // and the selection goes back to where the search began
+            Message::Panic => {
+                let searching = self.search.is_some();
+                let app = Self {
+                    help: false,
+                    ..self.send(Command::Panic)
+                }
+                .search_cancelled();
+                if searching {
+                    app.revealed()
+                } else {
+                    (app, Task::none())
+                }
+            }
             // Keys typed so far went already, as for any message
             Message::Cancel => self.cancelled(),
             // Buttons of the mouse go back and forward from the main window, as
@@ -133,11 +156,11 @@ impl App {
             | Message::Measured(_)
             | Message::Reached { .. }
             | Message::Copy(_)
-            | Message::Panic
             | Message::PauseAll
             | Message::ResumeAll
             | Message::Stop(_)
             | Message::Tick(_)
+            | Message::SearchSettled
             | Message::StandbySelected
             | Message::ShowMode(_)
             | Message::Loaded(..)
@@ -160,81 +183,4 @@ impl App {
             | Message::NewKind(_)) => (self.settled_by(message), Task::none()),
         }
     }
-
-    /// Hands a command to the back end, and brings the show as its file
-    /// would hold it up to date after a command that can change the cues.
-    /// The list on screen stays within the lists, whose number undo and
-    /// bringing back unsaved changes can change.
-    fn send(self, command: Command) -> Self {
-        let changes = command.edits() || matches!(command, Command::Undo | Command::Redo);
-        let workspace = self.workspace.apply(command);
-        let app = Self {
-            list: self.list.min(workspace.lists().len().saturating_sub(1)),
-            workspace,
-            ..self
-        };
-        if changes { app.with_text() } else { app }
-    }
-
-    fn send_all(self, commands: impl IntoIterator<Item = Command>) -> Self {
-        commands.into_iter().fold(self, Self::send)
-    }
-
-    /// Anything the operator does other than typing drops a command typed
-    /// halfway, so that a stray `d` cannot wait through a click and an edit
-    /// to delete a cue.  A level typed so far gives way to the level of its
-    /// cue as well, apart from a click, which can land in its own field.  A
-    /// link that failed to open is forgotten once the help page that holds
-    /// it closes.
-    fn next(self, message: Message) -> (Self, Task<Message>) {
-        let passive = matches!(
-            message,
-            Message::Tick(_)
-                | Message::Loaded(..)
-                | Message::Recheck
-                | Message::Rechecked(..)
-                | Message::LinkOpened(_)
-                | Message::AudioDevicesListed(_)
-                | Message::AudioDeviceKept(_)
-                | Message::Saved(_)
-                | Message::Resized(..)
-                | Message::WindowFocused(_)
-                | Message::Landed { .. }
-                | Message::Measured(_)
-                | Message::Remeasure
-                | Message::Drawn(_)
-                | Message::Reached { .. }
-        );
-        let typing = passive || matches!(message, Message::Typed { .. });
-        let clicked = matches!(message, Message::Clicked);
-        let app = Self {
-            keys: if typing { self.keys } else { Vec::new() },
-            clipped: self.clipped.filter(|_| typing),
-            remark: self.remark.filter(|_| typing),
-            typed_level: self.typed_level.filter(|_| passive || clicked),
-            ..self
-        };
-        let (app, task) = app.handled(message);
-        let app = Self {
-            link_problem: app.link_problem.filter(|_| app.help),
-            ..app
-        };
-        (app, task)
-    }
-}
-
-/// Runs blocking `work` on a thread of its own once iced runs the task: off
-/// the interface thread, where GO and Panic must never wait, and off the
-/// workers of iced's executor, which keep the clock ticking.  The task gives
-/// what the work returns, or nothing when the program closes first.
-fn on_own_thread<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> Task<T> {
-    Task::future(async move {
-        let (sender, receiver) = oneshot::channel();
-        thread::spawn(move || {
-            // Receiver has gone only when the program is closing
-            let _ = sender.send(work());
-        });
-        receiver.await.ok()
-    })
-    .and_then(Task::done)
 }
