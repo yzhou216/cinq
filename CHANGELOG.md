@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- The box that lists the keys that can follow those typed, such as the ones
+  after `d`, names outputs where the outputs show, as in "Cut the selected
+  output and the next", and cues where a cue list shows, where it named both
+  in every sentence.  The help page, which lists each action once, names
+  both.
 - On the Levels tab, the name of an output that cannot play now says what is
   wrong with it in words, as `House L (not found)` or `Lobby (past its
   channels)`, beside its yellow or red, so that the color is no longer the

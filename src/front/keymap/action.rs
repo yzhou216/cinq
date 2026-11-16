@@ -10,6 +10,7 @@ mod message;
 use strum::{EnumString, IntoStaticStr, VariantArray};
 
 use crate::front::message::Page;
+pub use description::Rows;
 
 /// [`Action::VARIANTS`] lists every action in the order of the help page,
 /// in the groups that a user of Vim scans: GO, Panic, and standby, then
@@ -131,20 +132,21 @@ impl Action {
     }
 
     /// Describes the operator `self` applied over the rows that `motion`
-    /// reaches
-    pub fn over(self, motion: Action) -> String {
+    /// reaches, which are `rows`
+    pub fn over(self, motion: Action, rows: Rows) -> String {
         let verb = match self {
             Action::Copy => "Copy",
             Action::Cut => "Cut",
             _ => "Delete",
         };
-        let rows = match motion {
-            Action::Next => "the selected cue or output and the next",
-            Action::Previous => "the selected cue or output and the previous",
-            Action::First => "the cues or outputs from the selection up to the first",
-            _ => "the cues or outputs from the selection down to the last",
+        let (one, many) = rows.nouns();
+        let reached = match motion {
+            Action::Next => format!("the selected {one} and the next"),
+            Action::Previous => format!("the selected {one} and the previous"),
+            Action::First => format!("the {many} from the selection up to the first"),
+            _ => format!("the {many} from the selection down to the last"),
         };
-        format!("{verb} {rows}")
+        format!("{verb} {reached}")
     }
 
     /// Returns whether a key of the action that is held down acts only

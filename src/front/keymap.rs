@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use strum::VariantArray;
 
-pub use action::Action;
+pub use action::{Action, Rows};
 pub use preset::Preset;
 pub use press::{KeyPress, Press, written};
 

@@ -394,7 +394,8 @@ after another, as in *g g*.
 
 The keys of a sequence wait until the sequence is complete, and the status bar
 shows the keys typed so far, while a box above it lists the keys that can come
-next and what each of them does.
+next and what each of them does, naming outputs instead of cues while the
+outputs show.  The help page, which lists each action once, names both.
 A key that completes or continues no sequence is dropped together with the
 keys typed so far, as Vim beeps and drops them, so that a key mistyped halfway,
 such as the *x* of *d x*, never starts a sequence of its own.

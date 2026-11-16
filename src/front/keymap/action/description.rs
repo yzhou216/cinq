@@ -88,3 +88,62 @@ impl Action {
         }
     }
 }
+
+/// Rows that the keys of cues act on, which are the cues of a cue list or
+/// the outputs of the show, according to which the main window shows
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rows {
+    Cues,
+    Outputs,
+}
+
+/// Words of the help page that name both kinds of rows, with what each kind
+/// reads as alone, the longest first so that a phrase is never cut short
+const BOTH: [(&str, &str, &str); 8] = [
+    ("the cues, or the outputs,", "the cues", "the outputs"),
+    (
+        "cue, or output, selecting",
+        "cue, selecting",
+        "output, selecting",
+    ),
+    (
+        "cue, output, or menu option",
+        "cue or menu option",
+        "output or menu option",
+    ),
+    ("a cue, or an output,", "a cue", "an output"),
+    ("cues, or outputs,", "cues", "outputs"),
+    ("cue, or output,", "cue", "output"),
+    ("cue or output", "cue", "output"),
+    ("cues or outputs", "cues", "outputs"),
+];
+
+impl Rows {
+    /// Returns what the rows are called, and what many of them are
+    pub(super) fn nouns(self) -> (&'static str, &'static str) {
+        match self {
+            Rows::Cues => ("cue", "cues"),
+            Rows::Outputs => ("output", "outputs"),
+        }
+    }
+}
+
+impl Action {
+    /// Returns the sentence of the help page for the rows that show, so that
+    /// the box of the keys that can follow names outputs where the outputs
+    /// show and cues where a cue list does, instead of both
+    pub fn description_in(self, rows: Rows) -> String {
+        BOTH.iter().fold(
+            self.description().to_owned(),
+            |text, (both, cues, outputs)| {
+                text.replace(
+                    both,
+                    match rows {
+                        Rows::Cues => cues,
+                        Rows::Outputs => outputs,
+                    },
+                )
+            },
+        )
+    }
+}
