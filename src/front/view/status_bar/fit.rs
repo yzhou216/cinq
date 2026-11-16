@@ -16,7 +16,7 @@ use super::{LINE, giving_way};
 use crate::front::keymap::Action;
 
 /// Ends a notice that was shortened
-const ELLIPSIS: &str = "…";
+pub(super) const ELLIPSIS: &str = "…";
 
 /// Returns the hints joined, each one whole, without as many of those
 /// that give way as it takes for the rest to fit in `room` columns

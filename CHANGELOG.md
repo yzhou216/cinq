@@ -10,6 +10,11 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A long name of the show gives way first in the status bar: it is cut short
+  at its end with an ellipsis, down to 16 columns, before any key hint goes,
+  so that the mode and the warning count stay, and the keys of GO and Panic
+  as well while no notice shows, where a file named with sixty characters
+  pushed them out of the bar.
 - The outputs table drops its New cues column once the Device column cannot
   show its widest name on one line, as at 1024x768 beside a Dante Virtual
   Soundcard, and keeps the column in a wider window, where it fits.  The

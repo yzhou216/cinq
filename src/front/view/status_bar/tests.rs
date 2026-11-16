@@ -6,6 +6,7 @@
 //! search line keeps from them
 
 mod cancel;
+mod name;
 mod outputs;
 
 use super::{

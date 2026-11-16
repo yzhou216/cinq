@@ -673,6 +673,8 @@ While the outputs show, the status bar names the keys of *add_below*, *edit*,
 and *back*, and gives way, from the first to the last, to the key of *forward*,
 *add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that
 the key that leaves the outputs outlasts all but the help page.
+In every view, the name of the show in the status bar gives way before any of
+these keys do, cut short at its end with an ellipsis, down to 16 columns.
 
 # ACTIONS
 
