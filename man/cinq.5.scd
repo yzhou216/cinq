@@ -39,11 +39,13 @@ inline tables.
 A file that is not TOML, or that *cinq* cannot write, stays as it is, and an
 editor that has the file open may offer to load it again.
 
-The help page, which the key of *help* opens, names the keymap in use, lists
-every action with its keys and its name in the file, links to the file that
-the keys come from, or would come from, and ends with the notice of the
-license of cinq.
-Following the link opens the file in
+The help page, which the key of *help* opens, names the keymap in use, opens
+with a short paragraph of first steps that names the keys of GO and Panic, of
+moving and standby, and of adding, naming, and undoing, links to the tutorial,
+lists each action that the keymap binds to a key with its keys and its name in
+the file, links to the file that the keys come from, or would come from, and
+ends with the notice of the license of cinq.
+Following the link to the file opens it in
 ; if xdg windows
 the program that the desktop opens it with,
 ; if darwin
@@ -51,6 +53,9 @@ the default text editor,
 ; end
 and first makes the file when it is not there yet, holding only a line
 that points to this page.
+Following the link to the tutorial opens the PDF that *FILES* names in the
+program that the desktop opens it with.
+Why a link failed to open shows below the page until the page closes.
 
 # FILES
 
@@ -74,6 +79,26 @@ deleting it brings back the keys of vi and the other defaults.
 
 Started with *--config-dir*=_directory_, *cinq* reads _directory/config.toml_
 in its place, and follows it as it changes in the same way.
+
+; if xdg
+_$XDG_DATA_HOME/doc/cinq/tutorial.pdf_
+	The tutorial, which the help page links to.
+	*cinq* opens the first _doc/cinq/tutorial.pdf_ that it finds in the
+	directory of the user's data, which is _~/.local/share_ when
+	*XDG_DATA_HOME* is unset or is not an absolute path, and then in each
+	directory that *XDG_DATA_DIRS* lists, separated by colons, which are
+	_/usr/local/share_ and _/usr/share_ when it lists no absolute path, as
+	the XDG Base Directory Specification sets out.
+	The packages for GNU/Linux put it in _/usr/share_.
+; if darwin
+_/usr/local/share/doc/cinq/tutorial.pdf_
+	The tutorial, which the help page links to, where the installer package
+	puts it.
+; if windows
+_tutorial.pdf_
+	The tutorial, which the help page links to, in the directory that holds
+	_cinq.exe_.
+; end
 
 # SETTINGS
 
@@ -169,18 +194,18 @@ of the help page.
 |  panic
 :  Escape
 :  Escape
+|  standby
+:  Enter
+:  Enter
+|  cancel
+:  Control+c
+:  none
 |  next
 :  j, g j, ArrowDown, Control+n, +
 :  ArrowDown
 |  previous
 :  k, g k, ArrowUp, Control+p, -
 :  ArrowUp
-|  next_list
-:  l, ArrowRight
-:  Control+PageDown
-|  previous_list
-:  h, ArrowLeft
-:  Control+PageUp
 |  first
 :  g g, Control+Home
 :  Home
@@ -223,6 +248,12 @@ of the help page.
 |  row_to_bottom
 :  z b, z -
 :  none
+|  next_list
+:  l, ArrowRight
+:  Control+PageDown
+|  previous_list
+:  h, ArrowLeft
+:  Control+PageUp
 |  next_tab
 :  g t
 :  Control+Tab
@@ -247,12 +278,6 @@ of the help page.
 |  previous_match
 :  N
 :  Shift+F3
-|  standby
-:  Enter
-:  Enter
-|  cancel
-:  Control+c
-:  none
 |  edit
 :  i, a, A
 :  none
@@ -268,33 +293,39 @@ of the help page.
 |  previous_field
 :  Shift+Tab
 :  Shift+Tab
+|  pick
+:  Control+y
+:  none
+|  close_menu
+:  Control+e
+:  F4
 |  add_below
 :  o
 :  Control+n
 |  add_above
 :  O
 :  Control+N
-|  move_down
-:  Alt+j, Alt+ArrowDown
-:  Alt+ArrowDown
-|  move_up
-:  Alt+k, Alt+ArrowUp
-:  Alt+ArrowUp
-|  delete
-:  none
-:  Delete
-|  copy
-:  y y, Y
-:  Control+c
 |  cut
 :  d d, x, Delete
 :  Control+x
+|  copy
+:  y y, Y
+:  Control+c
 |  paste_below
 :  p
 :  Control+v
 |  paste_above
 :  P
 :  Control+V
+|  delete
+:  none
+:  Delete
+|  move_down
+:  Alt+j, Alt+ArrowDown
+:  Alt+ArrowDown
+|  move_up
+:  Alt+k, Alt+ArrowUp
+:  Alt+ArrowUp
 |  undo
 :  u
 :  Control+z
@@ -319,12 +350,6 @@ of the help page.
 |  close_help
 :  q
 :  Control+w
-|  pick
-:  Control+y
-:  none
-|  close_menu
-:  Control+e
-:  F4
 
 # KEYS
 
@@ -605,10 +630,32 @@ page.
 *go*
 	GO: fire the standby cue, together with every cue that auto-continue or
 	auto-follow chains to it.
+	While no cue of the chain can play, the GO button looks disabled and the
+	line under the name of the standby cue says why, as in *GO fires nothing: cue
+	1 (no file set)*.  The key still moves standby past the cues that cannot
+	play.
 
 *panic*
 	Panic: fade every playing cue out over one second, and stop the rest.
 	A second panic while the first is still fading stops everything at once.
+
+*standby*
+	Put the selected cue on standby, so that the next GO fires it.
+
+*cancel*
+	Drop the keys typed so far, close the search line, with the selection going
+	back to where the search began, as Escape does there, close an open menu
+	without picking, and take the keyboard out of a text field or drop-down list,
+	as Control+c does in Vim.
+	It never touches playback, which is how it differs from Escape, so that it is
+	the key to reach for when no show should stop.
+	It acts in text fields, where a text field that has a selection still copies
+	it first.
+	The cua keymap binds no key to it, since Control+c copies there.
+	While keys wait or the search line is open, the status bar hints its key.
+	While a text field or a drop-down list has the keyboard, it hints the key
+	of *next_field* and this key as the one that leaves, so that the way out is
+	told where Escape would panic.
 
 *next*
 	Select the next cue, move the highlight of an open menu down, or scroll
@@ -622,12 +669,6 @@ page.
 	Select the previous cue, move the highlight of an open menu up, or
 	scroll the help page up.
 	The vi keymap binds *g k* as well as *k*, as it binds *g j*.
-
-*next_list*
-	Show the next cue list.
-
-*previous_list*
-	Show the previous cue list.
 
 *first*
 	Select the first cue, or the cue on the row counted, or go to the top of
@@ -729,6 +770,12 @@ page.
 	of the list.
 	A count selects its row first, as for *row_to_middle*.
 
+*next_list*
+	Show the next cue list.
+
+*previous_list*
+	Show the previous cue list.
+
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,
 	counted from one, or the last tab when there are fewer.
@@ -796,24 +843,6 @@ page.
 	as the count, going around the matches at most once.
 	It is a jump for *back*.
 
-*standby*
-	Put the selected cue on standby, so that the next GO fires it.
-
-*cancel*
-	Drop the keys typed so far, close the search line, with the selection going
-	back to where the search began, as Escape does there, close an open menu
-	without picking, and take the keyboard out of a text field or drop-down list,
-	as Control+c does in Vim.
-	It never touches playback, which is how it differs from Escape, so that it is
-	the key to reach for when no show should stop.
-	It acts in text fields, where a text field that has a selection still copies
-	it first.
-	The cua keymap binds no key to it, since Control+c copies there.
-	While keys wait or the search line is open, the status bar hints its key.
-	While a text field or a drop-down list has the keyboard, it hints the key
-	of *next_field* and this key as the one that leaves, so that the way out is
-	told where Escape would panic.
-
 *edit*
 	Edit the name of the selected cue: show the Basics tab and put the caret
 	at the end of the name, as Vim's *a* and *A* do at the end of a line.
@@ -839,31 +868,41 @@ page.
 *previous_field*
 	Move the keyboard to the previous field.
 
+*pick*
+	Pick the highlighted option of an open menu, as Enter does and as Control+y
+	does in Vim's popup menu.
+	It does nothing while no menu is open.
+
+*close_menu*
+	Close an open menu without picking an option, as Control+e does in Vim's
+	popup menu.
+	Unlike Escape, which closes the menu and also acts as Panic, it does not
+	panic.
+	It does nothing while no menu is open.
+
 *add_below*
 	Add a cue of the kind chosen in the toolbar below the selection, or at the
 	end of the list without one.
 	A count adds that many cues in a row, at most a thousand, as one change
 	that undo takes back, and selects the last of them, as the cursor of Vim
 	goes to the last line that *3o* inserts.
+	The status bar then hints the key of *change_name*, which renames the cue,
+	before the key of *undo*, which gives way first when the bar is short.
 
 *add_above*
 	Add a cue of the kind chosen in the toolbar above the selection, or at the
 	end of the list without one, as many as the count, as *add_below* does.
 
-*move_down*
-	Move the selected cue one place down its list, or as many places as the
-	count.
-
-*move_up*
-	Move the selected cue one place up its list, or as many places as the
-	count.
-
-*delete*
-	Delete the selected cue, or as many cues from it down as the count,
-	without copying them.
-	The vi keymap binds no key to it, since *cut* is what its *d d*, *x*, and
-	*Delete* do, as in Vim.
-	The cua keymap binds the Delete key to it, as desktop programs do.
+*cut*
+	Copy the selected cue, or as many cues from it down as the count, to the
+	clipboard and delete them, so that *cut* and then *paste_below* moves a
+	cue.
+	The vi keymap binds *x* and *Delete* to it as well as *d d*, as Vim cuts
+	with all three, and *d* followed by a motion cuts the cues the motion
+	reaches, as *TYPING* describes.
+	The status bar tells how many cues went to the clipboard and names the keys
+	of *paste_below* and *undo*, and goes on telling the change as a cut after
+	later keys and in the notices of *undo* and *redo*.
 
 *copy*
 	Copy the selected cue, or as many cues from it down as the count, to the
@@ -876,17 +915,6 @@ page.
 	The vi keymap binds *Y* to it as well as *y y*, as Vim yanks a line with
 	both, and *y* followed by a motion copies the cues the motion reaches, as
 	*TYPING* describes.
-
-*cut*
-	Copy the selected cue, or as many cues from it down as the count, to the
-	clipboard and delete them, so that *cut* and then *paste_below* moves a
-	cue.
-	The vi keymap binds *x* and *Delete* to it as well as *d d*, as Vim cuts
-	with all three, and *d* followed by a motion cuts the cues the motion
-	reaches, as *TYPING* describes.
-	The status bar tells how many cues went to the clipboard and names the keys
-	of *paste_below* and *undo*, and goes on telling the change as a cut after
-	later keys and in the notices of *undo* and *redo*.
 
 *paste_below*
 	Paste the cues of the clipboard below the selection, or at the end of the
@@ -910,6 +938,21 @@ page.
 *paste_above*
 	Paste the cues of the clipboard above the selection, as *paste_below*
 	does below it.
+
+*delete*
+	Delete the selected cue, or as many cues from it down as the count,
+	without copying them.
+	The vi keymap binds no key to it, since *cut* is what its *d d*, *x*, and
+	*Delete* do, as in Vim.
+	The cua keymap binds the Delete key to it, as desktop programs do.
+
+*move_down*
+	Move the selected cue one place down its list, or as many places as the
+	count.
+
+*move_up*
+	Move the selected cue one place up its list, or as many places as the
+	count.
 
 *undo*
 	Undo the latest change to the show, or as many of the latest changes as the
@@ -962,18 +1005,6 @@ page.
 *close_help*
 	Hide the help page.
 
-*pick*
-	Pick the highlighted option of an open menu, as Enter does and as Control+y
-	does in Vim's popup menu.
-	It does nothing while no menu is open.
-
-*close_menu*
-	Close an open menu without picking an option, as Control+e does in Vim's
-	popup menu.
-	Unlike Escape, which closes the menu and also acts as Panic, it does not
-	panic.
-	It does nothing while no menu is open.
-
 # DIAGNOSTICS
 
 Problems with the file show among the warnings in the sidebar, each after
@@ -1025,7 +1056,8 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   whatever modifiers are held with it there, apart from a key that the other
   of the two has by itself, as *TYPING* describes.
 
-The help page shows the keys as they ended up.
+The help page shows the keys as they ended up, and leaves out the actions that
+the keymap in use binds to no key.
 
 # EXAMPLES
 

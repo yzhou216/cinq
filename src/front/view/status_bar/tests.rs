@@ -5,6 +5,7 @@
 //! Tests of the hints that fit in the status bar, and of the room that the
 //! search line keeps from them
 
+mod adding;
 mod cancel;
 mod places;
 

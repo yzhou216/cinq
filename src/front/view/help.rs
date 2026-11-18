@@ -2,10 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Help page, which lists every key binding and fills the window
+//! Help page, which lists every action that has a key and fills the window
 //!
 //! The keys of the next and previous cue scroll it, and those of the first
 //! and last cue go to its top and its bottom.
+
+#[cfg(test)]
+mod tests;
 
 use std::ffi::OsString;
 
@@ -21,7 +24,7 @@ use strum::VariantArray;
 use super::{HELP, SPACING, button, theme};
 use crate::front::{
     App, Message,
-    keymap::{Action, config::Source},
+    keymap::{Action, Keymap, config::Source},
 };
 
 /// Widest that the text of the page grows, so that its lines stay easy to
@@ -54,7 +57,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
                 text(action.name())
             }),
         ],
-        Action::VARIANTS.iter().copied(),
+        bound(keymap),
     )
     .padding_y(ROW_GAP);
     let example = keymap
@@ -69,17 +72,25 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         ", apart from the space bar, which is Space.",
         Message::OpenLink,
     );
+    let tutorial = paragraph(
+        "The ",
+        link("tutorial", ()),
+        " shows step by step how to run a show and how to make one.",
+        |()| Message::OpenTutorial,
+    );
     let page = column![
         text(format!("Keys of the {} keymap", keymap.name())).size(24),
+        text(first_steps(keymap)),
+        tutorial,
         bindings,
         text(format!("A count typed before a key repeats a move{example}.  It goes that many places back or forward, undoes or redoes that many changes, copies, cuts, deletes, or adds that many cues, pastes that many times, goes that many matches along, scrolls that many rows, and goes that many pages down or up.  It picks the row for the first and last cue and for putting a row in place, the row in view for the top and bottom rows, and the tab for the next tab, and sets the rows of a half page.")),
     ]
     .extend(operators.map(Element::from))
+    .push(text("Actions that this keymap binds to no key are left out of the table, and cinq(5) lists them all."))
     .push(text("The keys of a sequence are typed one after another with no Space between them, since Space is GO."))
     .push(text("The keys of GO and Panic act at once, even halfway through another command."))
     .push(source(&app.config.source))
     .push(key_values)
-    .extend(app.link_problem.as_deref().map(|why| text(why).into()))
     .extend(notice())
     .push(button("Close").on_press(Message::CloseHelp))
     .spacing(SPACING)
@@ -90,7 +101,24 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         .spacing(0)
         .width(Fill)
         .height(Fill);
-    container(scrolling).padding(SPACING).into()
+    // Below the page rather than on it, so that it is in view however far
+    // the page has scrolled from the link
+    let problem = app
+        .link_problem
+        .as_deref()
+        .map(|why| container(text(why)).max_width(WIDTH).into());
+    let parts = column![scrolling].extend(problem).spacing(SPACING);
+    container(parts).padding(SPACING).into()
+}
+
+/// Returns the actions that the keymap binds to a key, in the order of the
+/// page, since a row with no key would only crowd the page
+fn bound(keymap: &Keymap) -> Vec<Action> {
+    Action::VARIANTS
+        .iter()
+        .copied()
+        .filter(|&action| keymap.key(action).is_some())
+        .collect()
 }
 
 fn source(source: &Source) -> Element<'_, Message> {
@@ -134,4 +162,22 @@ fn paragraph<'a, Link: Clone + 'static>(
 
 fn link<'a, Link>(label: impl IntoFragment<'a>, target: Link) -> Span<'a, Link> {
     span(label).link(target).color(theme::LINK).underline(true)
+}
+
+/// Tells in a few lines what to press first, with the keys of the keymap in
+/// use, since the table below puts the keys of scrolling before those that
+/// add and name a cue
+fn first_steps(keymap: &Keymap) -> String {
+    let key = |action| keymap.key(action).unwrap_or_else(|| "(no key)".to_owned());
+    format!(
+        "First steps: {go} is GO, which fires the standby cue, and {panic} is Panic, which stops everything.  {next} and {previous} move the selection, and {standby} puts the selected cue on standby.  {add} adds a cue below the selection, {name} names it, and {undo} undoes the last change.  The table lists every key, and cinq(5) describes the rest.",
+        go = key(Action::Go),
+        panic = key(Action::Panic),
+        next = key(Action::Next),
+        previous = key(Action::Previous),
+        standby = key(Action::Standby),
+        add = key(Action::AddBelow),
+        name = key(Action::ChangeName),
+        undo = key(Action::Undo),
+    )
 }

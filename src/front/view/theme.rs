@@ -134,6 +134,12 @@ pub(super) fn go(theme: &Theme, status: Status) -> Style {
     painted(theme, status, BG_GREEN_INTENSE)
 }
 
+/// GO in the style of a disabled button, whatever it is doing, for while it
+/// would fire nothing, so that its green never reads as ready
+pub(super) fn go_without_cues(theme: &Theme, _: Status) -> Style {
+    painted(theme, Status::Disabled, BG_GREEN_INTENSE)
+}
+
 pub(super) fn panic(theme: &Theme, status: Status) -> Style {
     painted(theme, status, BG_RED_INTENSE)
 }

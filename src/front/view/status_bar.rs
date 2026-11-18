@@ -37,7 +37,7 @@ use super::{
     line_height, line_keys, theme, warnings,
 };
 use crate::{
-    back::Turn,
+    back::{Change, Turn},
     front::{
         App, Message, Search,
         keymap::{Action, shown},
@@ -292,6 +292,16 @@ fn notice(app: &App) -> Option<String> {
         Turn::Done => (capitalized(&told), Action::Undo, workspace.undoable()),
         Turn::Undone => (format!("Undid: {told}"), Action::Redo, workspace.redoable()),
         Turn::Redone => (format!("Redid: {told}"), Action::Undo, workspace.undoable()),
+    };
+    // A cue just added bears a default name, which the key of renaming
+    // selects whole, so that typing names it
+    let renaming = matches!((turn, change), (Turn::Done, Change::Added { .. }))
+        .then(|| app.config.keymap.hint(Action::ChangeName, "rename"))
+        .flatten()
+        .filter(|_| app.editable());
+    let told = match renaming {
+        Some(hint) => format!("{told}{LINE}{hint}"),
+        None => told,
     };
     next.map(|_| answered(told, &app.config.keymap, action))
 }

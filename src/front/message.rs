@@ -198,6 +198,9 @@ pub enum Message {
     /// Opens the configuration file in the program that the desktop opens
     /// it with, making it first when it is not there yet
     EditConfig(PathBuf),
+    /// Opens the tutorial in the program that the desktop opens PDF files
+    /// with
+    OpenTutorial,
     LinkOpened(Result<(), String>),
     /// Asks for the audio devices afresh, as their list opens
     ListAudioDevices,

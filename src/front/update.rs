@@ -40,7 +40,7 @@ use crate::back::Command;
 pub(super) use clipboard::{Clipboard, Clipped};
 use dispatch::on_own_thread;
 pub(super) use history::{History, Spot};
-use link::{edit_config, open_link};
+use link::{edit_config, open_link, open_tutorial};
 pub(super) use paging::kept::{Measured, Measures};
 pub(super) use search::{Search, Searched};
 pub(super) use show::{Keeper, Read, Reader, Saved, Show};
@@ -109,6 +109,7 @@ impl App {
             Message::ChooseFile(id) => self.with_task(|app| app.choose_cue_file(id)),
             Message::OpenLink(target) => self.opening(move || open_link(&target)),
             Message::EditConfig(file) => self.opening(move || edit_config(&file)),
+            Message::OpenTutorial => self.opening(open_tutorial),
             Message::ToggleFullscreen => self.with_task(Self::toggle_fullscreen),
             Message::Closed(window) => self.closed(window),
             Message::ListAudioDevices => self.with_task(|_| device::listing()),

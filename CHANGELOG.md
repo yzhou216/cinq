@@ -171,6 +171,35 @@ Major changes and improvements in each release of cinq, newest first.
   `Enter: pick | F4: close` in the cua keymap, and gives way when the bar is
   short.  While a text field or a drop-down list has the keyboard, it hints the
   keys of the next field and, in the vi keymap, of leaving it.
+- The help page and the table of cinq(5) list the actions in groups, GO, Panic,
+  and standby first, then the moves, then the edits, then the files and the
+  window, in place of the order in which actions were added.
+- The help page leaves out the actions that the keymap in use binds to no key,
+  such as `delete` in the vi keymap, so that its table is shorter.
+- The help page opens with a short paragraph of first steps, above the table of
+  keys, that names the keys of GO and Panic, of moving the selection and of
+  standby, and of adding, naming, and undoing, in the keymap in use, since the
+  table begins with the keys of scrolling and a newcomer found `o` and `cc` only
+  on its second page.
+- The help page links to the tutorial below its first steps, and following the
+  link opens the PDF in the program that the desktop opens it with.  cinq looks
+  for it in the XDG data directories, such as `/usr/share`, where the packages
+  for GNU/Linux put it, in `/usr/local/share` on Darwin, and beside `cinq.exe`
+  on Windows, and says where it looked when it finds none.  Why a link failed to
+  open shows below the page, in view however far the page has scrolled, where it
+  showed near the end of the page.
+- The GO button looks disabled, as a disabled button does, while no cue that GO
+  would fire can play, and the line under the name of the standby cue says why
+  in words, as `GO fires nothing: cue 1 (no file set)`.  The notes and that line
+  give way at a word where they meet the controls, no longer in the middle of
+  one.
+- After a cue is added, the status bar hints the key that renames it, as `Added
+  cue 1 | cc: rename | u: undo` in the vi keymap and `F2: rename` in the cua
+  keymap, where only the key of undo followed, and the new cue kept the name
+  that a newcomer then found no key for.
+- The list of cue types beside Add cue carries the label `New cue:`, since it
+  only sets the type of the next cue that Add cue makes, and a newcomer took it
+  for the type of the selected cue.
 
 ## v0.1.4
 

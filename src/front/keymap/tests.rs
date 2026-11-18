@@ -103,8 +103,8 @@ fn keys_of_go_and_panic_hide_every_other_sequence_that_holds_them() {
         keymap.conflicts(),
         [
             "`Space` comes first, so `Space x` can never be typed",
-            "`Space` acts at once as go, so `Shift+Space` can never be typed",
             "`Space` acts at once as go, so `g Space` can never be typed",
+            "`Space` acts at once as go, so `Shift+Space` can never be typed",
         ]
     );
 }

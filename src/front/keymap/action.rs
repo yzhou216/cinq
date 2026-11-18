@@ -11,16 +11,18 @@ use strum::{EnumString, IntoStaticStr, VariantArray};
 
 use crate::front::message::Page;
 
-/// [`Action::VARIANTS`] lists every action in the order of the help page.
+/// [`Action::VARIANTS`] lists every action in the order of the help page,
+/// in the groups that a user of Vim scans: GO, Panic, and standby, then
+/// moving, then editing, then the files and the window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, IntoStaticStr, VariantArray)]
 #[strum(serialize_all = "snake_case")]
 pub enum Action {
     Go,
     Panic,
+    Standby,
+    Cancel,
     Next,
     Previous,
-    NextList,
-    PreviousList,
     First,
     Last,
     HalfPageDown,
@@ -35,6 +37,8 @@ pub enum Action {
     RowToMiddle,
     RowToTop,
     RowToBottom,
+    NextList,
+    PreviousList,
     NextTab,
     PreviousTab,
     Back,
@@ -43,22 +47,22 @@ pub enum Action {
     SearchBackward,
     NextMatch,
     PreviousMatch,
-    Standby,
-    Cancel,
     Edit,
     EditStart,
     ChangeName,
     NextField,
     PreviousField,
+    Pick,
+    CloseMenu,
     AddBelow,
     AddAbove,
-    MoveDown,
-    MoveUp,
-    Delete,
-    Copy,
     Cut,
+    Copy,
     PasteBelow,
     PasteAbove,
+    Delete,
+    MoveDown,
+    MoveUp,
     Undo,
     Redo,
     Open,
@@ -67,8 +71,6 @@ pub enum Action {
     Fullscreen,
     Help,
     CloseHelp,
-    Pick,
-    CloseMenu,
 }
 
 impl Action {

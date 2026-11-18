@@ -112,25 +112,35 @@ pub fn activity(active: &Active, cue: &Cue) -> String {
 /// with how long after GO each cue after the first fires, so that
 /// auto-continue and auto-follow chains are visible before they run.  The
 /// count leaves out the cues that cannot play, which GO skips, and each of
-/// them says why.
+/// them says why.  A chain with no cue that can play says so in words
+/// before it names the cues and why each cannot play.
 pub fn chain(workspace: &Workspace, list: &CueList, standby: &Cue) -> String {
-    let fired = count(workspace.next_go(list).count(), "cue");
-    let described = list
-        .chain(standby.id)
-        .enumerate()
-        .map(|(index, (cue, delay))| {
-            let delay = (index > 0).then(|| format!("+{delay:.1}s"));
-            let skipped = workspace
-                .problem(cue)
-                .map(|problem| format!("skipped: {problem}"));
-            let notes = delay.into_iter().chain(skipped).join(", ");
-            if notes.is_empty() {
-                number(cue)
-            } else {
-                format!("{} ({notes})", number(cue))
-            }
+    let fired = workspace.next_go(list).count();
+    let cues = list.chain(standby.id);
+    if fired == 0 {
+        let reasons = cues.filter_map(|(cue, _)| {
+            let problem = workspace.problem(cue)?;
+            Some(format!("cue {} ({problem})", number(cue)))
         });
-    format!("GO fires {fired}: {}", described.format(", "))
+        return format!("GO fires nothing: {}", reasons.format(", "));
+    }
+    let described = cues.enumerate().map(|(index, (cue, delay))| {
+        let delay = (index > 0).then(|| format!("+{delay:.1}s"));
+        let skipped = workspace
+            .problem(cue)
+            .map(|problem| format!("skipped: {problem}"));
+        let notes = delay.into_iter().chain(skipped).join(", ");
+        if notes.is_empty() {
+            number(cue)
+        } else {
+            format!("{} ({notes})", number(cue))
+        }
+    });
+    format!(
+        "GO fires {}: {}",
+        count(fired, "cue"),
+        described.format(", ")
+    )
 }
 
 /// Tells what a copy or cut took with `verb`, by the number of the cue, or
