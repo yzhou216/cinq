@@ -24,7 +24,8 @@ const HEARING: f64 = 0.1;
 /// audio or video cue, as its cue had them when GO fired it, so that an
 /// edit changes the next run of a cue and not the one under way.  Only a
 /// running audio or video cue follows an edit at once: it takes a new
-/// level, and it stops when it gets a new file.
+/// level, and it stops when it gets a new file.  A light cue reads its
+/// levels as its action begins.
 #[derive(Debug, Clone, Copy)]
 pub struct Active {
     pub id: CueId,
@@ -75,6 +76,7 @@ impl Active {
                 sound: cue.sounds(),
             }),
             (Kind::Picture, _) => Effect::Picture,
+            (Kind::Light, _) => Effect::Light,
             (Kind::Fade, Some(target)) => Effect::Fade {
                 target,
                 fade: Fade {

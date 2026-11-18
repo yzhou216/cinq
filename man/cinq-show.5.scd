@@ -18,17 +18,20 @@ _show_.cinq.toml
 
 A show of *cinq* lives in a file in TOML, which *cinq* opens from its command
 line or from the file chooser of the desktop, and which saving writes.
-The file lists the outputs of the show, the cue lists of the show in order,
-each with its cues, and each cue with the settings that its kind uses.
+The file lists the outputs of the show, the instruments of its light patch,
+and its cue lists in order, each with its cues, and each cue with the
+settings that its kind uses.
 What belongs to a session rather than to the show stays out of the file: the
 cue on standby, which is the first of each list once the show opens, the cues
-that run, and how long each sound or video file plays.
+that run, the levels of the lights, and how long each sound or video file
+plays.
 
 Saving leaves out the settings that the kind of a cue does not use, and those
 that keep their defaults, apart from *level*, *duration*, and *stop_target*,
 which it writes for every cue whose kind uses them.
 A file can leave out any setting but the *name* of a list, the *name* and the
-*channels* of an output, and the *id* and the *kind* of a cue.
+*channels* of an output, the *id* and the *address* of an instrument, and the
+*id* and the *kind* of a cue.
 *cinq* passes over settings that it does not know.
 
 # OUTPUTS
@@ -134,10 +137,11 @@ Each cue is a table in the array *cue* of its list:
 	Number of the cue, as the cue list shows it, which can be any text.
 
 *kind*
-	What the cue does: *audio*, *video*, *picture*, *fade*, *stop*, *wait*, or
-	*memo*.
+	What the cue does: *audio*, *video*, *picture*, *light*, *fade*, *stop*,
+	*wait*, or *memo*.
 	An audio cue plays a sound file, a video cue plays a video file, and a
-	picture cue shows a picture file, as *STAGE* describes.
+	picture cue shows a picture file, as *STAGE* describes, and a light cue
+	fades instruments of the light patch, as *LIGHTS* describes.
 	The clock of an audio or video cue follows its sound as the audio device
 	plays it.
 	Its fades, its end, and the cues that follow it therefore stay with what
@@ -178,8 +182,8 @@ Each cue is a table in the array *cue* of its list:
 	default.
 
 *duration*
-	Seconds that the action of a fade or wait cue takes, which are five by
-	default.
+	Seconds that the action of a light, fade, or wait cue takes, which are
+	five by default.
 
 *post_wait*
 	Seconds between the action of the cue beginning, once its pre-wait is
@@ -213,8 +217,13 @@ Each cue is a table in the array *cue* of its list:
 *notes*
 	Notes of the cue, for the operator.
 
-A file in which two cues share an identity, a level lies outside its range, or
-a cue sends to an output that the show does not have, cannot be opened.
+*lights*
+	Table of the levels that a light cue fades instruments to, in percent
+	from 0 to 100, by the *id* of each instrument.
+
+A file in which two cues or two instruments share an identity, a level or an
+address lies outside its range, or a cue sends to an output that the show
+does not have, cannot be opened.
 
 # STAGE
 
@@ -263,6 +272,64 @@ Closing the main window quits *cinq*.
 The key of *fullscreen* toggles the stage window between fullscreen and a
 window, until the next GO that fires a picture or video cue, and the other
 keys act on the cue list from either window, as *cinq*(5) describes.
+
+# LIGHTS
+
+Each instrument of the light patch is a table in the array *instrument*, in
+order, and has one level, its intensity, which one DMX address sets:
+
+*id*
+	Identity of the instrument, a whole number that no other instrument of
+	the show has, by which light cues name it.
+
+*name*
+	Name of the instrument, as the inspector shows it.
+
+*universe*
+	Universe of the instrument, from 1 to 32768, which is 1 by default.
+	Universes count from 1, as in sACN.
+	Art-Net counts from 0, so it carries universe 1 as its Port-Address 0,
+	and each universe after it as the next Port-Address, as most consoles
+	do.
+
+*address*
+	DMX address of the instrument in its universe, from 1 to 512.
+
+The inspector edits the patch on its *Light Patch* tab.
+There an address reads as the DMX address alone in universe 1, and as the
+universe, a slash, and the DMX address in the others, as in _2/12_.
+A new instrument takes the address after that of the last, and none is added
+after address 512 of universe 32768.
+
+A light cue fades the instruments that it names from their levels at its
+start to its own levels, over its *duration*.
+It leaves the other instruments as they are, so that each instrument keeps
+the level of the last light cue that named it, as in QLab.
+A light cue takes the instruments that it names over from an older one that
+is still fading them.
+Pausing a light cue pauses its fade, and stopping it, as a panic does,
+leaves its instruments where the fade has brought them.
+Each time that the show opens, every instrument starts at level 0 until a
+light cue sets it.
+
+*cinq* sends the levels of each universe that the patch uses in two ways.
+Art-Net goes to the broadcast address of every IPv4 network that the computer
+is on, and sACN to the multicast group of the universe on each of those
+networks.
+Both go to the computer itself as well.
+*cinq* sends them as soon as the levels change, and again every second.
+Every ten seconds it lists the universes that it sends, as the universe
+discovery of sACN asks, so that monitors and receivers find them.
+Its sACN has priority 100, the default of sACN.
+A receiver that merges sources of one priority therefore takes the higher
+level of each address from *cinq* and any other source, such as a lighting
+console.
+Instruments that share an address set it to the highest of their levels.
+A universe that leaves the patch, by an edit or by the opening of another
+show, goes to level 0 on every address, and then its sACN stream says that it
+has ended, so that no receiver keeps its last levels.
+When *cinq* ends, receivers of sACN hold its levels for as long as they
+hold those of any source that has gone quiet.
 
 # UNSAVED CHANGES
 
@@ -454,6 +521,47 @@ level = -4.0
 [list.cue.sends]
 House = 0.0
 Sub = -6.0
+```
+
+A patch of two instruments, and a list of two light cues.
+The first brings the front light up at once.
+The second fades the front light down to 40 percent, and brings the back
+light up to 80 percent, over five seconds:
+
+```
+[[instrument]]
+id = 1
+name = "Front"
+address = 1
+
+[[instrument]]
+id = 2
+name = "Back"
+address = 2
+
+[[list]]
+name = "Main"
+
+[[list.cue]]
+id = 1
+number = "1"
+kind = "light"
+name = "Preset"
+duration = 0.0
+
+[list.cue.lights]
+1 = 100.0
+
+[[list.cue]]
+id = 2
+number = "2"
+kind = "light"
+name = "Back light"
+duration = 5.0
+
+[list.cue.lights]
+1 = 40.0
+2 = 80.0
 ```
 
 # SEE ALSO

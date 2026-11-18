@@ -22,7 +22,7 @@ use iced::{
     widget::{column, container, row, text, text_input},
 };
 
-use super::LEVEL_ROOM;
+use super::{LEVEL_ROOM, lock};
 use crate::{
     back::Output,
     front::{
@@ -49,7 +49,7 @@ const CHANNELS_ROOM: f32 = 8.0;
 const DEVICE_ROOM: f32 = 34.0;
 
 /// Returns the width of a field that holds `columns` columns of text
-fn room(columns: f32) -> f32 {
+pub(super) fn room(columns: f32) -> f32 {
     char_width() * columns + text_input::DEFAULT_PADDING.x()
 }
 
@@ -77,7 +77,7 @@ pub(super) fn typing<'a>(
 
 /// Returns the line of help beside a setting: `hint`, in dim text, or the
 /// reason that the value is not applied, in red, where there is one
-fn help<'a>(hint: impl Into<String>, rejection: Option<String>) -> Element<'a, Message> {
+pub(super) fn help<'a>(hint: impl Into<String>, rejection: Option<String>) -> Element<'a, Message> {
     match rejection {
         Some(reason) => text(format!("Not applied: {reason}"))
             .style(text::danger)
@@ -160,12 +160,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
             ],
         ),
     ];
-    let lock = if app.editable() {
-        ""
-    } else {
-        " (read-only in show mode)"
-    };
-    column![text(format!("Output: {}{lock}", output.name))]
+    column![text(format!("Output: {}{}", output.name, lock(app)))]
         .extend(settings.into_iter().map(|(label, cells)| {
             row![text(label).width(char_width() * LABEL)]
                 .extend(cells)

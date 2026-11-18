@@ -7,8 +7,11 @@
 
 use super::{device, reasons};
 use crate::{
-    back::{Command, CueList, Device, Fault, Output, OutputEdit, OutputId, Workspace},
-    front::{App, keymap::config::Config},
+    back::{
+        Command, CueId, CueList, Device, Fault, InstrumentId, Output, OutputEdit, OutputId,
+        Workspace,
+    },
+    front::{App, Setting, keymap::config::Config},
 };
 
 /// Returns the interface of a show of two outputs, Main and Output 1
@@ -139,4 +142,28 @@ fn a_missing_default_device_keeps_its_name_and_points_to_the_sidebar() {
         device::hint(&named, &main(&named)),
         "Connect the device, or pick another"
     );
+}
+
+#[test]
+fn a_light_level_or_an_address_out_of_range_is_rejected_with_its_reason() {
+    let app = app();
+    let reason = |setting, text| reasons::rejection(&app, setting, text);
+    let level = Setting::Light(CueId(1), InstrumentId(1));
+    ["", "0", "100", "12.5%"]
+        .into_iter()
+        .for_each(|text| assert_eq!(reason(level, text), None, "{text:?}"));
+    ["101", "-1", "bright"].into_iter().for_each(|text| {
+        assert_eq!(
+            reason(level, text).as_deref(),
+            Some("levels run from 0 to 100 percent, or empty for unchanged"),
+            "{text:?}"
+        );
+    });
+    let address = Setting::Address(InstrumentId(1));
+    ["1", "512", "2/12", "32768/512"]
+        .into_iter()
+        .for_each(|text| assert_eq!(reason(address, text), None, "{text:?}"));
+    ["0", "513", "0/1", "32769/1", ""]
+        .into_iter()
+        .for_each(|text| assert!(reason(address, text).is_some(), "{text:?}"));
 }

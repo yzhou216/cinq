@@ -19,7 +19,7 @@ use super::{
     keymap::{Action, Press, config::Config},
     update::{Measured, Read, Saved, Spot},
 };
-use crate::back::{Command, CueId, Device, Edit, Kind, OutputId, Place};
+use crate::back::{Command, CueId, Device, Edit, InstrumentId, Kind, OutputId, PatchEdit, Place};
 pub use line::LineKey;
 pub use scrolling::{Height, Page};
 pub use tab::Tab;
@@ -36,6 +36,10 @@ pub enum Setting {
     /// Level at which new cues send to an output, which an empty field
     /// takes away
     NewCues(OutputId),
+    /// Level in percent of an instrument in a light cue, which an empty
+    /// field leaves unchanged
+    Light(CueId, InstrumentId),
+    Address(InstrumentId),
 }
 
 /// Where the caret lands in a field that a key focuses, and what it selects
@@ -177,6 +181,7 @@ pub enum Message {
     Across(Action, Action, Option<usize>),
     Edit(CueId, Edit),
     LevelTyped(CueId, String),
+    Patch(PatchEdit),
     /// Asks which file an audio, video, or picture cue plays or shows
     ChooseFile(CueId),
     FileChosen(CueId, PathBuf),

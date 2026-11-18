@@ -12,7 +12,7 @@ use super::{
     history::{Change, Kept, Placed, Standby},
     numbering::Numbers,
 };
-use crate::back::{Active, CueId, CueList, Edit, Kind, Media, Output, Place};
+use crate::back::{Active, CueId, CueList, Edit, Kind, Media, Place};
 
 impl Workspace {
     /// Puts `standby` on standby in a list without recording the move, as
@@ -155,21 +155,26 @@ impl Workspace {
         }
     }
 
-    pub(super) fn restored(self, lists: Vec<CueList>, outputs: Vec<Output>) -> Self {
+    /// Puts `kept` in place of the lists, outputs, and patch of the show as
+    /// one change
+    pub(super) fn restored(self, kept: Kept) -> Self {
         let before = Kept {
             lists: self.lists.clone(),
             outputs: self.outputs.clone(),
+            patch: self.patch.clone(),
         };
-        let after = Kept { lists, outputs };
-        self.with_kept(after.clone())
-            .recorded(Change::Restored { before, after })
+        self.with_kept(kept.clone()).recorded(Change::Restored {
+            before,
+            after: kept,
+        })
     }
 
-    /// Puts kept lists and outputs in place of those of the show without
-    /// recording a change, as undo and redo do.  Kept lists without
-    /// outputs leave the outputs as they are, since a show keeps one.
+    /// Puts kept lists, outputs, and patch in place of those of the show
+    /// without recording a change, as undo and redo do.  Kept lists without
+    /// outputs leave the outputs as they are, since a show keeps one, while
+    /// a kept show without instruments has an empty patch.
     pub(super) fn with_kept(self, kept: Kept) -> Self {
-        let workspace = self.with_lists(kept.lists);
+        let workspace = self.with_lists(kept.lists).with_patch(kept.patch);
         if kept.outputs.is_empty() {
             workspace
         } else {

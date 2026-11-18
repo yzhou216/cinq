@@ -5,17 +5,18 @@
 //! Cue-based show controller in the spirit of QLab
 //!
 //! Audio cues play sound files, video cues play video files on a stage
-//! window, where picture cues show picture files, fade cues change the
-//! level of a playing audio or video cue and fade out the pictures of the
-//! cues that they stop, stop cues end another cue, and wait and memo cues
-//! pace and annotate the show.
+//! window, where picture cues show picture files, light cues fade the
+//! instruments of a light patch, fade cues change the level of a playing
+//! audio or video cue and fade out the pictures of the cues that they stop,
+//! stop cues end another cue, and wait and memo cues pace and annotate the
+//! show.
 //! GO fires the standby cue together with every cue that auto-continue or
 //! auto-follow chains to it.  Selection and standby are independent:
 //! inspecting a cue never changes what the next GO fires.
 //!
 //! The back end in [`back`] holds the show, every rule for changing it, and
-//! the audio and video output, and it does not depend on iced.  The front
-//! end in [`front`] draws the show and the stage with iced and turns
+//! the audio, video, and light output, and it does not depend on iced.  The
+//! front end in [`front`] draws the show and the stage with iced and turns
 //! operator input into back-end commands.  The command line in [`cli`]
 //! names the show to open, and can name the directory that config.toml
 //! comes from, or asks for the list of audio devices instead.

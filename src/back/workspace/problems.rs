@@ -24,7 +24,7 @@ impl Workspace {
                 Some(target) if cue.can_target(target) => None,
                 _ => Some(Problem::NoTarget),
             },
-            Kind::Wait | Kind::Memo => None,
+            Kind::Light | Kind::Wait | Kind::Memo => None,
         }
     }
 

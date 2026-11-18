@@ -21,6 +21,7 @@
   crate,
   sourceDateEpoch,
   installBundle,
+  signBundle,
 }:
 let
   inherit (stdenvNoCC.hostPlatform) isDarwin isFreeBSD isLinux;
@@ -85,9 +86,11 @@ rustPlatform.buildRustPackage {
   ''
   + lib.optionalString isDarwin installBundle;
 
-  postFixup = lib.optionalString isLinux ''
-    patchelf --add-rpath ${lib.makeLibraryPath runtimeLibs} "$out/bin/cinq"
-  '';
+  postFixup =
+    lib.optionalString isLinux ''
+      patchelf --add-rpath ${lib.makeLibraryPath runtimeLibs} "$out/bin/cinq"
+    ''
+    + lib.optionalString isDarwin signBundle;
 
   passthru = { inherit runtimeLibs; };
 

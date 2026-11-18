@@ -82,17 +82,18 @@ fn tab_by_a_count_is_the_tab_of_that_number_or_the_last() {
     assert_eq!(next(Some(1), Tab::Levels), Tab::Basics);
     assert_eq!(next(Some(2), Tab::Basics), Tab::Time);
     assert_eq!(next(Some(3), Tab::Basics), Tab::Levels);
-    assert_eq!(next(Some(9), Tab::Basics), Tab::Levels);
-    assert_eq!(next(None, Tab::Levels), Tab::Basics);
+    assert_eq!(next(Some(9), Tab::Basics), Tab::Patch);
+    assert_eq!(next(None, Tab::Patch), Tab::Basics);
     assert_eq!(next(None, Tab::Basics), Tab::Time);
 }
 
 #[test]
 fn tab_back_by_a_count_wraps_as_a_single_step_does() {
     let previous = |count, tab| shown(Action::PreviousTab, count, tab);
-    assert_eq!(previous(None, Tab::Basics), Tab::Levels);
+    assert_eq!(previous(None, Tab::Basics), Tab::Patch);
     assert_eq!(previous(Some(2), Tab::Levels), Tab::Basics);
-    assert_eq!(previous(Some(4), Tab::Levels), Tab::Time);
-    // Count as large as a number can hold, which a sum would overflow
-    assert_eq!(previous(Some(usize::MAX), Tab::Time), Tab::Time.stepped(-1));
+    assert_eq!(previous(Some(5), Tab::Levels), Tab::Time);
+    // Count as large as a number can hold, which a sum would overflow.  It
+    // is 3 modulo the four tabs, so that Time steps back 3 times, to Levels.
+    assert_eq!(previous(Some(usize::MAX), Tab::Time), Tab::Levels);
 }

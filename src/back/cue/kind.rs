@@ -19,6 +19,9 @@ pub enum Kind {
     Video,
     /// Shows a picture file in the stage window until something stops it
     Picture,
+    /// Fades instruments of the light patch to levels of its own, which
+    /// they keep once it has ended
+    Light,
     /// Changes the level of a playing audio or video cue over time, and
     /// fades out the picture of a picture or video cue that it stops
     Fade,
@@ -36,7 +39,7 @@ impl Kind {
     /// that they play, picture cues last until something stops them, and
     /// the rest are instant.
     pub fn has_duration(self) -> bool {
-        matches!(self, Kind::Fade | Kind::Wait)
+        matches!(self, Kind::Light | Kind::Fade | Kind::Wait)
     }
 
     pub fn plays_file(self) -> bool {

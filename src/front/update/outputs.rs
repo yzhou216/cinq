@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Outputs of the show, which the main window shows in place of a cue list,
-//! and the settings that apply once the text typed into them reads as a
-//! value
+//! and the settings of outputs, sends, and the light patch that apply once
+//! the text typed into them reads as a value
 //!
 //! The keys that move through cues move through the outputs by the code that
 //! the two share, and the keys that edit cues edit the outputs while they
@@ -18,7 +18,10 @@ mod undoing;
 use iced::Task;
 
 use crate::{
-    back::{Channels, Command, CueId, Edit, OutputEdit, Place, parse_level},
+    back::{
+        Channels, Command, CueId, Edit, OutputEdit, PatchEdit, Place, parse_address, parse_level,
+        parse_percent,
+    },
     front::{App, Message, Setting, view},
 };
 
@@ -154,6 +157,12 @@ impl App {
             Setting::NewCues(id) => {
                 level().map(|level| Command::EditOutput(id, OutputEdit::NewCues(level)))
             }
+            Setting::Light(cue, id) => {
+                parse_percent(&text).map(|level| Command::Edit(cue, Edit::Light(id, level)))
+            }
+            Setting::Address(id) => parse_address(&text).map(|(universe, address)| {
+                Command::Patch(PatchEdit::Address(id, universe, address))
+            }),
         };
         Self {
             typed: Some((setting, text)),

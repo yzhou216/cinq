@@ -2,18 +2,22 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Show files, which hold the cue lists of a workspace as TOML
+//! Show files, which hold the light patch and the cue lists of a workspace
+//! as TOML
 //!
-//! A show file lists the cue lists of a show in order, each with its cues,
-//! and each cue with the settings that its kind uses, leaving out those
-//! that keep their defaults, apart from the level, the duration, and
-//! whether a fade stops its target, which it holds for every cue whose kind
-//! uses them.  Cues keep their identities, by which fade and stop cues name
-//! their targets.  What playback and loading find, such as the cue on
-//! standby, the cues that run, and how long each sound or video file plays,
-//! belongs to the session rather than to the show, and the file leaves it
-//! out.  The outputs come first, as [`outputs`] tells.
+//! A show file lists the instruments of the light patch, then the cue lists
+//! of a show in order, each with its cues, and each cue with the settings
+//! that its kind uses, leaving out those that keep their defaults, apart
+//! from the level, the duration, and whether a fade stops its target, which
+//! it holds for every cue whose kind uses them.  Cues and instruments keep
+//! their identities, by which fade and stop cues name their targets and
+//! light cues their instruments.  What playback and loading find, such as
+//! the cue on standby, the cues that run, the light levels, and how long
+//! each sound or video file plays, belongs to the session rather than to
+//! the show, and the file leaves it out.  The outputs come first, as
+//! [`outputs`] tells.  What keeps a file from opening lives in [`check`].
 
+mod check;
 mod outputs;
 
 use std::{
@@ -21,17 +25,18 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use super::Workspace;
-use crate::back::{Advance, Cue, CueId, CueList, Kind, LEVELS, LOUDEST, Output, SILENCE};
+use crate::back::{Advance, Cue, CueId, CueList, Instrument, InstrumentId, Kind, Output};
 use outputs::OutputFile;
 
 #[derive(Serialize, Deserialize)]
 struct ShowFile {
     #[serde(default, rename = "output", skip_serializing_if = "Vec::is_empty")]
     outputs: Vec<OutputFile>,
+    #[serde(default, rename = "instrument", skip_serializing_if = "Vec::is_empty")]
+    instruments: Vec<Instrument>,
     #[serde(default, rename = "list")]
     lists: Vec<ListFile>,
 }
@@ -71,14 +76,17 @@ struct CueFile {
     notes: String,
     /// Levels at which the cue sends to outputs, by their names
     sends: Option<BTreeMap<String, f32>>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    lights: BTreeMap<InstrumentId, f32>,
 }
 
 impl Workspace {
     /// Reads a show from the text of its file, finding the files of its
     /// cues from `directory`.  Each list starts with standby on its
     /// first cue, and a file without lists holds one empty list, as every
-    /// show does.  A file in which two cues share an identity cannot be
-    /// read, nor can one with a level that no cue could be given, since a
+    /// show does.  A file in which two cues or two instruments share an
+    /// identity cannot be read, nor can one with an address that no
+    /// instrument could be given, or a level that no cue could, since a
     /// level typed wrong by hand, such as 60 for -60, would play at a
     /// thousand times the amplitude of its file.
     pub fn from_show(text: &str, directory: impl Into<PathBuf>) -> Result<Self, String> {
@@ -89,20 +97,11 @@ impl Workspace {
             .into_iter()
             .map(|list| list.list(&outputs))
             .collect::<Result<_, _>>()?;
-        let workspace = Self::new(lists).directory(directory).with_outputs(outputs);
-        let duplicate = workspace.cues().map(|cue| cue.id.0).duplicates().next();
-        let unplayable = workspace
-            .cues()
-            .find(|cue| cue.kind.has_level() && !LEVELS.contains(&cue.level));
-        match (duplicate, unplayable) {
-            (Some(id), _) => Err(format!("more than one cue has the id {id}")),
-            (None, Some(cue)) => Err(format!(
-                "the cue with the id {} has the level {} dB, which is not between {SILENCE} and \
-                 {LOUDEST} dB",
-                cue.id.0, cue.level
-            )),
-            (None, None) => Ok(workspace),
-        }
+        let workspace = Self::new(lists)
+            .directory(directory)
+            .with_outputs(outputs)
+            .with_patch(show.instruments);
+        check::problem(&workspace).map_or(Ok(workspace), Err)
     }
 
     /// Returns the text of the show as a file in `directory` holds it, with
@@ -111,6 +110,7 @@ impl Workspace {
     pub fn show(&self, directory: Option<&Path>) -> String {
         let show = ShowFile {
             outputs: outputs::written(&self.outputs),
+            instruments: self.patch.clone(),
             lists: self
                 .lists
                 .iter()
@@ -189,6 +189,11 @@ impl CueFile {
                 .as_ref()
                 .filter(|_| plays)
                 .map(|sends| outputs::sends_by_name(sends, outputs)),
+            lights: if cue.kind == Kind::Light {
+                cue.lights.clone()
+            } else {
+                BTreeMap::new()
+            },
         }
     }
 
@@ -211,6 +216,7 @@ impl CueFile {
             .maybe_stop_target(self.stop_target)
             .notes(self.notes)
             .maybe_sends(sends)
+            .lights(self.lights)
             .build())
     }
 }

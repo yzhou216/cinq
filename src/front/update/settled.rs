@@ -102,6 +102,7 @@ impl App {
                 }
                 .send_all(edit)
             }
+            Message::Patch(edit) => self.send(Command::Patch(edit)),
             Message::FileChosen(id, path) => {
                 let file = self.workspace.file_name_of(&path);
                 let playing = self.workspace.cue(id).map(|cue| cue.playing(file));

@@ -6,20 +6,22 @@
 //!
 //! Playback here is bookkeeping without side effects: fired cues count
 //! time, fades move levels, and stop cues end other cues.  The audio output
-//! in [`super::Audio`] turns the result into sound, and the video output in
-//! [`super::Video`] into pictures.  A [`Command`] asks for each change, and
-//! an [`Active`] records each cue that GO has fired.  The rules of playback
-//! live in [`playback`] and [`stopping`], those that change the cue lists
-//! in [`editing`] and [`pasting`], undo and redo in [`history`], show files
-//! in [`show`], the places of the files of cues in [`files`], and why cues
-//! cannot play in [`problems`], and the cues that send to no output in
-//! [`stranded`].
+//! in [`super::Audio`] turns the result into sound, the video output in
+//! [`super::Video`] into pictures, and the light output in
+//! [`super::Lights`] into DMX.  A [`Command`] asks for each change, and an
+//! [`Active`] records each cue that GO has fired.  The rules of playback
+//! live in [`playback`] and [`stopping`], those of lights in [`lighting`],
+//! those that change the cue lists in [`editing`] and [`pasting`], undo and
+//! redo in [`history`], show files in [`show`], the places of the files of
+//! cues in [`files`], and why cues cannot play in [`problems`], and the cues
+//! that send to no output in [`stranded`].
 
 mod active;
 mod command;
 mod editing;
 mod files;
 mod history;
+mod lighting;
 mod numbering;
 mod outputs;
 mod pasting;
@@ -31,20 +33,22 @@ mod stranded;
 #[cfg(test)]
 pub(super) mod tests;
 
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 pub use active::{Active, Phase};
 pub use command::{Command, Place};
 pub use history::{Change, Turn};
 
 use crate::back::{
-    Cue, CueId, CueList, Output, OutputId,
+    Cue, CueId, CueList, Instrument, InstrumentId, Output, OutputId,
     items::{replaced, replaced_where},
 };
-use history::History;
+use history::{History, Kept};
+use lighting::Dimmer;
+pub use lighting::Universe;
 
-/// Show as a whole, with its cue lists, outputs, running cues, and editing
-/// lock
+/// Show as a whole, with its cue lists, outputs, light patch, running cues,
+/// and editing lock
 ///
 /// A show always holds at least one cue list, which the front end shows,
 /// and at least one output.
@@ -54,6 +58,9 @@ pub struct Workspace {
     outputs: Vec<Output>,
     /// Identity that the next added output receives
     next_output: u32,
+    patch: Vec<Instrument>,
+    /// Level of each instrument that a light cue has set
+    dimmers: BTreeMap<InstrumentId, Dimmer>,
     active: Vec<Active>,
     /// Lock on editing during a performance, which leaves playback alone
     show_mode: bool,
@@ -98,6 +105,8 @@ impl Workspace {
             lists,
             outputs: vec![Output::main(OutputId(1))],
             next_output: 2,
+            patch: Vec::new(),
+            dimmers: BTreeMap::new(),
             active: Vec::new(),
             show_mode: false,
             next_run: 0,
@@ -204,7 +213,12 @@ impl Workspace {
             Command::Cut(ids) => self.deleted(&ids, true),
             Command::Move { cue, by } => self.moved(cue, by),
             Command::Edit(id, edit) => self.edited(id, edit),
-            Command::Restore(lists, outputs) => self.restored(lists, outputs),
+            Command::Patch(edit) => self.patched(edit),
+            Command::Restore(lists, outputs, patch) => self.restored(Kept {
+                lists,
+                outputs,
+                patch,
+            }),
             Command::AddOutput { at, count, anchor } => self.added_output(at, count, anchor),
             Command::DeleteOutputs(ids) => self.deleted_outputs(&ids, false),
             Command::CutOutputs(ids) => self.deleted_outputs(&ids, true),

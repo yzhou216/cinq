@@ -6,7 +6,9 @@
 
 use std::mem;
 
-use crate::back::{Cue, CueId, CueList, Edit, Output, OutputEdit, OutputId, Place};
+use crate::back::{
+    Cue, CueId, CueList, Edit, Instrument, Output, OutputEdit, OutputId, PatchEdit, Place,
+};
 
 #[derive(Debug, Clone)]
 pub enum Change {
@@ -40,8 +42,8 @@ pub enum Change {
     Edited { cue: CueId, undo: Edit, redo: Edit },
     /// Standby of a list moved by the operator
     Standby(Standby),
-    /// Cue lists and outputs kept from before put in place of those of the
-    /// show, with those before and after
+    /// Cue lists, outputs, and light patch kept from before put in place of
+    /// those of the show, with those before and after
     Restored { before: Kept, after: Kept },
     /// Outputs added, deleted, moved, or edited, with all of them before
     /// and after, whether they were cut to the register of outputs or
@@ -59,13 +61,20 @@ pub enum Change {
         pasted: bool,
         anchor: Option<OutputId>,
     },
+    /// Light patch edited, with the patch before and after
+    Patched {
+        edit: PatchEdit,
+        before: Vec<Instrument>,
+        after: Vec<Instrument>,
+    },
 }
 
-/// Cue lists and outputs of a show as they were or became
+/// Cue lists, outputs, and light patch of a show as they were or became
 #[derive(Debug, Clone)]
 pub struct Kept {
     pub lists: Vec<CueList>,
     pub outputs: Vec<Output>,
+    pub patch: Vec<Instrument>,
 }
 
 #[derive(Debug, Clone)]
@@ -106,7 +115,10 @@ impl Change {
             | Change::Pasted { cues, .. }
             | Change::Deleted { cues, .. } => cues.first().map(|placed| placed.cue.id),
             Change::Moved { cue, .. } | Change::Edited { cue, .. } => Some(*cue),
-            Change::Standby(_) | Change::Restored { .. } | Change::Outputs { .. } => None,
+            Change::Standby(_)
+            | Change::Restored { .. }
+            | Change::Outputs { .. }
+            | Change::Patched { .. } => None,
         }
     }
 
@@ -140,7 +152,7 @@ impl Change {
                     redo: again,
                     ..
                 },
-            ) => cue == next && mem::discriminant(redo) == mem::discriminant(again),
+            ) => cue == next && redo.same_setting(again),
             (
                 Change::Outputs {
                     setting: Some(setting),
@@ -151,6 +163,9 @@ impl Change {
                     ..
                 },
             ) => setting == again,
+            (Change::Patched { edit, .. }, Change::Patched { edit: next, .. }) => {
+                edit.same_setting(next)
+            }
             _ => false,
         }
     }
@@ -183,6 +198,11 @@ impl Change {
                 pasted,
                 anchor,
             },
+            (Self::Patched { before, .. }, Self::Patched { edit, after, .. }) => Self::Patched {
+                edit,
+                before,
+                after,
+            },
             (_, next) => next,
         }
     }
@@ -194,6 +214,7 @@ impl Change {
             Self::Edited { undo, redo, .. } => undo == redo,
             Self::Moved { from, to, .. } => from == to,
             Self::Outputs { before, after, .. } => before == after,
+            Self::Patched { before, after, .. } => before == after,
             _ => false,
         }
     }

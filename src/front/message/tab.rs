@@ -14,6 +14,8 @@ pub enum Tab {
     #[strum(to_string = "Time & Loops")]
     Time,
     Levels,
+    #[strum(to_string = "Light Patch")]
+    Patch,
 }
 
 impl Tab {

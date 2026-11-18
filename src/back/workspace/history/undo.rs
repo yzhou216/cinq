@@ -97,6 +97,7 @@ impl Workspace {
             Change::Standby(standby) => self.with_standby_moved(standby.reversed()),
             Change::Restored { before, .. } => self.with_kept(before),
             Change::Outputs { before, .. } => self.with_outputs(before),
+            Change::Patched { before, .. } => self.with_patch(before),
         }
     }
 
@@ -112,6 +113,7 @@ impl Workspace {
             Change::Standby(standby) => self.with_standby_moved(standby),
             Change::Restored { after, .. } => self.with_kept(after),
             Change::Outputs { after, .. } => self.with_outputs(after),
+            Change::Patched { after, .. } => self.with_patch(after),
         }
     }
 

@@ -59,6 +59,8 @@ pub(in crate::back::workspace) enum Effect {
     Picture,
     /// Makes a fade on the level of a cue
     Fade { target: CueId, fade: Fade },
+    /// Fades instruments to the levels of a light cue
+    Light,
     /// Stops a cue
     Stop(CueId),
     /// Takes time and does nothing else, as wait and memo cues do

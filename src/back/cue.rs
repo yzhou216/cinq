@@ -13,11 +13,11 @@ mod seconds;
 #[cfg(test)]
 mod tests;
 
-use std::{ffi::OsStr, fmt, ops::RangeInclusive, path::Path};
+use std::{collections::BTreeMap, ffi::OsStr, fmt, ops::RangeInclusive, path::Path};
 
 use bon::Builder;
 
-use super::output::Sends;
+use super::{InstrumentId, output::Sends};
 
 pub(in crate::back) use clip::{Clip, Shown};
 pub use edit::Edit;
@@ -46,6 +46,23 @@ pub fn parse_level(text: &str) -> Option<f32> {
         .filter(|level| LEVELS.contains(level))
 }
 
+/// Levels of a light, in percent
+pub const PERCENT: RangeInclusive<f32> = 0.0..=100.0;
+
+/// Returns the light level that `text` reads as, as in `80` or `80%`: the
+/// inner `None` for empty text, which leaves an instrument out of a light
+/// cue, or the outer `None` for text that reads as no level
+pub fn parse_percent(text: &str) -> Option<Option<f32>> {
+    match text.trim().trim_end_matches('%').trim() {
+        "" => Some(None),
+        number => number
+            .parse::<f32>()
+            .ok()
+            .filter(|level| PERCENT.contains(level))
+            .map(Some),
+    }
+}
+
 /// Identity of a cue that stays stable when the operator renumbers it
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CueId(pub u32);
@@ -57,8 +74,9 @@ pub struct CueId(pub u32);
 /// for the rest, which `build` finishes.  By default a cue has no target,
 /// no waits, and a manual advance, an audio or video cue plays its whole
 /// file once, and a picture cue shows its file until something stops it.
-/// Fade and wait cues last five seconds, and fade cues fade their target
-/// out and stop it, which is what most fades do.
+/// Light, fade, and wait cues last five seconds, light cues set no levels,
+/// and fade cues fade their target out and stop it, which is what most
+/// fades do.
 #[derive(Debug, Clone, PartialEq, Builder)]
 #[builder(start_fn = new)]
 pub struct Cue {
@@ -110,6 +128,9 @@ pub struct Cue {
     /// send to the first output at 0 dB, as a cue of a show file that names
     /// no outputs does
     pub sends: Option<Sends>,
+    /// Levels in percent that a light cue fades instruments to
+    #[builder(default)]
+    pub lights: BTreeMap<InstrumentId, f32>,
 }
 
 impl fmt::Display for Cue {
@@ -171,7 +192,12 @@ impl Cue {
             && match self.kind {
                 Kind::Fade => other.kind.has_file(),
                 Kind::Stop => true,
-                Kind::Audio | Kind::Video | Kind::Picture | Kind::Wait | Kind::Memo => false,
+                Kind::Audio
+                | Kind::Video
+                | Kind::Picture
+                | Kind::Light
+                | Kind::Wait
+                | Kind::Memo => false,
             }
     }
 

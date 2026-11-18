@@ -38,12 +38,14 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
                 Edit::Level(_) => format!("changed the level of cue {cue}"),
                 Edit::StopTarget(_) => format!("changed whether cue {cue} stops its target"),
                 Edit::Sends(_) => format!("changed where cue {cue} plays"),
+                Edit::Light(..) => format!("changed the light levels of cue {cue}"),
             }
         }
         Change::Standby(standby) => match standby.after.and_then(|id| workspace.cue(id)) {
             Some(cue) => format!("moved standby to cue {}", number(cue)),
             None => "moved standby past the end".to_owned(),
         },
+        Change::Patched { .. } => "changed the light patch".to_owned(),
         Change::Restored { .. } => "brought back the unsaved changes".to_owned(),
         Change::Outputs {
             before,

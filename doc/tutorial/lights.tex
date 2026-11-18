@@ -1,0 +1,92 @@
+% SPDX-FileCopyrightText: 2026 Yiyu Zhou <yiyu@yiyuzhou.io>
+%
+% SPDX-License-Identifier: GPL-3.0-or-later
+
+\chapter{Lights}
+\label{ch:lights}
+
+Lighting consoles, dimmers, and nodes take levels over a network as sACN,
+the open standard ANSI E1.31, or as Art-Net.  cinq sends both, so light cues
+can set the lights along with the sound.  This chapter needs no lighting
+hardware, since the window shows every level that cinq sends.
+
+Press \key{Control+l} and open \texttt{lights.cinq.toml} in your copy of the
+demo.
+
+\section{The light patch}
+
+Each light is an instrument with a name and a DMX address.  The address is
+the channel that sets the intensity of the instrument.  The instruments form
+the light patch.
+
+\begin{enumerate}
+\item Click the \ui{Light Patch} tab of the inspector.  It lists the three
+  instruments of the show, as in Figure~\ref{fig:patch}.
+\item Press \ui{GO} twice.  Cue~1 brings the front light to 30\% at once.
+  Cue~2 fades it to 70\% and the back light to 40\% over three seconds.  The
+  \ui{Now} column follows each level.
+\end{enumerate}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{screenshots/patch.png}
+  \caption{\ui{Light Patch} tab after cue~2}
+  \label{fig:patch}
+\end{figure}
+
+Universes count from 1, as in sACN, and each holds 512 addresses.  The
+\ui{Address} column shows an address in universe~1 as the address alone.  In
+another universe, it shows the universe, a slash, and the address, as
+\texttt{2/1} for the lightning.  \ui{Add instrument} adds an instrument at
+the address after the last one.  \ui{Remove} removes an instrument from the
+patch, and no cue sets it afterward.
+
+\section{Light cues}
+
+A light cue fades the instruments that it names to its own levels, in
+percent, over its duration.  The other instruments keep their levels until a
+later light cue names them, as in QLab.
+
+\begin{enumerate}
+\item Select cue~2, Stage up, and click the \ui{Levels} tab.  It lists every
+  instrument with its level in the cue, as in Figure~\ref{fig:light}.  An
+  empty field, as for the lightning, leaves the instrument unchanged.
+\item Press \ui{GO}\@.  Cue~3 flashes the lightning.  It auto-continues to
+  cue~4, which fades the lightning out in half a second, and cue~4
+  auto-continues at once to cue~5, which plays the thunder.
+\end{enumerate}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{screenshots/light.png}
+  \caption{\ui{Levels} tab of a light cue}
+  \label{fig:light}
+\end{figure}
+
+Pausing a light cue pauses its fade.  Stopping it, as Panic does, leaves the
+lights where the fade has brought them, so Panic never blacks out the stage.
+For a blackout, use a light cue that takes every instrument to 0\%, such as
+cue~7.
+
+\section{Seeing the output}
+
+cinq sends each universe of the patch as sACN and as Art-Net.  It sends them
+on every network of the computer and to the computer itself, whenever a level
+changes and again every second.  An sACN monitor, such as sACNView, shows
+universes 1 and 2 as the cues run.  cinq also announces its universes every
+ten seconds, so the monitor lists the source \texttt{cinq} without further
+setup.  On Darwin, allow cinq to find devices on local networks when it asks.
+
+A receiver merges the sACN of cinq with that of any other source at the same
+priority that drives the same universe, such as a lighting console, and takes
+the higher level of each address.  Test on a universe that nothing else uses.
+Drive the universe of a real rig only with the agreement of the lighting
+designer.
+
+\section*{Exercise}
+
+Add an instrument with \ui{Add instrument}.  Then choose \ui{Light} in the
+\ui{New cue} list and press \ui{Add cue}.  Set the \ui{Duration} of the new
+cue to 2 seconds, and on the \ui{Levels} tab of the cue, set the level of the
+new instrument to 50.  Press \ui{Standby selected}, then \ui{GO}\@.  Watch
+the level in the \ui{Now} column or in your sACN monitor.

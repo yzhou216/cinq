@@ -4,7 +4,9 @@
 
 //! Requests that change a workspace
 
-use crate::back::{Cue, CueId, CueList, Edit, Kind, Media, Output, OutputEdit, OutputId};
+use crate::back::{
+    Cue, CueId, CueList, Edit, Instrument, Kind, Media, Output, OutputEdit, OutputId, PatchEdit,
+};
 
 /// Request to change the show
 ///
@@ -52,9 +54,12 @@ pub enum Command {
     Move { cue: CueId, by: isize },
     /// Changes one setting of a cue
     Edit(CueId, Edit),
-    /// Puts cue lists and outputs kept from before in place of those of
-    /// the show, as one change, as bringing back unsaved changes does
-    Restore(Vec<CueList>, Vec<Output>),
+    /// Changes the light patch
+    Patch(PatchEdit),
+    /// Puts cue lists, outputs, and a light patch kept from before in
+    /// place of those of the show, as one change, as bringing back unsaved
+    /// changes does
+    Restore(Vec<CueList>, Vec<Output>, Vec<Instrument>),
     /// Adds a number of outputs in a row at a place among the outputs, counted
     /// from zero, or at the end past them, as one change, next to the output
     /// `anchor` that was selected, which undo selects again
@@ -112,6 +117,7 @@ impl Command {
                 | Command::Cut(_)
                 | Command::Move { .. }
                 | Command::Edit(..)
+                | Command::Patch(_)
                 | Command::Restore(..)
                 | Command::AddOutput { .. }
                 | Command::DeleteOutputs(_)

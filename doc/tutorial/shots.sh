@@ -119,7 +119,7 @@ keys k
 keys gt
 sleep 1
 shot levels
-keys gt
+keys 1gt
 
 # Sequence of the fade cue on standby, five seconds after its GO
 keys gg
@@ -194,4 +194,21 @@ keys -k BackSpace
 keys -k Return
 sleep 1
 shot sends
+quit
+
+# Light show once cues 1 and 2 have run and the fade of cue 2 is over:
+# the Levels tab of cue 2 and the patch
+launch lights.cinq.toml
+keys -k space
+sleep 1
+keys -k space
+sleep 4
+keys k
+keys gt
+keys gt
+sleep 1
+shot light
+keys gt
+sleep 1
+shot patch
 quit

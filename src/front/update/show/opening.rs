@@ -92,6 +92,7 @@ impl App {
                 .send(Command::Restore(
                     kept.lists().to_vec(),
                     kept.outputs().to_vec(),
+                    kept.patch().to_vec(),
                 )),
             Ok(_) => opened,
             Err(problem) => Self {

@@ -2,11 +2,15 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Why the text typed into a setting of an output does not apply, in words
-//! that tell what the setting takes, for the line of help beside the field
+//! Why the text typed into a setting of an output or of the light patch does
+//! not apply, in words that tell what the setting takes, for the line of
+//! help beside the field
 
 use crate::{
-    back::{Channels, DEVICE_CHANNELS, LOUDEST, Output, SILENCE, parse_level},
+    back::{
+        Channels, DEVICE_CHANNELS, LOUDEST, Output, SILENCE, parse_address, parse_level,
+        parse_percent,
+    },
     front::{App, Setting},
 };
 
@@ -52,5 +56,11 @@ pub(in crate::front) fn rejection(app: &App, setting: Setting, text: &str) -> Op
         Setting::OutputName(id) => name(app, app.workspace.output(id)?, text),
         Setting::Channels(_) => channels(text),
         Setting::NewCues(_) | Setting::Send(..) => level(text),
+        Setting::Light(..) => parse_percent(text)
+            .is_none()
+            .then(|| "levels run from 0 to 100 percent, or empty for unchanged".to_owned()),
+        Setting::Address(_) => parse_address(text)
+            .is_none()
+            .then(|| "addresses are 1 to 512, or 2/12 in a universe from 1 to 32768".to_owned()),
     }
 }

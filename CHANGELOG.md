@@ -360,6 +360,17 @@ Major changes and improvements in each release of cinq, newest first.
   as the Default device list does at 1024 by 768 pixels with a notice in the
   status bar, no longer draws below the sidebar, over the inspector, where the
   software renderer let it spill.
+- Light cues fade the instruments of a light patch to levels of their
+  own.  An instrument keeps its level until a later light cue names it, as
+  in QLab.  The show file holds the patch, which the inspector edits on its
+  Light Patch tab.  cinq sends the levels as Art-Net and as sACN on every
+  network that the computer is on.  Universes count from 1, as in sACN.
+  Each instrument has one level, its intensity.  cinq 0.1.4 and older
+  refuse a show with light cues, and drop the patch when they save one.
+- On Darwin, `cinq.app` says why it reaches the local network, and it is
+  signed under the identifier of its bundle, so that Allow takes effect.
+- The tutorial has a chapter on lights, which runs the light cues of a new
+  demo show, `lights.cinq.toml`.
 
 ## v0.1.4
 
