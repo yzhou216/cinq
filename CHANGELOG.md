@@ -371,6 +371,13 @@ Major changes and improvements in each release of cinq, newest first.
   signed under the identifier of its bundle, so that Allow takes effect.
 - The tutorial has a chapter on lights, which runs the light cues of a new
   demo show, `lights.cinq.toml`.
+- Network cues send an OSC message as they start, over TCP or UDP, as
+  those of QLab do.  A GO can then fire a cue of a lighting console, or of
+  any other device or program that takes OSC, alongside sound and video.
+  The inspector edits the destination and the message of a network cue on
+  its Basics tab.  The chapter of the tutorial on lights covers them too,
+  with a cue that sends its message to a program that prints it.  cinq 0.1.4
+  and older refuse a show with network cues.
 
 ## v0.1.4
 

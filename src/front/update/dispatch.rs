@@ -25,6 +25,7 @@ pub(super) fn passive(message: &Message) -> bool {
             | Message::Loaded(..)
             | Message::Recheck
             | Message::Rechecked(..)
+            | Message::NetworkChecked
             | Message::LinkOpened(_)
             | Message::AudioDevicesListed(_)
             | Message::AudioDeviceKept(_)

@@ -202,6 +202,7 @@ impl App {
             | Message::ShowMode(_)
             | Message::Loaded(..)
             | Message::Rechecked(..)
+            | Message::NetworkChecked
             | Message::Saved(_)
             | Message::Reconfigured(_)
             | Message::LinkOpened(_)

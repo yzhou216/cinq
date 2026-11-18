@@ -2,13 +2,15 @@
 %
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-\chapter{Lights}
+\chapter{Lights and network cues}
 \label{ch:lights}
 
 Lighting consoles, dimmers, and nodes take levels over a network as sACN,
 the open standard ANSI E1.31, or as Art-Net.  cinq sends both, so light cues
-can set the lights along with the sound.  This chapter needs no lighting
-hardware, since the window shows every level that cinq sends.
+can set the lights along with the sound.  Network cues send Open Sound
+Control (OSC) messages, which can fire a cue on a lighting console or in
+another program.  This chapter needs no lighting hardware, since the window
+shows every level that cinq sends.
 
 Press \key{Control+l} and open \texttt{lights.cinq.toml} in your copy of the
 demo.
@@ -82,6 +84,41 @@ priority that drives the same universe, such as a lighting console, and takes
 the higher level of each address.  Test on a universe that nothing else uses.
 Drive the universe of a real rig only with the agreement of the lighting
 designer.
+
+\section{Network cues}
+
+A network cue sends one OSC message when it starts.  For TCP, the destination
+is \texttt{host:port}.  For UDP, it is \texttt{udp://host:port}.  The message
+is an address that starts with a slash, followed by arguments.  Each argument
+is a number or text.  Double quotes keep text with spaces whole.
+
+\begin{enumerate}
+\item Select cue~6 and click the \ui{Basics} tab.  The \ui{Message} row holds
+  the destination, UDP port 9000 on this computer, and the message, as in
+  Figure~\ref{fig:network}.
+\item In a terminal, start a program that prints the OSC messages that it
+  receives on that port, such as \texttt{oscdump 9000} from liblo.
+\item Press \ui{GO}\@.  After the thunder, cue~6 is on standby, so GO fires
+  it.  The program prints the message, with \texttt{Act 1} and \texttt{3} as
+  its arguments.
+\end{enumerate}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{screenshots/network.png}
+  \caption{\ui{Basics} tab of a network cue}
+  \label{fig:network}
+\end{figure}
+
+Each console or program documents the messages that it accepts and the port
+that it listens on.  For example, the Eos consoles of ETC take OSC over TCP
+with SLIP framing on port~3037, and \texttt{/eos/cue/1/5/fire} fires cue~5
+of cue list~1.
+
+A message that cannot be sent, as when no program accepts its TCP
+connection, appears among the warnings in the sidebar.  cinq drops a message
+that it cannot send within a second of its cue, since a console cue that
+fires late can do more harm than one that does not fire.
 
 \section*{Exercise}
 

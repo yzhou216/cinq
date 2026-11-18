@@ -7,14 +7,16 @@
 //! Playback here is bookkeeping without side effects: fired cues count
 //! time, fades move levels, and stop cues end other cues.  The audio output
 //! in [`super::Audio`] turns the result into sound, the video output in
-//! [`super::Video`] into pictures, and the light output in
-//! [`super::Lights`] into DMX.  A [`Command`] asks for each change, and an
-//! [`Active`] records each cue that GO has fired.  The rules of playback
-//! live in [`playback`] and [`stopping`], those of lights in [`lighting`],
-//! those that change the cue lists in [`editing`] and [`pasting`], undo and
-//! redo in [`history`], show files in [`show`], the places of the files of
-//! cues in [`files`], and why cues cannot play in [`problems`], and the cues
-//! that send to no output in [`stranded`].
+//! [`super::Video`] into pictures, the light output in [`super::Lights`]
+//! into DMX, and the network output in [`super::Network`] into messages.
+//! A [`Command`] asks for each change, and an [`Active`] records each cue
+//! that GO has fired.  The rules of playback live in [`playback`] and
+//! [`stopping`], those of lights in [`lighting`], those of network cues in
+//! [`networking`], those that change the cue lists in [`editing`] and
+//! [`pasting`], those of outputs in [`outputs`], undo and redo in
+//! [`history`], show files in [`show`], the places of the files of cues in
+//! [`files`], why cues cannot play in [`problems`], and the cues that send
+//! to no output in [`stranded`].
 
 mod active;
 mod command;
@@ -22,6 +24,7 @@ mod editing;
 mod files;
 mod history;
 mod lighting;
+mod networking;
 mod numbering;
 mod outputs;
 mod pasting;
@@ -40,7 +43,7 @@ pub use command::{Command, Place};
 pub use history::{Change, Turn};
 
 use crate::back::{
-    Cue, CueId, CueList, Instrument, InstrumentId, Output, OutputId,
+    Cue, CueId, CueList, Instrument, InstrumentId, Outgoing, Output, OutputId,
     items::{replaced, replaced_where},
 };
 use history::{History, Kept};
@@ -62,6 +65,9 @@ pub struct Workspace {
     /// Level of each instrument that a light cue has set
     dimmers: BTreeMap<InstrumentId, Dimmer>,
     active: Vec<Active>,
+    /// Messages of network cues started since the network output last took
+    /// them
+    outbox: Vec<Outgoing>,
     /// Lock on editing during a performance, which leaves playback alone
     show_mode: bool,
     /// Identity the next added cue receives, counted past the largest
@@ -108,6 +114,7 @@ impl Workspace {
             patch: Vec::new(),
             dimmers: BTreeMap::new(),
             active: Vec::new(),
+            outbox: Vec::new(),
             show_mode: false,
             next_run: 0,
             directory: PathBuf::new(),

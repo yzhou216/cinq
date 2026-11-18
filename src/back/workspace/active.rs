@@ -25,7 +25,7 @@ const HEARING: f64 = 0.1;
 /// edit changes the next run of a cue and not the one under way.  Only a
 /// running audio or video cue follows an edit at once: it takes a new
 /// level, and it stops when it gets a new file.  A light cue reads its
-/// levels as its action begins.
+/// levels, and a network cue its message, as its action begins.
 #[derive(Debug, Clone, Copy)]
 pub struct Active {
     pub id: CueId,
@@ -77,6 +77,7 @@ impl Active {
             }),
             (Kind::Picture, _) => Effect::Picture,
             (Kind::Light, _) => Effect::Light,
+            (Kind::Network, _) => Effect::Send,
             (Kind::Fade, Some(target)) => Effect::Fade {
                 target,
                 fade: Fade {

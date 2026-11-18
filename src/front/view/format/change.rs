@@ -39,6 +39,8 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
                 Edit::StopTarget(_) => format!("changed whether cue {cue} stops its target"),
                 Edit::Sends(_) => format!("changed where cue {cue} plays"),
                 Edit::Light(..) => format!("changed the light levels of cue {cue}"),
+                Edit::Destination(_) => format!("changed the destination of cue {cue}"),
+                Edit::Message(_) => format!("changed the message of cue {cue}"),
             }
         }
         Change::Standby(standby) => match standby.after.and_then(|id| workspace.cue(id)) {

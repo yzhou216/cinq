@@ -64,7 +64,7 @@ pub fn info_plist() -> String {
   <key>NSHumanReadableCopyright</key>
   <string>Copyright (C) 2026 Yiyu Zhou</string>
   <key>NSLocalNetworkUsageDescription</key>
-  <string>cinq sends the levels of its light cues to the lighting consoles and nodes on the networks that the computer is on.</string>
+  <string>cinq sends the levels of its light cues, and the messages of its network cues, to the lighting consoles and other devices on the networks that the computer is on.</string>
 </dict>
 </plist>
 "#,

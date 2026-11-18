@@ -197,7 +197,7 @@ shot sends
 quit
 
 # Light show once cues 1 and 2 have run and the fade of cue 2 is over:
-# the Levels tab of cue 2 and the patch
+# the Levels tab of cue 2, the patch, and the Basics tab of the network cue
 launch lights.cinq.toml
 keys -k space
 sleep 1
@@ -211,4 +211,8 @@ shot light
 keys gt
 sleep 1
 shot patch
+keys 1gt
+keys jjjj
+sleep 1
+shot network
 quit

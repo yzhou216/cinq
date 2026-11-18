@@ -45,7 +45,7 @@ pub fn action(cue: &Cue) -> String {
         | (Kind::Light | Kind::Fade | Kind::Wait, _) => length,
         (Kind::Picture, Media::Loaded { .. }) => "hold".to_owned(),
         (Kind::Audio | Kind::Video | Kind::Picture, _) => "?".to_owned(),
-        (Kind::Stop | Kind::Memo, _) => "-".to_owned(),
+        (Kind::Stop | Kind::Network | Kind::Memo, _) => "-".to_owned(),
     }
 }
 
@@ -74,11 +74,15 @@ pub fn target(workspace: &Workspace, cue: &Cue) -> String {
             .and_then(|name| Path::new(name).file_name())
             .map_or_else(String::new, |name| name.to_string_lossy().into_owned()),
         Kind::Fade | Kind::Stop => workspace.target(cue).map_or_else(String::new, number),
-        Kind::Light => {
-            let patched = workspace.patch().iter().map(|instrument| instrument.id);
-            let lit = patched.filter(|id| cue.lights.contains_key(id));
-            count(lit.count(), "instrument")
-        }
+        Kind::Light => count(
+            workspace
+                .patch()
+                .iter()
+                .filter(|instrument| cue.lights.contains_key(&instrument.id))
+                .count(),
+            "instrument",
+        ),
+        Kind::Network => cue.message.trim().to_owned(),
         Kind::Wait | Kind::Memo => String::new(),
     }
 }

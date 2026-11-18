@@ -47,7 +47,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         .active()
         .iter()
         .filter_map(|active| workspace.cue(active.id).map(|cue| active_cue(active, cue)));
-    let device = faults::warnings(app).into_iter().map(|warning| {
+    let outputs_failing = faults::warnings(app).into_iter().map(|warning| {
         let told = match &warning {
             Warning::Device {
                 device,
@@ -68,6 +68,10 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         };
         pressing(told, Message::InspectOutput(warning.output()))
     });
+    let network = app
+        .network_problems
+        .iter()
+        .map(|problem| text(problem).style(text::danger).into());
     let files = [&app.file_problem, &app.keep_problem, &app.device_problem]
         .into_iter()
         .flatten()
@@ -91,7 +95,8 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             Message::Select(cue.id),
         )
     });
-    let everything: Vec<Element<'_, Message>> = device
+    let everything: Vec<Element<'_, Message>> = outputs_failing
+        .chain(network)
         .chain(files)
         .chain(settings)
         .chain(problems)

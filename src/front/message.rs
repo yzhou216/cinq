@@ -206,6 +206,8 @@ pub enum Message {
     Loaded(u64, Vec<Command>),
     /// Time to load again the files that could not be played
     Recheck,
+    /// Time to look for news of the network output
+    NetworkChecked,
     /// What loading again the files that could not be played found, for
     /// the show of an identity
     Rechecked(u64, Vec<Command>),

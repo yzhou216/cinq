@@ -51,6 +51,9 @@ impl App {
             .is_some_and(|search| search.warned)
             .then(|| time::every(NO_MATCH).map(|_| Message::SearchSettled));
         let drawing = self.unmeasured().then(|| event::listen_with(drawn));
+        let network = self
+            .network_checks
+            .map(|every| time::every(every).map(|_| Message::NetworkChecked));
         let always = [
             keyboard::listen().filter_map(keys::key_press),
             event::listen_with(clicked),
@@ -71,6 +74,7 @@ impl App {
             ticks,
             rechecks,
             settling,
+            network,
             reconfigured
         ))
     }

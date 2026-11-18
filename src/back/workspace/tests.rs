@@ -11,6 +11,7 @@ mod editing;
 mod files;
 mod history;
 mod light;
+mod network;
 mod output_pasting;
 mod outputs;
 mod pasting;

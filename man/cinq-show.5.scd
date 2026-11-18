@@ -137,11 +137,13 @@ Each cue is a table in the array *cue* of its list:
 	Number of the cue, as the cue list shows it, which can be any text.
 
 *kind*
-	What the cue does: *audio*, *video*, *picture*, *light*, *fade*, *stop*,
-	*wait*, or *memo*.
+	What the cue does: *audio*, *video*, *picture*, *light*, *network*,
+	*fade*, *stop*, *wait*, or *memo*.
 	An audio cue plays a sound file, a video cue plays a video file, and a
-	picture cue shows a picture file, as *STAGE* describes, and a light cue
-	fades instruments of the light patch, as *LIGHTS* describes.
+	picture cue shows a picture file, as *STAGE* describes.
+	A light cue fades instruments of the light patch, as *LIGHTS*
+	describes, and a network cue sends a message over the network, as
+	*NETWORK* describes.
 	The clock of an audio or video cue follows its sound as the audio device
 	plays it.
 	Its fades, its end, and the cues that follow it therefore stay with what
@@ -220,6 +222,12 @@ Each cue is a table in the array *cue* of its list:
 *lights*
 	Table of the levels that a light cue fades instruments to, in percent
 	from 0 to 100, by the *id* of each instrument.
+
+*destination*
+	Where a network cue sends its message, as *NETWORK* describes.
+
+*message*
+	Message that a network cue sends, as *NETWORK* describes.
 
 A file in which two cues or two instruments share an identity, a level or an
 address lies outside its range, or a cue sends to an output that the show
@@ -330,6 +338,47 @@ show, goes to level 0 on every address, and then its sACN stream says that it
 has ended, so that no receiver keeps its last levels.
 When *cinq* ends, receivers of sACN hold its levels for as long as they
 hold those of any source that has gone quiet.
+
+# NETWORK
+
+A network cue sends an Open Sound Control (OSC) message once its pre-wait is
+over, as the network cues of QLab do, so that a GO in *cinq* can fire a cue
+of a lighting console or of another program.
+It takes no time, and does nothing else.
+
+The *destination* of a network cue is _host:port_ for TCP, where *cinq* frames
+each packet with SLIP, as OSC 1.1 asks of streams, or _udp://host:port_ for
+UDP, with one packet in each datagram.
+The host is an IPv4 address, or a name that *cinq* reaches at its first IPv4
+address.
+An address avoids waiting for a name to resolve, which holds up the messages
+behind it for as long as the name server takes.
+*cinq* keeps a TCP connection to a destination open while messages to it
+follow each other within a second, and makes a new one for the first message
+after that, so that a message never waits in a connection whose cable is
+out, to arrive late once it is back in.
+
+The *message* of a network cue holds its address, which starts with a slash,
+followed by its arguments after spaces, each an integer, a decimal number, or
+else a string.
+Double quotes keep a string whole across spaces, and keep it a string where
+it reads as a number.
+A string cannot hold a double quote itself.
+
+A network cue whose destination or message does not read as one cannot play.
+A message that cannot go out within a second of its cue starting is lost,
+since a cue that fires late can do more harm than one that does not fire.
+This happens when the destination refuses the connection, or does not take it
+in time, as a console that has lost its power or its cable does.
+It happens as well when the message waits behind others.
+The warnings in the sidebar say why until a message to the same destination
+gets there, or until no cue names the destination any more, and *cinq* says so
+on standard error as well, once for each reason.
+
+Consoles and programs tell in their manuals which messages they take, and on
+which ports.
+For example, the Eos consoles of ETC take OSC over TCP with SLIP on port
+3037, and fire cue 5 of cue list 1 for _/eos/cue/1/5/fire_.
 
 # UNSAVED CHANGES
 
@@ -562,6 +611,31 @@ duration = 5.0
 [list.cue.lights]
 1 = 40.0
 2 = 80.0
+```
+
+A list in which one GO fires cue 5 of a lighting console, at the address of
+the console on its network, and plays a sound along with it:
+
+```
+[[list]]
+name = "Main"
+
+[[list.cue]]
+id = 1
+number = "5"
+kind = "network"
+name = "Lights for the storm"
+advance = "continue"
+destination = "10.101.100.20:3037"
+message = "/eos/cue/1/5/fire"
+
+[[list.cue]]
+id = 2
+number = "5.1"
+kind = "audio"
+name = "Storm"
+file = "storm.wav"
+level = 0.0
 ```
 
 # SEE ALSO

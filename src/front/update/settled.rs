@@ -62,6 +62,7 @@ impl App {
             Message::ShowMode(show_mode) => self.send(Command::ShowMode(show_mode)),
             Message::Loaded(show, found) => self.loaded(show, found),
             Message::Rechecked(show, found) => self.rechecked(show, found),
+            Message::NetworkChecked => self,
             Message::Saved(saved) => self.saved(saved),
             // Keys typed halfway went by the bindings before, so the update
             // drops them, as it does for most messages
