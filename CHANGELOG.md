@@ -10,6 +10,8 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+## v0.1.5
+
 - `back` and `forward` go back and forward between the places that jumps left,
   as the jump list of Vim does: switching cue lists, `first`, `last`, selecting
   a cue in another cue list, searching, and showing the outputs and leaving
