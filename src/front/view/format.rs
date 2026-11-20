@@ -13,7 +13,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 
-use crate::back::{Active, Advance, Cue, CueList, Kind, Media, Output, Phase, Workspace};
+use crate::back::{Active, Advance, Cue, CueList, Kind, Media, Output, Phase, SILENCE, Workspace};
 pub use change::change;
 use consequences::short;
 pub use consequences::{consequences, consequences_of, leading};
@@ -114,7 +114,7 @@ pub fn activity(active: &Active, cue: &Cue) -> String {
     let paused = if active.paused { "paused, " } else { "" };
     let fading = active.fade.map_or("", |_| ", fading");
     let level = if cue.sounds() {
-        format!(", {} dB", decibels(active.level))
+        format!(", {} dB", decibels(active.level.max(SILENCE)))
     } else {
         String::new()
     };

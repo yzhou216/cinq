@@ -4,8 +4,10 @@
 
 //! Tests of the text that describes cues
 
-use super::{chain, change, clipped, target};
-use crate::back::{Advance, Command, Cue, CueId, CueList, Kind, Place, Workspace};
+use super::{activity, chain, change, clipped, target};
+use crate::back::{
+    Advance, Command, Cue, CueId, CueList, Edit, Kind, Place, Workspace, loaded, sound,
+};
 
 fn memo(id: u32) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Memo, "Note").build()
@@ -89,4 +91,31 @@ fn a_chain_with_nothing_to_fire_says_so_and_names_each_cue_with_its_reason() {
         "GO fires nothing: cue 1 (no file set), cue 2 (no file set)"
     );
     assert_eq!(words(vec![memo(3)]), "GO fires 1 cue: 3");
+}
+
+#[test]
+fn a_run_moved_below_silence_is_told_at_silence() {
+    let cue = |id: u32, kind, level: f32| {
+        Cue::new(CueId(id), id.to_string(), kind, "Rain")
+            .advance(Advance::Continue)
+            .file("sound.ogg")
+            .target(CueId(1))
+            .level(level)
+            .duration(1.0)
+            .stop_target(false)
+            .build()
+    };
+    let workspace = Workspace::new(vec![CueList::new(
+        "Main",
+        vec![cue(1, Kind::Audio, 0.0), cue(2, Kind::Fade, -60.0)],
+    )]);
+    let loaded = loaded(1, "sound.ogg", sound(10.0));
+    let ducked = [loaded, Command::Go { list: 0 }, Command::Tick(2.0)]
+        .into_iter()
+        .fold(workspace, Workspace::apply)
+        .apply(Command::Edit(CueId(1), Edit::Level(-30.0)));
+    let active = ducked.active_of(CueId(1)).expect("the cue plays");
+    assert_eq!(active.level, -90.0);
+    let cue = ducked.cue(CueId(1)).expect("the cue is there");
+    assert_eq!(activity(active, cue), "0:08.0 left, -60.0 dB");
 }
