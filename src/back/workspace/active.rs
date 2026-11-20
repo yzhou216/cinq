@@ -25,8 +25,9 @@ const HEARING: f64 = 0.1;
 /// edit changes the next run of a cue and not the one under way.  Only a
 /// running audio or video cue follows an edit at once: its level moves by
 /// the change in the level of its cue, and it stops when it gets a new
-/// file.  A light cue reads its levels, and a network cue its message, as
-/// its action begins.
+/// file.  The fades that a fade cue makes, and its runs that have yet to
+/// act, take the new level of the fade cue.  A light cue reads its levels,
+/// and a network cue its message, as its action begins.
 #[derive(Debug, Clone, Copy)]
 pub struct Active {
     pub id: CueId,
@@ -203,6 +204,27 @@ impl Active {
     pub(super) fn moved(self, by: f32) -> Self {
         Self {
             level: (self.level + by).min(LOUDEST),
+            ..self
+        }
+    }
+
+    /// Returns the run with the fades that the fade cue `by` is making on
+    /// it, and the fade that it has yet to make if it is a run of that cue,
+    /// ending at `level`.  A fade under way keeps its remaining time, so
+    /// that the level turns from where it is toward the new one.
+    pub(super) fn retargeted(self, by: CueId, level: f32) -> Self {
+        let to = |fade: Fade| Fade { to: level, ..fade };
+        Self {
+            fade: self
+                .fade
+                .map(|fade| if fade.by == Some(by) { to(fade) } else { fade }),
+            effect: match self.effect {
+                Effect::Fade { target, fade } if self.id == by && !self.started => Effect::Fade {
+                    target,
+                    fade: to(fade),
+                },
+                effect => effect,
+            },
             ..self
         }
     }

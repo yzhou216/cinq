@@ -214,7 +214,9 @@ impl Workspace {
     /// that a fade has lowered stays lower, and a fade under way that leaves
     /// it playing goes on from there to its own level.  A cue that a panic
     /// or a fade is stopping keeps fading out, so that no edit brings it
-    /// back.
+    /// back.  The level of a fade cue is the level of the fades that the cue
+    /// is making, which turn from where they are toward it in the time they
+    /// have left, and of its runs that have yet to act.
     pub(super) fn changed(self, id: CueId, edit: Edit) -> Self {
         let Some(cue) = self.cue(id) else {
             return self;
@@ -227,6 +229,9 @@ impl Workspace {
                     Some(fade) if fade.then_stop => active,
                     _ => active.moved(by),
                 })
+            }
+            Edit::Level(level) if cue.kind == Kind::Fade => {
+                self.with_each_active(|active| active.retargeted(id, level))
             }
             _ => self,
         }

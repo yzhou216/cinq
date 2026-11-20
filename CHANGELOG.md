@@ -24,6 +24,11 @@ Major changes and improvements in each release of cinq, newest first.
   level of the fade, and the list of running cues never shows less than
   -60 dB.  A fade under way that leaves the cue playing goes on, from where the
   change moved the level, instead of ending.
+- Changing the level of a fade cue while it fades now sends the fade to the
+  new level in the time it has left, and a fade cue that has yet to act fades
+  to the new level, where the change used to wait for the next run of the
+  fade cue.  Its duration, target, and stop setting still wait for the next
+  run.
 
 ## v0.1.5
 

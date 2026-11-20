@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Tests of a level edit of a cue that plays, which moves the run by the
-//! change and leaves the fades of other cues going
+//! change and leaves the fades of other cues going, and of the level of a
+//! fade cue, which its fades take
 
 use super::*;
 use crate::back::LOUDEST;
@@ -26,6 +27,14 @@ fn ducked() -> Workspace {
         .apply(Command::Tick(3.0));
     assert_eq!(level(&ducked, 1), Some(-20.0));
     ducked
+}
+
+/// Returns the workspace in which cue 2 is halfway through a four-second
+/// fade of cue 1 to -20 dB
+fn fading() -> Workspace {
+    workspace(vec![continuing(1), ducking(2, -20.0, 4.0)])
+        .apply(GO)
+        .apply(Command::Tick(2.0))
 }
 
 fn set(workspace: Workspace, level: f32) -> Workspace {
@@ -67,12 +76,10 @@ fn level_edit_of_a_run_that_waits_moves_it_too() {
 
 #[test]
 fn level_edit_during_a_fade_that_leaves_the_cue_playing_moves_the_level_on() {
-    let fading = workspace(vec![continuing(1), ducking(2, -20.0, 4.0)])
-        .apply(GO)
-        .apply(Command::Tick(2.0));
-    let halfway = level(&fading, 1).expect("the cue plays");
+    let under_way = fading();
+    let halfway = level(&under_way, 1).expect("the cue plays");
     assert!(halfway < 0.0 && halfway > -20.0, "{halfway}");
-    let moved = set(fading, -6.0);
+    let moved = set(under_way, -6.0);
     let active = moved.active_of(CueId(1)).expect("the cue plays");
     assert_eq!(active.level, halfway - 6.0);
     assert!(active.fade.is_some(), "the fade goes on");
@@ -99,4 +106,51 @@ fn undo_and_redo_of_a_level_edit_move_a_run_back_and_forth() {
     let undone = nudged.apply(Command::Undo);
     assert_eq!(level(&undone, 1), Some(-20.0));
     assert_eq!(level(&undone.apply(Command::Redo), 1), Some(-26.0));
+}
+
+#[test]
+fn level_edit_of_a_fade_cue_turns_the_fade_under_way_toward_the_new_level() {
+    let under_way = fading();
+    let before = under_way.active_of(CueId(1)).and_then(|active| active.fade);
+    let edited = under_way
+        .apply(edit(2, Edit::Level(-40.0)))
+        .apply(edit(2, Edit::Duration(10.0.into())));
+    let fade = edited.active_of(CueId(1)).and_then(|active| active.fade);
+    let (before, fade) = (before.expect("a fade"), fade.expect("a fade"));
+    assert_eq!(fade.to, -40.0);
+    assert_eq!(fade.remaining, before.remaining, "its time is as it was");
+    assert_eq!(level(&edited, 1), level(&fading(), 1));
+    let ended = edited.apply(Command::Tick(2.0));
+    assert_eq!(level(&ended, 1), Some(-40.0));
+}
+
+#[test]
+fn level_edit_of_a_fade_cue_leaves_the_fade_of_a_panic() {
+    let panicking = workspace(vec![audio(1), ducking(2, -20.0, 4.0)])
+        .apply(GO)
+        .apply(Command::Panic)
+        .apply(edit(2, Edit::Level(-10.0)));
+    let fade = panicking.active_of(CueId(1)).and_then(|active| active.fade);
+    assert_eq!(fade.map(|fade| fade.to), Some(SILENCE));
+}
+
+#[test]
+fn level_edit_of_a_fade_cue_that_waits_makes_the_fade_to_the_new_level() {
+    let waiting = workspace(vec![continuing_after(1, 2.0), ducking(2, -20.0, 1.0)])
+        .apply(GO)
+        .apply(Command::Tick(1.0));
+    assert_eq!(level(&waiting, 1), Some(0.0), "the fade has yet to act");
+    let ended = waiting
+        .apply(edit(2, Edit::Level(-40.0)))
+        .apply(edit(2, Edit::StopTarget(true)))
+        .apply(Command::Tick(3.0));
+    let active = ended.active_of(CueId(1)).expect("the stop waits for a run");
+    assert_eq!(active.level, -40.0);
+}
+
+#[test]
+fn level_edit_of_another_cue_leaves_the_fade_alone() {
+    let edited = fading().apply(edit(1, Edit::Level(-6.0)));
+    let fade = edited.active_of(CueId(1)).and_then(|active| active.fade);
+    assert_eq!(fade.map(|fade| fade.to), Some(-20.0));
 }

@@ -212,6 +212,11 @@ Each cue is a table in the array *cue* of its list:
 	A fade under way that leaves the cue playing goes on from the moved level
 	to its own, while a fade that stops the cue, from a fade cue or a panic,
 	leaves it fading out as before.
+	Changing the *level* of a fade cue while it fades sends the fade to the new
+	level in the time it has left, and a fade cue that has yet to act, in its
+	pre-wait or its place in a chain, fades to the new level when it does.
+	The *duration*, *target*, and *stop_target* of a fade cue take effect the
+	next time that it runs.
 
 *stop_target*
 	Whether a fade cue stops its target once the fade is over, which it does

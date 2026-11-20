@@ -189,7 +189,7 @@ fn editing_a_fade_cue_in_its_pre_wait_leaves_the_fade_it_will_make() {
         .apply(edit(2, Edit::StopTarget(false)))
         .apply(Command::Tick(1.0));
     let fade = workspace.active_of(CueId(1)).unwrap().fade.unwrap();
-    assert_eq!((fade.to, fade.then_stop), (SILENCE, true));
+    assert_eq!((fade.to, fade.then_stop), (-10.0, true));
 }
 
 #[test]
