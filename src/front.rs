@@ -160,9 +160,6 @@ struct App {
     history: History,
     /// Cue shown in the inspector
     selected: Option<CueId>,
-    /// Level of a cue as the operator types it, which its field shows in
-    /// place of the level until the operator does anything else
-    typed_level: Option<(CueId, String)>,
     /// Text of a setting as the operator types it, which its field shows in
     /// place of the setting until the operator does anything else
     typed: Option<(Setting, String)>,

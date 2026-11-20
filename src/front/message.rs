@@ -25,9 +25,13 @@ pub use scrolling::{Height, Page};
 pub use tab::Tab;
 
 /// Setting whose field shows the text typed into it, which applies once it
-/// reads as a value
+/// reads as a value, or for a level or the channels of an output, once the
+/// operator has left the field
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Setting {
+    /// Level of an audio or video cue, or the level that a fade cue fades
+    /// its target to
+    Level(CueId),
     /// Level at which a cue sends to an output, which an empty field takes
     /// away
     Send(CueId, OutputId),
@@ -40,6 +44,16 @@ pub enum Setting {
     /// field leaves unchanged
     Light(CueId, InstrumentId),
     Address(InstrumentId),
+}
+
+impl Setting {
+    /// Returns whether the text typed into the field waits until the
+    /// operator has left it, since a level typed so far, such as the `2` of
+    /// `-25`, reads as another level that a playing cue would follow, and
+    /// the channels of an output would open a device
+    pub(super) fn waits(self) -> bool {
+        !matches!(self, Self::OutputName(_) | Self::Address(_))
+    }
 }
 
 /// Where the caret lands in a field that a key focuses, and what it selects
@@ -180,7 +194,6 @@ pub enum Message {
     /// would move it, counted as the motion is
     Across(Action, Action, Option<usize>),
     Edit(CueId, Edit),
-    LevelTyped(CueId, String),
     Patch(PatchEdit),
     /// Asks which file an audio, video, or picture cue plays or shows
     ChooseFile(CueId),
@@ -241,7 +254,7 @@ pub enum Message {
     /// Selects an output, which the inspector then shows
     SelectOutput(OutputId),
     /// Text typed into the field of a setting, which applies once it reads
-    /// as a value
+    /// as a value, or once the field is left for a level or channels
     SettingTyped(Setting, String),
     /// Plays an output on a device
     OutputDevice(OutputId, Device),

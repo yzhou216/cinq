@@ -2,14 +2,11 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of a file chosen for a new cue, a level half typed, and a failed link
+//! Tests of a file chosen for a new cue and a failed link
 
-use iced::window;
-
-use super::show;
 use crate::{
-    back::{CueId, Place, Workspace},
-    front::{App, MAIN_SIZE, Message},
+    back::{Place, Workspace},
+    front::{App, Message},
 };
 
 #[test]
@@ -27,22 +24,6 @@ fn sound_file_chosen_for_a_new_cue_names_it_by_its_path_from_the_show() {
         (cue.file.as_str(), cue.name.as_str()),
         ("sounds/storm.ogg", "storm")
     );
-}
-
-#[test]
-fn level_typed_so_far_shows_until_the_operator_does_anything_else() {
-    let app = show(Some(CueId(1)));
-    let typed = |text: &str| Message::LevelTyped(CueId(1), text.to_owned());
-    let (half, _) = app.next(typed("-"));
-    assert_eq!(half.typed_level, Some((CueId(1), "-".to_owned())));
-    let (clicked, _) = half.next(Message::Clicked);
-    assert!(clicked.typed_level.is_some());
-    let (typed, _) = clicked.next(typed("-6"));
-    assert_eq!(typed.workspace.cue(CueId(1)).unwrap().level, -6.0);
-    let (resized, _) = typed.next(Message::Resized(window::Id::unique(), MAIN_SIZE));
-    assert!(resized.typed_level.is_some());
-    let (moved, _) = resized.next(Message::Step(1));
-    assert_eq!(moved.typed_level, None);
 }
 
 #[test]

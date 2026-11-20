@@ -6,7 +6,7 @@
 
 use super::{App, Measured, Message};
 use crate::{
-    back::{Command, Edit, OutputEdit, parse_level},
+    back::{Command, OutputEdit},
     front::Tab,
 };
 
@@ -95,14 +95,6 @@ impl App {
                 ..self
             },
             Message::Edit(id, edit) => self.send(Command::Edit(id, edit)),
-            Message::LevelTyped(cue, text) => {
-                let edit = parse_level(&text).map(|level| Command::Edit(cue, Edit::Level(level)));
-                Self {
-                    typed_level: Some((cue, text)),
-                    ..self
-                }
-                .send_all(edit)
-            }
             Message::Patch(edit) => self.send(Command::Patch(edit)),
             Message::FileChosen(id, path) => {
                 let file = self.workspace.file_name_of(&path);

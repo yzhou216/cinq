@@ -74,10 +74,10 @@ impl App {
     /// Applies a message, after anything other than typing drops what the
     /// operator left half done.  A command typed halfway goes, so that a stray
     /// `d` cannot wait through a click and an edit to delete a cue.  A level
-    /// typed so far goes too, apart from at a click, which can land in its own
-    /// field.  The channels typed into the field of an output apply once it is
-    /// left or at any click, so that no key after a click opens a device.  A
-    /// link that failed to open is forgotten once its help page closes.
+    /// or the channels typed into a field apply once it is left or at any
+    /// click, before the message acts, so that GO fires a cue at the level
+    /// typed and no key after a click opens a device.  A link that failed to
+    /// open is forgotten once its help page closes.
     pub(super) fn next(self, message: Message) -> (Self, Task<Message>) {
         let passive = passive(&message);
         let typing = passive || matches!(message, Message::Typed { .. });
@@ -109,7 +109,6 @@ impl App {
             clipped: app.clipped.filter(|_| typing),
             remark: app.remark.filter(|_| typing),
             unapplied: app.unapplied.filter(|_| typing),
-            typed_level: app.typed_level.filter(|_| passive || clicked),
             typed: app.typed.filter(|_| kept),
             ..app
         };

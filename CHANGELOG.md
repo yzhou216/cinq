@@ -10,6 +10,26 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A level typed into a field, that of a cue, a send, the new cues of an
+  output, or an instrument of a light cue, applies once the field is left, by
+  Enter, Tab, a click, GO, or any other key or click.  A cue that plays no
+  longer follows each key, as the `2` of `-25` would have made it 28 dB
+  louder, and an emptied send no longer silences a cue before a level is typed
+  back.  GO fires a cue at the level typed.  The slider still applies as it
+  moves.
+- Changing the level of an audio or video cue while it plays moves it by the
+  change instead of setting the level, so that a cue that a fade cue has
+  lowered stays lower, where a nudge of its slider from 0 to -0.5 used to make
+  it jump to -0.5 dB.  Moving the level to the bottom and back restores the
+  level of the fade, and the list of running cues never shows less than
+  -60 dB.  A fade under way that leaves the cue playing goes on, from where the
+  change moved the level, instead of ending.
+- Changing the level of a fade cue while it fades now sends the fade to the
+  new level in the time it has left, and a fade cue that has yet to act fades
+  to the new level, where the change used to wait for the next run of the
+  fade cue.  Its duration, target, and stop setting still wait for the next
+  run.
+
 ## v0.1.5
 
 - `back` and `forward` go back and forward between the places that jumps left,

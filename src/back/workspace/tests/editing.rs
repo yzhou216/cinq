@@ -189,7 +189,7 @@ fn editing_a_fade_cue_in_its_pre_wait_leaves_the_fade_it_will_make() {
         .apply(edit(2, Edit::StopTarget(false)))
         .apply(Command::Tick(1.0));
     let fade = workspace.active_of(CueId(1)).unwrap().fade.unwrap();
-    assert_eq!((fade.to, fade.then_stop), (SILENCE, true));
+    assert_eq!((fade.to, fade.then_stop), (-10.0, true));
 }
 
 #[test]
@@ -206,7 +206,7 @@ fn editing_the_clip_of_a_running_cue_waits_for_its_next_run() {
 }
 
 #[test]
-fn level_edit_takes_over_from_a_fade_that_leaves_its_target_playing() {
+fn level_edit_leaves_a_fade_that_leaves_its_target_playing_running() {
     let fading = workspace(vec![continuing(1), fade_under(2)])
         .apply(GO)
         .apply(Command::Tick(1.0));
@@ -215,11 +215,15 @@ fn level_edit_takes_over_from_a_fade_that_leaves_its_target_playing() {
             .active_of(CueId(1))
             .is_some_and(|active| active.fade.is_some())
     );
-    let edited = fading
-        .apply(edit(1, Edit::Level(-3.0)))
-        .apply(Command::Tick(1.0));
-    let active = edited.active_of(CueId(1)).expect("the cue plays on");
-    assert_eq!((active.level, active.fade.is_none()), (-3.0, true));
+    let edited = fading.apply(edit(1, Edit::Level(-3.0)));
+    assert!(
+        edited
+            .active_of(CueId(1))
+            .is_some_and(|active| active.fade.is_some())
+    );
+    let active = edited.apply(Command::Tick(5.0));
+    let active = active.active_of(CueId(1)).expect("the cue plays on");
+    assert_eq!((active.level, active.fade.is_none()), (-18.0, true));
 }
 
 #[test]

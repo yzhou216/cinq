@@ -203,6 +203,20 @@ Each cue is a table in the array *cue* of its list:
 	Level in dB that an audio or video cue plays at, which is 0 by default, or
 	that a fade cue fades its target to, which is -60, silence, by default.
 	It lies between -60 and 12.
+	Changing the *level* of an audio or video cue while it plays moves the
+	level that it plays at by the change, rather than to the new level, so
+	that a cue that a fade cue has lowered stays lower.
+	The level that it plays at goes no higher than 12.
+	Below -60 the cue is silent, but the level goes on counting, so that
+	moving the *level* down to -60 and back restores the level of the fade.
+	A fade under way that leaves the cue playing goes on from the moved level
+	to its own, while a fade that stops the cue, from a fade cue or a panic,
+	leaves it fading out as before.
+	Changing the *level* of a fade cue while it fades sends the fade to the new
+	level in the time it has left, and a fade cue that has yet to act, in its
+	pre-wait or its place in a chain, fades to the new level when it does.
+	The *duration*, *target*, and *stop_target* of a fade cue take effect the
+	next time that it runs.
 
 *stop_target*
 	Whether a fade cue stops its target once the fade is over, which it does

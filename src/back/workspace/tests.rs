@@ -10,6 +10,7 @@ mod adding;
 mod editing;
 mod files;
 mod history;
+mod levels;
 mod light;
 mod network;
 mod output_pasting;

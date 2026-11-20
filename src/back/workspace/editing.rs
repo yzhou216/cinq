@@ -12,7 +12,7 @@ use super::{
     history::{Change, Kept, Placed, Standby},
     numbering::Numbers,
 };
-use crate::back::{Active, CueId, CueList, Edit, Kind, Media, Place};
+use crate::back::{CueId, CueList, Edit, Kind, Media, Place};
 
 impl Workspace {
     /// Puts `standby` on standby in a list without recording the move, as
@@ -210,23 +210,29 @@ impl Workspace {
     /// A running cue stops when it gets another file, which has yet to
     /// load, while a file name that leads to the same file, such as the
     /// one chosen again, leaves it playing.  A running audio or video cue
-    /// takes a new level at once, which ends a fade on it.  A cue that a
-    /// panic or a fade is stopping keeps fading out, so that no edit brings
-    /// it back.
+    /// moves its level by the change in the level of its cue, so that a cue
+    /// that a fade has lowered stays lower, and a fade under way that leaves
+    /// it playing goes on from there to its own level.  A cue that a panic
+    /// or a fade is stopping keeps fading out, so that no edit brings it
+    /// back.  The level of a fade cue is the level of the fades that the cue
+    /// is making, which turn from where they are toward it in the time they
+    /// have left, and of its runs that have yet to act.
     pub(super) fn changed(self, id: CueId, edit: Edit) -> Self {
         let Some(cue) = self.cue(id) else {
             return self;
         };
         let (path, plays) = (self.path(cue), cue.kind.plays_file());
         let workspace = match edit {
-            Edit::Level(level) if plays => self.with_active(id, |active| match active.fade {
-                Some(fade) if fade.then_stop => active,
-                _ => Active {
-                    level,
-                    fade: None,
-                    ..active
-                },
-            }),
+            Edit::Level(level) if plays => {
+                let by = level - cue.level;
+                self.with_active(id, |active| match active.fade {
+                    Some(fade) if fade.then_stop => active,
+                    _ => active.moved(by),
+                })
+            }
+            Edit::Level(level) if cue.kind == Kind::Fade => {
+                self.with_each_active(|active| active.retargeted(id, level))
+            }
             _ => self,
         }
         .with_list_of(id, |cues| cues.edited(id, edit));

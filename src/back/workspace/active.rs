@@ -11,7 +11,7 @@
 mod effect;
 mod playing;
 
-use crate::back::{Cue, CueId, Kind};
+use crate::back::{Cue, CueId, Kind, LOUDEST};
 pub(super) use effect::{Effect, Fade};
 
 /// Share of the way to the time that its sound has reached that a run
@@ -23,9 +23,11 @@ const HEARING: f64 = 0.1;
 /// A fired cue keeps its timing and its effect, such as the clip of an
 /// audio or video cue, as its cue had them when GO fired it, so that an
 /// edit changes the next run of a cue and not the one under way.  Only a
-/// running audio or video cue follows an edit at once: it takes a new
-/// level, and it stops when it gets a new file.  A light cue reads its
-/// levels, and a network cue its message, as its action begins.
+/// running audio or video cue follows an edit at once: its level moves by
+/// the change in the level of its cue, and it stops when it gets a new
+/// file.  The fades that a fade cue makes, and its runs that have yet to
+/// act, take the new level of the fade cue.  A light cue reads its levels,
+/// and a network cue its message, as its action begins.
 #[derive(Debug, Clone, Copy)]
 pub struct Active {
     pub id: CueId,
@@ -40,7 +42,9 @@ pub struct Active {
     /// Seconds since GO, negative while the cue waits its turn in a chain
     pub(super) elapsed: f64,
     pub paused: bool,
-    /// Level in dB an audio or video cue plays at
+    /// Level in dB an audio or video cue plays at.  An edit can move it
+    /// below -60 dB, which sounds as silence, so that moving the level
+    /// of the cue back restores what a fade had set.
     pub level: f32,
     pub fade: Option<Fade>,
     pub(super) pre_wait: f64,
@@ -191,6 +195,37 @@ impl Active {
                 elapsed: self.elapsed + (played - self.played()) * HEARING,
                 ..self
             }
+        }
+    }
+
+    /// Returns the run with its level moved by `by` dB, as far up as
+    /// [`LOUDEST`] and without a limit down, and with any fade left to go on
+    /// from there
+    pub(super) fn moved(self, by: f32) -> Self {
+        Self {
+            level: (self.level + by).min(LOUDEST),
+            ..self
+        }
+    }
+
+    /// Returns the run with the fades that the fade cue `by` is making on
+    /// it, and the fade that it has yet to make if it is a run of that cue,
+    /// ending at `level`.  A fade under way keeps its remaining time, so
+    /// that the level turns from where it is toward the new one.
+    pub(super) fn retargeted(self, by: CueId, level: f32) -> Self {
+        let to = |fade: Fade| Fade { to: level, ..fade };
+        Self {
+            fade: self
+                .fade
+                .map(|fade| if fade.by == Some(by) { to(fade) } else { fade }),
+            effect: match self.effect {
+                Effect::Fade { target, fade } if self.id == by && !self.started => Effect::Fade {
+                    target,
+                    fade: to(fade),
+                },
+                effect => effect,
+            },
+            ..self
         }
     }
 

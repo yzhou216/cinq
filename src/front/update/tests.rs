@@ -6,8 +6,8 @@
 //! open, the help page that comes and goes without touching the main
 //! window, the selection after deleting or undo takes the selected cue
 //! away, the selection that follows standby, the sound file chosen for a
-//! new cue, a level typed halfway, a link of the help page that fails to
-//! open, the clipboard, and the keys that enter the name of a cue
+//! new cue, the levels typed into fields, a link of the help page that
+//! fails to open, the clipboard, and the keys that enter the name of a cue
 
 mod adding;
 mod cancel;
@@ -38,6 +38,7 @@ mod search_line;
 mod search_places;
 mod selection;
 mod side_buttons;
+mod typed_levels;
 mod unapplied;
 mod viewing;
 
