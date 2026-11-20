@@ -8,15 +8,15 @@
 //! The stage window opens once the show holds a picture or video cue, as a
 //! window that the operator can move to the display of the audience, and
 //! shows black while no picture shows.  Each GO that fires a picture or
-//! video cue makes it fullscreen, on the display that it is on, and brings
-//! it before the other windows, so that what the cue shows fills the
-//! screen.  The key of the fullscreen action toggles the window between
-//! fullscreen and a window, until the next such GO.  Closing it closes it
-//! until a picture or video cue fires again, which opens it anew,
-//! fullscreen wherever the platform puts it, while closing the main window
-//! quits cinq.  Each picture that the video output hands on becomes an
-//! image for iced once, as it comes due, and stays until a newer picture of
-//! its cue takes its place or the cue stops.
+//! video cue, itself or through a start cue, makes it fullscreen, on the
+//! display that it is on, and brings it before the other windows, so that
+//! what the cue shows fills the screen.  The key of the fullscreen action
+//! toggles the window between fullscreen and a window, until the next such
+//! GO.  Closing it closes it until a picture or video cue fires again,
+//! which opens it anew, fullscreen wherever the platform puts it, while
+//! closing the main window quits cinq.  Each picture that the video output
+//! hands on becomes an image for iced once, as it comes due, and stays
+//! until a newer picture of its cue takes its place or the cue stops.
 //!
 //! The interface wakes for each picture as it comes due, and each picture
 //! costs a whole update, as each tick of the clock does, which builds the

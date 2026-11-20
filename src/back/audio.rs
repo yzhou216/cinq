@@ -162,9 +162,11 @@ impl Audio {
 
 /// Returns the sounds that runs may start within `ahead` seconds: first
 /// those of the runs that GO has fired and that have yet to sound, which
-/// start soonest, then those of the next GO of each list.  Each sound is
-/// judged by its own start, so that sounds that start together are never
-/// split, and those that start at the instant of GO are always among them.
+/// start soonest, then those that start cues that have yet to act will
+/// fire, and those of the next GO of each list, through its start cues as
+/// well.  Each sound is judged by its own start, so that sounds that start
+/// together are never split, and those that start at the instant of GO are
+/// always among them.
 fn upcoming(workspace: &Workspace, ahead: f64) -> Vec<Ask> {
     let fired = workspace.active().iter().filter_map(|active| {
         let clip = active.pending().filter(|_| active.starts_in() <= ahead)?;
@@ -175,18 +177,16 @@ fn upcoming(workspace: &Workspace, ahead: f64) -> Vec<Ask> {
             level: active.level,
         })
     });
-    let next = workspace.lists().iter().flat_map(|list| {
-        workspace.next_go(list).filter_map(|(cue, delay)| {
-            let starts = f64::from(delay) + f64::from(cue.pre_wait.value());
-            let clip = cue.clip().filter(|_| cue.sounds() && starts <= ahead)?;
-            Some(Ask {
-                cue: cue.id,
-                wanted: Wanted {
-                    path: workspace.path(cue)?,
-                    clip,
-                },
-                level: cue.level,
-            })
+    let next = workspace.ahead().into_iter().filter_map(|(cue, delay)| {
+        let starts = f64::from(delay) + f64::from(cue.pre_wait.value());
+        let clip = cue.clip().filter(|_| cue.sounds() && starts <= ahead)?;
+        Some(Ask {
+            cue: cue.id,
+            wanted: Wanted {
+                path: workspace.path(cue)?,
+                clip,
+            },
+            level: cue.level,
         })
     });
     fired.chain(next).unique_by(|ask| ask.cue).collect()

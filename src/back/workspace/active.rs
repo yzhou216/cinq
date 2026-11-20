@@ -94,6 +94,9 @@ impl Active {
                 },
             },
             (Kind::Stop, Some(target)) => Effect::Stop(target),
+            (Kind::Start, Some(target)) => Effect::Start(target),
+            (Kind::Pause, Some(target)) => Effect::Pause(target),
+            (Kind::GoTo, Some(target)) => Effect::GoTo(target),
             _ => Effect::Nothing,
         };
         Self {
@@ -150,8 +153,11 @@ impl Active {
         self.elapsed < 0.0
     }
 
+    /// Returns whether the action is to begin, which waits while the cue is
+    /// paused, as one that a start cue has fired and a pause cue holds before
+    /// it acts
     pub(super) fn due(&self) -> bool {
-        !self.started && self.elapsed >= self.pre_wait
+        !self.started && !self.paused && self.elapsed >= self.pre_wait
     }
 
     pub(super) fn begun(self) -> Self {
@@ -166,8 +172,11 @@ impl Active {
             .is_some_and(|fade| fade.then_stop && fade.remaining <= 0.0)
     }
 
+    /// Returns whether the cue has run its course, which it cannot before
+    /// its action has begun, so that a cue that a start cue has just fired
+    /// and that takes no time still acts
     pub(super) fn finished(&self) -> bool {
-        !self.endless() && self.elapsed >= self.pre_wait + self.length
+        self.started && !self.endless() && self.elapsed >= self.pre_wait + self.length
     }
 
     pub(super) fn advanced(self, seconds: f64) -> Self {

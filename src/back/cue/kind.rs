@@ -25,8 +25,15 @@ pub enum Kind {
     /// Changes the level of a playing audio or video cue over time, and
     /// fades out the picture of a picture or video cue that it stops
     Fade,
+    /// Starts another cue as GO starts it, or resumes it where it is paused
+    Start,
     /// Stops another cue
     Stop,
+    /// Pauses another cue until something resumes it
+    Pause,
+    /// Moves the standby of the list of another cue to that cue, so that the
+    /// next GO of that list fires it
+    GoTo,
     /// Sends an OSC message over the network, as to a lighting console to
     /// fire one of its own cues
     Network,
@@ -61,8 +68,11 @@ impl Kind {
         self.plays_file() || self == Kind::Fade
     }
 
-    pub(in crate::back) fn has_target(self) -> bool {
-        matches!(self, Kind::Fade | Kind::Stop)
+    pub fn has_target(self) -> bool {
+        matches!(
+            self,
+            Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::GoTo
+        )
     }
 }
 

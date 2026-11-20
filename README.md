@@ -32,8 +32,8 @@ Minimal cue-based show controller, the
   keeping its level until a later light cue names it.
 - **Network cues** that send OSC over TCP or UDP, such as to fire the cues
   of a lighting console.
-- **Fade, stop, wait, and memo cues**, chained by auto-continue and
-  auto-follow, with pre-waits and post-waits.
+- **Fade, start, stop, pause, GoTo, wait, and memo cues**, chained by
+  auto-continue and auto-follow, with pre-waits and post-waits.
 - **Panic** fades everything out in a second, and a second Panic stops at
   once.
 - **Show mode** locks editing during a performance.

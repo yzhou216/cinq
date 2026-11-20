@@ -1,0 +1,116 @@
+// SPDX-FileCopyrightText: 2026 Yiyu Zhou <yiyu@yiyuzhou.io>
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! Rules of control cues: a start cue fires or resumes its target, a pause
+//! cue holds it, and a GoTo cue moves standby to it
+
+use std::iter;
+
+use super::{Active, Workspace};
+use crate::back::{Cue, CueId, Kind};
+
+impl Workspace {
+    /// Carries out a start cue.  A target that is paused resumes together
+    /// with the cues that it would start, and nothing else fires.  Any other
+    /// target fires with its chain as GO fires the chain, in the list of the
+    /// target and `offset` seconds along, leaving standby and the history
+    /// of moves alone.  The cues that fire begin their actions on the next
+    /// tick, so that start cues that start each other go round once a tick.
+    pub(super) fn started_cue(self, target: CueId, offset: f64) -> Self {
+        let paused = self.active_of(target).is_some_and(|run| run.paused);
+        match self.list_of(target) {
+            _ if paused => self.with_pause_of(target, false),
+            Some(list) => self.fired(list, target, offset),
+            None => self,
+        }
+    }
+
+    /// Carries out a pause cue, which holds the run of its target, whatever
+    /// it is doing, and the cues that the run would start, so that the chain
+    /// stays where it is.  A target with no run is left alone.
+    pub(super) fn held(self, target: CueId) -> Self {
+        self.with_pause_of(target, true)
+    }
+
+    /// Carries out a GoTo cue, which moves the standby of the list that
+    /// holds its target to the target, as GO moves standby: undo does not
+    /// take the move back.
+    pub(super) fn moved_to(self, target: CueId) -> Self {
+        match self.list_of(target) {
+            Some(list) => self.with_standby(list, Some(target)).played_from(list),
+            None => self,
+        }
+    }
+
+    /// Returns the cues of `fired`, each with the seconds until it fires,
+    /// together with those that the start cues among them fire, and those
+    /// that the start cues among these fire in turn.  A start cue whose
+    /// target is paused fires nothing, since it resumes the target.  Each
+    /// round adds only cues that are not there yet, so that start cues that
+    /// start each other end the search.
+    pub fn reached<'a>(&'a self, fired: Vec<(&'a Cue, f32)>) -> Vec<(&'a Cue, f32)> {
+        let started: Vec<(&Cue, f32)> = fired
+            .iter()
+            .filter(|(cue, _)| cue.kind == Kind::Start)
+            .filter_map(|&(cue, delay)| Some((self.target(cue)?, delay + cue.pre_wait.value())))
+            .filter(|(target, _)| !self.active_of(target.id).is_some_and(|run| run.paused))
+            .flat_map(|(target, acts)| {
+                self.chain_of(target.id)
+                    .map(move |(cue, delay)| (cue, acts + delay))
+            })
+            .filter(|(cue, _)| !fired.iter().any(|(old, _)| old.id == cue.id))
+            .collect();
+        if started.is_empty() {
+            fired
+        } else {
+            self.reached([fired, started].concat())
+        }
+    }
+
+    /// Returns the cues that may fire without the operator, through the
+    /// start cues that have fired and have yet to act, or with the next GO
+    /// of a list, through its start cues as well, each with the seconds
+    /// until it fires, from now or from that GO, so that the audio and video
+    /// outputs can make them ready ahead
+    pub(in crate::back) fn ahead(&self) -> Vec<(&Cue, f32)> {
+        let starting = self
+            .active
+            .iter()
+            .filter(|active| !active.started)
+            .filter_map(|active| {
+                let cue = self.cue(active.id).filter(|cue| cue.kind == Kind::Start)?;
+                Some((cue, (-active.elapsed) as f32))
+            })
+            .collect();
+        let next = self
+            .lists
+            .iter()
+            .flat_map(|list| self.reached(self.next_go(list).collect()));
+        self.reached(starting).into_iter().chain(next).collect()
+    }
+
+    /// Returns the chain that a start cue on `target` fires, without the
+    /// cues that cannot play
+    fn chain_of(&self, target: CueId) -> impl Iterator<Item = (&Cue, f32)> {
+        self.list_of(target)
+            .and_then(|list| self.lists.get(list))
+            .into_iter()
+            .flat_map(move |list| self.chain_from(list, target))
+    }
+
+    fn with_pause_of(self, id: CueId, paused: bool) -> Self {
+        let held: Vec<u32> = self
+            .active_of(id)
+            .into_iter()
+            .flat_map(|run| iter::once(run.run).chain(self.followers(run.run)))
+            .collect();
+        self.with_each_active(|active| {
+            if held.contains(&active.run) {
+                Active { paused, ..active }
+            } else {
+                active
+            }
+        })
+    }
+}

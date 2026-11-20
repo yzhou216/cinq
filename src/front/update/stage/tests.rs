@@ -10,6 +10,7 @@
 mod editing;
 mod keys;
 mod search;
+mod starting;
 
 use iced::{Size, window};
 

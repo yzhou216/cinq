@@ -20,10 +20,12 @@ impl Workspace {
                 }
                 Media::Loaded { .. } => None,
             },
-            Kind::Fade | Kind::Stop => match self.target(cue) {
-                Some(target) if cue.can_target(target) => None,
-                _ => Some(Problem::NoTarget),
-            },
+            Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::GoTo => {
+                match self.target(cue) {
+                    Some(target) if cue.can_target(target) => None,
+                    _ => Some(Problem::NoTarget),
+                }
+            }
             Kind::Network if Destination::parse(&cue.destination).is_none() => {
                 Some(Problem::NoDestination)
             }

@@ -81,6 +81,43 @@ sequence.  A memo cue does nothing at all.  It serves as a note in the list
 or as the start of a sequence, like cue~1 of the storm show, whose notes tell
 the operator what the music is for.
 
+\section{Pause and start cues}
+
+A pause cue pauses another cue, its target, and a start cue starts it again.
+Both take no time, and both go in the list like any other cue.
+
+Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
+
+\begin{enumerate}
+\item Select the rain.  On its \ui{Time \& Loops} tab, check \ui{Loop until
+  stopped} if it is not checked, so that the rain keeps playing while you
+  work.
+\item Choose \ui{Pause} in the \ui{New cue} list of the toolbar and press
+  \ui{Add cue}\@.  The new cue appears below the rain and targets it, since a
+  new pause cue targets the cue above it.
+\item With the pause cue selected, choose \ui{Start} in the \ui{New cue} list
+  and press \ui{Add cue}\@.  The new start cue appears below the pause cue,
+  which it targets for the same reason.  Open the \ui{Target} list on its
+  \ui{Basics} tab and choose the rain instead.
+\item Select the rain, press \ui{Standby selected}, and press \ui{GO}\@.  The
+  rain starts.  Press \ui{GO} again.  The pause cue pauses the rain, which
+  the \texttt{State} column and the sidebar mark as paused, and the sound
+  stops where it was.
+\item Press \ui{GO} again.  The start cue resumes the rain from the point
+  where it stopped.  \ui{Resume all} in the transport resumes it as well.
+\end{enumerate}
+
+A start cue whose target is not paused fires the target as GO would, together
+with the cues that chain to it.  A pause cue also holds the cues that wait
+for its target to start them, as cue~4 of the storm show waits out the
+post-wait of cue~3, so that the whole sequence holds where it is.  Neither
+moves the cue on standby.
+
+A GoTo cue does move it.  Its target can be any cue, and when GO fires the
+GoTo cue, the target goes on standby, so that the next GO fires it, and
+nothing else happens.  Use one at the end of a list to put its first cue on
+standby again.
+
 \section*{Exercise}
 
 You can now make one GO fire a whole sequence.  In your own show, move the

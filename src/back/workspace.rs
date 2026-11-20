@@ -5,21 +5,23 @@
 //! Workspace, which holds the cue lists and the cues playing from them
 //!
 //! Playback here is bookkeeping without side effects: fired cues count
-//! time, fades move levels, and stop cues end other cues.  The audio output
-//! in [`super::Audio`] turns the result into sound, the video output in
+//! time, fades move levels, stop cues end other cues, start and pause cues
+//! fire and hold them, and GoTo cues move standby.  The audio output in
+//! [`super::Audio`] turns the result into sound, the video output in
 //! [`super::Video`] into pictures, the light output in [`super::Lights`]
 //! into DMX, and the network output in [`super::Network`] into messages.
 //! A [`Command`] asks for each change, and an [`Active`] records each cue
 //! that GO has fired.  The rules of playback live in [`playback`] and
-//! [`stopping`], those of lights in [`lighting`], those of network cues in
-//! [`networking`], those that change the cue lists in [`editing`] and
-//! [`pasting`], those of outputs in [`outputs`], undo and redo in
-//! [`history`], show files in [`show`], the places of the files of cues in
-//! [`files`], why cues cannot play in [`problems`], and the cues that send
-//! to no output in [`stranded`].
+//! [`stopping`], those of control cues in [`control`], those of lights in
+//! [`lighting`], those of network cues in [`networking`], those that change
+//! the cue lists in [`editing`] and [`pasting`], those of outputs in
+//! [`outputs`], undo and redo in [`history`], show files in [`show`], the
+//! places of the files of cues in [`files`], why cues cannot play in
+//! [`problems`], and the cues that send to no output in [`stranded`].
 
 mod active;
 mod command;
+mod control;
 mod editing;
 mod files;
 mod history;

@@ -22,16 +22,25 @@ impl Workspace {
     pub fn next_go<'a>(&'a self, list: &'a CueList) -> impl Iterator<Item = (&'a Cue, f32)> {
         list.standby
             .into_iter()
-            .flat_map(move |standby| list.chain(standby))
+            .flat_map(move |standby| self.chain_from(list, standby))
+    }
+
+    /// Returns the chain that fires from `start`, without the cues that
+    /// cannot play
+    pub(super) fn chain_from<'a>(
+        &'a self,
+        list: &'a CueList,
+        start: CueId,
+    ) -> impl Iterator<Item = (&'a Cue, f32)> {
+        list.chain(start)
             .filter(move |(cue, _)| self.problem(cue).is_none())
     }
 
-    /// Returns the cues that the next GO of each list may start that name a
-    /// file, each with its file, which the video output makes ready ahead
+    /// Returns the cues of [`Workspace::ahead`] that name a file, each with
+    /// its file, which the video output makes ready ahead
     pub(in crate::back) fn upcoming(&self) -> impl Iterator<Item = (&Cue, PathBuf)> {
-        self.lists
-            .iter()
-            .flat_map(|list| self.next_go(list))
+        self.ahead()
+            .into_iter()
             .filter_map(|(cue, _)| Some((cue, self.path(cue)?)))
     }
 
@@ -40,31 +49,43 @@ impl Workspace {
     /// cannot play are skipped, and cues that are already running restart,
     /// which cancels the cues that their old runs had yet to start.
     pub(super) fn go(self, list: usize) -> Self {
-        let Some((fired, standby)) = self.lists.get(list).and_then(|cues| {
-            let end = cues.chain(cues.standby?).last()?.0.id;
-            let fired: Vec<Active> = self
-                .next_go(cues)
-                .zip(self.next_run..)
-                .map(|((cue, delay), run)| {
-                    let after = (run > self.next_run).then(|| run - 1);
-                    Active::new(cue, run, after, delay.into())
-                })
-                .collect();
-            Some((fired, cues.after(end)))
+        let Some((start, standby)) = self.lists.get(list).and_then(|cues| {
+            let start = cues.standby?;
+            let end = cues.chain(start).last()?.0.id;
+            Some((start, cues.after(end)))
         }) else {
             return self;
         };
+        self.with_standby(list, standby)
+            .played_from(list)
+            .fired(list, start, 0.0)
+            .tick(0.0)
+    }
+
+    /// Fires the chain that starts at `start` in `list`, each cue started
+    /// by the one before it, as runs `offset` seconds along.  Cues that
+    /// are already running restart.
+    pub(super) fn fired(self, list: usize, start: CueId, offset: f64) -> Self {
+        let fired: Vec<Active> = self
+            .lists
+            .get(list)
+            .into_iter()
+            .flat_map(|cues| self.chain_from(cues, start))
+            .zip(self.next_run..)
+            .map(|((cue, delay), run)| {
+                let after = (run > self.next_run).then(|| run - 1);
+                Active::new(cue, run, after, delay.into()).advanced(offset)
+            })
+            .collect();
         let next_run = fired.last().map_or(self.next_run, |active| active.run + 1);
-        let workspace = fired.iter().fold(
-            self.with_standby(list, standby).played_from(list),
-            |workspace, cue| workspace.restarted(cue.id),
-        );
+        let workspace = fired
+            .iter()
+            .fold(self, |workspace, cue| workspace.restarted(cue.id));
         Self {
             active: workspace.active.into_iter().chain(fired).collect(),
             next_run,
             ..workspace
         }
-        .tick(0.0)
     }
 
     pub(super) fn tick(self, seconds: f64) -> Self {
@@ -114,14 +135,15 @@ impl Workspace {
             .fold(self.with_each_active(Active::begun), Self::with_effect_of)
     }
 
-    /// Carries out the effect of a fade or stop cue on its target, of a
-    /// light cue on its instruments, or of a network cue, unless an effect
-    /// earlier in the same tick has stopped the cue.  A fade acts only on a
-    /// target that is playing, takes over from a fade already on it only
-    /// where [`Fade::yields_to`] allows, and starts as far along as the tick
-    /// has passed the end of the pre-wait.
+    /// Carries out the effect of a fade, stop, start, pause, or GoTo cue on
+    /// its target, of a light cue on its instruments, or of a network cue,
+    /// unless an effect earlier in the same tick has stopped the cue or a
+    /// start cue has fired it again, which leaves its action to the next
+    /// tick.  A fade acts only on a target that is playing, takes over from
+    /// a fade already on it only where [`Fade::yields_to`] allows, and
+    /// starts as far along as the tick has passed the end of the pre-wait.
     fn with_effect_of(self, id: CueId) -> Self {
-        let Some(fired) = self.active_of(id).copied() else {
+        let Some(fired) = self.active_of(id).filter(|active| active.started).copied() else {
             return self;
         };
         match fired.effect {
@@ -133,6 +155,9 @@ impl Workspace {
                 }
             }),
             Effect::Stop(target) => self.stopped(target),
+            Effect::Start(target) => self.started_cue(target, fired.played()),
+            Effect::Pause(target) => self.held(target),
+            Effect::GoTo(target) => self.moved_to(target),
             Effect::Light => self.lit(fired.id, fired.run),
             Effect::Send => self.sent_by(fired.id),
             Effect::Sound(_) | Effect::Video { .. } | Effect::Picture | Effect::Nothing => self,
