@@ -199,7 +199,7 @@ impl Cue {
         other.id != self.id
             && match self.kind {
                 Kind::Fade => other.kind.has_file(),
-                Kind::Stop => true,
+                Kind::Start | Kind::Stop | Kind::Pause | Kind::GoTo => true,
                 Kind::Audio
                 | Kind::Video
                 | Kind::Picture

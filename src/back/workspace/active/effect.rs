@@ -63,6 +63,12 @@ pub(in crate::back::workspace) enum Effect {
     Light,
     /// Stops a cue
     Stop(CueId),
+    /// Fires a cue with its chain, or resumes it where it is paused
+    Start(CueId),
+    /// Pauses a cue with the cues that it would start
+    Pause(CueId),
+    /// Moves the standby of the list that holds a cue to that cue
+    GoTo(CueId),
     /// Sends the message of a network cue
     Send,
     /// Takes time and does nothing else, as wait and memo cues do

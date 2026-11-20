@@ -195,9 +195,10 @@ _tutorial.pdf_
 	Number of seconds, 0 or more and whole or fractional, before a sound starts
 	that *cinq* makes it ready, so that GO opens no sound file itself.
 	*cinq* makes ready the sounds that start within that time, of the runs
-	that GO has fired and have yet to sound, and of what the next GO of each
-	list would fire, counting each sound from its delay in a chain and its
-	pre-wait.
+	that GO has fired and have yet to sound, of what the next GO of each list
+	would fire, and of what the start cues among them would fire, counting
+	each sound from its delay in a chain and its pre-wait, along with the
+	pre-wait of the start cue that fires it.
 	The sounds that start together are made ready together, and those that
 	start at the instant of GO always are, even at 0.
 	As time passes the sounds of a long chain follow, so that a chain of any
@@ -1068,9 +1069,9 @@ page.
 	which the status bar tells.
 	A pasted cue keeps its number unless another cue holds it, when it takes
 	the next free number.
-	A fade or stop cue pasted together with its target, whether copied or cut
-	with it, targets the new copy of that cue, as in QLab, in each round of a
-	count.
+	A fade, start, stop, pause, or GoTo cue pasted together with its target,
+	whether copied or cut with it, targets the new copy of that cue, as in
+	QLab, in each round of a count.
 	Otherwise it keeps its target when it is pasted into the show it was
 	copied from and the target is still there, and has none in another show.
 	The file of a cue goes by its path from the directory of the show it lands

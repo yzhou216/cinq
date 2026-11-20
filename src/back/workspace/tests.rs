@@ -9,7 +9,9 @@
 mod adding;
 mod editing;
 mod files;
+mod going;
 mod history;
+mod holding;
 mod levels;
 mod light;
 mod network;
@@ -19,6 +21,7 @@ mod pasting;
 mod picture;
 mod playback;
 mod show;
+mod starting;
 mod stopping;
 mod video;
 
@@ -32,7 +35,22 @@ use crate::back::{
 /// Returns a workspace with one list of cues, whose picture files have
 /// loaded as pictures and every other file as ten seconds of sound
 pub(in crate::back) fn workspace(cues: Vec<Cue>) -> Workspace {
-    let workspace = Workspace::new(vec![CueList::new("Main", cues)]);
+    lists_of(vec![cues])
+}
+
+/// Returns a workspace with a list for each set of cues, loaded as for
+/// [`workspace`]
+fn lists_of(lists: Vec<Vec<Cue>>) -> Workspace {
+    let workspace = Workspace::new(
+        lists
+            .into_iter()
+            .enumerate()
+            .map(|(index, cues)| match index {
+                0 => CueList::new("Main", cues),
+                _ => CueList::new(format!("List {}", index + 1), cues),
+            })
+            .collect(),
+    );
     let loads: Vec<Command> = workspace
         .unloaded()
         .map(|cue| {
@@ -145,6 +163,34 @@ fn continuing_after(id: u32, post_wait: f32) -> Cue {
         post_wait: post_wait.into(),
         ..continuing(id)
     }
+}
+
+/// Returns a cue of a control kind that acts on cue `target`
+fn control(id: u32, kind: Kind, target: u32) -> Cue {
+    Cue::new(CueId(id), id.to_string(), kind, "Control")
+        .target(CueId(target))
+        .build()
+}
+
+pub(in crate::back) fn start_cue(id: u32, target: u32) -> Cue {
+    control(id, Kind::Start, target)
+}
+
+fn pause_cue(id: u32, target: u32) -> Cue {
+    control(id, Kind::Pause, target)
+}
+
+fn goto_cue(id: u32, target: u32) -> Cue {
+    control(id, Kind::GoTo, target)
+}
+
+fn stop_cue(id: u32, target: u32) -> Cue {
+    control(id, Kind::Stop, target)
+}
+
+/// Returns the standby of the list `list`
+fn standby_of(workspace: &Workspace, list: usize) -> Option<u32> {
+    workspace.lists()[list].standby.map(|id| id.0)
 }
 
 /// Returns a fade cue that fades cue 1 out over four seconds and stops it

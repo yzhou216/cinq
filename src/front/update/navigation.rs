@@ -13,12 +13,15 @@ use crate::{
 impl App {
     /// A selection on the standby cue moves on with standby, so that the cue
     /// list keeps the next cue in view as the show runs, while a selection
-    /// elsewhere stays where the operator put it.
+    /// elsewhere stays where the operator put it.  The stage comes up for a
+    /// GO that fires a picture or video cue, itself or through a start cue.
     pub(super) fn gone(self) -> Self {
         let following = self.selected.is_some() && self.selected == self.current().standby;
+        let fired = self.workspace.next_go(self.current()).collect();
         let staged = self
             .workspace
-            .next_go(self.current())
+            .reached(fired)
+            .iter()
             .any(|(cue, _)| cue.kind.on_stage());
         let go = Command::Go { list: self.list };
         let app = self.send(go);

@@ -45,7 +45,7 @@ impl Workspace {
 
     /// Returns the runs that the run `run` would start, directly or
     /// through other runs that have yet to start
-    fn followers(&self, run: u32) -> Vec<u32> {
+    pub(super) fn followers(&self, run: u32) -> Vec<u32> {
         self.active
             .iter()
             .filter(|next| next.after == Some(run) && next.waiting())

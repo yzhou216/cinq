@@ -12,6 +12,7 @@ mod opener;
 mod opening;
 mod patch;
 mod retry;
+mod starting;
 mod voice;
 
 use std::{

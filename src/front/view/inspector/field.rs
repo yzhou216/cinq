@@ -77,8 +77,10 @@ impl Field {
                 ]
                 .spacing(SPACING)
                 .into(),
-                Kind::Fade | Kind::Stop if editable => target_menu(app, cue),
-                Kind::Fade | Kind::Stop => shown(
+                Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::GoTo if editable => {
+                    target_menu(app, cue)
+                }
+                Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::GoTo => shown(
                     &app.workspace
                         .target(cue)
                         .map_or_else(String::new, Cue::to_string),

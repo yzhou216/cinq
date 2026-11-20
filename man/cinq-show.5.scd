@@ -131,19 +131,21 @@ Each cue is a table in the array *cue* of its list:
 
 *id*
 	Identity of the cue, a whole number that no other cue of the show has,
-	by which fade and stop cues name their targets.
+	by which the cues that act on other cues name their targets.
 
 *number*
 	Number of the cue, as the cue list shows it, which can be any text.
 
 *kind*
 	What the cue does: *audio*, *video*, *picture*, *light*, *network*,
-	*fade*, *stop*, *wait*, or *memo*.
+	*fade*, *start*, *stop*, *pause*, *goto*, *wait*, or *memo*.
 	An audio cue plays a sound file, a video cue plays a video file, and a
 	picture cue shows a picture file, as *STAGE* describes.
 	A light cue fades instruments of the light patch, as *LIGHTS*
 	describes, and a network cue sends a message over the network, as
 	*NETWORK* describes.
+	A start cue starts another cue, a pause cue pauses it, and a GoTo cue
+	moves the standby cue of its list to it, as *CONTROL CUES* describes.
 	The clock of an audio or video cue follows its sound as the audio device
 	plays it.
 	Its fades, its end, and the cues that follow it therefore stay with what
@@ -175,9 +177,9 @@ Each cue is a table in the array *cue* of its list:
 	stops it, a stop cue, or a panic.
 
 *target*
-	Identity of the cue that a fade or stop cue acts on.
-	A fade cue acts on an audio, video, or picture cue, and a stop cue on any
-	cue but itself.
+	Identity of the cue that a fade, start, stop, pause, or GoTo cue acts on.
+	A fade cue acts on an audio, video, or picture cue, and each of the others
+	on any cue but itself, in any list of the show.
 
 *pre_wait*
 	Seconds between the cue firing and its action, which are none by
@@ -272,9 +274,9 @@ which opens beside the main window once the show holds a picture or video
 cue, as a window that the operator can move to the display of the audience.
 It shows black while no picture shows, and otherwise the picture of the cue
 that fired last, whole and as large as the window allows.
-Each GO that fires a picture or video cue makes the stage window fullscreen,
-on the display that it is on, and brings it before the other windows, so
-that the picture fills the screen as it comes up.
+Each GO that fires a picture or video cue, itself or through a start cue,
+makes the stage window fullscreen, on the display that it is on, and brings it
+before the other windows, so that the picture fills the screen as it comes up.
 A picture that comes up hides those of the cues that fired before it where
 it lies over them, which show again once it has gone, as that of a picture
 cue does once a video that fired after it ends, unless something has stopped
@@ -393,6 +395,46 @@ Consoles and programs tell in their manuals which messages they take, and on
 which ports.
 For example, the Eos consoles of ETC take OSC over TCP with SLIP on port
 3037, and fire cue 5 of cue list 1 for _/eos/cue/1/5/fire_.
+
+# CONTROL CUES
+
+A start, pause, or GoTo cue acts on its *target* once its pre-wait is over, as
+the transport and GoTo cues of QLab do.
+It takes no time, as a stop cue does, and its target can be any cue but itself,
+in its own list or in another.
+A cue of these kinds that names no target cannot play, and shows among the
+warnings.
+
+A start cue starts its target as GO starts the standby cue.
+It fires the target together with every cue that auto-continue or auto-follow
+chains to it in the list of the target, passing over those that cannot play,
+and restarts any of them that already runs.
+Where the target is paused, the start cue resumes it instead, together with
+the cues that wait for it to start them, and fires nothing else.
+It leaves the standby cue of every list where it is, and puts nothing in the
+history that undo takes back.
+The cues that a start cue fires act on other cues, the lights, and the network
+from the next tick of the clock, a fortieth of a second later, while their sound
+and pictures come at once, so that start cues that start each other without
+waits take turns rather than hold up cinq, until something stops them, such as
+a panic.
+
+A pause cue pauses its target, whatever the target is doing: waiting in a
+chain, waiting out its pre-wait, playing, or looping.
+It pauses as well the cues that wait for the target to start them, so that the
+chain holds where it is.
+A target that does not run, or no longer does, is left alone, even where cues
+that it fired still wait out its post-wait.
+Pausing holds the fades of a cue, as Pause all does.
+A start cue that targets the paused cue, or Resume all, resumes it.
+
+A GoTo cue moves the standby cue of the list that holds its target to the
+target, so that the next GO of that list fires it, and fires nothing itself.
+The move is made as GO makes its own: undo does not take it back, and the
+moves of standby that undo could have taken back before it in that list are
+dropped.
+A GoTo cue in the chain that a GO fires sets the standby cue that the GO
+leaves, since it acts after the GO has moved standby past the chain.
 
 # UNSAVED CHANGES
 
@@ -650,6 +692,46 @@ kind = "audio"
 name = "Storm"
 file = "storm.wav"
 level = 0.0
+```
+
+A list in which music loops until the second GO pauses it, the third GO resumes
+it where it paused, and the fourth fades it out and stops it:
+
+```
+[[list]]
+name = "Main"
+
+[[list.cue]]
+id = 1
+number = "1"
+kind = "audio"
+name = "Vamp"
+file = "sounds/vamp.ogg"
+loop = true
+
+[[list.cue]]
+id = 2
+number = "2"
+kind = "pause"
+name = "Hold vamp"
+target = 1
+
+[[list.cue]]
+id = 3
+number = "3"
+kind = "start"
+name = "Resume vamp"
+target = 1
+
+[[list.cue]]
+id = 4
+number = "4"
+kind = "fade"
+name = "Vamp out"
+target = 1
+duration = 4.0
+level = -60.0
+stop_target = true
 ```
 
 # SEE ALSO

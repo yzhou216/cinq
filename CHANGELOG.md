@@ -29,6 +29,18 @@ Major changes and improvements in each release of cinq, newest first.
   to the new level, where the change used to wait for the next run of the
   fade cue.  Its duration, target, and stop setting still wait for the next
   run.
+- Start, pause, and GoTo cues act on other cues, as those of QLab do, and
+  take no time.  A start cue fires its target together with the cues that
+  chain to it, as GO does, or resumes it where it is paused.  A pause cue
+  pauses its target while it runs, wherever it is, together with the cues
+  that wait for it to start them.  A GoTo cue moves the standby cue of the
+  list of its target to the target, so that the next GO of that list fires
+  it.  Each targets any cue but itself, in any list, chosen on the Basics tab
+  of the inspector, and a new one targets the cue above it.  The sounds and
+  pictures that a start cue fires are made ready ahead, as those of GO are,
+  and a picture or video cue that it fires brings up the stage window.  The
+  chapter of the tutorial on sequences covers pause and start cues.  cinq
+  0.1.5 and older refuse a show with start, pause, or GoTo cues.
 
 ## v0.1.5
 
