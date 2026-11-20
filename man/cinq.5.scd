@@ -607,6 +607,14 @@ A text field of the inspector, or a drop-down list
 	file, as the Choose button does, and the status bar hints it.
 	Anywhere else Enter leaves a text field, and opens the menu of a drop-down
 	list, which takes the keyboard from there.
+	A level typed into a field, the level of a cue, a send, the level of new
+	cues of an output, or that of an instrument of a light cue, applies once
+	the field is left, by Enter, Tab, a click, GO, or anything else the
+	operator does, so that a cue that plays does not follow each key, as the
+	*2* of *-25* would make it.
+	GO then fires the cue at the level typed.
+	The slider next to the level of a cue applies as it moves.
+	Names and addresses apply as they are typed.
 
 The help page
 	The page fills the main window, while the stage window keeps showing the

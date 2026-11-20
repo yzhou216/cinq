@@ -214,7 +214,6 @@ impl App {
             | Message::Clicked
             | Message::WindowFocused(_)
             | Message::Edit(..)
-            | Message::LevelTyped(..)
             | Message::Patch(_)
             | Message::FileChosen(..)
             | Message::ToggleHelp

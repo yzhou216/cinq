@@ -49,10 +49,19 @@ pub(super) fn level(text: &str) -> Option<String> {
         .then(|| format!("levels run from {SILENCE:+} to {LOUDEST:+} dB, or empty for none"))
 }
 
+/// Returns why `text` is not the level of a cue, if it is not.  An empty one
+/// is not, since a cue always has a level.
+fn cue_level(text: &str) -> Option<String> {
+    parse_level(text)
+        .is_none()
+        .then(|| format!("levels run from {SILENCE:+} to {LOUDEST:+} dB"))
+}
+
 /// Returns why `text` cannot be the value of `setting`, if it cannot, which
 /// the status bar tells once the keyboard leaves a field that holds it
 pub(in crate::front) fn rejection(app: &App, setting: Setting, text: &str) -> Option<String> {
     match setting {
+        Setting::Level(_) => cue_level(text),
         Setting::OutputName(id) => name(app, app.workspace.output(id)?, text),
         Setting::Channels(_) => channels(text),
         Setting::NewCues(_) | Setting::Send(..) => level(text),

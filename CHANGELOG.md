@@ -10,6 +10,14 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A level typed into a field, that of a cue, a send, the new cues of an
+  output, or an instrument of a light cue, applies once the field is left, by
+  Enter, Tab, a click, GO, or any other key or click.  A cue that plays no
+  longer follows each key, as the `2` of `-25` would have made it 28 dB
+  louder, and an emptied send no longer silences a cue before a level is typed
+  back.  GO fires a cue at the level typed.  The slider still applies as it
+  moves.
+
 ## v0.1.5
 
 - `back` and `forward` go back and forward between the places that jumps left,

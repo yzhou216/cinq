@@ -10,22 +10,19 @@ mod field;
 mod light;
 mod output;
 pub(in crate::front) use output::rejection;
-use output::room;
+use output::typing;
 mod sends;
 
 use iced::{
     Center, Element, Fill,
-    widget::{
-        checkbox, column, container, progress_bar, radio, row, rule, slider, table, text,
-        text_input,
-    },
+    widget::{checkbox, column, container, progress_bar, radio, row, rule, slider, table, text},
 };
 use strum::VariantArray;
 
 use super::{INSPECTOR, SPACING, format, keep_keys, theme};
 use crate::{
     back::{Cue, Edit, Kind, LEVELS, Media, parse_level},
-    front::{App, Message, Tab},
+    front::{App, Message, Setting, Tab},
 };
 use field::Field;
 
@@ -145,14 +142,14 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
     };
     let id = cue.id;
     let editable = app.editable();
-    let typed = match &app.typed_level {
-        Some((typed, text)) if *typed == id => text.clone(),
-        _ => format::decibels(cue.level),
-    };
-    let field = text_input("", &typed)
-        .on_input_maybe(editable.then_some(move |text| Message::LevelTyped(id, text)))
-        .width(room(LEVEL_ROOM))
-        .style(theme::field(parse_level(&typed).is_some()));
+    let (field, typed) = typing(
+        app,
+        Setting::Level(id),
+        "",
+        format::decibels(cue.level),
+        LEVEL_ROOM,
+    );
+    let field = field.style(theme::field(parse_level(&typed).is_some()));
     let level: Element<'_, Message> = if editable {
         slider(LEVELS, cue.level, move |db| {
             Message::Edit(id, Edit::Level(db))
