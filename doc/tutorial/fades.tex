@@ -40,6 +40,9 @@ toward the new level in the time it has left.  Change the level of the rain
 itself after a fade has lowered it, and the rain moves by the same amount,
 so that a cue that a fade has lowered stays lower.
 
+A checkbox, such as \ui{Stop target when done}, takes the keyboard with
+\key{Tab} like a field, and \key{Enter} checks or clears it.
+
 \section{A fade of your own}
 
 Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
@@ -48,7 +51,16 @@ Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
 \item Select the rain, choose \ui{Fade} in the toolbar list, and press
   \ui{Add cue}.  The new fade cue appears below the rain and targets it,
   since a new fade cue targets the cue above it.  By default, it fades its
-  target to silence over five seconds and then stops it.
+  target to silence over five seconds and then stops it.  With the keys,
+  press \key{Shift+Tab} twice from the cue list, which reaches the \ui{New
+  cue} list from the end of the order of the fields, since \key{Tab} would
+  pass the fields of the inspector first, press \key{Enter} to open the list,
+  move to \ui{Fade} with \key{j}
+  and \key{k}, and press \key{Enter} to pick it.  Then press the key that the
+  status bar names to leave the list, \key{Control+c} in the vi keymap, which
+  gives the keyboard back to the cue list, and press \key{o}, which adds a
+  cue of the kind that the list shows.  The list keeps its kind, so each
+  later \key{o} adds a fade cue until you pick another kind.
 \item Select the rain, press \ui{Standby selected}, and press \ui{GO} twice:
   once to start the rain, and once to fade it out.
 \end{enumerate}

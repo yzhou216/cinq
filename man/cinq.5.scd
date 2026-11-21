@@ -664,8 +664,9 @@ A text field of the inspector, a drop-down list, or a checkbox
 	Show mode never locks it, since it is the way out, so that the keyboard
 	alone locks the show before a performance and unlocks it after.
 	It has no key of its own.
-	From the cue list, *previous_field* reaches it in three presses with a cue
-	selected that has an inspector, as the sidebar holds the last two stops.
+	From the cue list, *previous_field* reaches it in three presses, after the
+	list of the sidebar and the list of the kind of cue to add, and reaches
+	that list in two.
 	The buttons Add instrument and Remove of the Light Patch are stops as well,
 	in the order of the window, which Enter presses, with the same border, and
 	show mode locks them, so that these keys pass them by then.

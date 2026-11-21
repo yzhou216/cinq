@@ -46,7 +46,8 @@ Press \key{Control+l} and open \texttt{storm.cinq.toml} again.
 
 Cue~3 auto-continues to cue~4 after a post-wait of 4 seconds, and cue~4
 continues to cue~5 after 1.5 seconds.  Cue~5 waits for GO, so the sequence
-ends there.  While a cue waits to start, the sidebar counts down to it.
+ends there.  While a cue waits to start, its \texttt{State} column reads
+\texttt{in} and the seconds left.
 
 \section{Pre-wait and post-wait}
 
@@ -91,8 +92,10 @@ Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
 \begin{enumerate}
 \item Select the rain.  On its \ui{Time \& Loops} tab, check \ui{Loop until
   stopped or devamped} if it is not checked, so that the rain keeps playing
-  while you work.
-\item Choose \ui{Pause} in the \ui{New cue} list of the toolbar and press
+  while you work.  With the keys, \key{Tab} reaches the checkbox and
+  \key{Enter} checks it, as in Chapter~\ref{ch:cues}.
+\item Choose \ui{Pause} in the \ui{New cue} list of the toolbar, with the keys
+  of Chapter~\ref{ch:fades} if you like, and press
   \ui{Add cue}\@.  The new cue appears below the rain and targets it, since a
   new pause cue targets the cue above it.
 \item With the pause cue selected, choose \ui{Start} in the \ui{New cue} list
@@ -141,8 +144,8 @@ next four the vamp, and the last two the ending.
 
 \begin{enumerate}
 \item Press \ui{Panic}, and select the rain.  On its \ui{Time \& Loops} tab,
-  check \ui{Loop until stopped or devamped} if it is not checked, and type
-  \texttt{2} in \ui{Loop start} and \texttt{6} in \ui{Loop end}.
+  check \ui{Loop until stopped or devamped} if it is not checked, as above,
+  and type \texttt{2} in \ui{Loop start} and \texttt{6} in \ui{Loop end}.
 \item With the rain selected, choose \ui{Devamp} in the \ui{New cue} list
   and press \ui{Add cue}\@.  The new cue appears below the rain and targets
   it, as a new pause cue does.
@@ -205,9 +208,9 @@ and the motions of \key{d} and \key{y}, so that \key{3>>} indents three cues.
 
 A group collapses into one row, which hides the cues that it holds, as a closed
 fold does in Vim.  Select the group and press \key{zc}, or \key{ArrowLeft} with
-the cua keymap, and the row of the group gains a \texttt{+} before its name and
-the number of cues that it hides after it, while an open group has a
-\texttt{-} before its name.  \key{zo}, or \key{ArrowRight} with the cua
+the cua keymap, and the row of the group gains a \texttt{+} before its name,
+while an open group has a \texttt{-} before its name.  Its \texttt{Target}
+column says how many cues the group holds, as in \texttt{2 cues}.  \key{zo}, or \key{ArrowRight} with the cua
 keymap, opens it again, \key{za} does either, and \key{zM} and \key{zR}
 collapse and open every group.  A click on the \texttt{+} or the \texttt{-}
 does the same.  A collapsed group fires, stops, and pauses its cues as an open
