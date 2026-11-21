@@ -97,6 +97,10 @@ Major changes and improvements in each release of cinq, newest first.
   list switched to selects the collapsed group that hides its standby cue.
   Collapsing is no change for undo, show mode allows it, and the show file
   keeps it as `collapsed = true` on the group.
+- The transport ends the name and the notes of the standby cue in an ellipsis
+  where they run out of room, where they were cut without a sign, and the Show
+  mode checkbox moves to the toolbar, so that the notes take the whole width
+  under the title: a long note shows 89 characters instead of 56 at 1024x768.
 
 ## v0.1.5
 

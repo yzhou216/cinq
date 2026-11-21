@@ -8,8 +8,8 @@
 //! the keyboard, as the fields of the inspector do.
 
 use iced::{
-    Center, Element,
-    widget::{row, space, text},
+    Center, Element, padding,
+    widget::{checkbox, container, row, space, text},
 };
 use strum::VariantArray;
 
@@ -27,6 +27,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         let several = app.workspace.outputs().len() > 1;
         return row![
             space::horizontal(),
+            show_mode(app),
             button("Add output")
                 .on_press_maybe(app.editable().then_some(Message::Add(Place::After, 1))),
             button("Delete output").on_press_maybe(
@@ -43,6 +44,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     let tools = row![
         button("Standby selected").on_press_maybe(movable.then_some(Message::StandbySelected)),
         space::horizontal(),
+        show_mode(app),
         // Names the list for a newcomer, who took it for the kind of the
         // selected cue, which it only sets for the cue that Add cue makes
         text("New cue:"),
@@ -55,4 +57,17 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     .padding(SPACING)
     .align_y(Center);
     keep_keys(tools, keymap)
+}
+
+/// Returns the checkbox of show mode, which locks the buttons beside it,
+/// with room after it, so that its label does not read as the start of the
+/// next
+fn show_mode(app: &App) -> Element<'_, Message> {
+    container(
+        checkbox(app.workspace.show_mode())
+            .label("Show mode")
+            .on_toggle(Message::ShowMode),
+    )
+    .padding(padding::right(SPACING))
+    .into()
 }
