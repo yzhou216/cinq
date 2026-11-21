@@ -31,6 +31,9 @@ pub enum Kind {
     Stop,
     /// Pauses another cue until something resumes it
     Pause,
+    /// Lets another cue that loops leave its loop at the end of a pass and
+    /// play on to its end
+    Devamp,
     /// Moves the standby of the list of another cue to that cue, so that the
     /// next GO of that list fires it
     GoTo,
@@ -71,7 +74,7 @@ impl Kind {
     pub fn has_target(self) -> bool {
         matches!(
             self,
-            Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::GoTo
+            Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo
         )
     }
 }

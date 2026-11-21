@@ -41,6 +41,29 @@ Major changes and improvements in each release of cinq, newest first.
   and a picture or video cue that it fires brings up the stage window.  The
   chapter of the tutorial on sequences covers pause and start cues.  cinq
   0.1.5 and older refuse a show with start, pause, or GoTo cues.
+- An audio or video cue that loops can loop a section of its file, so that one
+  file holds an introduction, a vamp, and an ending: the cue plays from its
+  start to its loop end, then goes back to its loop start each time it reaches
+  its loop end.  The Loop start and Loop end fields of the Time & Loops tab
+  set them, blank for the start and the end of the cue, which loops the whole
+  clip as before, and they are editable while the cue loops.  A loop that
+  reaches outside the cue counts as the part of it that lies within, and a loop
+  that starts at or after its end cannot play: the cue reads BROKEN and GO
+  skips it.  The show file keeps `loop_start` and `loop_end` of a cue that
+  sets them, looping or not.  cinq 0.1.5 and older ignore `loop_start` and
+  `loop_end`, and loop the whole clip.
+- Devamp cues, named as in QLab, let an audio or video cue that loops leave its
+  loop: the run of the target plays on to the end of a pass through its loop,
+  then from the loop end to the end of its cue, and ends there.  It leaves at
+  the first end of a pass that lies more than half a second ahead, which the
+  sound needs to leave its loop cleanly, so that a loop shorter than about half
+  a second can go round once more than planned.  A devamp cue takes no time,
+  and its target is any audio or video cue, in any list, chosen on the Basics
+  tab.  A target that does not loop reads NO LOOP, and GO skips the cue.  A run
+  that a devamp cue has let go on shows the time it has left, and fades, stop
+  cues, pause cues, and panics act on it as on any run.  The chapter of the
+  tutorial on sequences covers loop sections and devamp cues.  cinq 0.1.5 and
+  older refuse a show with devamp cues.
 
 ## v0.1.5
 

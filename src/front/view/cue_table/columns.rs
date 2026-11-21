@@ -100,9 +100,12 @@ pub(super) fn state(
         (Some(Problem::NotLoaded), _) => ("loading".to_owned(), text::default),
         (Some(Problem::NoFile), _) => ("NO FILE".to_owned(), danger),
         (Some(Problem::NoTarget), _) => ("NO TARGET".to_owned(), danger),
+        (Some(Problem::NotLooping), _) => ("NO LOOP".to_owned(), danger),
         (Some(Problem::NoDestination), _) => ("NO DESTINATION".to_owned(), danger),
         (Some(Problem::NoMessage), _) => ("NO MESSAGE".to_owned(), danger),
-        (Some(Problem::LoadFailed(_) | Problem::EmptyClip), _) => ("BROKEN".to_owned(), danger),
+        (Some(Problem::LoadFailed(_) | Problem::EmptyClip | Problem::EmptyLoop), _) => {
+            ("BROKEN".to_owned(), danger)
+        }
         (None, Some(active)) if active.paused => ("paused".to_owned(), text::warning),
         (None, Some(active)) => (format::phase(active), text::success),
         (None, None) if workspace.sends_nowhere(cue) => ("NO OUTPUT".to_owned(), text::warning),

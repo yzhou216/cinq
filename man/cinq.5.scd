@@ -1069,9 +1069,9 @@ page.
 	which the status bar tells.
 	A pasted cue keeps its number unless another cue holds it, when it takes
 	the next free number.
-	A fade, start, stop, pause, or GoTo cue pasted together with its target,
-	whether copied or cut with it, targets the new copy of that cue, as in
-	QLab, in each round of a count.
+	A fade, start, stop, pause, devamp, or GoTo cue pasted together with its
+	target, whether copied or cut with it, targets the new copy of that cue,
+	as in QLab, in each round of a count.
 	Otherwise it keeps its target when it is pasted into the show it was
 	copied from and the target is still there, and has none in another show.
 	The file of a cue goes by its path from the directory of the show it lands

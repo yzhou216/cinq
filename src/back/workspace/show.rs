@@ -64,6 +64,8 @@ struct CueFile {
     end: Option<f32>,
     #[serde(default, rename = "loop", skip_serializing_if = "std::ops::Not::not")]
     looping: bool,
+    loop_start: Option<f32>,
+    loop_end: Option<f32>,
     target: Option<u32>,
     pre_wait: Option<f32>,
     duration: Option<f32>,
@@ -184,6 +186,8 @@ impl CueFile {
             start: set(cue.start.value()).filter(|_| plays),
             end: cue.end.time().filter(|_| plays),
             looping: plays && cue.looping,
+            loop_start: cue.loop_start.time().filter(|_| plays),
+            loop_end: cue.loop_end.time().filter(|_| plays),
             target: cue
                 .target
                 .filter(|_| cue.kind.has_target())
@@ -220,6 +224,8 @@ impl CueFile {
             .maybe_start(self.start)
             .maybe_end(self.end)
             .looping(self.looping)
+            .maybe_loop_start(self.loop_start)
+            .maybe_loop_end(self.loop_end)
             .maybe_target(self.target.map(CueId))
             .maybe_pre_wait(self.pre_wait)
             .maybe_duration(self.duration)

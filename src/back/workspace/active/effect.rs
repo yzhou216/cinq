@@ -67,6 +67,8 @@ pub(in crate::back::workspace) enum Effect {
     Start(CueId),
     /// Pauses a cue with the cues that it would start
     Pause(CueId),
+    /// Lets a cue that loops leave its loop at the end of a pass
+    Devamp(CueId),
     /// Moves the standby of the list that holds a cue to that cue
     GoTo(CueId),
     /// Sends the message of a network cue

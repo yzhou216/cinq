@@ -21,7 +21,8 @@ Minimal cue-based show controller, the
   as you save it.  GO and Panic act from anywhere, even halfway through
   another key sequence, apart from Space while a text field has the keyboard.
 - **Audio cues** in WAV, FLAC, Ogg Vorbis, MP3, or AAC, with start and end
-  times, seamless loops, and levels that change while they play.
+  times, seamless loops of the whole clip or a section of it, and levels that
+  change while they play.
 - **Video cues** in H.264 and MP4, with their sound, which cinq decodes
   itself with rust_h264 rather than handing them to another player, and
   **picture cues** in PNG or JPEG, which hold until something stops them.
@@ -32,8 +33,9 @@ Minimal cue-based show controller, the
   keeping its level until a later light cue names it.
 - **Network cues** that send OSC over TCP or UDP, such as to fire the cues
   of a lighting console.
-- **Fade, start, stop, pause, GoTo, wait, and memo cues**, chained by
-  auto-continue and auto-follow, with pre-waits and post-waits.
+- **Fade, start, stop, pause, devamp, GoTo, wait, and memo cues**, chained by
+  auto-continue and auto-follow, with pre-waits and post-waits.  A devamp cue
+  lets a looping sound or video leave its loop and play on to its end.
 - **Panic** fades everything out in a second, and a second Panic stops at
   once.
 - **Show mode** locks editing during a performance.

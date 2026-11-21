@@ -6,8 +6,10 @@
 //! of the time that the sounds of audio and video cues have reached, which
 //! need no audio device
 
+mod devamping;
 mod device;
 mod fakes;
+mod leaving;
 mod opener;
 mod opening;
 mod patch;
@@ -59,7 +61,13 @@ fn ask(wanted: &Wanted) -> Ask {
 /// Returns `seconds` of silence as a WAV file: mono, in 16 bits, at 8000
 /// frames a second
 fn silence(seconds: f32) -> Vec<u8> {
-    let data = (seconds * 16000.0) as u32;
+    silence_at(seconds, 8000)
+}
+
+/// Returns `seconds` of silence as a WAV file: mono, in 16 bits, at `rate`
+/// frames a second
+fn silence_at(seconds: f32, rate: u32) -> Vec<u8> {
+    let data = (seconds * rate as f32) as u32 * 2;
     [
         b"RIFF".as_slice(),
         &(36 + data).to_le_bytes(),
@@ -68,8 +76,8 @@ fn silence(seconds: f32) -> Vec<u8> {
         &16_u32.to_le_bytes(),
         &1_u16.to_le_bytes(),
         &1_u16.to_le_bytes(),
-        &8000_u32.to_le_bytes(),
-        &16000_u32.to_le_bytes(),
+        &rate.to_le_bytes(),
+        &(rate * 2).to_le_bytes(),
         &2_u16.to_le_bytes(),
         &16_u16.to_le_bytes(),
         b"data",
@@ -86,7 +94,7 @@ fn whole(path: &Path) -> Wanted {
         clip: Clip {
             start: 0.0,
             end: 0.1,
-            looping: false,
+            looping: None,
         },
     }
 }

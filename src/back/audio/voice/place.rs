@@ -12,7 +12,7 @@ use std::path::Path;
 use kira::{
     AudioManager, AudioManagerSettings, Capacities,
     sound::{
-        FromFileError, Region, SoundData,
+        EndPosition, FromFileError, Region, SoundData,
         streaming::{StreamingSoundData, StreamingSoundHandle},
     },
     track::MainTrackBuilder,
@@ -95,7 +95,7 @@ pub(super) fn opened(
     clip: Clip,
 ) -> Result<Play, String> {
     let data = StreamingSoundData::from_file(file).map_err(crate::back::audio::reason)?;
-    let data = clipped(data, clip, clip.position(active.played()), active.level);
+    let data = clipped(data, clip, active.played(), active.level);
     placed(target, data)
 }
 
@@ -135,21 +135,40 @@ where
     })
 }
 
-/// Returns `data` set to play `clip`, from `position` in the file and at
-/// `level`
+/// Returns whether a sound of `clip` loops once `played` seconds of the clip
+/// have played, which a clip does until its last pass through its loop
+/// begins, once a devamp cue has let it go on
+pub(super) fn circles(clip: Clip, played: f64) -> bool {
+    clip.looping.is_some() && clip.last_pass().is_none_or(|last| played < last)
+}
+
+/// Returns `data` set to play `clip` from where it is once `played` seconds
+/// of it have played, and at `level`.  A clip let go on from its loop that
+/// has begun its last pass gets no loop, so that its sound plays on from the
+/// end of its loop.
 pub(in crate::back::audio) fn clipped(
     data: StreamingSoundData<FromFileError>,
     clip: Clip,
-    position: f64,
+    played: f64,
     level: f32,
 ) -> StreamingSoundData<FromFileError> {
     // Cut from the start of the file, so that times in the cut are times in
     // the file, which kira seeks to directly.  A cut is left out where it
     // would end past the last frame of the file.
     let cut = (clip.end < data.duration().as_secs_f64()).then(|| Region::from(0.0..clip.end));
-    let looped = clip.looping.then(|| Region::from(clip.start..));
+    let looped = clip
+        .looping
+        .filter(|_| circles(clip, played))
+        .map(|section| Region {
+            start: section.start.into(),
+            end: if section.end < clip.end {
+                EndPosition::Custom(section.end.into())
+            } else {
+                EndPosition::EndOfAudio
+            },
+        });
     data.slice(cut)
         .loop_region(looped)
-        .start_position(position)
+        .start_position(clip.position(played))
         .volume(level)
 }

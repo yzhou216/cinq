@@ -66,8 +66,12 @@ impl Active {
             .map_or(1.0, |fade| fade.opacity * fade.left() as f32)
     }
 
+    /// Returns whether the clip goes round its loop for as long as nothing
+    /// stops it, which it does not once a devamp cue has let it go on
     pub(super) fn loops(&self) -> bool {
-        self.effect.clip().is_some_and(|clip| clip.looping)
+        self.effect
+            .clip()
+            .is_some_and(|clip| clip.lasts().is_none())
     }
 
     pub(super) fn endless(&self) -> bool {

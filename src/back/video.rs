@@ -15,11 +15,14 @@
 //! list may start are made ready ahead, as their sounds are, since decoding
 //! has to start at the sync sample before the start of a clip, a few
 //! seconds before it in many files, and a large picture file takes a moment
-//! to decode.  The workspace stays the only record of what should be seen,
-//! so a picture that cannot play goes back to it as a file that cannot be
-//! played.  Video files hold H.264 in MP4, whose tracks [`track`] reads,
-//! and which [`decoder`] decodes with rust_h264, while picture files hold
-//! PNG or JPEG, which [`still`] decodes.
+//! to decode.  A clip that loops shows the pictures of its loop again and
+//! again, and once a devamp cue has let it go on, those from the end of
+//! its loop to the end of its clip, which a run takes up as the workspace
+//! changes the clip that it shows.  The workspace stays the only record of
+//! what should be seen, so a picture that cannot play goes back to it as a
+//! file that cannot be played.  Video files hold H.264 in MP4, whose
+//! tracks [`track`] reads, and which [`decoder`] decodes with rust_h264,
+//! while picture files hold PNG or JPEG, which [`still`] decodes.
 
 mod decoder;
 mod player;
@@ -48,10 +51,23 @@ pub const PICTURE_FILES: [&str; 3] = ["jpeg", "jpg", "png"];
 
 /// What a player decodes, which one made ready ahead has to match for a
 /// run to take it
-#[derive(PartialEq)]
 struct Showing {
     path: PathBuf,
     shown: Shown,
+}
+
+impl Showing {
+    /// Returns whether a player made ready for `self` decodes `other` as
+    /// well, which it does when the two differ in no more than a devamp cue
+    /// letting the clip go on, as one that comes in the pre-wait of the run
+    /// does, since the player moves on to the new clip once it is taken
+    fn matches(&self, other: &Self) -> bool {
+        let unreleased = |shown| match shown {
+            Shown::Clip(clip) => Shown::Clip(clip.unreleased()),
+            Shown::Still => Shown::Still,
+        };
+        self.path == other.path && unreleased(self.shown) == unreleased(other.shown)
+    }
 }
 
 #[derive(Default)]
@@ -77,9 +93,14 @@ impl Video {
                 let cue = workspace.cue(active.id)?;
                 let shown = active.shown()?;
                 let showing = workspace.path(cue).map(|path| Showing { path, shown });
-                let player = taken(&mut ended, &cue.id, |run| *run == active.run)
-                    .or_else(|| taken(&mut ready, &cue.id, |made| Some(made) == showing.as_ref()));
-                Some((cue, active.run, moved_on(showing, active, player)))
+                let player = taken(&mut ended, &cue.id, |run| *run == active.run).or_else(|| {
+                    taken(&mut ready, &cue.id, |made| {
+                        showing
+                            .as_ref()
+                            .is_some_and(|showing| made.matches(showing))
+                    })
+                });
+                Some((cue, active.run, moved_on(showing, shown, active, player)))
             })
             .partition_map(|(cue, run, advanced)| match advanced {
                 Ok((player, picture)) => Either::Left((
@@ -96,7 +117,7 @@ impl Video {
                     path,
                     shown: cue.shown()?,
                 };
-                let player = taken(&mut ready, &cue.id, |made| *made == showing)
+                let player = taken(&mut ready, &cue.id, |made| made.matches(&showing))
                     .unwrap_or_else(|| Player::start(showing.path.clone(), showing.shown));
                 Some((cue.id, (showing, player)))
             })
@@ -127,9 +148,16 @@ impl Video {
 /// Returns the player of the run `active` of a video or picture cue that
 /// shows `showing`, moved on to the clock of the run once the pre-wait is
 /// over: `player`, the player of the run or the one made ready for it, or
-/// else one that starts now
-fn moved_on(showing: Option<Showing>, active: &Active, player: Option<Player>) -> Advanced {
+/// else one that starts now.  A player that decodes the clip before a devamp
+/// cue let it go on takes the clip as `shown` has it now.
+fn moved_on(
+    showing: Option<Showing>,
+    shown: Shown,
+    active: &Active,
+    player: Option<Player>,
+) -> Advanced {
     let player = player
+        .map(|player| player.released(shown))
         .or_else(|| showing.map(|showing| Player::start(showing.path, showing.shown)))
         .ok_or_else(|| Problem::NoFile.to_string())?;
     if active.shows_picture() {

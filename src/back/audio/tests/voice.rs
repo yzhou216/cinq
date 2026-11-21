@@ -88,7 +88,7 @@ fn played_while(
     let data = StreamingSoundData::from_file(directory.path().join("silence.wav"))
         .expect("the sound opens");
     let sound = manager
-        .play(clipped(data, clip, clip.start, 0.0))
+        .play(clipped(data, clip, 0.0, 0.0))
         .expect("the sound plays");
     let voice = Voice::of(sound, active);
     thread::sleep(DECODING);

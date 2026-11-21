@@ -28,7 +28,9 @@ mod workspace;
 
 use std::time::Duration;
 
-use cue::{Clip, Shown};
+#[cfg(test)]
+use cue::Loop;
+use cue::{Clip, Pass, Shown};
 
 pub use audio::{Audio, Fault, READY_AHEAD, SOUND_FILES, devices as audio_devices};
 pub use cue::{

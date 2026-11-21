@@ -138,14 +138,15 @@ Each cue is a table in the array *cue* of its list:
 
 *kind*
 	What the cue does: *audio*, *video*, *picture*, *light*, *network*,
-	*fade*, *start*, *stop*, *pause*, *goto*, *wait*, or *memo*.
+	*fade*, *start*, *stop*, *pause*, *devamp*, *goto*, *wait*, or *memo*.
 	An audio cue plays a sound file, a video cue plays a video file, and a
 	picture cue shows a picture file, as *STAGE* describes.
 	A light cue fades instruments of the light patch, as *LIGHTS*
 	describes, and a network cue sends a message over the network, as
 	*NETWORK* describes.
-	A start cue starts another cue, a pause cue pauses it, and a GoTo cue
-	moves the standby cue of its list to it, as *CONTROL CUES* describes.
+	A start cue starts another cue, a pause cue pauses it, a devamp cue lets
+	it leave its loop, and a GoTo cue moves the standby cue of its list to
+	it, as *CONTROL CUES* describes.
 	The clock of an audio or video cue follows its sound as the audio device
 	plays it.
 	Its fades, its end, and the cues that follow it therefore stay with what
@@ -171,15 +172,31 @@ Each cue is a table in the array *cue* of its list:
 	A cue that starts at or after its end cannot play.
 
 *loop*
-	Whether an audio or video cue plays from its start again each time it
-	reaches its end, which it does not by default.
+	Whether an audio or video cue plays from the start of its loop again each
+	time it reaches the end of its loop, which it does not by default.
 	A cue that loops plays until something stops it, such as a fade cue that
-	stops it, a stop cue, or a panic.
+	stops it, a stop cue, or a panic, or until a devamp cue lets it go on, as
+	*CONTROL CUES* describes.
+
+*loop_start*, *loop_end*
+	Seconds into its file at which the loop of an audio or video cue starts
+	and ends, which are the start and the end of the cue by default.
+	A cue that loops plays from its start to its loop end, and goes back to its
+	loop start each time it reaches its loop end, so that one file can hold an
+	introduction, a section that repeats, and an ending.
+	The loop lies within the cue: a loop start before the *start* counts as the
+	*start*, and a loop end after the *end* counts as the *end*.
+	A cue whose loop then starts at or after its end cannot play, and shows
+	among the warnings.
+	Saving writes both for a cue that sets them, whether it loops or not, so
+	that turning the loop off and on keeps them.
 
 *target*
-	Identity of the cue that a fade, start, stop, pause, or GoTo cue acts on.
-	A fade cue acts on an audio, video, or picture cue, and each of the others
-	on any cue but itself, in any list of the show.
+	Identity of the cue that a fade, start, stop, pause, devamp, or GoTo cue
+	acts on.
+	A fade cue acts on an audio, video, or picture cue, a devamp cue on an
+	audio or video cue, and each of the others on any cue but itself, in any
+	list of the show.
 
 *pre_wait*
 	Seconds between the cue firing and its action, which are none by
@@ -398,10 +415,11 @@ For example, the Eos consoles of ETC take OSC over TCP with SLIP on port
 
 # CONTROL CUES
 
-A start, pause, or GoTo cue acts on its *target* once its pre-wait is over, as
-the transport and GoTo cues of QLab do.
+A start, pause, devamp, or GoTo cue acts on its *target* once its pre-wait is
+over, as the transport, devamp, and GoTo cues of QLab do.
 It takes no time, as a stop cue does, and its target can be any cue but itself,
-in its own list or in another.
+in its own list or in another, except that a devamp cue needs an audio or
+video cue.
 A cue of these kinds that names no target cannot play, and shows among the
 warnings.
 
@@ -427,6 +445,30 @@ A target that does not run, or no longer does, is left alone, even where cues
 that it fired still wait out its post-wait.
 Pausing holds the fades of a cue, as Pause all does.
 A start cue that targets the paused cue, or Resume all, resumes it.
+
+A devamp cue lets its target leave its loop, as the devamp cue of QLab does.
+Its target is an audio or video cue that loops, in any list.
+A target that does not loop cannot be devamped, so the cue shows among the
+warnings, and GO skips it.
+The run of the target then plays on to the end of a pass through its loop,
+goes from the loop end on to the end of its cue, and ends there, as a cue that
+does not loop ends.
+Where the loop ends with the cue, the run ends at the end of that pass.
+The pass that it leaves at is the first to end more than half a second after
+the devamp cue acts, since the sound needs that long to leave its loop at the
+end of a pass, neither a pass early nor a pass late.
+A loop shorter than about half a second can still go round once more than that.
+A target that does not run is left alone, and a run that a devamp cue has let
+go on already keeps the pass that it leaves at.
+A target that is paused leaves at a pass end chosen from where it is paused,
+once it resumes and reaches it.
+A target that still waits in a chain or out its pre-wait plays through its loop
+once and goes on.
+Fades, stop cues, pause cues, and panics act on a run that has been let go on
+as on any other, and GO or a start cue that fires the target again starts a
+new run, which loops again.
+A cue that loops fires no cue by auto-follow, whether a devamp cue has let it
+go on or not.
 
 A GoTo cue moves the standby cue of the list that holds its target to the
 target, so that the next GO of that list fires it, and fires nothing itself.
@@ -732,6 +774,33 @@ target = 1
 duration = 4.0
 level = -60.0
 stop_target = true
+```
+
+A list in which a file of music holds an introduction up to four seconds, a
+vamp from four to twelve seconds, and an ending after that.
+The first GO plays the introduction and then loops the vamp, and the second GO
+lets the music leave the vamp at the end of a pass and play its ending:
+
+```
+[[list]]
+name = "Main"
+
+[[list.cue]]
+id = 1
+number = "1"
+kind = "audio"
+name = "Scene music"
+file = "sounds/scene.ogg"
+loop = true
+loop_start = 4.0
+loop_end = 12.0
+
+[[list.cue]]
+id = 2
+number = "2"
+kind = "devamp"
+name = "Leave vamp"
+target = 1
 ```
 
 # SEE ALSO

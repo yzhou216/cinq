@@ -5,15 +5,19 @@
 //! Threads that decode the clip of one run of a video cue, a pass through
 //! the clip each, a few pictures ahead of the clock of the run
 //!
-//! A pass starts a decoder at the last sync sample before the start of the
-//! clip that shows no later than the first picture of the clip, and decodes
-//! from there to the last sample that shows before its end.  Each sample
+//! A pass plays a stretch of the file, which is the whole clip for a clip
+//! that does not loop, and which [`Pass`] tells for one that does: from its
+//! start to the end of its loop, then round its loop, then from the end of
+//! its loop to its end once a devamp cue has let it go.  It starts a decoder
+//! at the last sync sample before the start of its stretch that shows no
+//! later than the first picture of the stretch, and decodes from there to
+//! the last sample that shows before its end.  Each sample
 //! holds a picture, which the decoder finishes as soon as it has read the
 //! sample rather than once the next picture starts, since a sample that
 //! fails to decode would otherwise take the picture before it along.  The
 //! pictures go out in the order they show, which [`order`] keeps, each at
-//! the time of its own sample, and those before the start of the clip are
-//! let go without turning them into RGBA, which [`color`] turns the rest
+//! the time of its own sample, and those before the start of the stretch
+//! are let go without turning them into RGBA, which [`color`] turns the rest
 //! into.  A pass ends by telling its player that it has sent every
 //! picture, or why its picture cannot play, as a pass that decodes no
 //! picture cannot, and it stops decoding as soon as its player has gone.
@@ -39,7 +43,7 @@ use rust_h264::{
 };
 
 use super::track::Track;
-use crate::back::Clip;
+use crate::back::Pass;
 pub use color::Picture;
 use color::rgba;
 use order::Order;
@@ -77,14 +81,14 @@ enum Stop {
     Failed(String),
 }
 
-/// Starts decoding pass `pass` through `clip` of the video file at `path`
-/// on a thread of its own, for the player whose life `player` watches, and
+/// Starts decoding `pass` through the clip of the video file at `path` on a
+/// thread of its own, for the player whose life `player` watches, and
 /// returns the way to its pictures.  The thread ends once it has decoded
 /// the pass, or once the player has gone.
-pub(super) fn start(path: PathBuf, clip: Clip, pass: u32, player: Weak<()>) -> Receiver<Sent> {
+pub(super) fn start(path: PathBuf, pass: Pass, player: Weak<()>) -> Receiver<Sent> {
     let (sender, pictures) = mpsc::sync_channel(AHEAD);
     thread::spawn(move || {
-        let end = match decoded(&path, clip, pass, &sender, &player) {
+        let end = match decoded(&path, pass, &sender, &player) {
             Ok(0) => Sent::Failed(UNDECODABLE.to_owned()),
             Ok(_) => Sent::Ended,
             Err(Stop::Failed(reason)) => Sent::Failed(reason),
@@ -99,23 +103,21 @@ pub(super) fn start(path: PathBuf, clip: Clip, pass: u32, player: Weak<()>) -> R
 /// Returns how many pictures of the pass went to `sender`
 fn decoded(
     path: &Path,
-    clip: Clip,
-    pass: u32,
+    pass: Pass,
     sender: &SyncSender<Sent>,
     player: &Weak<()>,
 ) -> Result<usize, Stop> {
     let mut track = Track::open(path).map_err(Stop::Failed)?;
-    let Some((from, to, first)) = track.span(clip.start, clip.end) else {
+    let Some((from, to, first)) = track.span(pass.from, pass.to) else {
         return Ok(0);
     };
-    let passed = f64::from(pass) * clip.length();
     let send = |pictures: Vec<(f64, Decoded)>, sent: usize| {
         pictures
             .iter()
-            .filter(|(shows, _)| (first..clip.end).contains(shows))
+            .filter(|(shows, _)| (first..pass.to).contains(shows))
             .try_fold(sent, |sent, (shows, picture)| {
                 let frame = Frame {
-                    at: passed + (shows - clip.start).max(0.0),
+                    at: pass.at + (shows - pass.from).max(0.0),
                     picture: rgba(picture),
                 };
                 sender

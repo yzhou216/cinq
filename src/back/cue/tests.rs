@@ -4,6 +4,8 @@
 
 //! Tests of cues: their levels, names, clips, and delays
 
+mod passing;
+
 use super::*;
 
 fn audio(name: &str, file: &str) -> Cue {
@@ -67,7 +69,7 @@ fn clip_runs_from_the_start_to_the_end_or_to_the_end_of_the_file() {
         Some(Clip {
             start,
             end,
-            looping: false,
+            looping: None,
         })
     };
     assert_eq!(whole.clip(), clip(0.0, 10.0));
@@ -106,12 +108,16 @@ fn clip_that_loops_goes_back_to_its_start_at_its_end() {
     let clip = Clip {
         start: 2.0,
         end: 5.0,
-        looping: true,
+        looping: Some(Loop {
+            start: 2.0,
+            end: 5.0,
+            released: None,
+        }),
     };
     assert_eq!(clip.position(1.0), 3.0);
     assert_eq!(clip.position(4.0), 3.0);
     let once = Clip {
-        looping: false,
+        looping: None,
         ..clip
     };
     assert_eq!(once.position(4.0), 6.0);
@@ -218,10 +224,14 @@ fn audio_cue_that_waits_for_go_goes_on_to_nothing() {
 
 #[test]
 fn clip_has_played_as_far_as_its_sound_has_reached_in_its_file() {
-    let clip = |looping| Clip {
+    let clip = |looping: bool| Clip {
         start: 2.0,
         end: 5.0,
-        looping,
+        looping: looping.then_some(Loop {
+            start: 2.0,
+            end: 5.0,
+            released: None,
+        }),
     };
     assert_eq!(clip(false).played_at(4.5, 2.4), 2.5);
     // Three seconds a pass: the sound at 3.0 in the file is a second into a
@@ -239,4 +249,113 @@ fn clip_has_played_as_far_as_its_sound_has_reached_in_its_file() {
             .iter()
             .all(|&at| (pass(clip(true).position(at), at) - at).abs() < 1e-9)
     );
+}
+
+/// Returns a clip from 1 to 9 seconds into its file that loops from 3 to 5,
+/// so that it reaches the end of its loop first after 4 seconds and goes
+/// round the loop every 2
+fn sectioned() -> Clip {
+    Clip {
+        start: 1.0,
+        end: 9.0,
+        looping: Some(Loop {
+            start: 3.0,
+            end: 5.0,
+            released: None,
+        }),
+    }
+}
+
+#[test]
+fn clip_plays_to_the_end_of_its_loop_then_goes_round_the_loop() {
+    let clip = sectioned();
+    assert_eq!(clip.position(1.5), 2.5);
+    assert_eq!(clip.position(3.5), 4.5);
+    assert_eq!(clip.position(4.5), 3.5);
+    assert_eq!(clip.position(7.0), 4.0);
+    assert_eq!(clip.lasts(), None);
+    assert!(
+        [0.0, 1.9, 2.0, 3.2, 4.0, 6.9, 21.3].iter().all(|&at| (clip
+            .played_at(clip.position(at), at)
+            - at)
+            .abs()
+            < 1e-9)
+    );
+}
+
+#[test]
+fn devamp_lets_a_loop_go_on_at_the_end_of_the_pass_under_way() {
+    let clip = sectioned();
+    let released = |played| {
+        clip.released(played, 0.5)
+            .looping
+            .and_then(|loop_| loop_.released)
+    };
+    assert_eq!(released(0.5), Some(4.0));
+    assert_eq!(released(4.2), Some(6.0));
+    // Too near the end of the pass for the sound to leave the loop there
+    assert_eq!(released(5.7), Some(8.0));
+    let free = clip.released(4.2, 0.5);
+    assert_eq!(free.lasts(), Some(10.0));
+    assert_eq!(free.last_pass(), Some(4.0));
+    assert_eq!(free.position(5.0), 4.0);
+    assert_eq!(free.position(7.5), 6.5);
+    assert_eq!(free.played_at(6.5, 7.4), 7.5);
+    // Sound still in its last pass while the clock has passed its end
+    assert_eq!(free.played_at(4.9, 6.2), 5.9);
+    assert_eq!(free.released(4.9, 0.5), free);
+}
+
+#[test]
+fn clip_makes_passes_through_its_loop_and_then_to_its_end() {
+    let clip = sectioned();
+    let pass = |from, to, at| Some(Pass { from, to, at });
+    assert_eq!(clip.pass(0), pass(1.0, 5.0, 0.0));
+    assert_eq!(clip.pass(1), pass(3.0, 5.0, 4.0));
+    assert_eq!(clip.pass(7), pass(3.0, 5.0, 16.0));
+    let free = clip.released(4.2, 0.5);
+    assert_eq!(free.pass(1), pass(3.0, 5.0, 4.0));
+    assert_eq!(free.pass(2), pass(5.0, 9.0, 6.0));
+    assert_eq!(free.pass(3), None);
+    let to_end = Clip { end: 5.0, ..free };
+    assert_eq!(to_end.pass(2), None);
+    assert_eq!(to_end.lasts(), Some(6.0));
+    let once = Clip {
+        looping: None,
+        ..clip
+    };
+    assert_eq!(once.pass(0), pass(1.0, 9.0, 0.0));
+    assert_eq!(once.pass(1), None);
+}
+
+#[test]
+fn loop_lies_within_the_clip_of_its_cue() {
+    let cue = |loop_start: f32, loop_end: f32| Cue {
+        start: 1.0.into(),
+        end: 8.0.into(),
+        looping: true,
+        loop_start: loop_start.into(),
+        loop_end: loop_end.into(),
+        ..loaded(audio("vamp", "vamp.ogg"))
+    };
+    let section = |cue: Cue| cue.clip().and_then(|clip| clip.looping);
+    let within = |start, end| {
+        Some(Loop {
+            start,
+            end,
+            released: None,
+        })
+    };
+    assert_eq!(section(cue(3.0, 5.0)), within(3.0, 5.0));
+    assert_eq!(section(cue(0.0, 30.0)), within(1.0, 8.0));
+    let whole = Cue {
+        loop_start: Seconds::default(),
+        loop_end: Seconds::default(),
+        ..cue(3.0, 5.0)
+    };
+    assert_eq!(section(whole), within(1.0, 8.0));
+    let backward = cue(5.0, 3.0);
+    assert_eq!(backward.clip(), None);
+    assert!(backward.loops_nothing());
+    assert!(!cue(3.0, 5.0).loops_nothing());
 }

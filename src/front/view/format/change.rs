@@ -29,6 +29,8 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
                 Edit::Start(_) => format!("changed the start of cue {cue}"),
                 Edit::End(_) => format!("changed the end of cue {cue}"),
                 Edit::Loop(_) => format!("changed whether cue {cue} loops"),
+                Edit::LoopStart(_) => format!("changed the loop start of cue {cue}"),
+                Edit::LoopEnd(_) => format!("changed the loop end of cue {cue}"),
                 Edit::Target(_) => format!("changed the target of cue {cue}"),
                 Edit::Notes(_) => format!("changed the notes of cue {cue}"),
                 Edit::PreWait(_) => format!("changed the pre-wait of cue {cue}"),

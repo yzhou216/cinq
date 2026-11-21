@@ -157,6 +157,7 @@ impl Workspace {
             Effect::Stop(target) => self.stopped(target),
             Effect::Start(target) => self.started_cue(target, fired.played()),
             Effect::Pause(target) => self.held(target),
+            Effect::Devamp(target) => self.devamped(target),
             Effect::GoTo(target) => self.moved_to(target),
             Effect::Light => self.lit(fired.id, fired.run),
             Effect::Send => self.sent_by(fired.id),
