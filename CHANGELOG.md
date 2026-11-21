@@ -110,6 +110,13 @@ Major changes and improvements in each release of cinq, newest first.
   leaves out a Pre, Post, Then, or Target column that no cue fills, and the
   Target column takes a file name whole, up to 48 columns, where a name keeps
   at least 16.
+- The sidebar keeps each cue list to one line, cutting a long name short in an
+  ellipsis and keeping the number of its cues, and scrolls to the list that
+  shows whenever it changes, and back to it as Tab moves on.  Each running cue
+  keeps to two lines, cutting the level before the phase.  The sidebar grows
+  to 400 pixels on a wide window, so that a warning takes one line where it
+  took two, and an empty Active or Warnings list leaves out the gap of its
+  empty body.
 
 ## v0.1.5
 

@@ -62,6 +62,10 @@ pub const SENDS: &str = "sends";
 /// into view
 pub const SIDEBAR_SCROLL: &str = "sidebar";
 
+/// Identity of the entry of the sidebar that shows, through which the sidebar
+/// finds where to scroll
+pub const CURRENT_LIST: &str = "current list";
+
 /// Identity of the help page, which the keys that move the selection
 /// scroll while it is open
 pub const HELP: &str = "help";
@@ -112,7 +116,7 @@ pub fn line_height() -> f32 {
 pub const SPACING: f32 = 10.0;
 
 /// Widest that the sidebar grows
-const SIDEBAR: f32 = 300.0;
+const SIDEBAR: f32 = 400.0;
 
 /// Line between the parts of the status bar, and between a message and the
 /// hint of the key that answers it

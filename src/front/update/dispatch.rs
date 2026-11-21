@@ -10,6 +10,7 @@ use std::thread;
 
 use iced::{Task, futures::channel::oneshot};
 
+use super::reveal_list::reveal_current_list;
 use crate::{
     back::Command,
     front::{App, Message},
@@ -116,7 +117,13 @@ impl App {
             typed: app.typed.filter(|_| kept),
             ..app
         };
+        let shown = app.shown_list();
         let (app, task) = app.handled(message);
+        let task = if app.shown_list() == shown {
+            task
+        } else {
+            task.chain(reveal_current_list())
+        };
         let app = Self {
             link_problem: app.link_problem.filter(|_| app.help),
             unapplied: unapplied.or(app.unapplied),

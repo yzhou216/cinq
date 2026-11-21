@@ -19,17 +19,23 @@ use iced::{
     },
 };
 
-use super::scroll::scrolled_to;
+use super::{reveal_list::reveal_current_list, scroll::scrolled_to};
 use crate::front::{reveal, view};
 
 /// Scrolls the sends and the sidebar to show the field that has the
-/// keyboard, if it is in one of them and lies out of view
+/// keyboard, if it is in one of them and lies out of view.  The sidebar first
+/// returns to its current list, so that Shift+Tab, which passes the Default
+/// device list at its end on the way to Show mode, does not leave the sidebar
+/// scrolled there.
 pub(super) fn reveal_focused<T: Send + 'static>() -> Task<T> {
     // Name of an output above its send, and the title above a list of the
     // sidebar, each with the gap that the column puts between them and below
     let sends = Revealing::new(view::SENDS, view::line_height() + view::SPACING / 2.0);
     let sidebar = Revealing::new(view::SIDEBAR_SCROLL, view::line_height() + view::SPACING);
-    Task::batch([operate(sends).discard(), operate(sidebar).discard()])
+    Task::batch([
+        operate(sends).discard(),
+        reveal_current_list().chain(operate(sidebar).discard()),
+    ])
 }
 
 /// Finds a scrollable and the field in it that has the keyboard

@@ -24,6 +24,7 @@ mod operators;
 mod outputs;
 mod paging;
 mod reveal_focused;
+mod reveal_list;
 mod rows;
 mod scroll;
 mod search;
