@@ -168,6 +168,10 @@ Major changes and improvements in each release of cinq, newest first.
   paragraphs keep their width.
 - The outputs view hands the room that the device does not need to the name
   and the state, so that they wrap later in a narrow window.
+- A path typed into the File field of an audio, video, or picture cue names the
+  cue after the file, as the file chooser does, while the cue goes by the name
+  it was added with or by the name of its previous file.  The name follows the
+  path as it is typed, and a name that was typed stays.
 
 ## v0.1.5
 

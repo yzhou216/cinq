@@ -179,16 +179,20 @@ impl Cue {
     /// Returns the edit that makes the cue play or show `file`, which names
     /// the cue after the file as well while the cue goes by the name it was
     /// added with, or by the name of the file it had before, as QLab names
-    /// the cues of files
+    /// the cues of files.  A path typed key by key goes through here at each
+    /// key, so a path without a name for the cue, such as an emptied field,
+    /// gives back the name the cue was added with and the name follows the
+    /// path again once it is typed anew.
     pub fn playing(&self, file: String) -> Edit {
-        let unnamed =
-            self.name == Self::new_name(self.kind) || Some(self.name.as_str()) == stem(&self.file);
-        match stem(&file) {
-            Some(name) if unnamed => Edit::FileAndName {
+        let added = Self::new_name(self.kind);
+        let unnamed = self.name == added || Some(self.name.as_str()) == stem(&self.file);
+        match (stem(&file), unnamed) {
+            (Some(name), true) => Edit::FileAndName {
                 name: name.to_owned(),
                 file,
             },
-            _ => Edit::File(file),
+            (None, true) => Edit::FileAndName { name: added, file },
+            (_, false) => Edit::File(file),
         }
     }
 
