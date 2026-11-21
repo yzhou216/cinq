@@ -202,6 +202,9 @@ struct App {
     /// Whether the File field of a cue has the keyboard, which the status bar
     /// hints Enter for while it is empty
     file_held: bool,
+    /// Whether the address of an instrument in the light patch has the
+    /// keyboard, which shows the help on addresses under the patch
+    address_held: bool,
     /// Whether a text field has the keyboard, which keeps every key but those
     /// that act in fields, so that the status bar hints no other key.  A
     /// closed drop-down list, which `held` alone tells, lets the keys of undo

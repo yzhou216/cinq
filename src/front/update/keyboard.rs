@@ -7,9 +7,11 @@
 //! The widgets keep that to themselves, and the status bar hints how to leave
 //! a field, so that one operation asks them after anything the operator does.
 //! A second asks whether the File field of a cue is the one, since its hint
-//! differs, and a third whether a text field is, since it keeps every key but
-//! those that act in fields, while a closed drop-down list lets the keys of
-//! undo and redo act as well, which the status bar hints accordingly.
+//! differs, a third whether an address of the light patch is, since the patch
+//! shows help on addresses only then, and a fourth whether a text field is,
+//! since it keeps every key but those that act in fields, while a closed
+//! drop-down list lets the keys of undo and redo act as well, which the status
+//! bar hints accordingly.
 
 use iced::{
     Rectangle, Task,
@@ -22,13 +24,15 @@ use iced::{
 use crate::front::{Message, view};
 
 /// Asks the widgets whether one of them has the keyboard, and whether it is
-/// the File field, and whether it is a text field, and tells
-/// [`Message::Held`], [`Message::FileHeld`], and [`Message::TextHeld`] the
-/// answers
+/// the File field, and whether it is an address of the light patch, and
+/// whether it is a text field, and tells [`Message::Held`],
+/// [`Message::FileHeld`], [`Message::AddressHeld`], and [`Message::TextHeld`]
+/// the answers
 fn held() -> Task<Message> {
     Task::batch([
         operate(Holding::anywhere()).map(Message::Held),
         operate(Holding::in_field(view::FILE)).map(Message::FileHeld),
+        operate(Holding::in_field(view::ADDRESS)).map(Message::AddressHeld),
         operate(Holding::in_text()).map(Message::TextHeld),
     ])
 }

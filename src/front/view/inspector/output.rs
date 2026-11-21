@@ -13,16 +13,17 @@
 
 mod device;
 mod reasons;
+pub(super) use reasons::address_help;
 pub(in crate::front) use reasons::rejection;
 #[cfg(test)]
 mod tests;
 
 use iced::{
     Center, Element, Fill, Padding,
-    widget::{column, container, row, text, text_input},
+    widget::{Text, column, container, row, text, text_input},
 };
 
-use super::{LEVEL_ROOM, lock};
+use super::{LEVEL_ROOM, lock, locked::locked};
 use crate::{
     back::Output,
     front::{
@@ -75,14 +76,33 @@ pub(super) fn typing<'a>(
     (input, shown)
 }
 
+/// Returns `input` as `typing` made it, in the style of whether `valid`, while
+/// the show can be edited, or else `shown` in a box that the keyboard skips
+pub(super) fn styled<'a>(
+    app: &App,
+    input: text_input::TextInput<'a, Message>,
+    shown: &str,
+    placeholder: &str,
+    columns: f32,
+    valid: bool,
+) -> Element<'a, Message> {
+    if app.editable() {
+        input.style(theme::field(valid)).into()
+    } else {
+        locked(shown, placeholder, None, room(columns).into())
+    }
+}
+
+/// Returns the reason that a value is not applied, in red
+pub(super) fn refused<'a>(reason: &str) -> Text<'a> {
+    text(format!("Not applied: {reason}")).style(text::danger)
+}
+
 /// Returns the line of help beside a setting: `hint`, in dim text, or the
 /// reason that the value is not applied, in red, where there is one
 pub(super) fn help<'a>(hint: impl Into<String>, rejection: Option<String>) -> Element<'a, Message> {
     match rejection {
-        Some(reason) => text(format!("Not applied: {reason}"))
-            .style(text::danger)
-            .width(Fill)
-            .into(),
+        Some(reason) => refused(&reason).width(Fill).into(),
         None => text(hint.into()).style(text::secondary).width(Fill).into(),
     }
 }

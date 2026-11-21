@@ -154,3 +154,20 @@ fn only_a_text_field_counts_when_the_keyboard_is_asked_for_in_text() {
     assert!(visit(true));
     assert!(!visit(false), "a drop-down list offers no text input");
 }
+
+#[test]
+fn any_address_of_the_light_patch_counts_for_the_help_on_addresses() {
+    let holding = || Holding::in_field(view::ADDRESS);
+    assert!(found(
+        holding(),
+        &[
+            (Some("address"), false),
+            (Some("address"), true),
+            (Some("address"), false)
+        ]
+    ));
+    assert!(!found(
+        holding(),
+        &[(Some("address"), false), (Some("name"), true)]
+    ));
+}

@@ -207,6 +207,7 @@ impl App {
             | Message::MenuOpen(_)
             | Message::Held(_)
             | Message::FileHeld(_)
+            | Message::AddressHeld(_)
             | Message::TextHeld(_)
             | Message::DefaultHighlighted(_)
             | Message::Copy(_)

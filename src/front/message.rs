@@ -295,6 +295,9 @@ pub enum Message {
     /// Whether the File field of a cue has the keyboard, as the widgets told
     /// with [`Message::Held`]
     FileHeld(bool),
+    /// Whether the address of an instrument in the light patch has the
+    /// keyboard, as the widgets told with [`Message::Held`]
+    AddressHeld(bool),
     /// Whether a text field, which keeps every key, has the keyboard, as the
     /// widgets told with [`Message::Held`]
     TextHeld(bool),

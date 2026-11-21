@@ -5,7 +5,7 @@
 //! Tests of which outputs that cannot play the Levels tab counts, and of how
 //! it names them
 
-use super::{named, silent};
+use super::{named, silent, widest};
 use crate::{
     back::{Command, Cue, CueId, CueList, Fault, Kind, OutputId, Sends, Workspace},
     front::App,
@@ -43,4 +43,29 @@ fn an_output_that_cannot_play_is_named_with_what_is_wrong_with_it() {
     faults
         .iter()
         .for_each(|(fault, words)| assert_eq!(named("House L", Some(fault)), *words));
+}
+
+#[test]
+fn a_long_name_is_cut_short_and_its_fault_is_not() {
+    let long = "Missing speaker box number five";
+    assert_eq!(named(long, None), "Missing speaker box\u{2026}");
+    assert_eq!(
+        named(long, Some(&Fault::Unanswered)),
+        "Missing speaker box\u{2026} (not answering)"
+    );
+}
+
+#[test]
+fn the_room_of_the_names_counts_the_columns_that_a_wide_character_takes() {
+    let names = |names: &[&str]| {
+        widest(
+            &names
+                .iter()
+                .map(|name| (*name).to_owned())
+                .collect::<Vec<_>>(),
+        )
+    };
+    assert_eq!(names(&["House L", "Sub"]), 7);
+    assert_eq!(names(&["\u{4e3b}\u{97f3}\u{54cd}"]), 6);
+    assert_eq!(names(&[]), 0);
 }

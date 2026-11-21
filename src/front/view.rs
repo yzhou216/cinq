@@ -41,7 +41,7 @@ use super::{
     App, Message,
     keymap::{Action, Keymap},
 };
-use widget::{button, dropdown, dropdown_width, hide, keep_keys, line_keys, marked_row};
+use widget::{button, check, dropdown, dropdown_width, hide, keep_keys, line_keys, marked_row};
 
 /// Identity of the cue list, through which the selection scrolls into view
 pub const CUES: &str = "cues";
@@ -81,6 +81,10 @@ pub const INSPECTOR: &str = "inspector";
 /// Identity of the File field of an audio, video, or picture cue, which the
 /// status bar hints Enter for while it is empty and has the keyboard
 pub const FILE: &str = "file";
+
+/// Identity of the address fields of the light patch, which show the help on
+/// addresses while one of them has the keyboard
+pub const ADDRESS: &str = "address";
 
 /// Identity of the search line in the status bar, through which the key of
 /// the search action gives it the keyboard focus

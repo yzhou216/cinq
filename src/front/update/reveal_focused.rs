@@ -9,7 +9,7 @@
 //! sidebar scroll within it when the window is low, so Tab can reach a field
 //! that lies below the part in view, or above it.  One operation per
 //! scrollable finds the focused field among those inside it, and scrolls to
-//! show the field with the name above it.
+//! show the field with the label above it, where it has one.
 
 use iced::{
     Rectangle, Task, Vector,
@@ -28,9 +28,10 @@ use crate::front::{reveal, view};
 /// device list at its end on the way to Show mode, does not leave the sidebar
 /// scrolled there.
 pub(super) fn reveal_focused<T: Send + 'static>() -> Task<T> {
-    // Name of an output above its send, and the title above a list of the
-    // sidebar, each with the gap that the column puts between them and below
-    let sends = Revealing::new(view::SENDS, view::line_height() + view::SPACING / 2.0);
+    // A send lies in one row with its name, which leaves nothing above its
+    // field, while the title of a list of the sidebar lies above it, with the
+    // gap that the column puts between them
+    let sends = Revealing::new(view::SENDS, 0.0);
     let sidebar = Revealing::new(view::SIDEBAR_SCROLL, view::line_height() + view::SPACING);
     Task::batch([
         operate(sends).discard(),

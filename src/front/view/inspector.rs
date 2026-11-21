@@ -8,23 +8,24 @@
 
 mod field;
 mod light;
+mod locked;
 mod output;
 pub(in crate::front) use output::rejection;
-use output::typing;
+use output::{refused, styled, typing};
 mod sends;
 
 use iced::{
     Center, Element, Fill,
-    widget::{checkbox, column, container, progress_bar, radio, row, rule, slider, table, text},
+    widget::{column, container, progress_bar, radio, row, rule, slider, table, text},
 };
 use strum::VariantArray;
 
-use super::{INSPECTOR, SPACING, format, keep_keys, theme};
+use super::{INSPECTOR, SPACING, check, format, keep_keys};
 use crate::{
-    back::{Cue, Edit, Kind, LEVELS, Media, parse_level},
+    back::{Cue, Edit, Kind, LEVELS, Media, Problem},
     front::{App, Message, Setting, Tab},
 };
-use field::Field;
+use field::{Field, unread};
 
 /// Characters that the level field holds, as many as `-60.0` takes, with
 /// one to spare
@@ -60,12 +61,14 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     let body = match (app.tab, app.selected.and_then(|id| app.workspace.cue(id))) {
         _ if app.outputs_shown => output::view(app),
         (Tab::Patch, _) => light::patch(app),
-        (Tab::Basics, Some(cue)) => {
-            let basics = row(BASICS.map(|fields| form(app, cue, fields))).spacing(SPACING);
-            inspected(app, cue, basics.into())
-        }
-        (Tab::Time, Some(cue)) => inspected(app, cue, time(app, cue)),
-        (Tab::Levels, Some(cue)) => inspected(app, cue, levels(app, cue)),
+        (Tab::Basics, Some(cue)) => inspected(app, cue, &BASICS, forms(app, cue, BASICS)),
+        (Tab::Time, Some(cue)) => inspected(
+            app,
+            cue,
+            if cue.kind.plays_file() { &TIME } else { &[] },
+            time(app, cue),
+        ),
+        (Tab::Levels, Some(cue)) => inspected(app, cue, &[], levels(app, cue)),
         (_, None) if app.current().cues.is_empty() => {
             text("This list has no cues to inspect").into()
         }
@@ -83,14 +86,39 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     )
 }
 
-fn inspected<'a>(app: &'a App, cue: &Cue, fields: Element<'a, Message>) -> Element<'a, Message> {
-    column![
-        text(format!("{cue}, {} cue{}", cue.kind, lock(app))),
-        fields
-    ]
-    .spacing(SPACING)
-    .width(Fill)
-    .into()
+/// Returns the header of a cue over `fields`, which tells what keeps GO from
+/// playing the cue, and which of the `times` that it shows reads as no time
+fn inspected<'a>(
+    app: &'a App,
+    cue: &Cue,
+    times: &[&[Field]],
+    fields: Element<'a, Message>,
+) -> Element<'a, Message> {
+    let header = row![text(format!("{cue}, {} cue{}", cue.kind, lock(app)))]
+        .extend(trouble(app, cue))
+        .extend(unread(cue, times).map(|reason| text(reason).style(text::danger).into()))
+        .spacing(3.0 * SPACING)
+        .align_y(Center);
+    column![header, fields].spacing(SPACING).width(Fill).into()
+}
+
+/// Returns what keeps GO from playing the cue, in words, as the State column
+/// and the sidebar tell it, so that the place where the fix is made says it
+/// too.  A file that has yet to load is no fault.
+fn trouble<'a>(app: &App, cue: &Cue) -> Option<Element<'a, Message>> {
+    let problem = app
+        .workspace
+        .problem(cue)
+        .filter(|problem| *problem != Problem::NotLoaded)?;
+    let reason = match problem {
+        Problem::NoMessage => "no OSC message as /address arguments".to_owned(),
+        problem => problem.to_string(),
+    };
+    Some(
+        text(format!("GO skips this cue: {reason}"))
+            .style(text::danger)
+            .into(),
+    )
 }
 
 fn lock(app: &App) -> &'static str {
@@ -107,9 +135,18 @@ fn form<'a>(app: &'a App, cue: &'a Cue, fields: &[Field]) -> Element<'a, Message
             table::column(text("Setting"), move |field: Field| text(field.label(cue))),
             table::column(text("Value"), move |field: Field| field.input(app, cue)).width(Fill),
         ],
-        fields.iter().copied(),
+        fields
+            .iter()
+            .map(|field| field.of(cue))
+            .filter(|field| field.has_row(cue)),
     )
     .into()
+}
+
+fn forms<'a>(app: &'a App, cue: &'a Cue, columns: [&[Field]; 2]) -> Element<'a, Message> {
+    row(columns.map(|fields| form(app, cue, fields)))
+        .spacing(SPACING)
+        .into()
 }
 
 fn time<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
@@ -121,14 +158,16 @@ fn time<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         _ => {}
     }
     let id = cue.id;
-    let looping = checkbox(cue.looping)
-        .label("Loop until stopped or devamped")
-        .on_toggle_maybe(
-            app.editable()
-                .then_some(move |looping| Message::Edit(id, Edit::Loop(looping))),
-        );
-    let times = row(TIME.map(|fields| form(app, cue, fields))).spacing(SPACING);
-    column![times, looping].spacing(SPACING).into()
+    let looping = check(
+        "Loop until stopped or devamped",
+        cue.looping,
+        app.editable()
+            .then_some(move |looping| Message::Edit(id, Edit::Loop(looping))),
+        &app.config.keymap,
+    );
+    column![forms(app, cue, TIME), looping]
+        .spacing(SPACING)
+        .into()
 }
 
 fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
@@ -161,7 +200,8 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         format::decibels(cue.level),
         LEVEL_ROOM,
     );
-    let field = field.style(theme::field(parse_level(&typed).is_some()));
+    let reason = rejection(app, Setting::Level(id), &typed);
+    let field = styled(app, field, &typed, "", LEVEL_ROOM, reason.is_none());
     let level: Element<'_, Message> = if editable {
         slider(LEVELS, cue.level, move |db| {
             Message::Edit(id, Edit::Level(db))
@@ -172,14 +212,16 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         progress_bar(LEVELS, cue.level).into()
     };
     let stop = (cue.kind == Kind::Fade).then(|| {
-        checkbox(cue.stop_target)
-            .label("Stop target when done")
-            .on_toggle_maybe(
-                editable.then_some(move |stop| Message::Edit(id, Edit::StopTarget(stop))),
-            )
+        check(
+            "Stop target when done",
+            cue.stop_target,
+            editable.then_some(move |stop| Message::Edit(id, Edit::StopTarget(stop))),
+            &app.config.keymap,
+        )
     });
     column![
         row![text(label), level, field, text("dB")]
+            .extend(reason.map(|reason| refused(&reason).into()))
             .spacing(SPACING)
             .align_y(Center),
         stop,

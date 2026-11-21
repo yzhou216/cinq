@@ -621,12 +621,16 @@ the list taller, so the thresholds of *cinq* are in pixels of the view.
 Keys act on the cue list, whether the main window or the stage window has
 the keyboard, apart from the keys typed while one of these has the keyboard:
 
-A text field of the inspector, or a drop-down list
+A text field of the inspector, a drop-down list, or a checkbox
 	A click gives a text field the keyboard, and the keys of *next_field* and
-	*previous_field* move it from one text field or drop-down list to the
-	next, which shows a border in the color of focus, twice as thick as at rest.
+	*previous_field* move it from one text field, drop-down list, or checkbox
+	to the next, which shows a border in the color of focus, twice as thick as at
+	rest.
 	A text field that these keys reach has its text selected, so that typing
 	replaces it, whereas a click puts the caret where it fell.
+	A field that cannot be edited, as every field in show mode, or a field
+	that the cue ignores, as the post-wait of an auto-follow cue, is a plain
+	box that takes no keyboard, and these keys pass it by.
 	From the cue list, or the outputs, *next_field* goes first to the first field
 	of the inspector, so that the settings of what is selected are one key away,
 	and then on through the rest of the inspector, the toolbar, and the sidebar,
@@ -637,13 +641,20 @@ A text field of the inspector, or a drop-down list
 	A drop-down list that is closed lets the keys of *undo* and *redo* act as
 	well, since it has no text to undo, so that a change made from the list
 	can be taken back with the keyboard still there.
+	The checkboxes of the inspector, Loop until stopped or devamped and Stop target when
+	done, are stops of these keys as well, and show the same border around their
+	label.
+	Enter flips the one that has the keyboard, and then neither leaves it nor
+	puts a cue on standby, while Space and Escape keep GO and Panic and never flip
+	it.
+	Show mode locks the checkboxes, which take no keyboard then.
 	One of the sends of a cue, which scroll on the Levels tab, and a list of the
 	sidebar, which scrolls in a low window, scroll into view as these keys reach
-	it, with the name of the send or the title of the list above it.
+	it, with the title of the list above it.
 	Enter in the empty File field of a cue opens the dialog that chooses the
 	file, as the Choose button does, and the status bar hints it.
-	Anywhere else Enter leaves a text field, and opens the menu of a drop-down
-	list, which takes the keyboard from there.
+	Anywhere else Enter leaves a text field, opens the menu of a drop-down list,
+	which takes the keyboard from there, and flips a checkbox.
 	A level typed into a field, the level of a cue, a send, the level of new
 	cues of an output, or that of an instrument of a light cue, applies once
 	the field is left, by Enter, Tab, a click, GO, or anything else the
@@ -1113,9 +1124,9 @@ page.
 	before any other key is dropped with that key, as *TYPING* describes.
 
 *next_field*
-	Move the keyboard to the next field: a text field or drop-down list of the
-	inspector, or the list of the kind of cue that *add_below* and *add_above*
-	add.
+	Move the keyboard to the next field: a text field, drop-down list, or
+	checkbox of the inspector, or the list of the kind of cue that *add_below*
+	and *add_above* add.
 
 *previous_field*
 	Move the keyboard to the previous field.

@@ -34,6 +34,12 @@ pub(super) fn channels_help() -> String {
     format!("Channels 1 to {DEVICE_CHANNELS}: 3 for one, 1-2 or 1,3 for two")
 }
 
+/// Returns what an instrument takes for its address, which the help under
+/// the patch tells before anything is typed
+pub(in crate::front::view::inspector) fn address_help() -> &'static str {
+    "Addresses are 1 to 512, or 2/12 for address 12 in universe 2, up to universe 32768"
+}
+
 /// Returns why `text` does not read as the channels of an output, if it does
 /// not
 pub(super) fn channels(text: &str) -> Option<String> {

@@ -130,6 +130,22 @@ Major changes and improvements in each release of cinq, newest first.
   gap keeps the status apart from the hints.  A key that edits in show mode,
   or while the stage window has the keyboard, now says once why it did
   nothing.
+- The inspector tells in words what the color of a field told alone: its header
+  says why GO skips the selected cue, such as a missing file or no target, and
+  which time reads as no time, with the forms that a time takes, and a refused
+  level, send, light level, or address gives its reason beside the field or
+  above or under its table.  A field that the cue ignores says why, as
+  "(in a group)", "(with auto-follow)", or "(Loop is cleared)", and a value
+  that cannot change draws on the black of the window, where it reads at 7:1,
+  in a box of the height of a field that shows the dim placeholder where the
+  value is empty, so that the inspector keeps its height as GO moves the
+  selection.  Tab no longer stops on a field that cannot change, and it
+  reaches the Loop and Stop target checkboxes, which Enter flips and show
+  mode locks.  The sends of the Levels tab lie side by side in rows that wrap,
+  so that most of them show at once, the destination of a network cue has a
+  row of its own, a kind with no target has no Target row, and the Light Patch
+  tells that it has no instruments, and what an address takes only while an
+  address has the keyboard or is refused.
 
 ## v0.1.5
 
