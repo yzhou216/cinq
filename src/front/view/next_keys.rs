@@ -32,7 +32,7 @@ pub(super) fn view(app: &App) -> Option<Element<'_, Message>> {
     let lines = next.into_iter().map(|(keys, description)| {
         let padding = " ".repeat(width - keys.width());
         rich_text([
-            span(format!("{keys}{padding}")).color(theme::PALETTE.primary),
+            span(format!("{keys}{padding}")).color(theme::BLUE_COOLER),
             span(format!("  {description}")),
         ])
         .on_link_click(never)
