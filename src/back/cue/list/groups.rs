@@ -19,6 +19,7 @@
 //! does it once and answers every question about the structure from it.
 //! The methods of the list that ask one question build one for it.
 
+mod collapsing;
 mod firing;
 
 use std::{collections::BTreeSet, ops::Range};

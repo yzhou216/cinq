@@ -68,6 +68,8 @@ struct CueFile {
     loop_end: Option<f32>,
     #[serde(default, skip_serializing_if = "is_top")]
     depth: u8,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    collapsed: bool,
     target: Option<u32>,
     pre_wait: Option<f32>,
     duration: Option<f32>,
@@ -191,6 +193,7 @@ impl CueFile {
             loop_start: cue.loop_start.time().filter(|_| plays),
             loop_end: cue.loop_end.time().filter(|_| plays),
             depth: cue.depth,
+            collapsed: cue.kind == Kind::Group && cue.collapsed,
             target: cue
                 .target
                 .filter(|_| cue.kind.has_target())
@@ -230,6 +233,7 @@ impl CueFile {
             .maybe_loop_start(self.loop_start)
             .maybe_loop_end(self.loop_end)
             .depth(self.depth)
+            .collapsed(self.kind == Kind::Group && self.collapsed)
             .maybe_target(self.target.map(CueId))
             .maybe_pre_wait(self.pre_wait)
             .maybe_duration(self.duration)

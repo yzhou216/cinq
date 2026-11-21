@@ -62,10 +62,10 @@ pub struct Register {
 }
 
 impl App {
-    /// Copies the selected cue and the cues below it, as many as `count`
+    /// Copies the selected row and the rows below it, as many as `count`
     /// holds, in place of what the clipboard held, each group with the cues
-    /// that it holds.  Copying changes no show, so that show mode leaves it,
-    /// as Vim yanks in a read-only buffer.
+    /// that it holds, as a closed fold is yanked whole.  Copying changes no
+    /// show, so that show mode leaves it, as Vim yanks in a read-only buffer.
     pub(super) fn with_copied(self, count: usize) -> Self {
         self.clipped(count, "Copied", false)
     }
@@ -78,10 +78,13 @@ impl App {
             return self;
         };
         let list = self.current();
+        let groups = list.groups();
         // A group takes the cues that it holds along, once even where the
         // count reaches them as well
-        let rows: BTreeSet<usize> = (first..list.cues.len().min(first.saturating_add(count)))
-            .flat_map(|row| list.extent(row))
+        let rows: BTreeSet<usize> = self
+            .shown_cues_from(first, count)
+            .into_iter()
+            .flat_map(|row| groups.extent(row))
             .collect();
         let cues: Vec<Cue> = rows
             .into_iter()

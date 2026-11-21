@@ -226,6 +226,7 @@ impl Workspace {
             Command::Move { cue, by } => self.moved(cue, by),
             Command::Indent(ids) => self.indented(&ids),
             Command::Outdent(ids) => self.outdented(&ids),
+            Command::Collapse { cues, collapsed } => self.collapsed(&cues, collapsed),
             Command::Edit(id, edit) => self.edited(id, edit),
             Command::Patch(edit) => self.patched(edit),
             Command::Restore(lists, outputs, patch) => self.restored(Kept {

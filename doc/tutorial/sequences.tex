@@ -203,6 +203,25 @@ above it.  The cua keymap uses \key{Control+[} and \key{Control+]}.  Both
 move a cue together with the cues that it holds, and both take a number
 and the motions of \key{d} and \key{y}, so that \key{3>>} indents three cues.
 
+A group collapses into one row, which hides the cues that it holds, as a closed
+fold does in Vim.  Select the group and press \key{zc}, or \key{ArrowLeft} with
+the cua keymap, and the row of the group gains a \texttt{+} before its name and
+the number of cues that it hides after it, while an open group has a
+\texttt{-} before its name.  \key{zo}, or \key{ArrowRight} with the cua
+keymap, opens it again, \key{za} does either, and \key{zM} and \key{zR}
+collapse and open every group.  A click on the \texttt{+} or the \texttt{-}
+does the same.  A collapsed group fires, stops, and pauses its cues as an open
+one does, and keys that count rows, such as \key{3j}, count it as one row.  A
+search, a jump, and GO that move the selection to a hidden cue open the groups
+around it, so that the selection never goes out of sight, but a search that is
+cancelled closes them again.  When standby lies in a collapsed group, the
+\texttt{State} column of the group reads \texttt{NEXT}\@, and switching to the
+list selects the group.  When a cue that a collapsed group hides has a problem,
+such as \texttt{NO FILE}, the \texttt{State} column of the group reads it, so
+that no broken cue lies out of sight.  Collapsing is a way to look at
+the list, so undo leaves it alone, show mode allows it, and the show file keeps
+it.
+
 A group goes on by its own \ui{Then} setting, to the cue below everything that
 it holds: auto-continue fires that cue after the group's post-wait, and
 auto-follow fires it once the last cue in the group ends, which a looping

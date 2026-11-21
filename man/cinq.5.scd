@@ -289,6 +289,21 @@ of the help page.
 |  row_to_bottom
 :  z b, z -
 :  none
+|  collapse
+:  z c
+:  ArrowLeft
+|  expand
+:  z o
+:  ArrowRight
+|  toggle_group
+:  z a
+:  none
+|  collapse_all
+:  z M
+:  none
+|  expand_all
+:  z R
+:  none
 |  next_list
 :  l, ArrowRight
 :  Control+PageDown
@@ -465,6 +480,9 @@ page, until another count sets it again, the main window changes size, or
 another show opens.
 For *page_down* and *page_up*, it counts the pages.
 Other actions leave the count unused.
+A row is a row that the cue list shows, so that a collapsed group is one row,
+as a closed fold is one line in Vim, for every key that moves through rows or
+counts them, and for the mouse.
 A count larger than what there is, such as *9 Control+o* with fewer places
 behind, *9 g t* with fewer tabs, or *3 d d* on the last cue, makes *cinq* go as
 far as it can, where Vim would refuse it.
@@ -485,6 +503,8 @@ cue, *d g g* up to the first, and *d 3 G* to row 3, in whichever direction the
 row lies.
 A count before the operator, before the motion, or both counts the motion, and
 the two multiply, so that *2 d 3 j* cuts the selected cue and the next six.
+The count and the motion count rows, so that a collapsed group is one row of
+them and goes with every cue that it holds.
 A motion that cannot move, such as *d k* on the first cue, does nothing, and a
 count past the end stops at the last cue.
 The keys of *top_row*, *middle_row*, and *bottom_row* are no motions, since
@@ -521,7 +541,15 @@ A search looks at the number, type, name, target, action, and *Then* columns,
 with the text that the list shows in each, so that a search for *rumble* finds
 the cue of *rumble.ogg*, as a search of Vim finds the text of a whole line.
 The waits and the state are left out, since they are timings and what the
-show has made of a cue.
+show has made of a cue, and so are the marks of the groups.
+A search finds the cues that a collapsed group hides as well, and expands the
+groups that hide the match, as Vim opens the folds of a match.
+While the search line is open, only the groups that hide the current match
+stay open, and those that the line opened close again when the match moves
+elsewhere or the search is cancelled, as the incremental search of Vim closes
+the folds that it opened.
+Enter, and the keys of the next and previous match, keep the groups of the
+match open.
 A search up the list begins at the cue before the selected one.
 The search wraps around the list and ends on the selected cue, as a search of
 Vim does from the start of a line, so that the selected cue is the match only
@@ -910,6 +938,46 @@ page.
 	of the list.
 	A count selects its row first, as for *row_to_middle*.
 
+*collapse*
+	Collapse the selected group, so that the cue list shows it as one row and
+	leaves out the cues that it holds, as *z c* closes a fold in Vim.
+	On a collapsed group or a cue that is no group, it collapses the group that
+	holds the cue, and the selection moves to that group.
+	A group has a mark before its name, *-* while it is expanded and *+* while it
+	is collapsed, and a collapsed group tells after its name how many cues it
+	hides, as Vim tells the lines of a closed fold.
+	A cue list that holds no group leaves no room for the mark.
+	A click on the mark collapses the group, or expands it where it is
+	collapsed.
+	A collapsed group fires, stops, pauses, and runs its cues as an expanded one
+	does, so the keys that act on cues still do.
+	The State column of a collapsed group reads *NEXT* while standby lies among
+	the cues that it hides, and the problem of the first of them that has one,
+	such as *NO FILE*, as that cue does, unless the group runs, so that no broken
+	cue lies out of sight.
+	Collapsing is a way to look at the list, as a fold is in Vim: undo leaves it
+	alone, show mode allows it, and the show file keeps it, as *collapsed* in
+	*cinq-show*(5) tells.
+
+*expand*
+	Expand the selected group, if it is collapsed, as *z o* opens a fold in Vim.
+	Whatever selects a cue that a collapsed group hides expands the groups that
+	hide it, as Vim opens folds for a search or a jump, so that the selection is
+	never out of sight.
+	That includes a search match, *back* and *forward*, undo and redo, and GO
+	moving the selection with standby.
+
+*toggle_group*
+	Collapse the selected group, or expand it where it is collapsed, as *z a*
+	does in Vim.
+
+*collapse_all*
+	Collapse every group of the cue list, as *z M* does in Vim.
+	The selection moves to the outermost group that holds it.
+
+*expand_all*
+	Expand every group of the cue list, as *z R* does in Vim.
+
 *next_list*
 	Show the next cue list, or the outputs of the show after the last one.
 
@@ -917,7 +985,8 @@ page.
 	Show the previous cue list, or the last one from the outputs of the show.
 	Where that is the cue list that the outputs took the place of, it comes back
 	with the cue that was selected, as does choosing it in the sidebar, and any
-	other cue list shows with its standby cue selected.
+	other cue list shows with its standby cue selected, or with the collapsed
+	group that hides it, which stays collapsed.
 
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,

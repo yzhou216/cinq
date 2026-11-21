@@ -28,10 +28,12 @@ const MARGIN_ROWS: f32 = 3.0;
 
 impl App {
     /// The first cue snaps the list back to its start, as the window opened
-    /// it, since the row itself begins a separator below the start.
+    /// it, since the row itself begins a separator below the start.  A cue
+    /// that a collapsed group hides comes out of it first, since the
+    /// selection is never hidden.
     pub(super) fn revealed(self) -> (Self, Task<Message>) {
         // Scrolling moves the list away from the shape kept
-        let app = self.remeasured();
+        let app = self.with_selection_unhidden().remeasured();
         let (id, row) = (app.scrollable(), app.row());
         let task = match row {
             Some(0) => operation::snap_to(id, RelativeOffset::START),

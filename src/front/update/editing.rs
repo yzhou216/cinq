@@ -76,7 +76,7 @@ impl App {
         self.taking_away(count, Command::Delete)
     }
 
-    /// Removes the selected cue and the cues below it, as many as `count`
+    /// Removes the selected row and the rows below it, as many as `count`
     /// holds, with the command that `remove` makes of their identities
     pub(super) fn taking_away(self, count: usize, remove: fn(Vec<CueId>) -> Command) -> Self {
         let Some(first) = self.selected_row() else {
@@ -86,7 +86,7 @@ impl App {
         self.send(remove(ids)).showing(None, Some(first))
     }
 
-    /// Moves the selected cue and the cues below it, as many as `count`
+    /// Moves the selected row and the rows below it, as many as `count`
     /// holds, with the command that `regroup` makes of their identities,
     /// into the group above or out of their groups.  The selection stays on
     /// the first of them, as it does for a move.
@@ -100,13 +100,14 @@ impl App {
         }
     }
 
-    /// Returns the identities of the `count` cues of the current list from
-    /// the row `first` down
+    /// Returns the identities of the cues that `count` rows of the current
+    /// list from the row `first` down show, which stand for the cues that a
+    /// collapsed group holds, as an expanded group stands for its own
     fn ids_from(&self, first: usize, count: usize) -> Vec<CueId> {
-        self.current().cues[first..]
-            .iter()
-            .take(count)
-            .map(|cue| cue.id)
+        let cues = &self.current().cues;
+        self.shown_cues_from(first, count)
+            .into_iter()
+            .map(|index| cues[index].id)
             .collect()
     }
 

@@ -10,7 +10,7 @@ use unicode_width::UnicodeWidthStr;
 
 use super::{RADIO, STATE_ROOM, TARGET_ROOM};
 use crate::{
-    back::{Cue, Groups, Problem, Workspace},
+    back::{Cue, Groups, Kind, Problem, Workspace},
     front::view::{char_width, format, theme},
 };
 
@@ -57,7 +57,17 @@ impl Column {
             }
             Column::Post => format::post_wait(cue),
             Column::Then => format::advance(cue.advance).to_owned(),
-            Column::State => state(workspace, groups, cue, false).0,
+            Column::State => {
+                let next = groups.list().standby == Some(cue.id);
+                state(
+                    workspace,
+                    cue,
+                    next,
+                    hidden_problem(workspace, groups, cue),
+                    false,
+                )
+                .0
+            }
         }
     }
 
@@ -96,28 +106,58 @@ impl Column {
 /// where a paused cue stopped.  A cue that sends only to outputs that are gone
 /// reads in yellow that it has none, which GO does not skip.  Red turns
 /// lighter where the cue is `selected`, so that it stays legible on the
-/// selected row.
+/// selected row.  A cue that is `next` reads NEXT, as the row of a collapsed
+/// group does that hides the standby cue.  A collapsed group reads the
+/// `hidden` problem of a cue that it hides as that cue would, so that GO does
+/// not fire a broken cue out of sight, but gives way to the state of the group
+/// while it runs.
 pub(super) fn state(
     workspace: &Workspace,
-    groups: &Groups,
     cue: &Cue,
+    next: bool,
+    hidden: Option<Problem>,
     selected: bool,
 ) -> (String, fn(&Theme) -> text::Style) {
-    let danger = theme::danger(selected);
-    match (workspace.problem(cue), workspace.active_of(cue.id)) {
-        (Some(Problem::NotLoaded), _) => ("loading".to_owned(), text::default),
-        (Some(Problem::NoFile), _) => ("NO FILE".to_owned(), danger),
-        (Some(Problem::NoTarget | Problem::InTarget), _) => ("NO TARGET".to_owned(), danger),
-        (Some(Problem::NotLooping), _) => ("NO LOOP".to_owned(), danger),
-        (Some(Problem::NoDestination), _) => ("NO DESTINATION".to_owned(), danger),
-        (Some(Problem::NoMessage), _) => ("NO MESSAGE".to_owned(), danger),
-        (Some(Problem::LoadFailed(_) | Problem::EmptyClip | Problem::EmptyLoop), _) => {
-            ("BROKEN".to_owned(), danger)
+    let problem = |problem: Problem| -> (String, fn(&Theme) -> text::Style) {
+        let danger = theme::danger(selected);
+        match problem {
+            Problem::NotLoaded => ("loading".to_owned(), text::default),
+            Problem::NoFile => ("NO FILE".to_owned(), danger),
+            Problem::NoTarget | Problem::InTarget => ("NO TARGET".to_owned(), danger),
+            Problem::NotLooping => ("NO LOOP".to_owned(), danger),
+            Problem::NoDestination => ("NO DESTINATION".to_owned(), danger),
+            Problem::NoMessage => ("NO MESSAGE".to_owned(), danger),
+            Problem::LoadFailed(_) | Problem::EmptyClip | Problem::EmptyLoop => {
+                ("BROKEN".to_owned(), danger)
+            }
         }
+    };
+    match (workspace.problem(cue), workspace.active_of(cue.id)) {
+        (Some(own), _) => problem(own),
         (None, Some(active)) if active.paused => ("paused".to_owned(), text::warning),
         (None, Some(active)) => (format::phase(active), text::success),
-        (None, None) if workspace.sends_nowhere(cue) => ("NO OUTPUT".to_owned(), text::warning),
-        (None, None) if groups.list().standby == Some(cue.id) => ("NEXT".to_owned(), text::primary),
-        (None, None) => (String::new(), text::default),
+        (None, None) => match hidden {
+            Some(hidden) => problem(hidden),
+            None if workspace.sends_nowhere(cue) => ("NO OUTPUT".to_owned(), text::warning),
+            None if next => ("NEXT".to_owned(), text::primary),
+            None => (String::new(), text::default),
+        },
     }
+}
+
+/// Returns the problem of the first cue that the collapsed group `cue` hides
+/// which has one, or none for any other cue
+pub(super) fn hidden_problem<'a>(
+    workspace: &Workspace,
+    groups: &Groups<'a>,
+    cue: &Cue,
+) -> Option<Problem<'a>> {
+    (cue.kind == Kind::Group && cue.collapsed)
+        .then(|| {
+            groups
+                .members(cue.id)
+                .iter()
+                .find_map(|member| workspace.problem(member))
+        })
+        .flatten()
 }

@@ -119,6 +119,11 @@ pub struct Cue {
     /// as [`CueList::depths`] tells
     #[builder(default)]
     pub depth: u8,
+    /// Whether a group cue hides the cues that it holds in the cue list.
+    /// The show file keeps it, so that a show opens as it was left, but it
+    /// is no change to undo, as a closed fold is none in Vim.
+    #[builder(default)]
+    pub collapsed: bool,
     /// Cue that a fade, start, stop, pause, devamp, or GoTo cue acts on
     pub target: Option<CueId>,
     #[builder(default, into)]

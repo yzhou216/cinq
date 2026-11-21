@@ -45,6 +45,8 @@ impl Message {
                     | Message::Move(_)
                     | Message::Indent(_)
                     | Message::Outdent(_)
+                    | Message::Fold(_)
+                    | Message::FlipGroup(_)
                     | Message::Copy(_)
                     | Message::Cut(_)
                     | Message::Paste(..)

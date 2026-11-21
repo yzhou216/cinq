@@ -60,6 +60,9 @@ pub enum Command {
     /// Moves cues out of the group that holds each of them, with the cues
     /// that each holds, as one change
     Outdent(Vec<CueId>),
+    /// Collapses the groups among the cues, or expands them, which is no
+    /// edit and no change to undo, so that show mode allows it
+    Collapse { cues: Vec<CueId>, collapsed: bool },
     /// Changes one setting of a cue
     Edit(CueId, Edit),
     /// Changes the light patch

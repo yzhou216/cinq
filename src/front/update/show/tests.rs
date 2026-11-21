@@ -5,6 +5,7 @@
 //! Tests of opening and saving shows, and of keeping their unsaved changes
 //! as long as they last
 
+mod collapsing;
 mod keeper;
 mod opening;
 mod saving;

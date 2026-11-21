@@ -43,6 +43,15 @@ impl Action {
             Action::RowToBottom => {
                 "Scroll the list to put the selected row, or the row counted, at the bottom"
             }
+            Action::Collapse => {
+                "Collapse the selected group, or the group that holds the selected cue"
+            }
+            Action::Expand => "Expand the selected group",
+            Action::ToggleGroup => {
+                "Expand the selected group if it is collapsed, or else collapse it"
+            }
+            Action::CollapseAll => "Collapse every group of the list",
+            Action::ExpandAll => "Expand every group of the list",
             Action::NextList => "Show the next cue list, then the outputs",
             Action::PreviousList => "Show the previous cue list, or the last from the outputs",
             Action::NextTab => "Show the next inspector tab, or the tab counted",

@@ -56,12 +56,13 @@ impl Workspace {
         })
     }
 
-    /// Moves a cue within its list by a number of places, downwards when
-    /// positive, as far as the ends of the list allow.  A group moves with the
-    /// cues that it holds, as one block, whose depths shift so that its first
-    /// cue takes the depth of a cue added where the block lands.  A single cue
-    /// that keeps its depth is a move of its own, and any other is recorded
-    /// with the depths of the list before and after it.
+    /// Moves a cue within its list by a number of rows of the cue list,
+    /// downwards when positive, as far as the ends of the list allow, where a
+    /// collapsed group is one row.  A group moves with the cues that it
+    /// holds, as one block, whose depths shift so that its first cue takes
+    /// the depth of a cue added where the block lands.  A single cue that
+    /// keeps its depth is a move of its own, and any other is recorded with
+    /// the depths of the list before and after it.
     pub(super) fn moved(self, id: CueId, by: isize) -> Self {
         let Some(list) = self.list_of(id) else {
             return self;
@@ -71,14 +72,12 @@ impl Workspace {
             return self;
         };
         let rows = cues.extent(from).len();
-        let to = from
-            .saturating_add_signed(by)
-            .min(cues.cues.len().saturating_sub(rows));
+        let (moved, to) = cues.block_moved(from, by);
         if to == from {
             return self;
         }
         let (before, depth) = (cues.arrangement(), cues.cues[from].depth);
-        let workspace = self.with_list(list, |cues| cues.with_block_moved(from, to));
+        let workspace = self.with_list(list, |_| moved);
         let after = workspace.lists[list].arrangement();
         let now = after
             .iter()
@@ -96,6 +95,27 @@ impl Workspace {
                 after,
             }
         })
+    }
+
+    /// Collapses the groups among `ids`, or expands them, without recording
+    /// it, since a collapsed group is a way to look at the list
+    pub(super) fn collapsed(self, ids: &[CueId], collapsed: bool) -> Self {
+        let lists = self
+            .lists
+            .into_iter()
+            .map(|list| CueList {
+                cues: list
+                    .cues
+                    .into_iter()
+                    .map(|cue| match cue.kind {
+                        Kind::Group if ids.contains(&cue.id) => Cue { collapsed, ..cue },
+                        _ => cue,
+                    })
+                    .collect(),
+                ..list
+            })
+            .collect();
+        Self { lists, ..self }
     }
 
     /// Puts the cues of a list in the order and at the depths of

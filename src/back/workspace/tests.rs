@@ -7,6 +7,8 @@
 //! outputs borrow
 
 mod adding;
+mod collapsed_editing;
+mod collapsing;
 mod devamp_cues;
 mod devamping;
 mod editing;

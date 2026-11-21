@@ -25,7 +25,7 @@ impl App {
         let texts = self.row_texts();
         let found_rows = matching(&texts, text);
         let steps = within_a_lap(offset.unsigned_abs(), found_rows);
-        let (row, went_round) = (0..steps).fold((self.row(), false), |(row, round), _| {
+        let (row, went_round) = (0..steps).fold((self.position(), false), |(row, round), _| {
             let next = found(&texts, text, row, backward);
             let round = round
                 || row

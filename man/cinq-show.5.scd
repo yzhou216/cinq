@@ -216,6 +216,15 @@ Each cue is a table in the array *cue* of its list:
 	the structure.
 	Saving writes it for a cue that is not 0.
 
+*collapsed*
+	Whether a group cue is collapsed, which is false by default, so that the
+	cue list shows it as one row and hides the cues that it holds, as a closed
+	fold hides lines in Vim.
+	A collapsed group fires, stops, pauses, and runs its cues exactly as an
+	expanded one does, and collapsing is no change that undo takes back.
+	Saving writes it for a collapsed group only, and *cinq* ignores it on a
+	cue that is no group.
+
 *pre_wait*
 	Seconds between the cue firing and its action, which are none by
 	default.
@@ -552,6 +561,24 @@ The cues that act on other cues act on a group as follows:
 
 Panic and Pause all act on every run, those of groups and of the cues in them
 alike.
+
+A group may be collapsed, as the *collapsed* key tells, which only changes how
+the cue list shows it: as one row, with the cues that it holds hidden at any
+depth, as Vim shows a closed fold as one line.
+It fires, stops, pauses, and runs its cues as an expanded group does, and
+standby may stay on a cue that it hides.
+The row of a collapsed group counts as one row wherever the cue list counts
+rows, and editing acts on it as on a closed fold, on the whole group:
+
+- A cue added or pasted below a collapsed group goes below the cues that the
+  group holds, at the depth of the group, so that it lies outside the group.
+  A stop, pause, start, or GoTo cue added there targets the group, the row
+  above it.
+- Moving a cue or a group by a row moves it past a collapsed group and the
+  cues that it holds, to below them at the depth outside the group, and never
+  into it.
+- Indenting the cue just below a collapsed group moves it into the group as
+  its last cue, which expands the group.
 
 Editing keeps a group together with the cues that it holds:
 

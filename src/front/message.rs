@@ -21,7 +21,7 @@ use super::{
 };
 use crate::back::{Command, CueId, Device, Edit, InstrumentId, Kind, OutputId, PatchEdit, Place};
 pub use line::LineKey;
-pub use scrolling::{Height, Page};
+pub use scrolling::{Fold, Height, Page};
 pub use tab::Tab;
 
 /// Setting whose field shows the text typed into it, which applies once it
@@ -134,6 +134,11 @@ pub enum Message {
     /// Scrolls the list to put the selected row at a height in view, after
     /// selecting the row that the count typed before the keys names
     Place(Height, Option<usize>),
+    /// Collapses or expands groups of the cue list
+    Fold(Fold),
+    /// Collapses the group, or expands it where it is collapsed, as a click
+    /// on its mark does
+    FlipGroup(CueId),
     /// A drop-down list opened its menu, or its menu closed
     MenuOpen(bool),
     /// The highlight of the open menu of the Device list of an output moved

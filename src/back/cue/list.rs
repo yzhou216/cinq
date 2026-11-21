@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Cue lists, each with its own standby position, the groups in them in
-//! [`groups`], and the depth that a cue takes where it lands in [`placing`]
+//! [`groups`], and where a cue lands in [`placing`]
 
 mod groups;
 mod placing;
@@ -46,21 +46,13 @@ impl CueList {
         Self { standby, ..self }
     }
 
-    /// Returns the index that a cue put at `at` takes
-    pub(in crate::back) fn index_at(&self, at: Place) -> usize {
-        match at {
-            Place::After(cue) => self.position(cue).map(|index| index + 1),
-            Place::Before(cue) => self.position(cue),
-            Place::End => None,
-        }
-        .unwrap_or(self.cues.len())
-    }
-
     /// Inserts a new cue of `kind` with an identity, a number, and a depth at
     /// a place in the list, named as new cues of its kind are.  As in QLab, a
     /// new cue that acts on another cue targets the cue it follows when it
     /// can act on that cue, but never a group that holds the new cue, which
-    /// a cue added below a group is in.  A cue that goes at the end of a list
+    /// a cue added below a group is in.  The cue it follows is the row above
+    /// it in the cue list, so that a cue added below a collapsed group
+    /// targets the group.  A cue that goes at the end of a list
     /// whose standby waits past the end goes on standby, so that GO fires the
     /// first cue of a new list, and the cue added to a list played to its
     /// end.
@@ -76,12 +68,14 @@ impl CueList {
         let cue = Cue::new(id, number, kind, Cue::new_name(kind))
             .depth(depth)
             .build();
-        let depths = self.depths();
+        let groups = self.groups();
         let target = index
             .checked_sub(1)
-            .and_then(|before| Some((before, self.cues.get(before)?)))
+            .and_then(|before| groups.shown_as().get(before).copied())
+            .and_then(|row| Some((row, self.cues.get(row)?)))
             .filter(|&(row, before)| {
-                cue.can_target(before) && !(before.kind == Kind::Group && depth > depths[row])
+                cue.can_target(before)
+                    && !(before.kind == Kind::Group && depth > groups.depths()[row])
             })
             .map(|(_, before)| before.id);
         Self {
