@@ -166,6 +166,8 @@ Major changes and improvements in each release of cinq, newest first.
   standby opens the tutorial from the page, and the table of keys takes the
   width of the window, so that most descriptions fit one line, while the
   paragraphs keep their width.
+- The outputs view hands the room that the device does not need to the name
+  and the state, so that they wrap later in a narrow window.
 
 ## v0.1.5
 

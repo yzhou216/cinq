@@ -149,9 +149,10 @@ fn device_wanted(app: &App) -> f32 {
 /// Returns the columns that show and their widths, as many as keep the
 /// device on one line, or [`DEVICE_ROOM`] columns once the New cues column
 /// has gone, in `room`, with the others giving way in turn, or as few as
-/// they can
+/// they can, and then the name and the state back at the width of their
+/// text for as much as the device does not need
 fn fitting(app: &App, room: f32) -> Vec<(Column, Length)> {
-    giving_way(
+    let columns = giving_way(
         &[Yield::NewCues, Yield::State, Yield::Name],
         |gone| {
             Column::VARIANTS
@@ -168,7 +169,22 @@ fn fitting(app: &App, room: f32) -> Vec<(Column, Length)> {
             };
             device_room(columns, room) >= wanted
         },
-    )
+    );
+    let spare = device_room(&columns, room) - device_wanted(app);
+    columns
+        .into_iter()
+        .scan(spare.max(0.0), |spare, (column, width)| {
+            let grown = match (column, width, column.width(app, &[])) {
+                (Column::Name | Column::State, Length::Fixed(now), Length::Fixed(whole)) => {
+                    let grown = whole.min(now + *spare).max(now);
+                    *spare -= grown - now;
+                    Length::Fixed(grown)
+                }
+                _ => width,
+            };
+            Some((column, grown))
+        })
+        .collect()
 }
 
 /// Returns the width that the Device column has in `room` beside the other
