@@ -179,16 +179,22 @@ impl App {
     }
 
     pub(super) fn toggle_fullscreen(&self) -> Task<Message> {
+        let main = self.main;
         self.stage.window.map_or_else(Task::none, |window| {
-            window::mode(window).then(move |mode| {
-                let toggled = if mode == Mode::Fullscreen {
-                    Mode::Windowed
-                } else {
-                    Mode::Fullscreen
-                };
-                window::set_mode(window, toggled)
-            })
+            window::mode(window).then(move |mode| toggled(window, main, mode))
         })
+    }
+}
+
+/// Switches the stage window out of fullscreen, and the main window then asks
+/// for the keyboard, which the fullscreen window kept, or switches the stage
+/// window into it
+fn toggled(window: window::Id, main: Option<window::Id>, mode: Mode) -> Task<Message> {
+    if mode == Mode::Fullscreen {
+        window::set_mode(window, Mode::Windowed)
+            .chain(main.map_or_else(Task::none, window::gain_focus))
+    } else {
+        window::set_mode(window, Mode::Fullscreen)
     }
 }
 

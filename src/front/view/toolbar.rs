@@ -9,11 +9,11 @@
 
 use iced::{
     Center, Element, padding,
-    widget::{checkbox, container, row, space, text},
+    widget::{container, row, space, text},
 };
 use strum::VariantArray;
 
-use super::{SPACING, button, dropdown, keep_keys};
+use super::{SPACING, button, check_and_leave, dropdown, keep_keys};
 use crate::{
     back::{Kind, Place},
     front::{App, Message},
@@ -61,13 +61,15 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 
 /// Returns the checkbox of show mode, which locks the buttons beside it,
 /// with room after it, so that its label does not read as the start of the
-/// next
+/// next.  Tab reaches it and Enter flips it, and show mode never locks it,
+/// since it is the way out.
 fn show_mode(app: &App) -> Element<'_, Message> {
-    container(
-        checkbox(app.workspace.show_mode())
-            .label("Show mode")
-            .on_toggle(Message::ShowMode),
-    )
+    container(check_and_leave(
+        "Show mode",
+        app.workspace.show_mode(),
+        Some(Message::ShowMode),
+        &app.config.keymap,
+    ))
     .padding(padding::right(SPACING))
     .into()
 }

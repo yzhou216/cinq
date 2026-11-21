@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the hints while a drop-down list has the keyboard
+//! Tests of the hints while a drop-down list or a checkbox has the keyboard
 
 use super::{clipped, hinted, opened};
 use crate::{
@@ -72,4 +72,27 @@ fn a_list_hints_neither_the_keys_to_add_and_rename_an_output_nor_paste() {
         clipped(&cut(held(Preset::Vi, true))).as_deref(),
         Some("Cut cue 1")
     );
+}
+
+#[test]
+fn the_show_mode_check_box_hints_the_next_field_go_and_panic_in_show_mode_too() {
+    [Preset::Vi, Preset::Cua].into_iter().for_each(|preset| {
+        let app = App {
+            workspace: added().apply(Command::ShowMode(true)),
+            ..held(preset, false)
+        };
+        let hints = all(&app);
+        assert!(
+            hints.iter().any(|hint| hint.contains("next field")),
+            "{hints:?}"
+        );
+        assert!(hints.iter().any(|hint| hint.contains("GO")), "{hints:?}");
+        assert!(hints.iter().any(|hint| hint.contains("Panic")), "{hints:?}");
+        assert!(
+            hints
+                .iter()
+                .all(|hint| !hint.contains("rename") && !hint.contains("standby")),
+            "{hints:?}"
+        );
+    });
 }

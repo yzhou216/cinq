@@ -13,36 +13,47 @@
 //! A checkbox that cannot change takes no keyboard.
 
 use iced::{
-    Border, Color, Element, Event, Length, Rectangle, Renderer, Size, Theme,
+    Element, Event, Length, Rectangle, Renderer, Size, Theme,
     advanced::{
-        Clipboard, Renderer as _, Shell,
+        Clipboard, Shell,
         layout::{self, Layout},
         mouse, overlay, renderer,
         widget::{
             Operation, Widget,
-            operation::Focusable,
             tree::{self, Tree},
         },
     },
-    keyboard::{Key, key::Named},
-    widget::text_input,
+    keyboard::Key,
 };
 
-use super::{key_pressed, pressed};
+use super::{
+    focus::{self, State},
+    key_pressed,
+};
 use crate::front::{
-    Message,
+    Focus, Message,
     keymap::{KeyPress, Keymap},
-    view::theme,
 };
 
-/// Radius of the border that marks the checkbox as it has the keyboard
-const RADIUS: f32 = 2.0;
+/// Room that the label keeps after its last letter, within the border
+const ROOM: f32 = 4.0;
+
+/// Returns the layout of iced's checkbox, which lies in the room of this one
+fn look(layout: Layout<'_>) -> Layout<'_> {
+    layout
+        .children()
+        .next()
+        .expect("the layout of a checkbox holds that of iced's")
+}
 
 pub struct Check<'a> {
     /// iced's checkbox, which draws this one
     look: Element<'a, Message>,
     /// Message that Enter sends, which flips the box, unless it cannot change
     flip: Option<Message>,
+    /// Whether Enter gives the keyboard back to the cue list after it flips
+    /// the box
+    leaves: bool,
     keymap: &'a Keymap,
 }
 
@@ -54,34 +65,37 @@ pub fn check<'a>(
     on_toggle: Option<impl Fn(bool) -> Message + Clone + 'a>,
     keymap: &'a Keymap,
 ) -> Element<'a, Message> {
+    checkbox(label, checked, on_toggle, false, keymap)
+}
+
+/// Returns a checkbox as [`check`] does, one that gives the keyboard back to
+/// the cue list after Enter flips it, for a setting that the operator makes
+/// before moving on to the cues
+pub fn check_and_leave<'a>(
+    label: &'a str,
+    checked: bool,
+    on_toggle: Option<impl Fn(bool) -> Message + Clone + 'a>,
+    keymap: &'a Keymap,
+) -> Element<'a, Message> {
+    checkbox(label, checked, on_toggle, true, keymap)
+}
+
+fn checkbox<'a>(
+    label: &'a str,
+    checked: bool,
+    on_toggle: Option<impl Fn(bool) -> Message + Clone + 'a>,
+    leaves: bool,
+    keymap: &'a Keymap,
+) -> Element<'a, Message> {
     Element::new(Check {
         flip: on_toggle.clone().map(|on_toggle| on_toggle(!checked)),
         look: iced::widget::checkbox(checked)
             .label(label)
             .on_toggle_maybe(on_toggle)
             .into(),
+        leaves,
         keymap,
     })
-}
-
-struct State {
-    /// Whether the checkbox has the keyboard, which any click takes away, as
-    /// it does from a text field
-    focused: bool,
-}
-
-impl Focusable for State {
-    fn is_focused(&self) -> bool {
-        self.focused
-    }
-
-    fn focus(&mut self) {
-        self.focused = true;
-    }
-
-    fn unfocus(&mut self) {
-        self.focused = false;
-    }
 }
 
 impl Check<'_> {
@@ -98,12 +112,12 @@ impl Check<'_> {
         repeat: bool,
         shell: &mut Shell<'_, Message>,
     ) -> bool {
-        let taken = focused && !at_once && *key == Key::Named(Named::Enter);
+        let taken = focus::took(focused, key, at_once, shell);
         if let (true, false, Some(flip)) = (taken, repeat, &self.flip) {
             shell.publish(flip.clone());
-        }
-        if taken {
-            shell.capture_event();
+            if self.leaves {
+                shell.publish(Message::Focus(Focus::Cues));
+            }
         }
         taken
     }
@@ -136,9 +150,12 @@ impl Widget<Message, Theme, Renderer> for Check<'_> {
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        self.look
-            .as_widget_mut()
-            .layout(&mut tree.children[0], renderer, limits)
+        let look = self.look.as_widget_mut().layout(
+            &mut tree.children[0],
+            renderer,
+            &limits.shrink(Size::new(ROOM, 0.0)),
+        );
+        layout::Node::with_children(look.size().expand(Size::new(ROOM, 0.0)), vec![look])
     }
 
     fn draw(
@@ -156,26 +173,12 @@ impl Widget<Message, Theme, Renderer> for Check<'_> {
             renderer,
             theme,
             style,
-            layout,
+            look(layout),
             cursor,
             viewport,
         );
         if tree.state.downcast_ref::<State>().focused {
-            // Color of the border of a focused text field
-            let focused = text_input::Status::Focused { is_hovered: false };
-            let border = Border {
-                color: text_input::default(theme, focused).border.color,
-                width: theme::FOCUS_WIDTH,
-                radius: RADIUS.into(),
-            };
-            renderer.fill_quad(
-                renderer::Quad {
-                    bounds: layout.bounds().expand(theme::FOCUS_WIDTH),
-                    border,
-                    ..renderer::Quad::default()
-                },
-                Color::TRANSPARENT,
-            );
+            focus::mark(renderer, theme, layout.bounds());
         }
     }
 
@@ -191,10 +194,7 @@ impl Widget<Message, Theme, Renderer> for Check<'_> {
         viewport: &Rectangle,
     ) {
         let state = tree.state.downcast_mut::<State>();
-        if pressed(event) && state.focused {
-            state.focused = false;
-            shell.request_redraw();
-        }
+        focus::click_takes(state, event, shell);
         let taken = key_pressed(event).is_some_and(|KeyPress { key, press, repeat }| {
             let at_once = press.is_some_and(|press| self.keymap.acts_at_once(press));
             self.took(state.focused, key, at_once, repeat, shell)
@@ -203,7 +203,7 @@ impl Widget<Message, Theme, Renderer> for Check<'_> {
             self.look.as_widget_mut().update(
                 &mut tree.children[0],
                 event,
-                layout,
+                look(layout),
                 cursor,
                 renderer,
                 clipboard,
@@ -237,7 +237,7 @@ impl Widget<Message, Theme, Renderer> for Check<'_> {
     ) -> mouse::Interaction {
         self.look.as_widget().mouse_interaction(
             &tree.children[0],
-            layout,
+            look(layout),
             cursor,
             viewport,
             renderer,

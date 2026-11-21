@@ -146,6 +146,15 @@ Major changes and improvements in each release of cinq, newest first.
   row of its own, a kind with no target has no Target row, and the Light Patch
   tells that it has no instruments, and what an address takes only while an
   address has the keyboard or is refused.
+- Tab reaches the Show mode checkbox, which show mode never locks, and Enter
+  flips it and gives the keys back to the cue list, so that the keyboard alone
+  locks the show before a performance and unlocks it after.  On the Light
+  Patch, Tab reaches Add instrument and each Remove, which Enter presses and
+  show mode locks.  Tab past the last field, and Shift+Tab before the first,
+  leave every field and give the keys back to the cue list, or the outputs, so
+  that a checkbox or a closed list no longer keeps them in the cua keymap,
+  which has no key to leave a field.  F11 out of fullscreen gives the main
+  window the keyboard.
 
 ## v0.1.5
 

@@ -85,3 +85,11 @@ fn show_mode_tells_why_a_key_that_edits_did_nothing_and_stays_quiet_for_the_rest
             .all(|keys| told(keys).is_none())
     );
 }
+
+#[test]
+fn the_show_mode_check_box_flips_both_ways_since_show_mode_never_locks_it() {
+    let (locked, _) = show(Some(CueId(4))).handled(Message::ShowMode(true));
+    assert!(locked.workspace.show_mode() && !locked.editable());
+    let (unlocked, _) = locked.handled(Message::ShowMode(false));
+    assert!(!unlocked.workspace.show_mode() && unlocked.editable());
+}

@@ -59,7 +59,9 @@ pub(super) fn patch(app: &App) -> Element<'_, Message> {
                 text(format!("{:.0}%", app.workspace.light_level(instrument.id)))
             }),
             table::column(text(""), move |instrument: &Instrument| {
-                button("Remove").on_press_maybe(edit(PatchEdit::Remove(instrument.id)))
+                button("Remove")
+                    .on_press_maybe(edit(PatchEdit::Remove(instrument.id)))
+                    .reachable_and_leave(&app.config.keymap)
             }),
         ],
         app.workspace.patch(),
@@ -77,7 +79,9 @@ pub(super) fn patch(app: &App) -> Element<'_, Message> {
         row![
             text(format!("Light patch of the show{}", lock(app))),
             space::horizontal(),
-            button("Add instrument").on_press_maybe(edit(PatchEdit::Add)),
+            button("Add instrument")
+                .on_press_maybe(edit(PatchEdit::Add))
+                .reachable(&app.config.keymap),
         ]
         .align_y(Center),
         body,

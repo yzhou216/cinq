@@ -9,7 +9,11 @@
 //! holding GO would wait for the cue until letting go.  These buttons keep
 //! the look of iced's, but they send their message on the press.  The press
 //! never reaches the iced button inside, so it cannot send the message again
-//! on release, and a button held down keeps the look of one hovered.
+//! on release, and a button held down keeps the look of one hovered.  A button
+//! that is made [`reachable`](Button::reachable) is also a stop of the Tab
+//! order, which Enter presses.
+
+mod focused;
 
 use iced::{
     Element, Event, Length, Theme,
@@ -18,16 +22,22 @@ use iced::{
     widget::button::{Status, Style},
 };
 
+use self::focused::Focused;
 use super::{
     pressed,
     wrap::{Intercept, wrap},
 };
-use crate::front::{Message, view::theme};
+use crate::front::{Message, keymap::Keymap, view::theme};
 
 pub struct Button<'a> {
     /// iced's button, which draws this one but never sees a press
     look: iced::widget::Button<'a, Message>,
     on_press: Option<Message>,
+    /// Keymap of a button that Tab reaches and Enter presses
+    keymap: Option<&'a Keymap>,
+    /// Whether Enter gives the keyboard back to the cue list after it presses
+    /// the button
+    leaves: bool,
 }
 
 /// Returns a disabled button that shows `content`, until it has a message
@@ -35,6 +45,8 @@ pub fn button<'a>(content: impl Into<Element<'a, Message>>) -> Button<'a> {
     Button {
         look: iced::widget::button(content).style(theme::button),
         on_press: None,
+        keymap: None,
+        leaves: false,
     }
 }
 
@@ -47,6 +59,7 @@ impl Button<'_> {
         Self {
             look: self.look.on_press_maybe(message.clone()),
             on_press: message,
+            ..self
         }
     }
 
@@ -65,9 +78,37 @@ impl Button<'_> {
     }
 }
 
+impl<'a> Button<'a> {
+    /// Makes the button a stop of the Tab order, which Enter presses, unless
+    /// it has no message, as it has not while show mode locks it
+    pub fn reachable(self, keymap: &'a Keymap) -> Self {
+        Self {
+            keymap: Some(keymap),
+            ..self
+        }
+    }
+
+    /// Makes the button reachable as [`Self::reachable`] does, and gives the
+    /// keyboard back to the cue list after Enter presses it, for a button whose
+    /// press changes the rows under it, since iced would otherwise pass the
+    /// keyboard to the same button of the row that slides into its place
+    pub fn reachable_and_leave(self, keymap: &'a Keymap) -> Self {
+        Self {
+            leaves: true,
+            ..self.reachable(keymap)
+        }
+    }
+}
+
 impl<'a> From<Button<'a>> for Element<'a, Message> {
     fn from(button: Button<'a>) -> Self {
-        wrap(button.look, OnPress(button.on_press))
+        let look = wrap(button.look, OnPress(button.on_press.clone()));
+        match (button.keymap, button.on_press) {
+            (Some(keymap), Some(press)) => {
+                Element::new(Focused::new(look, press, button.leaves, keymap))
+            }
+            _ => look,
+        }
     }
 }
 

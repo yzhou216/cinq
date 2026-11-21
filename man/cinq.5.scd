@@ -634,7 +634,12 @@ A text field of the inspector, a drop-down list, or a checkbox
 	From the cue list, or the outputs, *next_field* goes first to the first field
 	of the inspector, so that the settings of what is selected are one key away,
 	and then on through the rest of the inspector, the toolbar, and the sidebar,
-	and round again, which *previous_field* does the other way.
+	which *previous_field* does the other way.
+	Past the last field, and before the first, no field has the keyboard, which
+	gives the keys back to the cue list, or the outputs, so that a checkbox or a
+	closed drop-down list never keeps them in the cua keymap, which binds no
+	*cancel*.
+	One more press goes round again.
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
 	*panic*, *cancel*, *next_field*, *previous_field*, *back*, *forward*, *open*,
 	*save*, and *save_as*, which act unless a text field takes them for typing.
@@ -647,14 +652,31 @@ A text field of the inspector, a drop-down list, or a checkbox
 	Enter flips the one that has the keyboard, and then neither leaves it nor
 	puts a cue on standby, while Space and Escape keep GO and Panic and never flip
 	it.
-	Show mode locks the checkboxes, which take no keyboard then.
+	Show mode locks those checkboxes, which take no keyboard then.
+	The Show mode checkbox of the toolbar, above the cue list and above the
+	outputs, is a stop as well, which comes after the fields of the inspector,
+	before the list of the kind of cue to add, and which Enter flips in the same
+	way, except that the keyboard then goes back to the cue list, since the
+	operator locks the show to run it.
+	Show mode never locks it, since it is the way out, so that the keyboard
+	alone locks the show before a performance and unlocks it after.
+	It has no key of its own.
+	From the cue list, *previous_field* reaches it in three presses with a cue
+	selected that has an inspector, as the sidebar holds the last two stops.
+	The buttons Add instrument and Remove of the Light Patch are stops as well,
+	in the order of the window, which Enter presses, with the same border, and
+	show mode locks them, so that these keys pass them by then.
+	Enter on Remove gives the keyboard back to the cue list, since the row
+	below slides into the place of the one removed and would take the keyboard
+	with it, so that removing instruments one after another takes a Tab each
+	time.
 	One of the sends of a cue, which scroll on the Levels tab, and a list of the
 	sidebar, which scrolls in a low window, scroll into view as these keys reach
 	it, with the title of the list above it.
 	Enter in the empty File field of a cue opens the dialog that chooses the
 	file, as the Choose button does, and the status bar hints it.
 	Anywhere else Enter leaves a text field, opens the menu of a drop-down list,
-	which takes the keyboard from there, and flips a checkbox.
+	which takes the keyboard from there, presses a button, and flips a checkbox.
 	A level typed into a field, the level of a cue, a send, the level of new
 	cues of an output, or that of an instrument of a light cue, applies once
 	the field is left, by Enter, Tab, a click, GO, or anything else the
@@ -1127,9 +1149,11 @@ page.
 	Move the keyboard to the next field: a text field, drop-down list, or
 	checkbox of the inspector, or the list of the kind of cue that *add_below*
 	and *add_above* add.
+	After the last field it gives the keyboard back to the cue list.
 
 *previous_field*
-	Move the keyboard to the previous field.
+	Move the keyboard to the previous field, or, before the first, back to the
+	cue list.
 
 *pick*
 	Pick the highlighted option of an open menu, as Enter does and as Control+y

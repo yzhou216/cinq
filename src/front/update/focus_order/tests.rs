@@ -37,20 +37,32 @@ fn tab_from_no_field_goes_first_to_the_inspector_then_to_the_toolbar_and_the_sid
     let visited = |mut at: Option<usize>| {
         (0..5)
             .map(|_| {
-                at = chosen(&window(at), false);
+                at = chosen(&window(at), false).filter(|&place| place < 4);
                 at
             })
             .collect::<Vec<_>>()
     };
-    // Places of the window: toolbar 0, inspector 1 and 2, sidebar 3
-    assert_eq!(visited(None), [Some(1), Some(2), Some(0), Some(3), Some(1)]);
+    // Places of the window: toolbar 0, inspector 1 and 2, sidebar 3, and
+    // after the last field no field, which holds the place 4
+    assert_eq!(
+        visited(None),
+        [Some(1), Some(2), Some(0), Some(3), None],
+        "the round ends with no field, which the next Tab starts again from"
+    );
+}
+
+#[test]
+fn tab_past_the_last_field_and_shift_tab_before_the_first_leave_every_field() {
+    assert_eq!(chosen(&window(Some(3)), false), Some(4));
+    assert_eq!(chosen(&window(Some(1)), true), Some(4));
 }
 
 #[test]
 fn shift_tab_goes_the_other_way_round_from_the_last_field() {
     assert_eq!(chosen(&window(None), true), Some(3));
     assert_eq!(chosen(&window(Some(3)), true), Some(0));
-    assert_eq!(chosen(&window(Some(1)), true), Some(3));
+    assert_eq!(chosen(&window(Some(0)), true), Some(2));
+    assert_eq!(chosen(&window(Some(2)), true), Some(1));
 }
 
 #[test]

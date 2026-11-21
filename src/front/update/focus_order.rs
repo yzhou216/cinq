@@ -8,9 +8,11 @@
 //! sidebar before the inspector, so that Tab from the cue list would visit
 //! them first.  The settings of what is selected are what the operator comes
 //! for, so that the order here puts the fields of the inspector first, then
-//! the rest in the order of the window, and goes round at its ends.  Two
-//! operations do it, as iced's own do: the first reads the fields, and the
-//! second gives the keyboard to the one that the order chose.
+//! the rest in the order of the window, and goes round at its ends, where it
+//! stops once with no field holding the keyboard, so that a checkbox or a
+//! closed list never keeps it for good.  Two operations do it, as iced's own
+//! do: the first reads the fields, and the second gives the keyboard to the
+//! one that the order chose.
 
 use iced::{
     Rectangle, Task,
@@ -30,7 +32,8 @@ struct Slot {
 }
 
 /// Moves the keyboard to the field after the one that has it, or before it
-/// when `backward`, or to the first or last where none has it
+/// when `backward`, or to the first or last where none has it, and takes it
+/// from every field when it moves past the last or the first
 pub(super) fn move_focus<T: Send + 'static>(backward: bool) -> Task<T> {
     operate(Reading::new(view::INSPECTOR)).then(move |slots| match chosen(&slots, backward) {
         Some(target) => operate::<T>(Giving { visited: 0, target }),
@@ -39,21 +42,30 @@ pub(super) fn move_focus<T: Send + 'static>(backward: bool) -> Task<T> {
 }
 
 /// Returns the place in the order of the window of the field that comes next
-/// in the order of this module, where the fields of the inspector come first
+/// in the order of this module, where the fields of the inspector come first,
+/// or the count of the fields where the next stop is no field, which gives the
+/// keys back to the list
 fn chosen(slots: &[Slot], backward: bool) -> Option<usize> {
     let order: Vec<usize> = (0..slots.len())
         .filter(|&at| slots[at].inspector)
         .chain((0..slots.len()).filter(|&at| !slots[at].inspector))
         .collect();
-    let last = order.len().checked_sub(1)?;
-    let here = order.iter().position(|&at| slots[at].focused);
-    let next = match (here, backward) {
-        (Some(here), false) => (here + 1) % order.len(),
-        (Some(here), true) => (here + last) % order.len(),
-        (None, false) => 0,
-        (None, true) => last,
+    // The stops are the fields and, after the last, no field, where the
+    // keyboard stands when none has it
+    let stops = order.len() + 1;
+    if order.is_empty() {
+        return None;
+    }
+    let here = order
+        .iter()
+        .position(|&at| slots[at].focused)
+        .unwrap_or(order.len());
+    let next = if backward {
+        (here + stops - 1) % stops
+    } else {
+        (here + 1) % stops
     };
-    order.get(next).copied()
+    Some(order.get(next).copied().unwrap_or(slots.len()))
 }
 
 /// Reads the fields of the window, noting those within the inspector

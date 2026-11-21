@@ -13,6 +13,7 @@
 mod button;
 mod check;
 mod dropdown;
+pub(in crate::front::view) mod focus;
 mod hide;
 mod keep_keys;
 mod line_keys;
@@ -24,7 +25,7 @@ use iced::{Event, Rectangle, mouse, touch};
 
 use crate::front::keymap::KeyPress;
 pub use button::button;
-pub use check::check;
+pub use check::{check, check_and_leave};
 pub(in crate::front::view) use dropdown::shortened;
 pub use dropdown::{dropdown, width as dropdown_width};
 pub use hide::hide;

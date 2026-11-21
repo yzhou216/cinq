@@ -4,19 +4,26 @@
 
 //! Tests of the keys that flip a checkbox and of the keys that none may take
 
-use iced::keyboard::{Key, Modifiers, key::Named};
+use iced::{
+    advanced::widget::operation::Focusable,
+    keyboard::{Key, Modifiers, key::Named},
+};
 use strum::VariantArray;
 
 use super::*;
 use crate::{
     back::{CueId, Edit},
-    front::keymap::{Action, Preset, Press},
+    front::{
+        Focus,
+        keymap::{Action, Preset, Press},
+    },
 };
 
 fn checkbox(keymap: &Keymap, changes: bool) -> Check<'_> {
     Check {
         look: iced::widget::checkbox(false).label("Loop").into(),
         flip: changes.then_some(Message::Edit(CueId(1), Edit::Loop(true))),
+        leaves: false,
         keymap,
     }
 }
@@ -99,4 +106,39 @@ fn the_state_takes_and_gives_up_the_keyboard() {
     assert!(state.is_focused());
     state.unfocus();
     assert!(!state.is_focused());
+}
+
+/// Presses Enter in a checkbox that has the keyboard, and returns what it
+/// sent, where `leaves` says whether it gives the keyboard back to the list
+fn entered(leaves: bool, repeat: bool) -> Vec<Message> {
+    let keymap = Keymap::default();
+    let mut messages = Vec::new();
+    let mut shell = Shell::new(&mut messages);
+    Check {
+        leaves,
+        ..checkbox(&keymap, true)
+    }
+    .took(true, &enter(), false, repeat, &mut shell);
+    messages
+}
+
+#[test]
+fn a_checkbox_that_leaves_gives_the_keyboard_to_the_list_after_it_flips() {
+    assert!(matches!(
+        entered(true, false).as_slice(),
+        [Message::Edit(..), Message::Focus(Focus::Cues)]
+    ));
+}
+
+#[test]
+fn a_checkbox_that_stays_keeps_the_keyboard_after_it_flips() {
+    assert!(matches!(
+        entered(false, false).as_slice(),
+        [Message::Edit(..)]
+    ));
+}
+
+#[test]
+fn a_held_enter_gives_the_keyboard_back_once_the_box_has_flipped_not_again() {
+    assert!(entered(true, true).is_empty());
 }
