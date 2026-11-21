@@ -117,6 +117,10 @@ impl App {
             Some((Action::Last, _)) if app.help => {
                 (app, operation::snap_to(view::HELP, RelativeOffset::END))
             }
+            // The page has no focus for links, so that its keys reach the
+            // tutorial, which a held key would open again on every repeat
+            Some((Action::Standby, _)) if app.help && repeat => (app, Task::none()),
+            Some((Action::Standby, _)) if app.help => app.handled(Message::OpenTutorial),
             Some((action, count)) if app.help && !action.acts_over_help() => match action.page() {
                 Some(page) => app.help_paged(page, count),
                 None => (app, Task::none()),

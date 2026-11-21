@@ -162,6 +162,10 @@ Major changes and improvements in each release of cinq, newest first.
   stays on a short bar until after GO and Panic, and while a field has the
   keyboard, GO, Panic, and the key that leaves it outlast the keys that only
   teach.
+- The first paragraph of the help page names the key that closes it, the key of
+  standby opens the tutorial from the page, and the table of keys takes the
+  width of the window, so that most descriptions fit one line, while the
+  paragraphs keep their width.
 
 ## v0.1.5
 

@@ -41,7 +41,8 @@ editor that has the file open may offer to load it again.
 
 The help page, which the key of *help* opens, names the keymap in use, opens
 with a short paragraph of first steps that names the keys of GO and Panic, of
-moving and standby, and of adding, naming, and undoing, links to the tutorial,
+moving and standby, of adding, naming, and undoing, of closing the page, and of
+opening the tutorial, links to the tutorial, which the key of *standby* opens too,
 lists each action that the keymap binds to a key with its keys and its name in
 the file, links to the file that the keys come from, or would come from, and
 ends with the notice of the license of cinq.
@@ -630,7 +631,9 @@ A text field of the inspector, a drop-down list, or a checkbox
 	replaces it, whereas a click puts the caret where it fell.
 	A field that cannot be edited, as every field in show mode, or a field
 	that the cue ignores, as the post-wait of an auto-follow cue, is a plain
-	box that takes no keyboard, and these keys pass it by.
+	box that takes no keyboard, and these keys pass it by.  The box keeps the
+	height of the field, and shows in dim text what the field shows while it
+	holds nothing, as *0* for a wait.
 	From the cue list, or the outputs, *next_field* goes first to the first field
 	of the inspector, so that the settings of what is selected are one key away,
 	and then on through the rest of the inspector, the toolbar, and the sidebar,
@@ -697,7 +700,8 @@ The help page
 	what the window shows, with a count of lines for the half pages, which
 	the cue list shares, and of pages for the whole pages.  Of the rest, only
 	the keys of *go*, *panic*, *help*, and *close_help* act, whichever window
-	has the keyboard, so that no field takes a key meanwhile.  The keys of *go*
+	has the keyboard, so that no field takes a key meanwhile, and that of
+	*standby* opens the tutorial, as its link does.  The keys of *go*
 	and *panic* close the page as well, so that the show is in view.  The key
 	of *help* opens the page from the main window only, since the stage window
 	may cover that window when it is fullscreen, and does nothing while the
@@ -857,6 +861,9 @@ page.
 *panic*
 	Panic: fade every playing cue out over one second, and stop the rest.
 	A second panic while the first is still fading stops everything at once.
+	A cue that Panic or a fade cue is fading reads *fading* in green in the State
+	column, in place of its time left or *looping*, so that the list tells it from
+	a cue at full level.
 
 *standby*
 	Put the selected cue on standby, so that the next GO fires it.

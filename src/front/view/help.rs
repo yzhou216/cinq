@@ -27,8 +27,8 @@ use crate::front::{
     keymap::{Action, Keymap, config::Source},
 };
 
-/// Widest that the text of the page grows, so that its lines stay easy to
-/// read in a window that the page fills
+/// Widest that the paragraphs of the page grow, so that their lines stay easy to
+/// read in a window that the page fills, which the table of keys does not need
 const WIDTH: f32 = 960.0;
 
 /// Space above and below the text of each row of the table, closer than in
@@ -75,24 +75,24 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         " shows step by step how to run a show and how to make one.",
         |()| Message::OpenTutorial,
     );
-    let page = column![
+    let top = column![
         text(format!("Keys of the {} keymap", keymap.name())).size(24),
         text(first_steps(keymap)),
         tutorial,
-        bindings,
-        text(counts(keymap)),
     ]
-    .extend(operators.map(Element::from))
-    .push(text("Actions that this keymap binds to no key are left out of the table, and cinq(5) lists them all."))
-    .push(text("The keys of a sequence are typed one after another with no Space between them, since Space is GO."))
-    .push(text("The keys of GO and Panic act at once, even halfway through another command."))
-    .push(source(&app.config.source))
-    .push(key_values)
-    .extend(notice())
-    .push(button("Close").on_press(Message::CloseHelp))
-    .spacing(SPACING)
-    .width(Fill)
-    .max_width(WIDTH);
+    .spacing(SPACING);
+    let bottom = column![text(counts(keymap))]
+        .extend(operators.map(Element::from))
+        .push(text("Actions that this keymap binds to no key are left out of the table, and cinq(5) lists them all."))
+        .push(text("The keys of a sequence are typed one after another with no Space between them, since Space is GO."))
+        .push(text("The keys of GO and Panic act at once, even halfway through another command."))
+        .push(source(&app.config.source))
+        .push(key_values)
+        .extend(notice())
+        .push(button("Close").on_press(Message::CloseHelp))
+        .spacing(SPACING);
+    // The table takes the window, since its descriptions wrap in half of it
+    let page = column![prose(top), bindings, prose(bottom)].spacing(SPACING);
     let scrolling = scrollable(page)
         .id(HELP)
         .spacing(0)
@@ -106,6 +106,11 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         .map(|why| container(text(why)).max_width(WIDTH).into());
     let parts = column![scrolling].extend(problem).spacing(SPACING);
     container(parts).padding(SPACING).into()
+}
+
+/// Returns `part` no wider than [`WIDTH`]
+fn prose<'a>(part: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
+    container(part).width(Fill).max_width(WIDTH).into()
 }
 
 /// Returns the actions that the keymap binds to a key, in the order of the
@@ -167,7 +172,7 @@ fn link<'a, Link>(label: impl IntoFragment<'a>, target: Link) -> Span<'a, Link> 
 fn first_steps(keymap: &Keymap) -> String {
     let key = |action| keymap.key(action).unwrap_or_else(|| "(no key)".to_owned());
     format!(
-        "First steps: {go} is GO, which fires the standby cue, and {panic} is Panic, which stops everything.  {next} and {previous} move the selection, and {standby} puts the selected cue on standby.  {add} adds a cue below the selection, {name} names it, and {undo} undoes the last change.  The table lists every key, and cinq(5) describes the rest.",
+        "First steps: {go} is GO, which fires the standby cue, and {panic} is Panic, which stops everything.  {next} and {previous} move the selection, and {standby} puts the selected cue on standby.  {add} adds a cue below the selection, {name} names it, and {undo} undoes the last change.  {close} closes this page, and {standby} opens the tutorial.  The table lists every key, and cinq(5) describes the rest.",
         go = key(Action::Go),
         panic = key(Action::Panic),
         next = key(Action::Next),
@@ -176,6 +181,7 @@ fn first_steps(keymap: &Keymap) -> String {
         add = key(Action::AddBelow),
         name = key(Action::ChangeName),
         undo = key(Action::Undo),
+        close = key(Action::CloseHelp),
     )
 }
 
