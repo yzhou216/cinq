@@ -7,9 +7,11 @@
 
 mod adding;
 mod cancel;
+mod lists;
 mod name;
 mod outputs;
 mod places;
+mod standby;
 
 use super::{
     SEARCH_ROOM, YIELDING,
@@ -18,7 +20,7 @@ use super::{
     mark, search_columns,
 };
 use crate::{
-    back::{Command, Cue, CueId, CueList, Kind, Workspace},
+    back::{Command, Cue, CueId, CueList, Kind, Place, Workspace},
     front::{
         App,
         keymap::{Action, Keymap, Preset, config::Config},
@@ -270,4 +272,21 @@ fn a_notice_cut_where_a_name_ended_in_an_ellipsis_gets_no_second_one() {
         shown(bare, Some(told.to_owned()), 45, &YIELDING),
         "Cues play on Dante Virtual S… | u: undo"
     );
+}
+
+#[test]
+fn an_open_menu_tells_no_notice_so_that_its_keys_come_first() {
+    let app = |menu| App {
+        workspace: Workspace::default().apply(Command::Add {
+            list: 0,
+            kind: Kind::Memo,
+            at: Place::End,
+            count: 1,
+        }),
+        remark: Some("The clipboard is empty"),
+        ..opened(Preset::Cua, menu, false)
+    };
+    let shown = |menu| fitted(&hinted(&app(menu)), 30, &YIELDING);
+    assert_eq!(shown(true), "Enter: pick | F4: close");
+    assert!(shown(false).starts_with("The clipboard"));
 }

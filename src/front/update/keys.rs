@@ -27,7 +27,32 @@ use crate::front::{
     view,
 };
 
+/// What the status bar tells when show mode drops a key that changes the show
+const LOCKED: &str = "Show mode does not allow edits";
+
+/// What the status bar tells when the stage window has the keyboard, which
+/// leaves the keys that change the show to the main window
+const STAGE: &str = "The stage window has the keyboard, so edits wait for the main window";
+
 impl App {
+    /// Returns why a key of `action` does nothing now, when it is one that
+    /// changes the show or names a cue.  Copying and undoing carry on in show
+    /// mode, so that they stay unremarked there, and the help page covers the
+    /// cues, so that no key is refused for them.
+    fn refusal(&self, action: Action) -> Option<&'static str> {
+        let changes = action.edits_the_show()
+            || matches!(
+                action,
+                Action::Edit | Action::EditStart | Action::ChangeName
+            );
+        let locked = changes && !matches!(action, Action::Copy | Action::Undo | Action::Redo);
+        match (self.help, self.stage.has_keyboard()) {
+            (true, _) => None,
+            (false, true) => changes.then_some(STAGE),
+            (false, false) => (!self.editable() && locked).then_some(LOCKED),
+        }
+    }
+
     pub(super) fn typed(self, press: Press, repeat: bool) -> (Self, Task<Message>) {
         let outcome = self.config.keymap.parse(&self.keys, press);
         let across = outcome.across();
@@ -41,19 +66,32 @@ impl App {
         if let Some((operator, motion, count)) = across {
             // Help page has no cues to operate on, and the stage window leaves
             // the cues to the main window
+            let remark = app.refusal(operator);
             return if app.help || app.stage.has_keyboard() {
-                (app, Task::none())
+                (Self { remark, ..app }, Task::none())
             } else {
-                app.handled(Message::Across(operator, motion, count))
+                let (app, task) = app.handled(Message::Across(operator, motion, count));
+                (
+                    Self {
+                        remark: remark.or(app.remark),
+                        ..app
+                    },
+                    task,
+                )
             };
         }
         match outcome.action {
             Some((action, _)) if repeat && action.acts_once_a_press() => (app, Task::none()),
             // Cue list is out of sight from the stage window, so that the keys
-            // that change the show or the clipboard wait for the main window
-            Some((action, _)) if app.stage.has_keyboard() && action.edits_the_show() => {
-                (app, Task::none())
-            }
+            // that change the show or the clipboard wait for the main window,
+            // and show mode locks the show, so that the status bar says why
+            Some((action, _)) if app.refusal(action).is_some() => (
+                Self {
+                    remark: app.refusal(action),
+                    ..app
+                },
+                Task::none(),
+            ),
             // Page opens in the main window, which the fullscreen stage
             // window may cover, so that the page would open out of sight
             Some((Action::Help, _)) if app.stage.has_keyboard() => (app, Task::none()),

@@ -117,6 +117,19 @@ Major changes and improvements in each release of cinq, newest first.
   to 400 pixels on a wide window, so that a warning takes one line where it
   took two, and an empty Active or Warnings list leaves out the gap of its
   empty body.
+- The status bar hints a key only where it acts: while a text field has the
+  keyboard it no longer offers undo, redo, paste, add, rename, or help, which
+  would only type there, and while a closed drop-down list has it, only undo
+  and redo of these.  Where the keymap binds no key to cancel, as the cua
+  keymap does, it hints Enter to leave a field.  It hints the key of standby
+  while the selected cue is not the standby cue, tells no notice while a menu
+  is open, so that the keys that pick and close it show, and in the outputs
+  view tells changes to the outputs only, so that the keys of that view show.
+  The rename of a cue just added outlasts the hints of GO, Panic, and saving
+  at 1024x768, the key of the next inspector tab is hinted last of all, and a
+  gap keeps the status apart from the hints.  A key that edits in show mode,
+  or while the stage window has the keyboard, now says once why it did
+  nothing.
 
 ## v0.1.5
 

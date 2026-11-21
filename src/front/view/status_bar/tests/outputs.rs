@@ -40,7 +40,7 @@ fn the_outputs_hint_the_way_back_and_the_keys_to_add_and_to_rename_an_output() {
     // Cue list needs none of them, and has nowhere to go back to
     assert_eq!(
         shown(&opened(Preset::Vi, false, false), COLUMNS),
-        "Space: GO | Escape: Panic | ?: help"
+        "Space: GO | Escape: Panic | ?: help | gt: next tab"
     );
 }
 
@@ -79,7 +79,19 @@ fn hints_of_the_outputs_give_way_with_the_way_back_lasting_longest_after_help() 
 #[test]
 fn the_cue_list_keeps_its_order_of_giving_way() {
     let cues = yielding(&App::default());
-    assert_eq!(cues[..2], [Action::Forward, Action::Back]);
+    assert_eq!(
+        cues[..8],
+        [
+            Action::NextTab,
+            Action::Standby,
+            Action::Forward,
+            Action::Back,
+            Action::Go,
+            Action::Panic,
+            Action::Save,
+            Action::ChangeName
+        ]
+    );
     assert_ne!(cues, yielding(&in_outputs(Preset::Vi)));
 }
 
@@ -249,4 +261,23 @@ fn an_undo_that_moves_the_first_output_back_tells_where_cues_play_without_a_dang
         told(undone, COLUMNS - 20),
         "Cues without sends play on Main | Control+r: redo"
     );
+}
+
+#[test]
+fn a_change_to_a_cue_is_not_told_while_the_outputs_show_so_that_their_keys_stay() {
+    let edited = rain().apply(Command::Edit(CueId(1), Edit::File("storm.ogg".to_owned())));
+    let app = |workspace: Workspace, outputs_shown| App {
+        workspace,
+        outputs_shown,
+        ..opened(Preset::Vi, false, false)
+    };
+    assert!(notice(&app(edited.clone(), false)).is_some());
+    assert_eq!(notice(&app(edited.clone(), true)), None);
+    assert_eq!(
+        shown(&app(edited, true), COLUMNS),
+        "o: add output | i: rename | Control+o: back to Main | Space: GO | Escape: Panic | ?: help"
+    );
+    // A change to the outputs is told there
+    let renamed = rain().apply(rename(1, "Pit"));
+    assert!(notice(&app(renamed, true)).is_some_and(|told| told.contains("Pit")));
 }

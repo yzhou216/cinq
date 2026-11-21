@@ -66,3 +66,22 @@ fn y_copies_the_selected_cue_and_takes_a_count() {
     let app = typing(show(Some(CueId(4))), "2 Y p");
     assert_eq!(rows(&app)[3..7], [4, 22, 23, 5]);
 }
+
+#[test]
+fn show_mode_tells_why_a_key_that_edits_did_nothing_and_stays_quiet_for_the_rest() {
+    let told = |keys| {
+        let (locked, _) = show(Some(CueId(4))).handled(Message::ShowMode(true));
+        typing(locked, keys).remark
+    };
+    assert!(
+        ["o", "p", "x", "d d", "c c", "d j"]
+            .into_iter()
+            .all(|keys| told(keys) == Some("Show mode does not allow edits"))
+    );
+    // Copying and moving about still work
+    assert!(
+        ["Y", "y y", "j", "k"]
+            .into_iter()
+            .all(|keys| told(keys).is_none())
+    );
+}

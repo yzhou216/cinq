@@ -41,6 +41,7 @@ impl App {
             },
             Message::Held(held) => Self { held, ..self },
             Message::FileHeld(file_held) => Self { file_held, ..self },
+            Message::TextHeld(text_held) => Self { text_held, ..self },
             Message::DefaultHighlighted(highlighted) => Self {
                 default_highlighted: highlighted,
                 ..self

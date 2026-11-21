@@ -714,6 +714,10 @@ Show mode locks editing: *edit*, *edit_start*, *change_name*, *add_below*,
 move standby back and forth.
 Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
 read-only buffer.
+A key that show mode locks, other than *undo* and *redo*, has the status bar
+say so, until the next key that acts.
+The stage window says so in the same way for the keys that it leaves to the
+main window.
 
 The outputs of the show, which *Outputs* below the cue lists in the sidebar
 shows in place of the cue list, take the actions that move through rows as
@@ -791,9 +795,12 @@ there.
 Every other action that acts on cues, such as *standby*, does nothing, since
 the cue list is out of sight.
 While the outputs show, the status bar names the keys of *add_below*, *edit*,
-and *back*, and gives way, from the first to the last, to the key of *forward*,
-*add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that
+and *back*, and gives way, from the first to the last, to the key of
+*change_name*, *forward*, *add_below*, *edit*, GO, Panic, *save*, *back*, and
+the help page, so that
 the key that leaves the outputs outlasts all but the help page.
+There the status bar tells a change to the outputs and none to the cues, so
+that the notice of a cue never takes the room of these keys.
 In every view, the name of the show in the status bar gives way before any of
 these keys do, cut short at its end with an ellipsis, down to 16 columns.
 
@@ -820,6 +827,9 @@ page.
 
 *standby*
 	Put the selected cue on standby, so that the next GO fires it.
+	While the selected cue is not the standby cue and no field or list has the
+	keyboard, the status bar hints this key, and gives way to the hint right
+	after that of *next_tab*.
 
 *cancel*
 	Drop the keys typed so far, close the search line, with the selection going
@@ -835,6 +845,13 @@ page.
 	While a text field or a drop-down list has the keyboard, it hints the key
 	of *next_field* and this key as the one that leaves, so that the way out is
 	told where Escape would panic.
+	Where no key is bound to it, a text field has Enter hinted as the key that
+	leaves, unless Enter is bound to *go*, *panic*, or another action that acts
+	in fields, which it then does instead.
+	The status bar hints only keys that act where the keyboard is, so that
+	while a text field or a drop-down list has it, it hints no key of
+	*paste_below*, *add_below*, *edit*, or *change_name*, and while a text field
+	has it, none of *undo* or *redo* either, which act in a closed drop-down list.
 
 *next*
 	Select the next cue, move the highlight of an open menu down, or scroll
@@ -1002,6 +1019,8 @@ page.
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,
 	counted from one, or the last tab when there are fewer.
+	While no field has the keyboard, the status bar hints its key last, so that
+	it gives way before any other.
 
 *previous_tab*
 	Show the previous tab of the inspector, or go back as many tabs as the count,
@@ -1105,6 +1124,8 @@ page.
 	Pick the highlighted option of an open menu, as Enter does and as Control+y
 	does in Vim's popup menu.
 	It does nothing while no menu is open.
+	While a menu is open, the status bar hints the keys of *pick* and
+	*close_menu* and tells no notice, so that no notice takes their room.
 
 *close_menu*
 	Close an open menu without picking an option, as Control+e does in Vim's
@@ -1120,7 +1141,8 @@ page.
 	that undo takes back, and selects the last of them, as the cursor of Vim
 	goes to the last line that *3o* inserts.
 	The status bar then hints the key of *change_name*, which renames the cue,
-	before the key of *undo*, which gives way first when the bar is short.
+	after the key of *undo*, and gives way to it only after the keys of GO,
+	Panic, and *save*, when the bar is short.
 
 *add_above*
 	Add a cue of the kind chosen in the toolbar above the selection, or at the
@@ -1257,7 +1279,8 @@ page.
 	has the keyboard.  Both keymaps bind *?* and F1 to it.  The vi keymap
 	departs from Vim here, where *?* searches up the list, so that the most
 	common help key works everywhere.  *?* types in a text field and in the
-	search line, as any character does.
+	search line, as any character does, so that the status bar hints this key
+	only where it acts.
 
 *close_help*
 	Hide the help page.

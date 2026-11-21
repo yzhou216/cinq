@@ -12,7 +12,7 @@ use crate::{
     back::{Cue, CueId, CueList, Kind, Workspace},
     front::{
         App,
-        keymap::{Action, Preset, Press},
+        keymap::{Action, Preset, Press, sequence},
     },
 };
 
@@ -110,24 +110,51 @@ fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
 }
 
 #[test]
-fn the_hints_of_leaving_a_field_give_way_after_the_help_page() {
+fn the_hints_of_leaving_a_field_give_way_after_go_and_panic() {
     let app = App {
         held: true,
         ..opened(Preset::Vi, false, false)
     };
+    // No help hint here: a field or a list that has the keyboard keeps the
+    // key of help from acting, and `?` types in a field
     let all = fitted(&hinted(&app), COLUMNS, &YIELDING);
     assert_eq!(
         all,
-        "Tab: next field | Control+c: leave | Space: GO | Escape: Panic | ?: help"
+        "Tab: next field | Control+c: leave | Space: GO | Escape: Panic"
     );
     assert_eq!(
-        fitted(&hinted(&app), 44, &YIELDING),
-        "Tab: next field | Control+c: leave | ?: help"
+        fitted(&hinted(&app), 50, &YIELDING),
+        "Tab: next field | Control+c: leave | Escape: Panic"
     );
     assert_eq!(
-        fitted(&hinted(&app), 43, &YIELDING),
+        fitted(&hinted(&app), 49, &YIELDING),
         "Tab: next field | Control+c: leave"
     );
+}
+
+#[test]
+fn the_help_key_is_hinted_only_where_it_acts() {
+    let told = |app: App| hinted(&app).iter().any(|(_, hint)| hint == "?: help");
+    let vi = |menu, help| opened(Preset::Vi, menu, help);
+    assert!(told(vi(false, false)));
+    assert!(!told(App {
+        held: true,
+        text_held: true,
+        ..vi(false, false)
+    }));
+    assert!(!told(App {
+        held: true,
+        ..vi(false, false)
+    }));
+    assert!(told(App {
+        held: true,
+        ..vi(true, false)
+    }));
+    assert!(told(App {
+        held: true,
+        text_held: true,
+        ..vi(false, true)
+    }));
 }
 
 #[test]
@@ -161,4 +188,54 @@ fn the_bar_hints_enter_while_the_empty_file_field_has_the_keyboard() {
     assert!(told("", true));
     assert!(!told("rain.flac", true), "a named file needs no chooser");
     assert!(!told("", false), "another field has the keyboard");
+}
+
+#[test]
+fn a_keymap_with_no_key_to_cancel_hints_enter_to_leave_a_text_field_only() {
+    let told = |text_held| {
+        let app = App {
+            held: true,
+            text_held,
+            ..opened(Preset::Cua, false, false)
+        };
+        hinted(&app).iter().any(|(_, hint)| hint == "Enter: leave")
+    };
+    assert!(told(true));
+    assert!(!told(false), "Enter opens the menu of a drop-down list");
+}
+
+#[test]
+fn the_key_of_the_next_tab_is_hinted_last_while_no_field_has_the_keyboard() {
+    let hints = |held| {
+        hinted(&App {
+            held,
+            ..opened(Preset::Vi, false, false)
+        })
+    };
+    assert_eq!(
+        hints(false).last().map(|(_, hint)| hint.as_str()),
+        Some("gt: next tab")
+    );
+    assert!(
+        hints(true)
+            .iter()
+            .all(|(_, hint)| !hint.contains("next tab"))
+    );
+}
+
+#[test]
+fn enter_is_not_hinted_to_leave_where_a_key_binding_takes_it_over() {
+    let told = |action| {
+        let mut app = App {
+            held: true,
+            text_held: true,
+            ..opened(Preset::Cua, false, false)
+        };
+        let enter = vec![sequence("Enter").expect("a key")];
+        app.config.keymap = app.config.keymap.clone().with(action, enter);
+        hinted(&app).iter().any(|(_, hint)| hint == "Enter: leave")
+    };
+    assert!(!told(Action::Go));
+    assert!(!told(Action::Panic));
+    assert!(told(Action::Pick), "pick acts in a menu and not in a field");
 }

@@ -7,25 +7,29 @@
 //! The widgets keep that to themselves, and the status bar hints how to leave
 //! a field, so that one operation asks them after anything the operator does.
 //! A second asks whether the File field of a cue is the one, since its hint
-//! differs.
+//! differs, and a third whether a text field is, since it keeps every key but
+//! those that act in fields, while a closed drop-down list lets the keys of
+//! undo and redo act as well, which the status bar hints accordingly.
 
 use iced::{
     Rectangle, Task,
     advanced::widget::{
         Id, Operation, operate,
-        operation::{Focusable, Outcome},
+        operation::{Focusable, Outcome, TextInput},
     },
 };
 
 use crate::front::{Message, view};
 
 /// Asks the widgets whether one of them has the keyboard, and whether it is
-/// the File field, and tells [`Message::Held`] and [`Message::FileHeld`] the
+/// the File field, and whether it is a text field, and tells
+/// [`Message::Held`], [`Message::FileHeld`], and [`Message::TextHeld`] the
 /// answers
 fn held() -> Task<Message> {
     Task::batch([
         operate(Holding::anywhere()).map(Message::Held),
         operate(Holding::in_field(view::FILE)).map(Message::FileHeld),
+        operate(Holding::in_text()).map(Message::TextHeld),
     ])
 }
 
@@ -37,9 +41,14 @@ pub(super) fn held_after(task: Task<Message>) -> Task<Message> {
 }
 
 /// Finds out whether any widget in any window has the keyboard focus, or
-/// the one that goes by an identity
+/// the one that goes by an identity, or a text field
 struct Holding {
     field: Option<Id>,
+    /// Whether only a text field counts
+    text_only: bool,
+    /// Whether the widget visited last is a text field, which tells itself
+    /// just before it offers its focus
+    text: bool,
     found: bool,
 }
 
@@ -47,6 +56,8 @@ impl Holding {
     fn anywhere() -> Self {
         Self {
             field: None,
+            text_only: false,
+            text: false,
             found: false,
         }
     }
@@ -54,7 +65,14 @@ impl Holding {
     fn in_field(field: &'static str) -> Self {
         Self {
             field: Some(Id::new(field)),
-            found: false,
+            ..Self::anywhere()
+        }
+    }
+
+    fn in_text() -> Self {
+        Self {
+            text_only: true,
+            ..Self::anywhere()
         }
     }
 }
@@ -64,9 +82,15 @@ impl Operation<bool> for Holding {
         operate(self);
     }
 
+    fn text_input(&mut self, _id: Option<&Id>, _bounds: Rectangle, _state: &mut dyn TextInput) {
+        self.text = true;
+    }
+
     fn focusable(&mut self, id: Option<&Id>, _bounds: Rectangle, state: &mut dyn Focusable) {
-        self.found |=
-            state.is_focused() && self.field.as_ref().is_none_or(|field| id == Some(field));
+        self.found |= state.is_focused()
+            && self.field.as_ref().is_none_or(|field| id == Some(field))
+            && (self.text || !self.text_only);
+        self.text = false;
     }
 
     fn finish(&self) -> Outcome<bool> {

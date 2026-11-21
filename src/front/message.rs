@@ -295,6 +295,9 @@ pub enum Message {
     /// Whether the File field of a cue has the keyboard, as the widgets told
     /// with [`Message::Held`]
     FileHeld(bool),
+    /// Whether a text field, which keeps every key, has the keyboard, as the
+    /// widgets told with [`Message::Held`]
+    TextHeld(bool),
     /// Toggles the stage window between fullscreen and a window
     ToggleFullscreen,
     /// Window closed, as the operator closes it
