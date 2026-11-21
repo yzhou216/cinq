@@ -14,7 +14,7 @@ use std::path::Path;
 use itertools::Itertools;
 
 use crate::back::{
-    Active, Advance, Cue, CueList, Groups, Kind, Media, Output, Phase, SILENCE, Workspace,
+    Active, Advance, Cue, CueList, Groups, Kind, Media, Output, OutputId, Phase, SILENCE, Workspace,
 };
 pub use change::change;
 use consequences::short;
@@ -147,9 +147,10 @@ pub fn activity(active: &Active, cue: &Cue) -> String {
 /// with how long after GO each cue after the first fires, so that
 /// auto-continue and auto-follow chains are visible before they run.  The
 /// count leaves out the cues that cannot play, which GO skips, and each of
-/// them says why.  A chain with no cue that can play says so in words
+/// them says why.  A cue that sends to no output that can play, among `failing`
+/// or in the show, is told as silent, though GO fires it.  A chain with no cue that can play says so in words
 /// before it names the cues and why each cannot play.
-pub fn chain(workspace: &Workspace, list: &CueList, standby: &Cue) -> String {
+pub fn chain(workspace: &Workspace, list: &CueList, standby: &Cue, failing: &[OutputId]) -> String {
     let fired = workspace.next_go(list).count();
     let cues = list.chain(standby.id);
     if fired == 0 {
@@ -164,7 +165,18 @@ pub fn chain(workspace: &Workspace, list: &CueList, standby: &Cue) -> String {
         let skipped = workspace
             .problem(cue)
             .map(|problem| format!("skipped: {problem}"));
-        let notes = delay.into_iter().chain(skipped).join(", ");
+        let silent = if workspace.sends_nowhere(cue) {
+            Some("silent: no output")
+        } else if workspace.sends_to_failing(cue, failing) {
+            Some("silent: output failed")
+        } else {
+            None
+        };
+        let notes = delay
+            .into_iter()
+            .chain(skipped)
+            .chain(silent.map(str::to_owned))
+            .join(", ");
         if notes.is_empty() {
             number(cue)
         } else {

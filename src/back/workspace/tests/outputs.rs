@@ -228,3 +228,21 @@ fn output_move_past_the_end_leaves_redo_alone() {
     });
     assert!(moved.redoable().is_some());
 }
+
+#[test]
+fn a_cue_that_sends_only_to_failing_outputs_is_silent_unless_its_file_holds_no_sound() {
+    let video = Cue::new(CueId(2), "2", Kind::Video, "Movie")
+        .file("movie.mp4")
+        .build();
+    let show = workspace(vec![audio(1), video])
+        .apply(loaded(1, "sound.ogg", sound(10.0)))
+        .apply(loaded(2, "movie.mp4", sound(10.0)));
+    let lost = |show: &Workspace, id: u32| {
+        let cue = show.cue(CueId(id)).expect("it exists");
+        show.sends_to_failing(cue, &[MAIN])
+    };
+    assert_eq!((lost(&show, 1), lost(&show, 2)), (true, true));
+    // The picture of a video with no sound still shows
+    let picture = show.apply(loaded(2, "movie.mp4", silent(10.0)));
+    assert_eq!((lost(&picture, 1), lost(&picture, 2)), (true, false));
+}

@@ -4,7 +4,7 @@
 
 //! Tests of the warnings about outputs that cannot play
 
-use super::{Warning, warnings};
+use super::{Warning, failing, warnings};
 use crate::{
     back::{Command, CueList, Device, Fault, OutputEdit, OutputId, Workspace},
     front::App,
@@ -105,4 +105,17 @@ fn outputs_of_a_device_that_cannot_play_share_a_warning_that_cinq_does_not_retry
         }]
     );
     assert!(Fault::Refused(String::new()).retried());
+}
+
+#[test]
+fn only_outputs_that_make_no_sound_count_as_failing() {
+    let app = app(
+        &[dante(), dante(), dante()],
+        vec![
+            (OutputId(1), missing()),
+            (OutputId(2), Fault::Channels(16)),
+            (OutputId(3), Fault::Unplayable("no samples".to_owned())),
+        ],
+    );
+    assert_eq!(failing(&app), [OutputId(1), OutputId(3)]);
 }

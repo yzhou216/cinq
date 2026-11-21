@@ -5,12 +5,13 @@
 //! Columns of the cue list
 
 use iced::{Theme, widget::text};
+use itertools::Itertools;
 use strum::{IntoStaticStr, VariantArray};
 use unicode_width::UnicodeWidthStr;
 
-use super::{RADIO, STATE_ROOM, TARGET_ROOM};
+use super::{RADIO, STATE_ROOM, TARGET_MOST};
 use crate::{
-    back::{Cue, Groups, Kind, Problem, Workspace},
+    back::{Cue, Groups, Kind, OutputId, Problem, Workspace},
     front::view::{char_width, format, theme},
 };
 
@@ -59,24 +60,26 @@ impl Column {
             Column::Then => format::advance(cue.advance).to_owned(),
             Column::State => {
                 let next = groups.list().standby == Some(cue.id);
-                state(
-                    workspace,
-                    cue,
-                    next,
-                    hidden_problem(workspace, groups, cue),
-                    false,
-                )
-                .0
+                let hidden = hidden_problem(workspace, groups, cue);
+                // The column has a fixed width, so that no output failing changes it
+                lines(workspace, cue, next, hidden, &[], false)
+                    .into_iter()
+                    .map(|(line, _)| line)
+                    .join("\n")
             }
         }
     }
 
-    pub(super) fn holds_text(self, workspace: &Workspace, groups: &Groups) -> bool {
-        groups
-            .list()
-            .cues
-            .iter()
-            .any(|cue| !self.text(workspace, groups, cue).is_empty())
+    /// Returns whether the list shows the column at all, which a yielding
+    /// column that holds no text in any row does not, as it tells nothing.
+    /// A list with no cue keeps them all, so that its header names them.
+    pub(super) fn shown(self, workspace: &Workspace, groups: &Groups) -> bool {
+        let cues = &groups.list().cues;
+        !Self::YIELDING.contains(&self)
+            || cues.is_empty()
+            || cues
+                .iter()
+                .any(|cue| !self.text(workspace, groups, cue).is_empty())
     }
 
     /// Returns none for the name, which takes the room left
@@ -93,32 +96,60 @@ impl Column {
         match self {
             Column::Name => None,
             Column::Number => Some(width(widest()) + RADIO),
-            Column::Target => Some(width(widest().min(TARGET_ROOM))),
+            Column::Target => Some(width(widest().min(TARGET_MOST))),
             Column::State => Some(width(STATE_ROOM)),
             _ => Some(width(widest())),
         }
     }
 }
 
-/// Describes a cue in the State column, in the color of what it needs.  A
-/// file that is still loading stops the cue from playing, but it needs
-/// nothing but time.  The list of running cues tells more of each, such as
-/// where a paused cue stopped.  A cue that sends only to outputs that are gone
-/// reads in yellow that it has none, which GO does not skip.  Red turns
-/// lighter where the cue is `selected`, so that it stays legible on the
-/// selected row.  A cue that is `next` reads NEXT, as the row of a collapsed
-/// group does that hides the standby cue.  A collapsed group reads the
-/// `hidden` problem of a cue that it hides as that cue would, so that GO does
-/// not fire a broken cue out of sight, but gives way to the state of the group
-/// while it runs.
-pub(super) fn state(
+/// A line of the State column with the style of its color
+pub(super) type Line = (String, fn(&Theme) -> text::Style);
+
+/// Returns the lines of the State column for a cue.  A cue that is `next`
+/// reads NEXT on the first line, as the row of a collapsed group does that
+/// hides the standby cue, so that the mark stays where GO lands whatever else
+/// the cue needs to say, which follows on the next line.  A cue whose outputs
+/// all `failing` plays on, in silence, which a last line of its own tells in
+/// yellow, so that it hides neither the state of a cue that runs nor its time
+/// left.
+pub(super) fn lines(
     workspace: &Workspace,
     cue: &Cue,
     next: bool,
     hidden: Option<Problem>,
+    failing: &[OutputId],
     selected: bool,
-) -> (String, fn(&Theme) -> text::Style) {
-    let problem = |problem: Problem| -> (String, fn(&Theme) -> text::Style) {
+) -> Vec<Line> {
+    let marked = next && workspace.active_of(cue.id).is_none();
+    let mark = marked.then(|| ("NEXT".to_owned(), text::primary as fn(&Theme) -> _));
+    let state = state(workspace, cue, hidden, selected);
+    let failed = (workspace.problem(cue).is_none() && workspace.sends_to_failing(cue, failing))
+        .then(|| ("OUTPUT FAILED".to_owned(), text::warning as fn(&Theme) -> _));
+    mark.into_iter()
+        .chain((!state.0.is_empty()).then_some(state))
+        .chain(failed)
+        .collect()
+}
+
+/// Describes a cue in the State column, in the color of what it needs.  A
+/// file that is still loading stops the cue from playing, but it needs
+/// nothing but time.  The list of running cues tells more of each, such as
+/// where a paused cue stopped.  A cue that a fade or Panic is fading reads
+/// fading, since the time left of its phase says nothing of that.  A cue that
+/// sends only to outputs that are gone reads in yellow that it has none,
+/// which GO does not skip.  Red turns lighter where the cue is `selected`, so
+/// that it stays legible on the selected row.  A collapsed group reads the
+/// `hidden` problem of a cue that it hides as that cue would, so that GO does
+/// not fire a broken cue out of sight, but gives way to the state of the
+/// group while it runs.
+pub(super) fn state(
+    workspace: &Workspace,
+    cue: &Cue,
+    hidden: Option<Problem>,
+    selected: bool,
+) -> Line {
+    let problem = |problem: Problem| -> Line {
         let danger = theme::danger(selected);
         match problem {
             Problem::NotLoaded => ("loading".to_owned(), text::default),
@@ -135,11 +166,12 @@ pub(super) fn state(
     match (workspace.problem(cue), workspace.active_of(cue.id)) {
         (Some(own), _) => problem(own),
         (None, Some(active)) if active.paused => ("paused".to_owned(), text::warning),
+        // The fade leaves no room for the time left, which the fade cue tells
+        (None, Some(active)) if active.fade.is_some() => ("fading".to_owned(), text::success),
         (None, Some(active)) => (format::phase(active), text::success),
         (None, None) => match hidden {
             Some(hidden) => problem(hidden),
             None if workspace.sends_nowhere(cue) => ("NO OUTPUT".to_owned(), text::warning),
-            None if next => ("NEXT".to_owned(), text::primary),
             None => (String::new(), text::default),
         },
     }

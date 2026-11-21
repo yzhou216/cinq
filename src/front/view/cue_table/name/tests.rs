@@ -4,7 +4,7 @@
 
 //! Tests of the marks of the groups in the cue list
 
-use super::{flip, hidden_note, mark};
+use super::{flip, mark};
 use crate::{
     back::{Cue, CueId, Kind},
     front::Message,
@@ -21,15 +21,6 @@ fn group(collapsed: bool) -> Cue {
 fn an_expanded_group_reads_a_minus_and_a_collapsed_one_a_plus() {
     assert_eq!(mark(&group(false)), "- ");
     assert_eq!(mark(&group(true)), "+ ");
-}
-
-#[test]
-fn only_a_collapsed_group_tells_how_many_cues_it_hides() {
-    assert_eq!(
-        hidden_note(&group(true), 3).as_deref(),
-        Some("  (3\u{a0}hidden)")
-    );
-    assert_eq!(hidden_note(&group(false), 3), None);
 }
 
 #[test]

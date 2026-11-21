@@ -770,6 +770,13 @@ A cue that sends only to outputs that a cut or a delete took away plays on no
 output, so that the status bar counts such cues with the change, its State
 reads *NO OUTPUT* in yellow, and the sidebar lists it among the warnings, until
 *undo* brings the outputs back or the cue sends elsewhere.
+A cue that sends only to outputs whose devices failed plays on in silence, so
+that its State reads *OUTPUT FAILED* in yellow, on a line of its own under the
+state of a cue that runs, as under *paused* or the time left, and alone for a
+cue that does not, until the device answers.
+An output past the channels of its device, whose pair that overlaps the last
+channel half sounds, does not count, and neither does a video cue whose file
+holds no sound, whose picture still shows.
 A cue whose sends were all cleared plays nowhere by choice, and gets no
 warning.
 *undo* and *redo* select the output that the change touched, or the neighbor
@@ -802,6 +809,10 @@ page.
 	line under the name of the standby cue says why, as in *GO fires nothing: cue
 	1 (no file set)*.  The key still moves standby past the cues that cannot
 	play.
+	A cue that sends only to outputs whose devices failed still fires, in
+	silence, so that the line tells *silent: output failed* for it, as it tells
+	*silent: no output* for a cue that sends to no output the show has, and
+	agrees with the State column of the cue list in which cues it tells.
 
 *panic*
 	Panic: fade every playing cue out over one second, and stop the rest.
@@ -944,8 +955,8 @@ page.
 	On a collapsed group or a cue that is no group, it collapses the group that
 	holds the cue, and the selection moves to that group.
 	A group has a mark before its name, *-* while it is expanded and *+* while it
-	is collapsed, and a collapsed group tells after its name how many cues it
-	hides, as Vim tells the lines of a closed fold.
+	is collapsed, and the Target column of a collapsed group tells how many cues
+	it hides.
 	A cue list that holds no group leaves no room for the mark.
 	A click on the mark collapses the group, or expands it where it is
 	collapsed.

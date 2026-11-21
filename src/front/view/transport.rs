@@ -13,7 +13,7 @@ use iced::{
 };
 use itertools::Itertools;
 
-use super::{SPACING, TEXT_SIZE, button, char_width, format, theme, widget::shortened};
+use super::{SPACING, TEXT_SIZE, button, char_width, faults, format, theme, widget::shortened};
 use crate::front::{App, Message};
 
 /// Size of the title, which names the standby cue
@@ -38,7 +38,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
             [
                 format!("Standby: {cue}"),
                 format!("Notes: {notes}"),
-                format::chain(&app.workspace, list, cue),
+                format::chain(&app.workspace, list, cue, &faults::failing(app)),
             ]
         }
         None => [

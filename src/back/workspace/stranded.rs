@@ -10,13 +10,38 @@
 //! whose sends were all cleared plays nowhere by choice, as a video cue does
 //! that shows a picture and no sound, so that neither counts.
 
-use crate::back::{Cue, Output, Workspace};
+use crate::back::{Cue, Media, Output, OutputId, Workspace};
 
 impl Workspace {
     /// Returns whether `cue` plays a file and sends to outputs, none of which
     /// the show has
     pub fn sends_nowhere(&self, cue: &Cue) -> bool {
         stranded(cue, &self.outputs)
+    }
+
+    /// Returns whether `cue` plays a file on outputs of the show that all lie
+    /// among `failing`, which makes no sound.  A cue that names no sends plays
+    /// on the first output, and a video cue whose file holds no sound has
+    /// none to lose, since its picture still shows.
+    pub fn sends_to_failing(&self, cue: &Cue, failing: &[OutputId]) -> bool {
+        let sent: Vec<OutputId> = match &cue.sends {
+            Some(sends) => sends
+                .keys()
+                .copied()
+                .filter(|id| self.outputs.iter().any(|output| output.id == *id))
+                .collect(),
+            None => self
+                .outputs
+                .iter()
+                .take(1)
+                .map(|output| output.id)
+                .collect(),
+        };
+        let silent = matches!(cue.media, Media::Loaded { sound: None, .. });
+        cue.kind.plays_file()
+            && !silent
+            && !sent.is_empty()
+            && sent.iter().all(|id| failing.contains(id))
     }
 
     /// Returns the cues that send to no output that the show has

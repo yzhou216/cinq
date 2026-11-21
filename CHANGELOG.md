@@ -101,6 +101,15 @@ Major changes and improvements in each release of cinq, newest first.
   where they run out of room, where they were cut without a sign, and the Show
   mode checkbox moves to the toolbar, so that the notes take the whole width
   under the title: a long note shows 89 characters instead of 56 at 1024x768.
+- A standby cue that has a problem reads NEXT and the problem on lines of their
+  own in the State column, where the problem used to hide NEXT, and the column
+  holds NO DESTINATION on one line.  The column reads `fading` for a cue that a
+  fade or Panic is fading, and OUTPUT FAILED in yellow for a cue that sends
+  only to outputs whose devices failed, which the line under the standby cue
+  tells as silent, as it tells a cue that sends to no output.  The cue list
+  leaves out a Pre, Post, Then, or Target column that no cue fills, and the
+  Target column takes a file name whole, up to 48 columns, where a name keeps
+  at least 16.
 
 ## v0.1.5
 

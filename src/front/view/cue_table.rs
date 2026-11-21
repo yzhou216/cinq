@@ -15,6 +15,7 @@
 //! scroll, lines up with them.
 
 mod columns;
+mod fitting;
 mod layout;
 mod name;
 #[cfg(test)]
@@ -29,15 +30,14 @@ use iced::{
         text, text::Wrapping,
     },
 };
-use itertools::Itertools;
-use strum::VariantArray;
 
-use super::{CUES, SELECTED, char_width, giving_way, marked_row};
+use super::{CUES, SELECTED, faults, marked_row};
 use crate::{
     back::{Cue, Groups, Workspace},
     front::{App, Message, keymap::Action},
 };
-use columns::{Column, hidden_problem, state};
+use columns::{Column, hidden_problem, lines};
+use fitting::fitting;
 use layout::Layout;
 
 /// Returns the texts of a cue that a search matches, which are those of the
@@ -80,6 +80,10 @@ const NAME_ROOM: usize = 16;
 
 /// Most columns of the font that the Target column takes, past which a
 /// long file name wraps
+const TARGET_MOST: usize = 48;
+
+/// Columns of the font that the Target column narrows to before any column
+/// gives way, where the list is too narrow for a name to keep [`NAME_ROOM`]
 const TARGET_ROOM: usize = 24;
 
 /// Columns of the font that a name moves right for each group that holds its
@@ -87,9 +91,10 @@ const TARGET_ROOM: usize = 24;
 const INDENT: usize = 2;
 
 /// Columns of the font that the State column holds, so that the column
-/// keeps its width as cues run: as many as `10:00.0 left` takes, the
-/// longest state of a cue whose sound is under a hundred minutes
-const STATE_ROOM: usize = 12;
+/// keeps its width as cues run: as many as `NO DESTINATION` takes, the
+/// longest state, which is longer than `10:00.0 left` of a cue whose sound is
+/// under a hundred minutes
+const STATE_ROOM: usize = 14;
 
 pub(super) fn view(app: &App) -> Element<'_, Message> {
     responsive(move |size| list(app, size.width - SCROLL_BAR)).into()
@@ -152,41 +157,6 @@ fn empty(app: &App) -> Element<'_, Message> {
         .into()
 }
 
-/// Returns the columns that a list `room` wide shows, each with its width.
-/// When showing them all leaves a name less than [`NAME_ROOM`] columns of
-/// the font, past the gutter that a list holding a group keeps for the mark,
-/// the yielding columns give way in turn, those without text in any row
-/// first, as they tell nothing, and the inspector shows them all.
-fn fitting(app: &App, layout: &Layout, room: f32) -> Vec<(Column, Option<f32>)> {
-    let groups = &layout.groups;
-    let all: Vec<(Column, Option<f32>)> = Column::VARIANTS
-        .iter()
-        .map(|&column| (column, column.width(&app.workspace, groups)))
-        .collect();
-    let yielding: Vec<Column> = Column::YIELDING
-        .into_iter()
-        .sorted_by_cached_key(|column| column.holds_text(&app.workspace, groups))
-        .collect();
-    let name_room = |columns: &[(Column, Option<f32>)]| {
-        room - columns
-            .iter()
-            .map(|(_, width)| width.unwrap_or(0.0) + CELL_SPACE)
-            .sum::<f32>()
-    };
-    giving_way(
-        &yielding,
-        |gone| {
-            all.iter()
-                .copied()
-                .filter(|(column, _)| !gone.contains(column))
-                .collect()
-        },
-        |columns: &Vec<_>| {
-            name_room(columns) >= (NAME_ROOM + layout.gutter()) as f32 * char_width()
-        },
-    )
-}
-
 fn table_column<'a>(
     app: &'a App,
     column: Column,
@@ -213,9 +183,8 @@ fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue, layout: &Layout) -> Elem
     let (content, padded): (Element<'a, Message>, _) = match column {
         Column::Name => {
             let name = column.text(&app.workspace, groups, cue);
-            let hidden = groups.members(cue.id).len();
             (
-                name::cell(cue, name, layout.depth(cue), hidden, layout.gutter()),
+                name::cell(cue, name, layout.depth(cue), layout.gutter()),
                 false,
             )
         }
@@ -232,8 +201,18 @@ fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue, layout: &Layout) -> Elem
         Column::State => {
             let selected = app.selected == Some(cue.id);
             let hidden = hidden_problem(&app.workspace, groups, cue);
-            let (state, style) = state(&app.workspace, cue, layout.is_next(cue), hidden, selected);
-            (text(state).style(style).into(), true)
+            let failing = faults::failing(app);
+            let lines = lines(
+                &app.workspace,
+                cue,
+                layout.is_next(cue),
+                hidden,
+                &failing,
+                selected,
+            )
+            .into_iter()
+            .map(|(line, style)| text(line).style(style).into());
+            (iced::widget::column(lines).into(), true)
         }
         _ => (text(column.text(&app.workspace, groups, cue)).into(), true),
     };
