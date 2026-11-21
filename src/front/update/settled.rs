@@ -41,6 +41,11 @@ impl App {
             },
             Message::Held(held) => Self { held, ..self },
             Message::FileHeld(file_held) => Self { file_held, ..self },
+            Message::CheckHeld(check_held) => Self { check_held, ..self },
+            Message::ButtonHeld(button_held) => Self {
+                button_held,
+                ..self
+            },
             Message::AddressHeld(address_held) => Self {
                 address_held,
                 ..self

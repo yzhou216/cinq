@@ -19,7 +19,7 @@ use iced::{
         layout::{self, Layout},
         mouse, overlay, renderer,
         widget::{
-            Operation, Widget,
+            Id, Operation, Widget,
             tree::{self, Tree},
         },
     },
@@ -33,6 +33,7 @@ use super::{
 use crate::front::{
     Focus, Message,
     keymap::{KeyPress, Keymap},
+    view,
 };
 
 /// Room that the label keeps after its last letter, within the border
@@ -223,7 +224,11 @@ impl Widget<Message, Theme, Renderer> for Check<'_> {
         operation: &mut dyn Operation,
     ) {
         if self.flip.is_some() {
-            operation.focusable(None, layout.bounds(), tree.state.downcast_mut::<State>());
+            operation.focusable(
+                Some(&Id::new(view::CHECK)),
+                layout.bounds(),
+                tree.state.downcast_mut::<State>(),
+            );
         }
     }
 

@@ -32,6 +32,8 @@ fn held() -> Task<Message> {
     Task::batch([
         operate(Holding::anywhere()).map(Message::Held),
         operate(Holding::in_field(view::FILE)).map(Message::FileHeld),
+        operate(Holding::in_field(view::CHECK)).map(Message::CheckHeld),
+        operate(Holding::in_field(view::BUTTON)).map(Message::ButtonHeld),
         operate(Holding::in_field(view::ADDRESS)).map(Message::AddressHeld),
         operate(Holding::in_text()).map(Message::TextHeld),
     ])

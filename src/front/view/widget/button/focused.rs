@@ -16,7 +16,7 @@ use iced::{
         layout::{self, Layout},
         mouse, overlay, renderer,
         widget::{
-            Operation, Widget,
+            Id, Operation, Widget,
             tree::{self, Tree},
         },
     },
@@ -29,6 +29,7 @@ use super::super::{
 use crate::front::{
     Focus, Message,
     keymap::{KeyPress, Keymap},
+    view,
 };
 
 pub struct Focused<'a> {
@@ -172,7 +173,11 @@ impl Widget<Message, Theme, Renderer> for Focused<'_> {
         _renderer: &Renderer,
         operation: &mut dyn Operation,
     ) {
-        operation.focusable(None, layout.bounds(), tree.state.downcast_mut::<State>());
+        operation.focusable(
+            Some(&Id::new(view::BUTTON)),
+            layout.bounds(),
+            tree.state.downcast_mut::<State>(),
+        );
     }
 
     fn mouse_interaction(

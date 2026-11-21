@@ -7,7 +7,10 @@
 use iced::keyboard::{Key, Modifiers};
 use unicode_width::UnicodeWidthStr;
 
-use super::{super::status, YIELDING, fitted, hinted, opened};
+use super::{
+    super::{status, yielding},
+    YIELDING, fitted, hinted, opened,
+};
 use crate::{
     back::{Cue, CueId, CueList, Kind, Workspace},
     front::{
@@ -110,26 +113,32 @@ fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
 }
 
 #[test]
-fn the_hints_of_leaving_a_field_give_way_after_go_and_panic() {
+fn the_hints_of_a_field_give_way_in_turn_with_go_and_panic_before_the_key_that_leaves() {
     let app = App {
         held: true,
         ..opened(Preset::Vi, false, false)
     };
     // No help hint here: a field or a list that has the keyboard keeps the
     // key of help from acting, and `?` types in a field
-    let all = fitted(&hinted(&app), COLUMNS, &YIELDING);
+    let shown = |room| fitted(&hinted(&app), room, yielding(&app));
+    let all = shown(COLUMNS);
     assert_eq!(
         all,
-        "Tab: next field | Control+c: leave | Space: GO | Escape: Panic"
+        "Enter: open | Tab: next field | Control+c: leave | Space: GO | Escape: Panic"
     );
+    // The key of the next field goes first, as the border shows the field, and
+    // what Enter does stays with the rest in a bar of 1024 pixels that has the
+    // name of a show and two statuses at its left
     assert_eq!(
-        fitted(&hinted(&app), 50, &YIELDING),
-        "Tab: next field | Control+c: leave | Escape: Panic"
+        shown(all.len() - 1),
+        "Enter: open | Control+c: leave | Space: GO | Escape: Panic"
     );
-    assert_eq!(
-        fitted(&hinted(&app), 49, &YIELDING),
-        "Tab: next field | Control+c: leave"
-    );
+    assert_eq!(shown(58), shown(all.len() - 1));
+    assert_eq!(shown(57), "Control+c: leave | Space: GO | Escape: Panic");
+    // Then GO, whose button the transport shows, and Panic, while the key that
+    // leaves the field outlasts both
+    assert_eq!(shown(43), "Control+c: leave | Escape: Panic");
+    assert_eq!(shown(31), "Control+c: leave");
 }
 
 #[test]
@@ -205,7 +214,7 @@ fn a_keymap_with_no_key_to_cancel_hints_enter_to_leave_a_text_field_only() {
 }
 
 #[test]
-fn the_key_of_the_next_tab_is_hinted_last_while_no_field_has_the_keyboard() {
+fn the_key_of_the_next_tab_is_hinted_late_while_no_field_has_the_keyboard() {
     let hints = |held| {
         hinted(&App {
             held,
@@ -213,7 +222,11 @@ fn the_key_of_the_next_tab_is_hinted_last_while_no_field_has_the_keyboard() {
         })
     };
     assert_eq!(
-        hints(false).last().map(|(_, hint)| hint.as_str()),
+        hints(false)
+            .iter()
+            .rev()
+            .nth(1)
+            .map(|(_, hint)| hint.as_str()),
         Some("gt: next tab")
     );
     assert!(

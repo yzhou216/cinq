@@ -36,6 +36,8 @@ pub(super) fn passive(message: &Message) -> bool {
             | Message::WindowFocused(_)
             | Message::Held(_)
             | Message::FileHeld(_)
+            | Message::CheckHeld(_)
+            | Message::ButtonHeld(_)
             | Message::AddressHeld(_)
             | Message::TextHeld(_)
             | Message::Landed { .. }

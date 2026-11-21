@@ -155,6 +155,13 @@ Major changes and improvements in each release of cinq, newest first.
   that a checkbox or a closed list no longer keeps them in the cua keymap,
   which has no key to leave a field.  F11 out of fullscreen gives the main
   window the keyboard.
+- The status bar hints `Enter: flip` while a checkbox has the keyboard and
+  `Enter: open` while a closed drop-down list does, and the key that shows the
+  next cue list, or the outputs after the last one, as `l: next list` in vi.
+  At the end of a list that another follows, where GO fires nothing, that hint
+  stays on a short bar until after GO and Panic, and while a field has the
+  keyboard, GO, Panic, and the key that leaves it outlast the keys that only
+  teach.
 
 ## v0.1.5
 

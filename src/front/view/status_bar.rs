@@ -8,11 +8,13 @@
 //! that cancels while keys wait or the search line is open, the keys that go
 //! back and forward between the places jumped to while there is a place to
 //! go to, the key that saves unsaved changes, the keys of GO, Panic, and the
-//! help page, and, while a text field or a drop-down list has the keyboard,
-//! the keys that go to the next field and that leave the field, which are
-//! Enter where the keymap binds no key to cancel and a text field has the
-//! keyboard, while no field has it, the key of the next inspector tab and,
-//! while the selected cue is not the standby cue, the key of standby
+//! help page, and, while a text field, a checkbox, or a drop-down list has
+//! the keyboard, the keys that go to the next field and that leave the field,
+//! which are Enter where the keymap binds no key to cancel and a text field
+//! has the keyboard, and what Enter does in a checkbox, which flips it, and
+//! in a closed list, which opens it, while no field has the keyboard, the key
+//! of the next inspector tab, the key of the next cue list, and, while the
+//! selected cue is not the standby cue, the key of standby
 //!
 //! A text field keeps every key, so that the keys of undoing, redoing,
 //! pasting, renaming, and the help page are never hinted while one has the
@@ -21,8 +23,8 @@
 //! The bar keeps to one line, with the width of a separator between the
 //! status and the hints.  When it is too narrow for all of it, the name
 //! of the show is cut short at its end with an ellipsis, down to 16 columns,
-//! and then the keys of the next tab, of standby, of going forward and back,
-//! of GO, of Panic, of saving, of renaming a cue just added,
+//! and then the keys of the next list, of the next tab, of standby, of going
+//! forward and back, of GO, of Panic, of saving, of renaming a cue just added,
 //! of the help page, of the next field, and of leaving it give way in turn,
 //! each one whole, and then what the latest change told gives way, at a word,
 //! with an ellipsis, so that the status shows in full, while the keys typed so
@@ -32,6 +34,12 @@
 //! that the keys give way in another order: rename a cue, forward, add,
 //! rename an output, GO, Panic,
 //! saving, back, the help page, the next field, and leaving a field.
+//! Where standby lies past the end of a list that another follows, GO fires
+//! nothing, so that the key of the next list gives way after that of the help
+//! page instead.
+//! While a field has the keyboard, the key of the next field gives way first,
+//! then the keys of other places and what Enter does, and only then GO,
+//! Panic, and saving, which act there, while the key that leaves goes last.
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
 
@@ -56,8 +64,10 @@ use crate::front::{App, Message, Search, keymap::Action};
 /// Hints in turn of giving way, the first to go first.  The key of renaming
 /// outlasts GO and Panic, whose buttons the transport shows, and saving,
 /// whose mark the status shows, since it is told only right after a cue is
-/// added and nowhere else.
-const YIELDING: [Action; 13] = [
+/// added and nowhere else.  The key of the next cue list goes first of all, as
+/// it only teaches.
+const YIELDING: [Action; 14] = [
+    Action::NextList,
     Action::NextTab,
     Action::Standby,
     Action::Forward,
@@ -71,6 +81,54 @@ const YIELDING: [Action; 13] = [
     Action::Cancel,
     Action::CloseMenu,
     Action::Pick,
+];
+
+/// Hints in turn of giving way while standby lies past the end of its list
+/// and a later list exists, where GO fires nothing, so that the key of the
+/// next list, which is the way on, outlasts the keys that only teach, the
+/// hints of GO and Panic, whose buttons the transport shows, and that of the
+/// help page
+const YIELDING_AT_END: [Action; 14] = [
+    Action::NextTab,
+    Action::Standby,
+    Action::Forward,
+    Action::Back,
+    Action::Go,
+    Action::Panic,
+    Action::Save,
+    Action::ChangeName,
+    Action::Help,
+    Action::NextList,
+    Action::NextField,
+    Action::Cancel,
+    Action::CloseMenu,
+    Action::Pick,
+];
+
+/// Hints in turn of giving way while a text field, a checkbox, or a closed
+/// drop-down list has the keyboard, the first to go first.  The key of the
+/// next field only teaches, and a focus border shows the field, so that it
+/// goes first.  What Enter does outlasts the other keys that only teach, but
+/// gives way before GO and Panic, which act there, and those give way before
+/// the key that leaves the field, which is the way back to the cue list and
+/// panic.
+const YIELDING_IN_FIELD: [Action; 16] = [
+    Action::NextField,
+    Action::NextTab,
+    Action::Standby,
+    Action::NextList,
+    Action::Forward,
+    Action::Back,
+    Action::ChangeName,
+    Action::AddBelow,
+    Action::Edit,
+    Action::Help,
+    Action::Pick,
+    Action::Go,
+    Action::Panic,
+    Action::Save,
+    Action::Cancel,
+    Action::CloseMenu,
 ];
 
 /// Hints in turn of giving way while the outputs show, the first to go
@@ -95,8 +153,12 @@ const YIELDING_IN_OUTPUTS: [Action; 13] = [
 ];
 
 fn yielding(app: &App) -> &'static [Action] {
-    if app.outputs_shown {
+    if hints::in_field(app) {
+        &YIELDING_IN_FIELD
+    } else if app.outputs_shown {
         &YIELDING_IN_OUTPUTS
+    } else if hints::list_ended(app) {
+        &YIELDING_AT_END
     } else {
         &YIELDING
     }

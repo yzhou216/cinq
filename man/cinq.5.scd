@@ -878,6 +878,15 @@ page.
 	While a text field or a drop-down list has the keyboard, it hints the key
 	of *next_field* and this key as the one that leaves, so that the way out is
 	told where Escape would panic.
+	While a checkbox has it, the bar hints Enter as the key that flips it,
+	while a button has it, as the key that presses it, and
+	while a closed drop-down list has it, as the key that opens it, unless Enter
+	is bound to *go*, *panic*, or another action that acts in fields, so that a
+	newcomer does not press Space, which is GO.
+	There the hints give way, from the first to the last, to *next_field*, the
+	keys of other places, what Enter does, GO, Panic, *save*, and this key, so
+	that the key that leaves outlasts them all, and GO and Panic outlast
+	what only teaches.
 	Where no key is bound to it, a text field has Enter hinted as the key that
 	leaves, unless Enter is bound to *go*, *panic*, or another action that acts
 	in fields, which it then does instead.
@@ -1041,6 +1050,12 @@ page.
 
 *next_list*
 	Show the next cue list, or the outputs of the show after the last one.
+	While no field has the keyboard, the status bar hints its key last, so that
+	it gives way before any other.
+	While standby lies past the end of the cue list on show and a later list
+	exists, where GO fires nothing, the hint gives way instead only after the
+	hints of GO, Panic, *save*, and the help page, so that the key that goes on
+	to the next list shows on a short bar.
 
 *previous_list*
 	Show the previous cue list, or the last one from the outputs of the show.
@@ -1052,8 +1067,8 @@ page.
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,
 	counted from one, or the last tab when there are fewer.
-	While no field has the keyboard, the status bar hints its key last, so that
-	it gives way before any other.
+	While no field has the keyboard, the status bar hints its key next to last,
+	so that it gives way right after the key of *next_list*, before any other.
 
 *previous_tab*
 	Show the previous tab of the inspector, or go back as many tabs as the count,

@@ -40,7 +40,7 @@ fn the_outputs_hint_the_way_back_and_the_keys_to_add_and_to_rename_an_output() {
     // Cue list needs none of them, and has nowhere to go back to
     assert_eq!(
         shown(&opened(Preset::Vi, false, false), COLUMNS),
-        "Space: GO | Escape: Panic | ?: help | gt: next tab"
+        "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list"
     );
 }
 
@@ -80,8 +80,9 @@ fn hints_of_the_outputs_give_way_with_the_way_back_lasting_longest_after_help() 
 fn the_cue_list_keeps_its_order_of_giving_way() {
     let cues = yielding(&App::default());
     assert_eq!(
-        cues[..8],
+        cues[..9],
         [
+            Action::NextList,
             Action::NextTab,
             Action::Standby,
             Action::Forward,

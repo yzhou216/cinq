@@ -202,6 +202,12 @@ struct App {
     /// Whether the File field of a cue has the keyboard, which the status bar
     /// hints Enter for while it is empty
     file_held: bool,
+    /// Whether a checkbox has the keyboard, which the status bar hints Enter
+    /// for as it flips it, where it opens a drop-down list
+    check_held: bool,
+    /// Whether a button has the keyboard, which the status bar hints Enter
+    /// for as it presses the button
+    button_held: bool,
     /// Whether the address of an instrument in the light patch has the
     /// keyboard, which shows the help on addresses under the patch
     address_held: bool,

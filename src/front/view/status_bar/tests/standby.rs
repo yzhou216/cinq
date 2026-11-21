@@ -54,14 +54,18 @@ fn the_hint_of_standby_gives_way_right_after_the_one_of_the_next_tab() {
     let all = fitted(&hinted(&app), 100, &YIELDING);
     assert_eq!(
         all,
+        "Space: GO | Escape: Panic | ?: help | Enter: standby | gt: next tab | l: next list"
+    );
+    let without = |keys: &[&str]| {
+        let gone: usize = keys.iter().map(|key| key.len() + 3).sum();
+        fitted(&hinted(&app), all.len() - gone, &YIELDING)
+    };
+    assert_eq!(
+        without(&["l: next list"]),
         "Space: GO | Escape: Panic | ?: help | Enter: standby | gt: next tab"
     );
     assert_eq!(
-        fitted(
-            &hinted(&app),
-            all.len() - "gt: next tab".len() - 3,
-            &YIELDING
-        ),
+        without(&["l: next list", "gt: next tab"]),
         "Space: GO | Escape: Panic | ?: help | Enter: standby"
     );
     assert_eq!(

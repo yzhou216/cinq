@@ -85,6 +85,14 @@ pub const INSPECTOR: &str = "inspector";
 /// status bar hints Enter for while it is empty and has the keyboard
 pub const FILE: &str = "file";
 
+/// Identity of every checkbox that takes the keyboard, which the status bar
+/// hints Enter for as it flips the box
+pub const CHECK: &str = "check";
+
+/// Identity of every button that takes the keyboard, which the status bar
+/// hints Enter for as it presses the button
+pub const BUTTON: &str = "button";
+
 /// Identity of the address fields of the light patch, which show the help on
 /// addresses while one of them has the keyboard
 pub const ADDRESS: &str = "address";

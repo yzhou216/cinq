@@ -88,8 +88,20 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
         .map(|(_, hint)| (None, hint));
     // A pick or a close by key, and a Tab, leave the keyboard on a field or a
     // list, from which Escape would panic and no click is at hand
-    let in_field = app.held && !app.help && !in_menu && app.search.is_none();
+    let in_field = in_field(app);
     let next_field = key(Action::NextField, "next field").filter(|_| in_field);
+    // Enter flips a checkbox, presses a button, and opens a closed list, where
+    // a newcomer may take Space, which is GO, for the key that does.  A text
+    // field keeps Enter for leaving, and a key bound to act at once keeps it
+    // from any of them.
+    let enter = (in_field && !app.text_held && enter_leaves(app)).then(|| {
+        let does = match (app.check_held, app.button_held) {
+            (true, _) => "flip",
+            (false, true) => "press",
+            (false, false) => "open",
+        };
+        (Some(Action::Pick), format!("Enter: {does}"))
+    });
     // The keymap may bind no key to cancel, as CUA does, while Enter leaves a
     // text field, though it opens the menu of a drop-down list
     let leave = key(Action::Cancel, "leave")
@@ -105,6 +117,9 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     // Tabs of the inspector show with the cues, and no field keeps the key
     let in_cues = !app.outputs_shown && !app.held && !app.help && !in_menu && app.search.is_none();
     let tab = key(Action::NextTab, "next tab").filter(|_| in_cues);
+    // The way to the next list, and at last to the outputs, which only the
+    // keys teach
+    let next_list = key(Action::NextList, "next list").filter(|_| in_cues);
     // Enter moves standby to the selected cue, which no button of the toolbar
     // teaches by key, while the selection is elsewhere
     let standby = key(Action::Standby, "standby").filter(|_| {
@@ -131,6 +146,7 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
         .chain(close.filter(|_| in_menu))
         .chain(cancel)
         .chain(choose)
+        .chain(enter)
         .chain(next_field)
         .chain(leave)
         .chain(teaching.into_iter().flatten().flatten())
@@ -143,7 +159,20 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
         .chain(help)
         .chain(standby)
         .chain(tab)
+        .chain(next_list)
         .collect()
+}
+
+/// Returns whether a text field, a checkbox, or a closed drop-down list has
+/// the keyboard, from which a pick or a close by key, and a Tab, leave it
+pub(super) fn in_field(app: &App) -> bool {
+    app.held && !app.help && !menu_open(app) && app.search.is_none()
+}
+
+/// Returns whether standby lies past the end of the cue list on show while a
+/// later list exists, where GO fires nothing
+pub(super) fn list_ended(app: &App) -> bool {
+    app.current().standby.is_none() && app.list + 1 < app.workspace.lists().len()
 }
 
 /// Fewest columns of a place that stay, as the name of a cue list may be

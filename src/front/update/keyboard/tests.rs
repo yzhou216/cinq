@@ -113,7 +113,7 @@ impl Window {
 }
 
 /// Polls of a task that give nothing, after which it has nothing more to say
-const POLLS_TO_SETTLE: usize = 3;
+const POLLS_TO_SETTLE: usize = 4;
 
 /// What the status bar learns last, which is what it shows
 fn last(messages: &[Message]) -> (Option<bool>, Option<bool>) {
@@ -170,4 +170,24 @@ fn any_address_of_the_light_patch_counts_for_the_help_on_addresses() {
         holding(),
         &[(Some("address"), false), (Some("name"), true)]
     ));
+}
+
+#[test]
+fn a_check_box_is_told_from_a_drop_down_list_by_its_identity() {
+    let holding = || Holding::in_field(view::CHECK);
+    assert!(found(
+        holding(),
+        &[(Some("check"), false), (Some("check"), true)]
+    ));
+    assert!(!found(holding(), &[(None, true), (Some("check"), false)]));
+}
+
+#[test]
+fn a_button_is_told_from_a_drop_down_list_by_its_identity() {
+    let holding = || Holding::in_field(view::BUTTON);
+    assert!(found(
+        holding(),
+        &[(Some("button"), false), (Some("button"), true)]
+    ));
+    assert!(!found(holding(), &[(None, true), (Some("button"), false)]));
 }
