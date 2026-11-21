@@ -6,7 +6,7 @@
 //! search that they follow, wrapping, and counts of any size
 
 use super::{
-    search::{opened, opened_backward, searched, show, typed},
+    search::{opened, opened_backward, opening, searched, show, typed},
     typing,
 };
 use crate::{
@@ -100,16 +100,10 @@ fn next_and_previous_match_keys_step_with_the_count() {
 #[test]
 fn empty_line_accepted_repeats_the_last_search_in_the_direction_of_the_line() {
     let accepted = searched(opened(1), "storm");
-    let (again, _) = accepted
-        .handled(Message::Search { backward: false })
-        .0
-        .handled(Message::SearchAccepted);
+    let (again, _) = opening(accepted, false).handled(Message::SearchAccepted);
     assert!(again.search.is_none());
     assert_eq!(again.selected, Some(CueId(1)));
-    let (up, _) = searched(opened(1), "storm")
-        .handled(Message::Search { backward: true })
-        .0
-        .handled(Message::SearchAccepted);
+    let (up, _) = opening(searched(opened(1), "storm"), true).handled(Message::SearchAccepted);
     assert_eq!(up.selected, Some(CueId(1)));
     assert!(up.searched.backward);
 }

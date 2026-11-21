@@ -13,7 +13,7 @@
 //! those are.  Their sends go by the names of the outputs that they had
 //! there, since the identity of an output is its place in a show file.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use crate::{
     back::{Command, Cue, CueId, Output, OutputId, Place, Sends},
@@ -62,9 +62,10 @@ pub struct Register {
 }
 
 impl App {
-    /// Copies the selected cue and the cues below it, as many as `count`
-    /// holds, in place of what the clipboard held.  Copying changes no show,
-    /// so that show mode leaves it, as Vim yanks in a read-only buffer.
+    /// Copies the selected row and the rows below it, as many as `count`
+    /// holds, in place of what the clipboard held, each group with the cues
+    /// that it holds, as a closed fold is yanked whole.  Copying changes no
+    /// show, so that show mode leaves it, as Vim yanks in a read-only buffer.
     pub(super) fn with_copied(self, count: usize) -> Self {
         self.clipped(count, "Copied", false)
     }
@@ -76,10 +77,18 @@ impl App {
         let Some(first) = self.selected_row() else {
             return self;
         };
-        let cues: Vec<Cue> = self.current().cues[first..]
-            .iter()
-            .take(count)
-            .map(|cue| self.workspace.copied(cue))
+        let list = self.current();
+        let groups = list.groups();
+        // A group takes the cues that it holds along, once even where the
+        // count reaches them as well
+        let rows: BTreeSet<usize> = self
+            .shown_cues_from(first, count)
+            .into_iter()
+            .flat_map(|row| groups.extent(row))
+            .collect();
+        let cues: Vec<Cue> = rows
+            .into_iter()
+            .map(|row| self.workspace.copied(&list.cues[row]))
             .collect();
         let clipped = Clipped {
             told: format::clipped(verb, &cues),

@@ -2,17 +2,25 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Cue list, one row per cue, under a header that stays in view
+//! Cue list, one row per cue that the list shows, under a header that stays in
+//! view
 //!
-//! The selection only drives the inspector, while the State column marks
-//! the standby cue that GO fires as NEXT.  Widths are counted in columns of
+//! A collapsed group takes the row of the cues that it holds, as a closed fold
+//! takes one line in Vim, so that the rows drawn are those of
+//! [`Groups::shown`], in order.  The selection only drives the inspector,
+//! while the State column marks the standby cue that GO fires as NEXT, on the
+//! row of the collapsed group that hides it where one does.  Widths are counted in columns of
 //! the monospace font, of which a wide character such as one of Chinese
 //! takes two, so that the header, a table of its own above the rows that
 //! scroll, lines up with them.
 
 mod columns;
+mod layout;
+mod name;
 #[cfg(test)]
 mod tests;
+
+use std::rc::Rc;
 
 use iced::{
     Element, Fill, Length, padding,
@@ -26,10 +34,11 @@ use strum::VariantArray;
 
 use super::{CUES, SELECTED, char_width, giving_way, marked_row};
 use crate::{
-    back::{Cue, CueList, Workspace},
+    back::{Cue, Groups, Workspace},
     front::{App, Message, keymap::Action},
 };
-use columns::{Column, state};
+use columns::{Column, hidden_problem, state};
+use layout::Layout;
 
 /// Returns the texts of a cue that a search matches, which are those of the
 /// columns of the list apart from the waits, which are timings, and the
@@ -37,12 +46,12 @@ use columns::{Column, state};
 /// shows of the cue, as Vim finds the text of a line
 pub(in crate::front) fn searchable(
     workspace: &Workspace,
-    list: &CueList,
+    groups: &Groups,
     cue: &Cue,
 ) -> Vec<String> {
     use Column::{Action, Name, Number, Target, Then, Type};
     [Number, Type, Name, Target, Action, Then]
-        .map(|column| column.text(workspace, list, cue))
+        .map(|column| column.text(workspace, groups, cue))
         .to_vec()
 }
 
@@ -73,6 +82,10 @@ const NAME_ROOM: usize = 16;
 /// long file name wraps
 const TARGET_ROOM: usize = 24;
 
+/// Columns of the font that a name moves right for each group that holds its
+/// cue
+const INDENT: usize = 2;
+
 /// Columns of the font that the State column holds, so that the column
 /// keeps its width as cues run: as many as `10:00.0 left` takes, the
 /// longest state of a cue whose sound is under a hundred minutes
@@ -83,22 +96,24 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 }
 
 fn list<'a>(app: &'a App, room: f32) -> Element<'a, Message> {
-    let fitting = fitting(app, room);
-    let table = |titled: bool, cues: &'a [Cue]| {
-        let columns = fitting
-            .iter()
-            .map(move |&(column, width)| table_column(app, column, width, titled));
+    let layout = Rc::new(Layout::of(app.current()));
+    let fitting = fitting(app, &layout, room);
+    let table = |titled: bool, cues: Vec<&'a Cue>| {
+        let layout = Rc::clone(&layout);
+        let columns = fitting.iter().map(move |&(column, width)| {
+            table_column(app, column, width, titled, Rc::clone(&layout))
+        });
         table::table(columns, cues)
             .padding_x(CELL_PADDING)
             .separator_x(SEPARATOR)
     };
-    let header = table(true, &[]).padding_y(ROW_PADDING);
-    let cues = &app.current().cues;
-    let rows = if cues.is_empty() {
+    let header = table(true, Vec::new()).padding_y(ROW_PADDING);
+    let rows = if app.current().cues.is_empty() {
         empty(app)
     } else {
-        let rows = table(false, cues).padding_y(0);
-        marked_row(rows, fitting.len(), app.selected_row(), SELECTED)
+        let selected = app.selected.and_then(|id| layout.row_of(id));
+        let rows = table(false, layout.rows()).padding_y(0);
+        marked_row(rows, fitting.len(), selected, SELECTED)
     };
     scrolling(header, rows, CUES)
 }
@@ -139,17 +154,18 @@ fn empty(app: &App) -> Element<'_, Message> {
 
 /// Returns the columns that a list `room` wide shows, each with its width.
 /// When showing them all leaves a name less than [`NAME_ROOM`] columns of
-/// the font, the yielding columns give way in turn, those without text in
-/// any row first, as they tell nothing, and the inspector shows them all.
-fn fitting(app: &App, room: f32) -> Vec<(Column, Option<f32>)> {
-    let list = app.current();
+/// the font, past the gutter that a list holding a group keeps for the mark,
+/// the yielding columns give way in turn, those without text in any row
+/// first, as they tell nothing, and the inspector shows them all.
+fn fitting(app: &App, layout: &Layout, room: f32) -> Vec<(Column, Option<f32>)> {
+    let groups = &layout.groups;
     let all: Vec<(Column, Option<f32>)> = Column::VARIANTS
         .iter()
-        .map(|&column| (column, column.width(&app.workspace, list)))
+        .map(|&column| (column, column.width(&app.workspace, groups)))
         .collect();
     let yielding: Vec<Column> = Column::YIELDING
         .into_iter()
-        .sorted_by_cached_key(|column| column.holds_text(&app.workspace, list))
+        .sorted_by_cached_key(|column| column.holds_text(&app.workspace, groups))
         .collect();
     let name_room = |columns: &[(Column, Option<f32>)]| {
         room - columns
@@ -165,7 +181,9 @@ fn fitting(app: &App, room: f32) -> Vec<(Column, Option<f32>)> {
                 .filter(|(column, _)| !gone.contains(column))
                 .collect()
         },
-        |columns: &Vec<_>| name_room(columns) >= NAME_ROOM as f32 * char_width(),
+        |columns: &Vec<_>| {
+            name_room(columns) >= (NAME_ROOM + layout.gutter()) as f32 * char_width()
+        },
     )
 }
 
@@ -174,33 +192,54 @@ fn table_column<'a>(
     column: Column,
     width: Option<f32>,
     titled: bool,
+    layout: Rc<Layout<'a>>,
 ) -> table::Column<'a, 'a, &'a Cue, Message> {
     let header: Element<'a, Message> = if titled {
         text(column.title()).into()
     } else {
         space().into()
     };
-    table::column(header, move |cue| cell(app, column, cue))
+    table::column(header, move |cue| cell(app, column, cue, &layout))
         .width(width.map_or(Fill, Length::Fixed))
 }
 
 /// Returns the cell of `cue` in `column`, padded inside rather than by the
-/// table, so that a click anywhere in it selects the cue
-fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue) -> Element<'a, Message> {
-    let list = app.current();
-    let content: Element<'a, Message> = match column {
-        Column::Number => radio(cue.number.clone(), cue.id, app.selected, Message::Select).into(),
-        Column::Target => text(column.text(&app.workspace, list, cue))
-            .wrapping(Wrapping::WordOrGlyph)
-            .into(),
-        Column::State => {
-            let (state, style) = state(&app.workspace, list, cue, app.selected == Some(cue.id));
-            text(state).style(style).into()
+/// table, so that a click anywhere in it selects the cue, but on the mark of
+/// a group, which flips it.  The cell of a name pads its parts itself, so that
+/// the mark takes the height of the row.
+fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue, layout: &Layout) -> Element<'a, Message> {
+    let groups = &layout.groups;
+    let vertical = padding::vertical(ROW_PADDING);
+    let (content, padded): (Element<'a, Message>, _) = match column {
+        Column::Name => {
+            let name = column.text(&app.workspace, groups, cue);
+            let hidden = groups.members(cue.id).len();
+            (
+                name::cell(cue, name, layout.depth(cue), hidden, layout.gutter()),
+                false,
+            )
         }
-        _ => text(column.text(&app.workspace, list, cue)).into(),
+        Column::Number => (
+            radio(cue.number.clone(), cue.id, app.selected, Message::Select).into(),
+            true,
+        ),
+        Column::Target => (
+            text(column.text(&app.workspace, groups, cue))
+                .wrapping(Wrapping::WordOrGlyph)
+                .into(),
+            true,
+        ),
+        Column::State => {
+            let selected = app.selected == Some(cue.id);
+            let hidden = hidden_problem(&app.workspace, groups, cue);
+            let (state, style) = state(&app.workspace, cue, layout.is_next(cue), hidden, selected);
+            (text(state).style(style).into(), true)
+        }
+        _ => (text(column.text(&app.workspace, groups, cue)).into(), true),
     };
-    let cell = container(content)
-        .width(Fill)
-        .padding(padding::vertical(ROW_PADDING));
+    let cell =
+        container(content)
+            .width(Fill)
+            .padding(if padded { vertical } else { padding::all(0) });
     mouse_area(cell).on_press(Message::Select(cue.id)).into()
 }

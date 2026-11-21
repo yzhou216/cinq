@@ -10,12 +10,14 @@ use std::{
     path::Path,
 };
 
+use itertools::Itertools;
+
 use super::{
     Workspace,
     history::{Change, Placed},
     numbering::Numbers,
 };
-use crate::back::{Cue, CueId, Media, Place};
+use crate::back::{Cue, CueId, CueList, Media, Place};
 
 impl Workspace {
     /// Returns a copy of `cue` that another show can take in: its file by
@@ -40,7 +42,10 @@ impl Workspace {
     /// target is among the cues pasted together, in the same round of a
     /// clipboard pasted several times, targets the copy of that cue, as in
     /// QLab.  Otherwise a target is kept when it is a cue of the show and
-    /// dropped when it is not.  Once the identities have run out, no cue is
+    /// dropped when it is not.  The cues keep their shape: their depths shift
+    /// together, so that the first of them takes the depth that a cue added
+    /// there takes, and each round of a clipboard pasted several times
+    /// starts at that depth.  Once the identities have run out, no cue is
     /// pasted.
     pub(super) fn pasted(self, list: usize, cues: Vec<Cue>, at: Place) -> Self {
         let Some(target) = self.lists.get(list) else {
@@ -54,6 +59,7 @@ impl Workspace {
             return self;
         };
         let (before, index) = (target.standby, target.index_at(at));
+        let depth = target.depth_at(at);
         let known: HashSet<CueId> = self.cues().map(|cue| cue.id).collect();
         let numbers = Numbers::of(self.cues().map(|cue| cue.number.as_str()));
         let rounds = rounds(&cues);
@@ -63,11 +69,13 @@ impl Workspace {
             .zip(&ids)
             .map(|((&round, cue), &id)| ((round, cue.id), id))
             .collect();
+        let shapes = shapes(&cues, &rounds);
         let pasted: Vec<Cue> = cues
             .into_iter()
             .zip(&ids)
             .zip(rounds)
-            .scan(numbers, |numbers, ((cue, &id), round)| {
+            .zip(shapes)
+            .scan(numbers, |numbers, (((cue, &id), round), shape)| {
                 let number = if cue.number.trim().is_empty() || !numbers.holds(&cue.number) {
                     cue.number.clone()
                 } else {
@@ -89,6 +97,7 @@ impl Workspace {
                     number,
                     file,
                     target,
+                    depth: depth.saturating_add(shape),
                     ..cue
                 })
             })
@@ -125,6 +134,20 @@ fn rounds(cues: &[Cue]) -> Vec<usize> {
                 seen.insert(cue.id);
             }
             Some(*round)
+        })
+        .collect()
+}
+
+/// Returns how deep each cue lies within its own round, where the first of
+/// a round is the top, which is the shape that a paste keeps
+fn shapes(cues: &[Cue], rounds: &[usize]) -> Vec<u8> {
+    cues.iter()
+        .zip(rounds)
+        .chunk_by(|(_, round)| **round)
+        .into_iter()
+        .flat_map(|(_, round)| {
+            let round: Vec<Cue> = round.map(|(cue, _)| cue.clone()).collect();
+            CueList::depths_within(&round)
         })
         .collect()
 }

@@ -42,8 +42,10 @@ impl Workspace {
     /// Adds cues with the next identities, each after the one before and
     /// numbered after the highest cue of any list, and records them as one
     /// change at the place of the first, with the standby of their list before
-    /// and after, which the first of them can take.  Once the identities have
-    /// run out, no more cues are added.
+    /// and after, which the first of them can take.  Every cue takes the depth
+    /// that a cue added at the place of the first takes, so that a row of
+    /// groups lies side by side.  Once the identities have run out, no more
+    /// cues are added.
     pub(super) fn added(self, list: usize, kind: Kind, at: Place, count: usize) -> Self {
         let ids: Vec<CueId> = (self.next_id..)
             .take(count)
@@ -52,6 +54,7 @@ impl Workspace {
         let before = self.lists.get(list).and_then(|cues| cues.standby);
         let sends = self.new_sends().filter(|_| kind.plays_file());
         let numbers = Numbers::of(self.cues().map(|cue| cue.number.as_str()));
+        let depth = self.lists.get(list).map_or(0, |cues| cues.depth_at(at));
         let (workspace, ..) =
             ids.iter()
                 .fold((self, at, numbers), |(workspace, at, numbers), &id| {
@@ -59,7 +62,8 @@ impl Workspace {
                     let numbers = numbers.with_taken(&number);
                     let added = Self {
                         next_id: workspace.next_id + 1,
-                        ..workspace.with_list(list, |cues| cues.with_new_cue(id, number, kind, at))
+                        ..workspace
+                            .with_list(list, |cues| cues.with_new_cue(id, number, kind, at, depth))
                     }
                     .changed(id, Edit::Sends(sends.clone()));
                     (added, Place::After(id), numbers)
@@ -86,14 +90,17 @@ impl Workspace {
     }
 
     /// Deletes cues as one change, with the places they had and where
-    /// standby was before and after, and whether they were cut
+    /// standby was before and after, and whether they were cut.  A group
+    /// goes with every cue that it holds, which undo brings back as well.
     pub(super) fn deleted(self, ids: &[CueId], cut: bool) -> Self {
         // Cues in the order of their places, which is the order undo puts
         // them back in
-        let cues: Vec<Placed> = ids
+        let cues: Vec<Placed> = self
+            .lists
             .iter()
+            .flat_map(|list| list.with_members(ids))
             .unique()
-            .filter_map(|&id| self.place_of(id))
+            .filter_map(|id| self.place_of(id))
             .sorted_by_key(|placed| (placed.list, placed.index))
             .collect();
         if cues.is_empty() {
@@ -112,22 +119,6 @@ impl Workspace {
             .map(|(list, before)| workspace.standby_since(list, before))
             .collect();
         workspace.recorded(Change::Deleted { cues, standby, cut })
-    }
-
-    pub(super) fn moved(self, id: CueId, by: isize) -> Self {
-        let place = self
-            .lists
-            .iter()
-            .find_map(|cues| cues.position(id).map(|from| (from, cues.cues.len() - 1)));
-        let Some((from, last)) = place else {
-            return self;
-        };
-        let to = from.saturating_add_signed(by).min(last);
-        if to == from {
-            return self;
-        }
-        self.with_cue_moved(id, to)
-            .recorded(Change::Moved { cue: id, from, to })
     }
 
     /// Moves a cue to the place `to` in its list without recording the

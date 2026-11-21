@@ -116,10 +116,13 @@ impl Workspace {
             .flat_map(move |list| self.chain_from(list, target))
     }
 
+    /// Holds or resumes the run of a cue with the runs that it would start,
+    /// and for a group those of the cues that it holds as well
     fn with_pause_of(self, id: CueId, paused: bool) -> Self {
         let held: Vec<u32> = self
-            .active_of(id)
+            .with_members(id)
             .into_iter()
+            .filter_map(|member| self.active_of(member))
             .flat_map(|run| iter::once(run.run).chain(self.followers(run.run)))
             .collect();
         self.with_each_active(|active| {

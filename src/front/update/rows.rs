@@ -6,10 +6,15 @@
 //! rows share
 //!
 //! The main window lists the cues of a cue list or, in place of them, the
-//! outputs of the show.  Selecting, stepping, paging, scrolling, placing a
-//! row in view, and searching go through the interface here, so that a key
-//! does the same to either list by one code path.  Editing differs by kind
-//! and lives with each kind.
+//! outputs of the show.  Selecting, stepping, paging, scrolling, and placing a
+//! row in view go through the interface here, so that a key does the same to
+//! either list by one code path.  Editing differs by kind and lives with
+//! each kind.
+//!
+//! A row of the cues is a row that the table shows, so a collapsed group is
+//! one row, with every cue that it holds.  A search looks through the cues
+//! themselves, as Vim searches the text of a closed fold, and finds the
+//! cues that a collapsed group hides by their position in the list instead.
 
 use crate::front::{App, step, view};
 
@@ -34,7 +39,7 @@ impl App {
 
     pub(super) fn row_count(&self) -> usize {
         match self.rows() {
-            Rows::Cues(_) => self.current().cues.len(),
+            Rows::Cues(_) => self.current().groups().shown().len(),
             Rows::Outputs => self.workspace.outputs().len(),
         }
     }
@@ -61,8 +66,8 @@ impl App {
         match self.rows() {
             Rows::Cues(_) => {
                 let selected = row
-                    .and_then(|row| self.current().cues.get(row))
-                    .map(|cue| cue.id);
+                    .and_then(|row| self.shown_cues().get(row).copied())
+                    .map(|index| self.current().cues[index].id);
                 Self { selected, ..self }
             }
             Rows::Outputs => {
@@ -74,8 +79,35 @@ impl App {
         }
     }
 
-    /// Returns the row that a place names, if it is one of the rows listed
-    pub(super) fn row_of(&self, spot: Spot) -> Option<usize> {
+    /// Returns the place in the cue list of each row that the table shows,
+    /// in order
+    pub(super) fn shown_cues(&self) -> Vec<usize> {
+        self.current().groups().shown()
+    }
+
+    /// Returns the places in the cue list of the cues that `count` rows from
+    /// the row `first` down show, a collapsed group standing for itself
+    pub(super) fn shown_cues_from(&self, first: usize, count: usize) -> Vec<usize> {
+        self.shown_cues()
+            .into_iter()
+            .skip(first)
+            .take(count)
+            .collect()
+    }
+
+    /// Returns where a search stands, which is the place in the cue list of
+    /// the selected cue, hidden by a collapsed group or not, or the row of
+    /// the selected output
+    pub(super) fn position(&self) -> Option<usize> {
+        match self.rows() {
+            Rows::Cues(_) => self.selected_index(),
+            Rows::Outputs => self.output_row(),
+        }
+    }
+
+    /// Returns where a search stands for the place that a spot names, if it
+    /// is in the items listed
+    pub(super) fn position_of(&self, spot: Spot) -> Option<usize> {
         match (self.rows(), spot) {
             (Rows::Cues(_), Spot::Cue(id)) => self.current().position(id),
             (Rows::Outputs, Spot::Output(id)) => self
@@ -87,16 +119,36 @@ impl App {
         }
     }
 
-    /// Returns the texts of each row that a search matches: those that the row
-    /// shows in its columns, but for the state, as Vim searches a whole line
+    /// Selects the item at a position of the search texts, the cue in the
+    /// cue list or the row of the outputs.  A cue that a collapsed group
+    /// hides is selected as any other, and the groups expand once the
+    /// selection is brought into view.
+    pub(super) fn selecting_position(self, position: Option<usize>) -> Self {
+        match self.rows() {
+            Rows::Cues(_) => {
+                let selected = position
+                    .and_then(|index| self.current().cues.get(index))
+                    .map(|cue| cue.id);
+                Self { selected, ..self }
+            }
+            Rows::Outputs => self.selecting(position),
+        }
+    }
+
+    /// Returns the texts of each item that a search matches, a cue of the
+    /// list whether the table shows it or not: those that the row shows in
+    /// its columns, but for the state, as Vim searches a whole line
     pub(super) fn row_texts(&self) -> Vec<Vec<String>> {
         match self.rows() {
-            Rows::Cues(_) => self
-                .current()
-                .cues
-                .iter()
-                .map(|cue| view::cue_texts(&self.workspace, self.current(), cue))
-                .collect(),
+            Rows::Cues(_) => {
+                let groups = self.current().groups();
+                groups
+                    .list()
+                    .cues
+                    .iter()
+                    .map(|cue| view::cue_texts(&self.workspace, &groups, cue))
+                    .collect()
+            }
             Rows::Outputs => self
                 .workspace
                 .outputs()

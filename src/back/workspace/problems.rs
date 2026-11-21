@@ -24,6 +24,9 @@ impl Workspace {
             Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo => {
                 match self.target(cue) {
                     Some(target) if !cue.can_target(target) => Some(Problem::NoTarget),
+                    Some(target) if cue.kind == Kind::Start && self.within(cue, target) => {
+                        Some(Problem::InTarget)
+                    }
                     Some(target) if cue.kind == Kind::Devamp && !target.loops() => {
                         Some(Problem::NotLooping)
                     }
@@ -35,8 +38,18 @@ impl Workspace {
                 Some(Problem::NoDestination)
             }
             Kind::Network if osc::packet(&cue.message).is_none() => Some(Problem::NoMessage),
-            Kind::Light | Kind::Network | Kind::Wait | Kind::Memo => None,
+            Kind::Light | Kind::Network | Kind::Group | Kind::Wait | Kind::Memo => None,
         }
+    }
+
+    /// Returns whether `cue` lies in `target`, a group, at any depth.  A
+    /// start cue that does cannot play, since the group would fire it again.
+    fn within(&self, cue: &Cue, target: &Cue) -> bool {
+        target.kind == Kind::Group
+            && self
+                .list_of(cue.id)
+                .and_then(|list| self.lists.get(list))
+                .is_some_and(|list| list.groups().holds(target.id, cue.id))
     }
 
     pub fn problems(&self) -> impl Iterator<Item = (&Cue, Problem<'_>)> {

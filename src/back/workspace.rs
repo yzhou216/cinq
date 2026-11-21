@@ -12,11 +12,12 @@
 //! into DMX, and the network output in [`super::Network`] into messages.
 //! A [`Command`] asks for each change, and an [`Active`] records each cue
 //! that GO has fired.  The rules of playback live in [`playback`] and
-//! [`stopping`], those of control cues in [`control`], those of lights in
-//! [`lighting`], those of network cues in [`networking`], those that change
-//! the cue lists in [`editing`] and [`pasting`], those of outputs in
-//! [`outputs`], undo and redo in [`history`], show files in [`show`], the
-//! places of the files of cues in [`files`], why cues cannot play in
+//! [`stopping`], those of group runs in [`group_runs`], those of control cues
+//! in [`control`], those of lights in [`lighting`], those of network cues in
+//! [`networking`], those that change the cue lists in [`editing`] and
+//! [`pasting`], those of outputs in [`outputs`], undo and redo in
+//! [`history`], show files in [`show`], the places of the files of cues in
+//! [`files`], why cues cannot play in
 //! [`problems`], and the cues that send to no output in [`stranded`].
 
 mod active;
@@ -24,6 +25,8 @@ mod command;
 mod control;
 mod editing;
 mod files;
+mod group_runs;
+mod grouping;
 mod history;
 mod lighting;
 mod networking;
@@ -221,6 +224,9 @@ impl Workspace {
             Command::Delete(ids) => self.deleted(&ids, false),
             Command::Cut(ids) => self.deleted(&ids, true),
             Command::Move { cue, by } => self.moved(cue, by),
+            Command::Indent(ids) => self.indented(&ids),
+            Command::Outdent(ids) => self.outdented(&ids),
+            Command::Collapse { cues, collapsed } => self.collapsed(&cues, collapsed),
             Command::Edit(id, edit) => self.edited(id, edit),
             Command::Patch(edit) => self.patched(edit),
             Command::Restore(lists, outputs, patch) => self.restored(Kept {

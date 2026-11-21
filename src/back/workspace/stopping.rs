@@ -14,9 +14,16 @@ impl Workspace {
     /// Stops a cue.  The cues of its chain that have yet to start go too
     /// when the stopped cue would have started them, directly or through
     /// other cues that have yet to start.  Cues that wait for another cue
-    /// that has started stay, since that cue starts them.
+    /// that has started stay, since that cue starts them.  A group stops
+    /// together with every cue that it holds, each as a stopped cue, and the
+    /// last cue that a group holds to stop ends the run of the group.
     pub(super) fn stopped(self, id: CueId) -> Self {
-        self.without_followers_of(id).skipped(id)
+        self.with_members(id)
+            .into_iter()
+            .fold(self, |workspace, id| {
+                workspace.without_followers_of(id).skipped(id)
+            })
+            .without_ended_groups()
     }
 
     /// Ends the run of a cue that GO fires again.  As in QLab, a run that

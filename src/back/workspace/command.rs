@@ -44,14 +44,25 @@ pub enum Command {
         cues: Vec<Cue>,
         at: Place,
     },
-    /// Removes cues, stopping those that are running, as one change
+    /// Removes cues, stopping those that are running, as one change, each
+    /// group together with the cues that it holds
     Delete(Vec<CueId>),
     /// Removes cues as [`Command::Delete`] does, and records that they went
     /// to the clipboard, so that the change is told as a cut
     Cut(Vec<CueId>),
     /// Moves a cue within its list by a number of places, downwards when
-    /// positive, as far as the ends of the list allow
+    /// positive, as far as the ends of the list allow, a group together with
+    /// the cues that it holds
     Move { cue: CueId, by: isize },
+    /// Moves cues into the group above each of them, with the cues that
+    /// each holds, as one change
+    Indent(Vec<CueId>),
+    /// Moves cues out of the group that holds each of them, with the cues
+    /// that each holds, as one change
+    Outdent(Vec<CueId>),
+    /// Collapses the groups among the cues, or expands them, which is no
+    /// edit and no change to undo, so that show mode allows it
+    Collapse { cues: Vec<CueId>, collapsed: bool },
     /// Changes one setting of a cue
     Edit(CueId, Edit),
     /// Changes the light patch
@@ -116,6 +127,8 @@ impl Command {
                 | Command::Delete(_)
                 | Command::Cut(_)
                 | Command::Move { .. }
+                | Command::Indent(_)
+                | Command::Outdent(_)
                 | Command::Edit(..)
                 | Command::Patch(_)
                 | Command::Restore(..)

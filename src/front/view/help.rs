@@ -186,6 +186,6 @@ fn counts(keymap: &Keymap) -> String {
         .key(Action::Next)
         .map_or_else(String::new, |keys| format!(", as in 3 {keys}"));
     format!(
-        "A count typed before a key repeats a move{example}.  It goes that many places back or forward, undoes or redoes that many changes, copies, cuts, deletes, or adds that many cues or outputs, pastes that many times, goes that many matches along, scrolls that many rows, and goes that many pages down or up.  It picks the row for the first and last cue and for putting a row in place, the row in view for the top and bottom rows, and the tab for the next tab, and sets the rows of a half page."
+        "A count typed before a key repeats a move{example}.  It goes that many places back or forward, undoes or redoes that many changes, copies, cuts, deletes, or adds that many cues or outputs, indents or outdents that many cues, pastes that many times, goes that many matches along, scrolls that many rows, and goes that many pages down or up.  It picks the row for the first and last cue and for putting a row in place, the row in view for the top and bottom rows, and the tab for the next tab, and sets the rows of a half page."
     )
 }

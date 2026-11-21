@@ -13,7 +13,7 @@ use iced::{
 
 use super::{
     after, press,
-    search::{opened, searched, typed},
+    search::{opened, opening, searched, typed},
     typing,
 };
 use crate::{
@@ -99,9 +99,7 @@ fn the_keys_of_next_and_previous_match_are_jumps() {
 
 #[test]
 fn an_empty_line_accepted_repeats_the_search_as_a_jump() {
-    let again = searched(opened(1), "storm")
-        .handled(Message::Search { backward: false })
-        .0
+    let again = opening(searched(opened(1), "storm"), false)
         .handled(Message::SearchAccepted)
         .0;
     assert_eq!(again.selected, Some(CueId(1)));

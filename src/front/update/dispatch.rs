@@ -57,7 +57,11 @@ impl App {
     /// The list on screen stays within the lists, whose number undo and
     /// bringing back unsaved changes can change.
     pub(super) fn send(self, command: Command) -> Self {
-        let changes = command.edits() || matches!(command, Command::Undo | Command::Redo);
+        let changes = command.edits()
+            || matches!(
+                command,
+                Command::Undo | Command::Redo | Command::Collapse { .. }
+            );
         let workspace = self.workspace.apply(command);
         let app = Self {
             list: self.list.min(workspace.lists().len().saturating_sub(1)),

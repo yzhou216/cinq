@@ -21,7 +21,7 @@ use super::{
 };
 use crate::back::{Command, CueId, Device, Edit, InstrumentId, Kind, OutputId, PatchEdit, Place};
 pub use line::LineKey;
-pub use scrolling::{Height, Page};
+pub use scrolling::{Fold, Height, Page};
 pub use tab::Tab;
 
 /// Setting whose field shows the text typed into it, which applies once it
@@ -134,6 +134,11 @@ pub enum Message {
     /// Scrolls the list to put the selected row at a height in view, after
     /// selecting the row that the count typed before the keys names
     Place(Height, Option<usize>),
+    /// Collapses or expands groups of the cue list
+    Fold(Fold),
+    /// Collapses the group, or expands it where it is collapsed, as a click
+    /// on its mark does
+    FlipGroup(CueId),
     /// A drop-down list opened its menu, or its menu closed
     MenuOpen(bool),
     /// The highlight of the open menu of the Device list of an output moved
@@ -179,6 +184,12 @@ pub enum Message {
     /// Moves the selected cue by a number of places, downwards when
     /// positive
     Move(isize),
+    /// Moves a number of cues from the selection down into the group above
+    /// them, with the cues that they hold
+    Indent(usize),
+    /// Moves a number of cues from the selection down out of their groups,
+    /// with the cues that they hold
+    Outdent(usize),
     /// Copies a number of cues from the selection down to the clipboard
     Copy(usize),
     /// Copies a number of cues from the selection down to the clipboard and
@@ -189,9 +200,10 @@ pub enum Message {
     Paste(fn(CueId) -> Place, usize),
     /// Deletes a number of cues from the selection down
     Delete(usize),
-    /// Applies the operator `Cut`, `Copy`, or `Delete` to the cues from the
-    /// selection to where the motion `Next`, `Previous`, `First`, or `Last`
-    /// would move it, counted as the motion is
+    /// Applies the operator `Cut`, `Copy`, `Delete`, `Indent`, or `Outdent`
+    /// to the cues from the selection to where the motion `Next`,
+    /// `Previous`, `First`, or `Last` would move it, counted as the motion
+    /// is
     Across(Action, Action, Option<usize>),
     Edit(CueId, Edit),
     Patch(PatchEdit),

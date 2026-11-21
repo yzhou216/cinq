@@ -13,6 +13,7 @@ mod device;
 mod dispatch;
 mod editing;
 mod focus_order;
+mod folding;
 mod history;
 mod keyboard;
 mod keys;
@@ -92,6 +93,18 @@ impl App {
             Message::Scroll(rows) => self.scrolled(rows),
             Message::InView(height, count) => self.in_view(height, count),
             Message::Place(height, count) => self.placed(height, count),
+            Message::Fold(fold) => self.folded(fold).revealed(),
+            // A click on the mark of a group leaves the rows where they are,
+            // unless it took the selection into the group
+            Message::FlipGroup(id) => {
+                let selected = self.selected;
+                let flipped = self.flipped_group(id);
+                if flipped.selected == selected {
+                    (flipped, Task::none())
+                } else {
+                    flipped.revealed()
+                }
+            }
             Message::SwitchList(list) => self
                 .without_search()
                 .jumping(|app| app.showing_list(list))
@@ -101,6 +114,8 @@ impl App {
             Message::Forward(count) => self.walking(|app| app.went_forward(count)),
             Message::Add(place, count) => self.with_new_cue(place, count).revealed(),
             Message::Move(by) => self.with_selected_moved(by).revealed(),
+            Message::Indent(count) => self.regrouped(count, Command::Indent).revealed(),
+            Message::Outdent(count) => self.regrouped(count, Command::Outdent).revealed(),
             Message::Cut(count) => self.cut(count).revealed(),
             Message::Paste(place, count) => self.with_pasted(place, count).revealed(),
             Message::Delete(count) => self.without_selected(count).revealed(),

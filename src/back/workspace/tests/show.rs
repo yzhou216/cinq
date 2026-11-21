@@ -222,7 +222,7 @@ fn show_whose_identities_have_run_out_adds_no_cue() {
 fn examples_of_the_manual_page_open_as_shows() {
     let page = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/man/cinq-show.5.scd"));
     let examples: Vec<&str> = page.split("```").skip(1).step_by(2).collect();
-    assert_eq!(examples.len(), 8);
+    assert_eq!(examples.len(), 9);
     examples.into_iter().for_each(|example| {
         let read = Workspace::from_show(example, "/show");
         assert!(read.is_ok(), "{example}: {:?}", read.err());

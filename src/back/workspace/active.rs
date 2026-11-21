@@ -9,6 +9,7 @@
 //! tick forty times a second for an hour would drift by seconds in `f32`.
 
 mod effect;
+mod group;
 mod playing;
 
 use crate::back::{Cue, CueId, Kind, LOUDEST};
@@ -35,9 +36,11 @@ pub struct Active {
     /// apart from one that kept running
     pub(in crate::back) run: u32,
     /// Run of the cue whose start, or whose end for an auto-follow, starts
-    /// this one, or `None` for the cue that GO itself starts.  Runs of a
-    /// chain are not always consecutive, since a cue that GO fires again
-    /// takes a run of its own, so a cue finds the cues it starts by this.
+    /// this one, or `None` for the cue that GO itself starts.  A group
+    /// starts the cues that it holds directly, and the cue that follows it
+    /// in the chain.  Runs of a chain are not always consecutive, since a
+    /// cue that GO fires again takes a run of its own, so a cue finds the
+    /// cues it starts by this.
     pub(super) after: Option<u32>,
     /// Seconds since GO, negative while the cue waits its turn in a chain
     pub(super) elapsed: f64,
@@ -61,7 +64,8 @@ pub struct Active {
 /// Where an active cue is in its lifetime.  An audio or video cue whose
 /// clip loops stays [`Phase::Looping`] until something stops it, as a
 /// picture cue stays [`Phase::Showing`], unless a devamp cue lets it go on
-/// from its loop, which makes it [`Phase::Running`] until its clip ends.
+/// from its loop, which makes it [`Phase::Running`] until its clip ends.  A
+/// group is [`Phase::Endless`] where a cue that it holds never ends.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Phase {
     Scheduled { starts_in: f64 },
@@ -69,6 +73,7 @@ pub enum Phase {
     Running { remaining: f64 },
     Looping,
     Showing,
+    Endless,
 }
 
 impl Active {
@@ -85,6 +90,7 @@ impl Active {
             (Kind::Picture, _) => Effect::Picture,
             (Kind::Light, _) => Effect::Light,
             (Kind::Network, _) => Effect::Send,
+            (Kind::Group, _) => Effect::Group { endless: false },
             (Kind::Fade, Some(target)) => Effect::Fade {
                 target,
                 fade: Fade {
@@ -128,6 +134,7 @@ impl Active {
             },
             _ if self.effect == Effect::Picture => Phase::Showing,
             _ if self.loops() => Phase::Looping,
+            _ if self.endless() => Phase::Endless,
             elapsed => Phase::Running {
                 remaining: (self.pre_wait + self.length - elapsed).max(0.0),
             },
@@ -185,9 +192,13 @@ impl Active {
 
     /// Returns whether the cue has run its course, which it cannot before
     /// its action has begun, so that a cue that a start cue has just fired
-    /// and that takes no time still acts
+    /// and that takes no time still acts.  A group never does by time, since
+    /// it ends with the cues that it holds.
     pub(super) fn finished(&self) -> bool {
-        self.started && !self.endless() && self.elapsed >= self.pre_wait + self.length
+        self.started
+            && !self.endless()
+            && !self.holds()
+            && self.elapsed >= self.pre_wait + self.length
     }
 
     pub(super) fn advanced(self, seconds: f64) -> Self {

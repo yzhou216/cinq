@@ -19,6 +19,18 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
             cues.iter().map(|placed| &placed.cue),
         ),
         Change::Moved { cue, .. } => format!("moved cue {}", named(*cue)),
+        Change::Regrouped {
+            cues, moved: true, ..
+        } => cues
+            .first()
+            .map_or_else(String::new, |&cue| format!("moved cue {}", named(cue))),
+        Change::Regrouped { cues, deeper, .. } => {
+            let way = if *deeper { "into" } else { "out of" };
+            match cues.as_slice() {
+                [cue] => format!("moved cue {} {way} a group", named(*cue)),
+                cues => format!("moved {} cues {way} groups", cues.len()),
+            }
+        }
         Change::Edited { cue, redo, .. } => {
             let cue = named(*cue);
             match redo {

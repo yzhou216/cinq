@@ -93,6 +93,7 @@ impl Workspace {
                     .fold(restored, Self::with_standby_moved)
             }
             Change::Moved { cue, from, .. } => self.with_cue_moved(cue, from),
+            Change::Regrouped { list, before, .. } => self.with_arrangement(list, &before),
             Change::Edited { cue, undo, .. } => self.changed(cue, undo),
             Change::Standby(standby) => self.with_standby_moved(standby.reversed()),
             Change::Restored { before, .. } => self.with_kept(before),
@@ -109,6 +110,7 @@ impl Workspace {
                 .with_standby_moved(standby),
             Change::Deleted { cues, .. } => self.removed(cues.iter().map(|placed| placed.cue.id)),
             Change::Moved { cue, to, .. } => self.with_cue_moved(cue, to),
+            Change::Regrouped { list, after, .. } => self.with_arrangement(list, &after),
             Change::Edited { cue, redo, .. } => self.changed(cue, redo),
             Change::Standby(standby) => self.with_standby_moved(standby),
             Change::Restored { after, .. } => self.with_kept(after),

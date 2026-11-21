@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use super::{
     Workspace,
     active::{Effect, Fade},
+    group_runs::started_by,
 };
 use crate::back::{Active, Cue, CueId, CueList, SILENCE};
 
@@ -63,18 +64,31 @@ impl Workspace {
     }
 
     /// Fires the chain that starts at `start` in `list`, each cue started
-    /// by the one before it, as runs `offset` seconds along.  Cues that
-    /// are already running restart.
+    /// by the run that [`started_by`] tells, as runs `offset` seconds along.
+    /// Cues that are already running restart.
     pub(super) fn fired(self, list: usize, start: CueId, offset: f64) -> Self {
         let fired: Vec<Active> = self
             .lists
             .get(list)
             .into_iter()
-            .flat_map(|cues| self.chain_from(cues, start))
-            .zip(self.next_run..)
-            .map(|((cue, delay), run)| {
-                let after = (run > self.next_run).then(|| run - 1);
-                Active::new(cue, run, after, delay.into()).advanced(offset)
+            .flat_map(|cues| {
+                let groups = cues.groups();
+                let chain: Vec<(&Cue, f32, u32)> = self
+                    .chain_from(cues, start)
+                    .zip(self.next_run..)
+                    .map(|((cue, delay), run)| (cue, delay, run))
+                    .collect();
+                let runs: Vec<(CueId, u32)> =
+                    chain.iter().map(|&(cue, _, run)| (cue.id, run)).collect();
+                chain
+                    .into_iter()
+                    .zip(started_by(&groups, &runs))
+                    .map(|((cue, delay, run), after)| {
+                        Active::new(cue, run, after, delay.into())
+                            .spanning(groups.action_of(cue).into(), groups.endless(cue))
+                            .advanced(offset)
+                    })
+                    .collect::<Vec<_>>()
             })
             .collect();
         let next_run = fired.last().map_or(self.next_run, |active| active.run + 1);
@@ -118,8 +132,17 @@ impl Workspace {
             then_stop: true,
             opacity: 1.0,
         };
-        self.without_active_where(|active| fading || active.paused || !active.playing())
-            .with_each_active(|active| active.under(fade))
+        self.without_active_where(|active| {
+            fading || active.paused || (!active.holds() && !active.playing())
+        })
+        .with_each_active(|active| {
+            if active.holds() {
+                active
+            } else {
+                active.under(fade)
+            }
+        })
+        .without_ended_groups()
     }
 
     pub(super) fn paused(self, paused: bool) -> Self {
@@ -161,18 +184,24 @@ impl Workspace {
             Effect::GoTo(target) => self.moved_to(target),
             Effect::Light => self.lit(fired.id, fired.run),
             Effect::Send => self.sent_by(fired.id),
-            Effect::Sound(_) | Effect::Video { .. } | Effect::Picture | Effect::Nothing => self,
+            Effect::Sound(_)
+            | Effect::Video { .. }
+            | Effect::Picture
+            | Effect::Group { .. }
+            | Effect::Nothing => self,
         }
     }
 
-    /// Drops the cues that have finished.  A cue that a fade has faded out
-    /// stops as a stopped cue does, which also cancels the rest of its
-    /// chain that it has yet to start.
+    /// Drops the cues that have finished, and the groups that hold no cue
+    /// with a run.  A cue that a fade has faded out stops as a stopped cue
+    /// does, which also cancels the rest of its chain that it has yet to
+    /// start.
     fn without_finished(self) -> Self {
         let faded_out = self.active_where(Active::faded_out);
         faded_out
             .into_iter()
             .fold(self, Self::stopped)
             .without_active_where(Active::finished)
+            .without_ended_groups()
     }
 }

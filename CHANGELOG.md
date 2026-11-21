@@ -64,6 +64,39 @@ Major changes and improvements in each release of cinq, newest first.
   cues, pause cues, and panics act on it as on any run.  The chapter of the
   tutorial on sequences covers loop sections and devamp cues.  cinq 0.1.5 and
   older refuse a show with devamp cues.
+- Group cues, which act as the timeline group of QLab does, hold the cues
+  below them that lie one level deeper, and one GO on a group fires all of
+  them at once, each after its own pre-wait and those of the groups that hold
+  it.  Standby moves past the group, and the group goes on by its own Then
+  setting, to the cue below it: auto-follow once the last of its cues ends.
+  The Then setting of a cue inside a group has no effect, and the inspector
+  shows it disabled.  A group shows as running while any cue in it runs, with
+  the time left while the group has an end.  Stop, pause, start, and GoTo
+  cues, and the Stop button, act on a group and on every cue in it, while fade
+  and devamp cues cannot name one, and a start cue inside the group that it
+  starts cannot play.  A new cue below a group goes into it, and takes no
+  target from the group.  Pasted cues keep their shape, a group moves, is cut,
+  copied, and deleted with the cues it holds, and undo takes each back in one
+  step.  `>>` and `<<` in the vi keymap, and `Control+]` and `Control+[` in the
+  cua keymap, move a cue into the group above it and out of its group, and take
+  counts and motions as `d` and `y` do.  The show file keeps each cue's
+  `depth`.  cinq 0.1.5 and older refuse a show with group cues and ignore
+  `depth`.
+- A group collapses in the cue list, as a fold closes in Vim: the list shows
+  it as one row, with a `+` before its name where an open group has a `-`, and
+  leaves out the cues that it holds.  `z c`, `z o`, and `z a` collapse, expand,
+  and toggle the selected group in the vi keymap, `z M` and `z R` act on every
+  group, `ArrowLeft` and `ArrowRight` collapse and expand in the cua keymap,
+  and a click on the mark flips a group.  A collapsed group still fires, stops,
+  and pauses its cues, and its row reads NEXT while standby lies among them,
+  and the problem of the first of them that has one, such as NO FILE.  Every
+  key and count that moves through rows counts a collapsed group as one row,
+  and a search, a jump, undo, or GO that selects a hidden cue expands the
+  groups that hide it, while those that the search line opens to preview a
+  match close again when the match moves on or the search is cancelled.  A
+  list switched to selects the collapsed group that hides its standby cue.
+  Collapsing is no change for undo, show mode allows it, and the show file
+  keeps it as `collapsed = true` on the group.
 
 ## v0.1.5
 

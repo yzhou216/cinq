@@ -7,11 +7,20 @@
 //! outputs borrow
 
 mod adding;
+mod collapsed_editing;
+mod collapsing;
 mod devamp_cues;
 mod devamping;
 mod editing;
 mod files;
 mod going;
+mod group_control;
+mod grouping;
+mod groups_adding;
+mod groups_deleting;
+mod groups_moving;
+mod groups_pasting;
+mod groups_playing;
 mod history;
 mod holding;
 mod levels;
@@ -190,6 +199,15 @@ fn goto_cue(id: u32, target: u32) -> Cue {
 
 pub(in crate::back) fn devamp_cue(id: u32, target: u32) -> Cue {
     control(id, Kind::Devamp, target)
+}
+
+pub(in crate::back) fn group(id: u32) -> Cue {
+    Cue::new(CueId(id), id.to_string(), Kind::Group, "Group").build()
+}
+
+/// Returns the cue at `depth` in groups
+pub(in crate::back) fn within(depth: u8, cue: Cue) -> Cue {
+    Cue { depth, ..cue }
 }
 
 /// Returns an audio cue that loops from 2 to 6 seconds into its file of ten

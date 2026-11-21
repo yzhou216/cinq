@@ -221,11 +221,22 @@ impl App {
     }
 
     fn selected_here(&self) -> Option<CueId> {
-        self.selected.filter(|_| self.selected_row().is_some())
+        self.selected.filter(|_| self.selected_index().is_some())
     }
 
-    fn selected_row(&self) -> Option<usize> {
+    /// Returns the place of the selected cue among all the cues of the list
+    fn selected_index(&self) -> Option<usize> {
         self.selected.and_then(|id| self.current().position(id))
+    }
+
+    /// Returns the row that shows the selected cue, counted from zero among
+    /// the rows that the table shows, which is the row of the collapsed group
+    /// that holds the cue where one does
+    fn selected_row(&self) -> Option<usize> {
+        let list = self.current();
+        let groups = list.groups();
+        let standing = *groups.shown_as().get(self.selected_index()?)?;
+        groups.shown().binary_search(&standing).ok()
     }
 
     fn editable(&self) -> bool {

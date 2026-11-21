@@ -14,7 +14,7 @@ impl Active {
     fn under_way(&self) -> bool {
         matches!(
             self.phase(),
-            Phase::Running { .. } | Phase::Looping | Phase::Showing
+            Phase::Running { .. } | Phase::Looping | Phase::Showing | Phase::Endless
         )
     }
 
@@ -75,6 +75,9 @@ impl Active {
     }
 
     pub(super) fn endless(&self) -> bool {
-        self.effect == Effect::Picture || self.loops()
+        matches!(
+            self.effect,
+            Effect::Picture | Effect::Group { endless: true }
+        ) || self.loops()
     }
 }

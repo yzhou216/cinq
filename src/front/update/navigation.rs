@@ -41,15 +41,22 @@ impl App {
         }
     }
 
-    /// Shows a cue list with its standby cue selected, or its first cue
-    /// when standby is past the end
+    /// Shows a cue list with the row of its standby cue selected, or its
+    /// first cue when standby is past the end.  A collapsed group that hides
+    /// the standby cue is selected in its place, which leaves the group
+    /// collapsed, and its row tells where GO goes.
     pub(super) fn switched_to(self, list: usize) -> Self {
         Self {
-            selected: self
-                .workspace
-                .lists()
-                .get(list)
-                .and_then(|cues| cues.standby.or_else(|| cues.cues.first().map(|cue| cue.id))),
+            selected: self.workspace.lists().get(list).and_then(|cues| {
+                let standing = cues
+                    .standby
+                    .and_then(|id| cues.position(id))
+                    .map(|index| cues.groups().shown_as()[index])
+                    .map(|row| cues.cues[row].id);
+                standing
+                    .or(cues.standby)
+                    .or_else(|| cues.cues.first().map(|cue| cue.id))
+            }),
             list,
             ..self
         }

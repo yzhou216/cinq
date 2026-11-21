@@ -253,6 +253,58 @@ fn descriptions_name_the_rows_that_show_and_never_both() {
 
 #[test]
 fn help_page_names_the_keys_that_begin_an_operator() {
-    assert_eq!(Keymap::default().operator_keys(), ["d", "y"]);
+    assert_eq!(Keymap::default().operator_keys(), ["d", "y", ">", "<"]);
     assert!(Keymap::from(Preset::Cua).operator_keys().is_empty());
+}
+
+#[test]
+fn indent_and_outdent_take_counts_and_motions_as_cut_and_copy_do() {
+    assert_actions(&[
+        ("> >", Action::Indent, None),
+        ("3 > >", Action::Indent, Some(3)),
+        ("> 3 >", Action::Indent, Some(3)),
+        ("< <", Action::Outdent, None),
+        ("2 < 3 <", Action::Outdent, Some(6)),
+    ]);
+    assert_across(&[
+        ("> j", Action::Indent, Action::Next, None),
+        ("3 > k", Action::Indent, Action::Previous, Some(3)),
+        ("< G", Action::Outdent, Action::Last, None),
+        ("< 4 g g", Action::Outdent, Action::First, Some(4)),
+    ]);
+    assert!(typed("> x").pending.is_empty() && typed("> x").action.is_none());
+}
+
+#[test]
+fn descriptions_name_the_move_of_indent_and_outdent() {
+    assert_eq!(
+        Action::Indent.description(),
+        "Move the selected cue into the group above it"
+    );
+    assert_eq!(
+        Action::Outdent.description(),
+        "Move the selected cue out of its group"
+    );
+    assert_eq!(
+        Action::Indent.over(Action::Next, Rows::Cues),
+        "Indent the selected cue and the next"
+    );
+    assert_eq!(
+        Action::Outdent.over(Action::Last, Rows::Cues),
+        "Outdent the cues from the selection down to the last"
+    );
+}
+
+#[test]
+fn cua_binds_indent_and_outdent_to_control_with_the_brackets() {
+    let keymap = Keymap::from(Preset::Cua);
+    assert_eq!(
+        typed_on(&keymap, "Control+]").action,
+        Some((Action::Indent, None))
+    );
+    assert_eq!(
+        typed_on(&keymap, "3 Control+[").action,
+        Some((Action::Outdent, Some(3)))
+    );
+    assert!(keymap.operator_keys().is_empty());
 }

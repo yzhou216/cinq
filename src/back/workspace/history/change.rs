@@ -37,6 +37,20 @@ pub enum Change {
     },
     /// Cue moved within its list, from one place to another
     Moved { cue: CueId, from: usize, to: usize },
+    /// Cues moved into groups or out of them, or a cue moved with the cues that
+    /// it holds where the depths of cues change, with the order of the cues of
+    /// their list and the depth that each keeps, before and after.  Where
+    /// `moved` is set the change was a move up or down, which moves of one cue
+    /// in a row make one change of, and `deeper` tells whether the cue came
+    /// to lie deeper.
+    Regrouped {
+        list: usize,
+        cues: Vec<CueId>,
+        deeper: bool,
+        moved: bool,
+        before: Vec<(CueId, u8)>,
+        after: Vec<(CueId, u8)>,
+    },
     /// One setting of a cue edited, with the edit that takes it back and
     /// the edit that makes it again
     Edited { cue: CueId, undo: Edit, redo: Edit },
@@ -115,6 +129,7 @@ impl Change {
             | Change::Pasted { cues, .. }
             | Change::Deleted { cues, .. } => cues.first().map(|placed| placed.cue.id),
             Change::Moved { cue, .. } | Change::Edited { cue, .. } => Some(*cue),
+            Change::Regrouped { cues, .. } => cues.first().copied(),
             Change::Standby(_)
             | Change::Restored { .. }
             | Change::Outputs { .. }
@@ -137,85 +152,6 @@ impl Change {
                 ..
             } => Some(*cue),
             _ => None,
-        }
-    }
-
-    /// Returns whether `next` edits the setting that this change edited, or
-    /// moves the cue that it moved, so that the two make one change
-    pub(super) fn takes(&self, next: &Change) -> bool {
-        match (self, next) {
-            (Change::Moved { cue, .. }, Change::Moved { cue: next, .. }) => cue == next,
-            (
-                Change::Edited { cue, redo, .. },
-                Change::Edited {
-                    cue: next,
-                    redo: again,
-                    ..
-                },
-            ) => cue == next && redo.same_setting(again),
-            (
-                Change::Outputs {
-                    setting: Some(setting),
-                    ..
-                },
-                Change::Outputs {
-                    setting: Some(again),
-                    ..
-                },
-            ) => setting == again,
-            (Change::Patched { edit, .. }, Change::Patched { edit: next, .. }) => {
-                edit.same_setting(next)
-            }
-            _ => false,
-        }
-    }
-
-    /// Returns this change followed by `next` as one change, which takes
-    /// back to before this one and makes again what `next` made
-    pub(super) fn then(self, next: Self) -> Self {
-        match (self, next) {
-            (Self::Edited { cue, undo, .. }, Self::Edited { redo, .. }) => {
-                Self::Edited { cue, undo, redo }
-            }
-            (Self::Moved { cue, from, .. }, Self::Moved { to, .. }) => {
-                Self::Moved { cue, from, to }
-            }
-            (
-                Self::Outputs { before, .. },
-                Self::Outputs {
-                    after,
-                    setting,
-                    cut,
-                    pasted,
-                    anchor,
-                    ..
-                },
-            ) => Self::Outputs {
-                before,
-                after,
-                setting,
-                cut,
-                pasted,
-                anchor,
-            },
-            (Self::Patched { before, .. }, Self::Patched { edit, after, .. }) => Self::Patched {
-                edit,
-                before,
-                after,
-            },
-            (_, next) => next,
-        }
-    }
-
-    /// Returns whether the change leaves the show as it found it, as edits
-    /// or moves in a row that end where they began do
-    pub(super) fn changes_nothing(&self) -> bool {
-        match self {
-            Self::Edited { undo, redo, .. } => undo == redo,
-            Self::Moved { from, to, .. } => from == to,
-            Self::Outputs { before, after, .. } => before == after,
-            Self::Patched { before, after, .. } => before == after,
-            _ => false,
         }
     }
 

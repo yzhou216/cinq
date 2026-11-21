@@ -21,6 +21,7 @@
 //! workspace.
 
 mod change;
+mod joining;
 mod undo;
 
 pub use change::{Change, Kept, Placed, Standby, Turn};

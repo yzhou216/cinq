@@ -34,8 +34,13 @@ pub(super) fn show(selected: Option<CueId>) -> App {
     }
 }
 
+/// Opens the search line in the state, for a search down the list or up it
+pub(super) fn opening(app: App, backward: bool) -> App {
+    app.handled(Message::Search { backward }).0
+}
+
 fn opened_with(selected: Option<CueId>, backward: bool) -> App {
-    show(selected).handled(Message::Search { backward }).0
+    opening(show(selected), backward)
 }
 
 /// Opens the search line with `selected` selected

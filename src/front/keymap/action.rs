@@ -38,6 +38,11 @@ pub enum Action {
     RowToMiddle,
     RowToTop,
     RowToBottom,
+    Collapse,
+    Expand,
+    ToggleGroup,
+    CollapseAll,
+    ExpandAll,
     NextList,
     PreviousList,
     NextTab,
@@ -64,6 +69,8 @@ pub enum Action {
     Delete,
     MoveDown,
     MoveUp,
+    Indent,
+    Outdent,
     Undo,
     Redo,
     Open,
@@ -87,7 +94,13 @@ impl Action {
     /// Actions that apply to the rows that a motion reaches, as `d` and `y`
     /// do in Vim.  Each takes its operator key from a binding that doubles
     /// a key, such as `d d`.
-    pub(super) const OPERATORS: [Action; 3] = [Action::Cut, Action::Copy, Action::Delete];
+    pub(super) const OPERATORS: [Action; 5] = [
+        Action::Cut,
+        Action::Copy,
+        Action::Delete,
+        Action::Indent,
+        Action::Outdent,
+    ];
 
     /// Actions whose keys are the motions that follow an operator, each
     /// reaching the rows from the selection to where it would move it
@@ -137,6 +150,8 @@ impl Action {
         let verb = match self {
             Action::Copy => "Copy",
             Action::Cut => "Cut",
+            Action::Indent => "Indent",
+            Action::Outdent => "Outdent",
             _ => "Delete",
         };
         let (one, many) = rows.nouns();

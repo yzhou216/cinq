@@ -36,3 +36,20 @@ pub enum Height {
     Middle,
     Bottom,
 }
+
+/// What a key does to the groups of the cue list, as Vim's keys do to folds
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Fold {
+    /// Collapses the selected group, or the group that holds the selected
+    /// cue where that is no expanded group, as `z c` closes a fold
+    Close,
+    /// Expands the selected group, as `z o` opens a fold
+    Open,
+    /// Expands the selected group where it is collapsed, and collapses it
+    /// otherwise, as `z a` does to a fold
+    Toggle,
+    /// Collapses every group of the list, as `z M` closes every fold
+    CloseAll,
+    /// Expands every group of the list, as `z R` opens every fold
+    OpenAll,
+}

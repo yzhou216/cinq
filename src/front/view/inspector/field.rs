@@ -49,12 +49,14 @@ impl Field {
 
     /// Returns the input for this field, disabled when the value does not
     /// apply to the cue, such as the post-wait of an auto-follow cue, which
-    /// ignores it, or the loop start of a cue that does not loop
+    /// ignores it, the loop start of a cue that does not loop, or the post-wait
+    /// and Then setting of a cue in a group, which goes on to no cue
     pub(super) fn input<'a>(self, app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         let id = cue.id;
         let editable = app.editable();
+        let inside = app.current().group_of(id).is_some();
         let applies = match self {
-            Field::PostWait => cue.advance != Advance::Follow,
+            Field::PostWait => cue.advance != Advance::Follow && !inside,
             Field::LoopStart | Field::LoopEnd => cue.looping,
             _ => true,
         };
@@ -98,16 +100,16 @@ impl Field {
                     )
                 }
                 Kind::Network => network(cue, editable),
-                Kind::Light | Kind::Wait | Kind::Memo => shown(""),
+                Kind::Light | Kind::Group | Kind::Wait | Kind::Memo => shown(""),
             },
             Field::Notes => field(&cue.notes, Edit::Notes),
             Field::PreWait => field(cue.pre_wait.text(), |text| Edit::PreWait(text.into())),
             Field::Duration if cue.kind.has_duration() => {
                 field(cue.duration.text(), |text| Edit::Duration(text.into()))
             }
-            Field::Duration => shown(&format::action(cue)),
+            Field::Duration => shown(&format::action(&app.current().groups(), cue)),
             Field::PostWait => field(cue.post_wait.text(), |text| Edit::PostWait(text.into())),
-            Field::Then if editable => dropdown(
+            Field::Then if editable && !inside => dropdown(
                 Advance::VARIANTS,
                 Some(cue.advance),
                 move |advance| Message::Edit(id, Edit::Advance(advance)),

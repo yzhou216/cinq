@@ -9,7 +9,7 @@ use crate::{
     back::Place,
     front::{
         Caret, Focus, Message,
-        message::{Height, Page},
+        message::{Fold, Height, Page},
     },
 };
 
@@ -38,6 +38,11 @@ impl Action {
             Action::RowToMiddle => Message::Place(Height::Middle, count),
             Action::RowToTop => Message::Place(Height::Top, count),
             Action::RowToBottom => Message::Place(Height::Bottom, count),
+            Action::Collapse => Message::Fold(Fold::Close),
+            Action::Expand => Message::Fold(Fold::Open),
+            Action::ToggleGroup => Message::Fold(Fold::Toggle),
+            Action::CollapseAll => Message::Fold(Fold::CloseAll),
+            Action::ExpandAll => Message::Fold(Fold::OpenAll),
             Action::NextList => Message::StepList(step),
             Action::PreviousList => Message::StepList(-step),
             Action::NextTab => count.map_or(Message::StepTab(1), Message::ShowTab),
@@ -63,6 +68,8 @@ impl Action {
             Action::Delete => Message::Delete(times),
             Action::MoveDown => Message::Move(step),
             Action::MoveUp => Message::Move(-step),
+            Action::Indent => Message::Indent(times),
+            Action::Outdent => Message::Outdent(times),
             Action::Undo => Message::Undo(times),
             Action::Redo => Message::Redo(times),
             Action::Open => Message::Open,
@@ -90,6 +97,8 @@ impl Action {
                 | Action::Delete
                 | Action::MoveDown
                 | Action::MoveUp
+                | Action::Indent
+                | Action::Outdent
                 | Action::Undo
                 | Action::Redo
         )

@@ -48,10 +48,8 @@ impl App {
     }
 
     pub(super) fn with_output_moved(self, by: isize) -> Self {
-        match self.output {
-            Some(output) => self.send(Command::MoveOutput { output, by }),
-            None => self,
-        }
+        let moved = self.output.map(|output| Command::MoveOutput { output, by });
+        self.send_all(moved)
     }
 
     /// Deletes the selected output and the outputs below it, as many as
