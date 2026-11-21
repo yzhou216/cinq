@@ -34,8 +34,16 @@ pub enum Problem<'a> {
     /// its file, so it has nothing to play
     #[strum(to_string = "starts at or after its end")]
     EmptyClip,
+    /// Audio or video cue that loops has a loop that starts at or after its
+    /// end, once both lie within its clip, so it has nothing to loop
+    #[strum(to_string = "loop starts at or after its end")]
+    EmptyLoop,
     #[strum(to_string = "no target cue")]
     NoTarget,
+    /// Devamp cue targets a cue that does not loop, which it cannot let go
+    /// on
+    #[strum(to_string = "target cue does not loop")]
+    NotLooping,
     #[strum(to_string = "no destination as host:port")]
     NoDestination,
     #[strum(to_string = "no OSC message")]

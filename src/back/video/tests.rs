@@ -4,13 +4,15 @@
 
 //! Tests of reading how long video files play and of decoding their
 //! pictures in time, from the sync sample before a clip and on later passes
-//! through a clip that loops, along with those of [`damaged`] files,
-//! [`layouts`] of boxes, [`player`], [`runs`], and parts that [`skipped`]
+//! through a clip that loops, along with those of [`damaged`] files, the
+//! passes of clips that [`devamp`] lets go on, [`layouts`] of boxes,
+//! [`player`], [`runs`], and parts that [`skipped`]
 //! files leave out, on videos that [`movie`] makes and [`boxes`] changes,
 //! and those of [`still`], on pictures of its own
 
 mod boxes;
 mod damaged;
+mod devamp;
 mod layouts;
 pub(in crate::back) mod movie;
 mod player;
@@ -32,7 +34,7 @@ use super::{
     probe,
 };
 use crate::back::{
-    Clip, Cue, CueId, CueList, Kind, Load, Picture, Video, Workspace, load_files,
+    Clip, Cue, CueId, CueList, Kind, Load, Loop, Picture, Video, Workspace, load_files,
     workspace::tests::GO,
 };
 use boxes::reworked;
@@ -50,8 +52,12 @@ fn showing(path: &Path, kind: Kind) -> Workspace {
 }
 
 fn showing_cue(path: &Path, cue: Cue) -> Workspace {
+    showing_cues(path, vec![cue])
+}
+
+fn showing_cues(path: &Path, cues: Vec<Cue>) -> Workspace {
     let directory = path.parent().expect("the file is in a directory");
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])]).directory(directory);
+    let workspace = Workspace::new(vec![CueList::new("Main", cues)]).directory(directory);
     let loads = load_files(Load::all(&workspace, workspace.unloaded()));
     loads.into_iter().fold(workspace, Workspace::apply)
 }
@@ -89,7 +95,11 @@ fn clip(start: f64, end: f64, looping: bool) -> Clip {
     Clip {
         start,
         end,
-        looping,
+        looping: looping.then_some(Loop {
+            start,
+            end,
+            released: None,
+        }),
     }
 }
 
@@ -97,7 +107,8 @@ fn clip(start: f64, end: f64, looping: bool) -> Clip {
 /// sends, for a player that stays as long as the pass does
 fn sent(path: &Path, clip: Clip, pass: u32) -> Vec<Sent> {
     let player = Arc::new(());
-    decoder::start(path.to_owned(), clip, pass, Arc::downgrade(&player))
+    let pass = clip.pass(pass).expect("the clip has the pass");
+    decoder::start(path.to_owned(), pass, Arc::downgrade(&player))
         .iter()
         .collect()
 }
@@ -225,7 +236,8 @@ fn pass_that_decodes_no_picture_says_that_its_picture_cannot_be_decoded() {
 fn pass_stops_decoding_once_its_player_has_gone() {
     let (_directory, path) = movie(25, 25);
     let player = Arc::new(());
-    let pictures = decoder::start(path, clip(0.0, 0.8, false), 0, Arc::downgrade(&player));
+    let pass = clip(0.0, 0.8, false).pass(0).expect("the clip has a pass");
+    let pictures = decoder::start(path, pass, Arc::downgrade(&player));
     drop(player);
     let sent: Vec<Sent> = pictures.iter().collect();
     assert!(sent.len() < 25, "{} sent", sent.len());

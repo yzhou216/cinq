@@ -21,7 +21,7 @@ use crate::back::{Shown, video::player::Player};
 /// Moves `player` on to `played` seconds of its clip until it hands on the
 /// picture numbered `expected`, and returns the player with the numbers of
 /// every picture that it handed on
-fn shown(player: Player, played: f64, expected: usize) -> (Player, Vec<usize>) {
+pub(super) fn shown(player: Player, played: f64, expected: usize) -> (Player, Vec<usize>) {
     let started = Instant::now();
     repeated(
         (player, Vec::new()),

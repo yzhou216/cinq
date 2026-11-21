@@ -48,8 +48,10 @@ pub struct Active {
     pub level: f32,
     pub fade: Option<Fade>,
     pub(super) pre_wait: f64,
-    /// Seconds that the action takes after the pre-wait, or that one pass
-    /// of a clip that loops takes
+    /// Seconds that the action takes after the pre-wait.  For a clip that
+    /// loops this is how long the clip takes from its start to its end,
+    /// without going round its loop, until a devamp cue lets it go on, and
+    /// then how long the whole action takes.
     pub(super) length: f64,
     pub(super) effect: Effect,
     /// Whether the action has begun, so that a fade or stop cue acts once
@@ -58,7 +60,8 @@ pub struct Active {
 
 /// Where an active cue is in its lifetime.  An audio or video cue whose
 /// clip loops stays [`Phase::Looping`] until something stops it, as a
-/// picture cue stays [`Phase::Showing`].
+/// picture cue stays [`Phase::Showing`], unless a devamp cue lets it go on
+/// from its loop, which makes it [`Phase::Running`] until its clip ends.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Phase {
     Scheduled { starts_in: f64 },
@@ -96,6 +99,7 @@ impl Active {
             (Kind::Stop, Some(target)) => Effect::Stop(target),
             (Kind::Start, Some(target)) => Effect::Start(target),
             (Kind::Pause, Some(target)) => Effect::Pause(target),
+            (Kind::Devamp, Some(target)) => Effect::Devamp(target),
             (Kind::GoTo, Some(target)) => Effect::GoTo(target),
             _ => Effect::Nothing,
         };
@@ -130,15 +134,22 @@ impl Active {
         }
     }
 
-    /// Returns how much of the action has played, from zero to one, which
-    /// for a clip that loops is how much of the pass under way has played
+    /// Returns how much of the action has played, from zero to one.  For an
+    /// audio or video cue this is how far its sound has reached through its
+    /// clip, so that the progress of a clip that loops runs to the end of its
+    /// loop and back to the start of its loop with each pass, and runs on to
+    /// the end of the clip, without going back, once a devamp cue has let it
+    /// go on.
     pub fn progress(&self) -> f32 {
-        let progress = match self.phase() {
-            Phase::Scheduled { .. } | Phase::PreWait { .. } => 0.0,
-            _ if self.length <= 0.0 => 1.0,
-            Phase::Running { remaining } => 1.0 - remaining / self.length,
-            Phase::Looping => self.played() % self.length / self.length,
-            Phase::Showing => 1.0,
+        let progress = match (self.phase(), self.effect.clip()) {
+            (Phase::Scheduled { .. } | Phase::PreWait { .. }, _) => 0.0,
+            (Phase::Running { .. } | Phase::Looping, Some(clip)) => {
+                ((clip.position(self.played()) - clip.start) / clip.length()).min(1.0)
+            }
+            (Phase::Running { remaining }, None) if self.length > 0.0 => {
+                1.0 - remaining / self.length
+            }
+            _ => 1.0,
         };
         progress as f32
     }
@@ -235,6 +246,29 @@ impl Active {
                 effect => effect,
             },
             ..self
+        }
+    }
+
+    /// Returns the run with its clip let go on from its loop, as
+    /// [`Clip::released`](crate::back::Clip::released) tells, `notice`
+    /// seconds ahead at the least, and with its action lasting until the
+    /// clip ends.  A run whose clip stays as it was keeps its length.
+    pub(super) fn released(self, notice: f64) -> Self {
+        let effect = match self.effect {
+            Effect::Sound(clip) => Effect::Sound(clip.released(self.played(), notice)),
+            Effect::Video { clip, sound } => Effect::Video {
+                clip: clip.released(self.played(), notice),
+                sound,
+            },
+            effect => effect,
+        };
+        match effect.clip().and_then(|clip| clip.lasts()) {
+            Some(length) if effect != self.effect => Self {
+                effect,
+                length,
+                ..self
+            },
+            _ => self,
         }
     }
 

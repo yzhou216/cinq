@@ -90,8 +90,8 @@ Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
 
 \begin{enumerate}
 \item Select the rain.  On its \ui{Time \& Loops} tab, check \ui{Loop until
-  stopped} if it is not checked, so that the rain keeps playing while you
-  work.
+  stopped or devamped} if it is not checked, so that the rain keeps playing
+  while you work.
 \item Choose \ui{Pause} in the \ui{New cue} list of the toolbar and press
   \ui{Add cue}\@.  The new cue appears below the rain and targets it, since a
   new pause cue targets the cue above it.
@@ -117,6 +117,50 @@ A GoTo cue does move it.  Its target can be any cue, and when GO fires the
 GoTo cue, the target goes on standby, so that the next GO fires it, and
 nothing else happens.  Use one at the end of a list to put its first cue on
 standby again.
+
+\section{Loop sections and devamp cues}
+
+A loop need not take the whole file.  \ui{Loop start} and \ui{Loop end}, on
+the \ui{Time \& Loops} tab beside \ui{Start} and \ui{End}, set the part of the
+file that a looping cue plays again and again, in seconds from the beginning
+of the file.  The cue plays from its start to its loop end, then goes back to
+its loop start each time it reaches the loop end.  Left blank, they stand for
+the start and the end of the cue, so a cue without them loops its whole file,
+as before.  The fields are available only while the cue loops.  One file can
+therefore hold an introduction, a vamp that repeats under a scene, and an
+ending.
+
+A devamp cue lets the vamp end.  Its target, an audio or video cue that
+loops, plays on to the end of its current pass through the loop, goes on from
+the loop end to the end of the file, and ends there.  Like a pause cue, a
+devamp cue takes no time.
+
+Press \key{Control+l} and open \texttt{my-show.cinq.toml}.  The rain plays for
+eight seconds, so the steps make its first two seconds the introduction, the
+next four the vamp, and the last two the ending.
+
+\begin{enumerate}
+\item Press \ui{Panic}, and select the rain.  On its \ui{Time \& Loops} tab,
+  check \ui{Loop until stopped or devamped} if it is not checked, and type
+  \texttt{2} in \ui{Loop start} and \texttt{6} in \ui{Loop end}.
+\item With the rain selected, choose \ui{Devamp} in the \ui{New cue} list
+  and press \ui{Add cue}\@.  The new cue appears below the rain and targets
+  it, as a new pause cue does.
+\item Select the rain, press \ui{Standby selected}, and press \ui{GO}\@.  The
+  rain plays its two-second introduction, then repeats seconds 2 to 6 of the
+  file, and the \texttt{State} column reads \texttt{looping}.  The devamp cue
+  is on standby.
+\item Press \ui{GO} while the rain loops.  The \texttt{State} column of the
+  rain shows the time it has left instead of \texttt{looping}.  The rain
+  finishes its pass, plays the last two seconds of its file, and ends.
+\end{enumerate}
+
+A devamp cue never cuts a pass short.  It lets the rain leave at the first
+end of a pass that comes more than half a second after the cue acts, so that a
+GO that comes just before an end waits for the end after it.  A target that
+does not loop cannot be devamped: its devamp cue reads \texttt{NO LOOP}, and GO
+skips it.  A loop that starts at or after its end cannot play either, and its
+cue reads \texttt{BROKEN}\@.
 
 \section*{Exercise}
 

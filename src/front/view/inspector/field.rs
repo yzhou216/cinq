@@ -32,6 +32,10 @@ pub(super) enum Field {
     Then,
     Start,
     End,
+    #[strum(serialize = "Loop start")]
+    LoopStart,
+    #[strum(serialize = "Loop end")]
+    LoopEnd,
 }
 
 impl Field {
@@ -45,11 +49,15 @@ impl Field {
 
     /// Returns the input for this field, disabled when the value does not
     /// apply to the cue, such as the post-wait of an auto-follow cue, which
-    /// ignores it
+    /// ignores it, or the loop start of a cue that does not loop
     pub(super) fn input<'a>(self, app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         let id = cue.id;
         let editable = app.editable();
-        let applies = !matches!(self, Field::PostWait) || cue.advance != Advance::Follow;
+        let applies = match self {
+            Field::PostWait => cue.advance != Advance::Follow,
+            Field::LoopStart | Field::LoopEnd => cue.looping,
+            _ => true,
+        };
         let field = |value: &str, edit: fn(String) -> Edit| -> Element<'a, Message> {
             let input = text_input(self.placeholder(cue), value)
                 .on_input_maybe(
@@ -77,14 +85,18 @@ impl Field {
                 ]
                 .spacing(SPACING)
                 .into(),
-                Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::GoTo if editable => {
+                Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo
+                    if editable =>
+                {
                     target_menu(app, cue)
                 }
-                Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::GoTo => shown(
-                    &app.workspace
-                        .target(cue)
-                        .map_or_else(String::new, Cue::to_string),
-                ),
+                Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo => {
+                    shown(
+                        &app.workspace
+                            .target(cue)
+                            .map_or_else(String::new, Cue::to_string),
+                    )
+                }
                 Kind::Network => network(cue, editable),
                 Kind::Light | Kind::Wait | Kind::Memo => shown(""),
             },
@@ -105,6 +117,8 @@ impl Field {
             Field::Then => shown(&cue.advance.to_string()),
             Field::Start => field(cue.start.text(), |text| Edit::Start(text.into())),
             Field::End => field(cue.end.text(), |text| Edit::End(text.into())),
+            Field::LoopStart => field(cue.loop_start.text(), |text| Edit::LoopStart(text.into())),
+            Field::LoopEnd => field(cue.loop_end.text(), |text| Edit::LoopEnd(text.into())),
         }
     }
 
@@ -117,6 +131,8 @@ impl Field {
             Field::PostWait => cue.post_wait.is_valid(),
             Field::Start => cue.start.is_valid(),
             Field::End => cue.end.is_valid(),
+            Field::LoopStart => cue.loop_start.is_valid(),
+            Field::LoopEnd => cue.loop_end.is_valid(),
             _ => true,
         }
     }
@@ -128,6 +144,8 @@ impl Field {
             Field::Target if cue.kind == Kind::Picture => "path of a picture file",
             Field::PreWait | Field::Duration | Field::PostWait | Field::Start => "0",
             Field::End => "end of file",
+            Field::LoopStart => "start of cue",
+            Field::LoopEnd => "end of cue",
             _ => "",
         }
     }

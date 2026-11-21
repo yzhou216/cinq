@@ -41,8 +41,12 @@ const BASICS: [&[Field]; 2] = [
     ],
 ];
 
-/// Fields of the Time & Loops tab, with the length of the clip they set
-const TIME: [Field; 3] = [Field::Start, Field::End, Field::Duration];
+/// Fields of the Time & Loops tab, one column after the other: the clip with
+/// its length, and the loop within the clip
+const TIME: [&[Field]; 2] = [
+    &[Field::Start, Field::End, Field::Duration],
+    &[Field::LoopStart, Field::LoopEnd],
+];
 
 pub(super) fn view(app: &App) -> Element<'_, Message> {
     let tabs = column![text("Inspector")]
@@ -118,14 +122,13 @@ fn time<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
     }
     let id = cue.id;
     let looping = checkbox(cue.looping)
-        .label("Loop until stopped")
+        .label("Loop until stopped or devamped")
         .on_toggle_maybe(
             app.editable()
                 .then_some(move |looping| Message::Edit(id, Edit::Loop(looping))),
         );
-    column![form(app, cue, &TIME), looping]
-        .spacing(SPACING)
-        .into()
+    let times = row(TIME.map(|fields| form(app, cue, fields))).spacing(SPACING);
+    column![times, looping].spacing(SPACING).into()
 }
 
 fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
@@ -140,6 +143,7 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         | Kind::Start
         | Kind::Stop
         | Kind::Pause
+        | Kind::Devamp
         | Kind::GoTo
         | Kind::Network
         | Kind::Wait

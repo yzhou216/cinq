@@ -119,3 +119,52 @@ fn a_run_moved_below_silence_is_told_at_silence() {
     let cue = ducked.cue(CueId(1)).expect("the cue is there");
     assert_eq!(activity(active, cue), "0:08.0 left, -60.0 dB");
 }
+
+#[test]
+fn loop_edits_are_told_by_the_part_of_the_loop_they_change() {
+    let rain = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
+        .looping(true)
+        .build();
+    let workspace = Workspace::new(vec![CueList::new("Main", vec![rain])]);
+    let after = |edit| told(&workspace.clone().apply(Command::Edit(CueId(1), edit)));
+    assert_eq!(
+        after(Edit::LoopStart(2.0.into())),
+        "changed the loop start of cue 1"
+    );
+    assert_eq!(
+        after(Edit::LoopEnd(6.0.into())),
+        "changed the loop end of cue 1"
+    );
+}
+
+#[test]
+fn a_devamped_run_is_told_by_the_time_it_has_left_instead_of_looping() {
+    let rain = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
+        .file("sound.ogg")
+        .looping(true)
+        .loop_start(2.0)
+        .loop_end(6.0)
+        .build();
+    let devamp = Cue::new(CueId(2), "2", Kind::Devamp, "Leave rain")
+        .target(CueId(1))
+        .build();
+    let workspace = [
+        loaded(1, "sound.ogg", sound(10.0)),
+        Command::Go { list: 0 },
+        Command::Tick(1.0),
+    ]
+    .into_iter()
+    .fold(
+        Workspace::new(vec![CueList::new("Main", vec![rain, devamp])]),
+        Workspace::apply,
+    );
+    let told = |workspace: &Workspace| {
+        let cue = workspace.cue(CueId(1)).expect("the cue is there");
+        activity(workspace.active_of(CueId(1)).expect("the cue plays"), cue)
+    };
+    assert_eq!(told(&workspace), "looping, +0.0 dB");
+    let devamped = [Command::Go { list: 0 }, Command::Tick(1.0)]
+        .into_iter()
+        .fold(workspace, Workspace::apply);
+    assert_eq!(told(&devamped), "0:08.0 left, +0.0 dB");
+}

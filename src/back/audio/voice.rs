@@ -24,7 +24,7 @@ use super::{
     preload::Preloaded,
 };
 use crate::back::{Active, Clip, Command, TICK};
-use place::{Place, Play, each, opened, placed};
+use place::{Place, Play, circles, each, opened, placed};
 pub(super) use place::{Target, clipped};
 
 /// Time a sound takes to reach a level the workspace asks for, which
@@ -48,6 +48,9 @@ pub(super) struct Voice {
     level: f32,
     /// Pause state last sent to the sounds
     paused: bool,
+    /// Whether the sounds may still have the loop of their clip, which
+    /// [`Voice::followed`] takes away once
+    looped: bool,
 }
 
 impl Voice {
@@ -65,7 +68,7 @@ impl Voice {
         clip: Clip,
     ) -> Result<Self, String> {
         let plays = each(&mut targets, |target| opened(target, file, active, clip))?;
-        Ok(Self::with(plays, active))
+        Ok(Self::with(plays, active, circles(clip, active.played())))
     }
 
     /// Starts a sound made ready ahead on the first target, which waits at
@@ -95,7 +98,9 @@ impl Voice {
             }),
             None => opened(target, file, active, clip),
         })?;
-        Ok(Self::with(plays, active))
+        // The sound made ready ahead has the loop of its clip, whether or not
+        // the clip has been let go on since
+        Ok(Self::with(plays, active, clip.looping.is_some()))
     }
 
     #[cfg(test)]
@@ -103,16 +108,31 @@ impl Voice {
         sound: kira::sound::streaming::StreamingSoundHandle<kira::sound::FromFileError>,
         active: &Active,
     ) -> Self {
-        Self::with(vec![Play { sound, place: None }], active)
+        let looped = active
+            .sound()
+            .is_some_and(|clip| circles(clip, active.played()));
+        Self::with(vec![Play { sound, place: None }], active, looped)
     }
 
-    fn with(plays: Vec<Play>, active: &Active) -> Self {
+    fn with(plays: Vec<Play>, active: &Active, looped: bool) -> Self {
         Self {
             run: active.run,
             plays,
             level: active.level,
             paused: false,
+            looped,
         }
+    }
+
+    #[cfg(test)]
+    pub(super) fn looped(&self) -> bool {
+        self.looped
+    }
+
+    /// Returns where in its file the first sound is
+    #[cfg(test)]
+    pub(super) fn position(&self) -> Option<f64> {
+        self.plays.first().map(|play| play.sound.position())
     }
 
     /// Returns the devices that the run plays on, in order
@@ -124,8 +144,23 @@ impl Voice {
     }
 
     /// Sends the sounds any change in the level or pause state of their
-    /// run
+    /// run, and takes away their loop once their run, which a devamp cue
+    /// has let go on, begins its last pass through the loop.  Kira decodes a
+    /// sound about 16384 frames ahead of where it plays and applies a new
+    /// loop as it decodes, so the sound leaves the loop at the end of the
+    /// pass that the decoder is in.  Before the last pass begins, the
+    /// decoder may still be in the pass before it, and the sound would leave
+    /// the loop a pass too early.  After the last pass has begun, the
+    /// decoder is in it, unless the pass is shorter than the sound decodes
+    /// ahead, and the sound leaves the loop at its end, as planned.  The
+    /// clock of the run lies a buffer of the device ahead of its sound at
+    /// most, far less than the sound decodes ahead, so the loop goes the
+    /// moment that the clock reaches the start of the last pass.
     pub(super) fn followed(self, active: &Active) -> Self {
+        let leaving = self.looped
+            && active
+                .sound()
+                .is_some_and(|clip| clip.last_pass().is_some_and(|last| active.played() >= last));
         let plays = self
             .plays
             .into_iter()
@@ -142,6 +177,9 @@ impl Voice {
                     };
                     play.sound.set_volume(active.level, glide);
                 }
+                if leaving {
+                    play.sound.set_loop_region(None);
+                }
                 play
             })
             .collect();
@@ -149,6 +187,7 @@ impl Voice {
             plays,
             level: active.level,
             paused: active.paused,
+            looped: self.looped && !leaving,
             ..self
         }
     }

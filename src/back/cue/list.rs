@@ -64,10 +64,10 @@ impl CueList {
 
     /// Inserts a new cue of `kind` with an identity and a number at a place
     /// in the list, named as new cues of its kind are.  As in QLab, a new
-    /// fade or stop cue targets the cue it follows when it can act on that
-    /// cue.  A cue that goes at the end of a list whose standby waits past
-    /// the end goes on standby, so that GO fires the first cue of a new
-    /// list, and the cue added to a list played to its end.
+    /// cue that acts on another cue targets the cue it follows when it can
+    /// act on that cue.  A cue that goes at the end of a list whose standby
+    /// waits past the end goes on standby, so that GO fires the first cue of
+    /// a new list, and the cue added to a list played to its end.
     pub(in crate::back) fn with_new_cue(
         self,
         id: CueId,

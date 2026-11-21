@@ -19,7 +19,9 @@ use bon::Builder;
 
 use super::{InstrumentId, output::Sends};
 
-pub(in crate::back) use clip::{Clip, Shown};
+#[cfg(test)]
+pub(in crate::back) use clip::Loop;
+pub(in crate::back) use clip::{Clip, Pass, Shown};
 pub use edit::Edit;
 pub use kind::{Advance, Kind};
 pub use list::CueList;
@@ -100,11 +102,20 @@ pub struct Cue {
     /// end of the file when the text reads as no time
     #[builder(default, into)]
     pub end: Seconds,
-    /// Whether an audio or video cue plays from its start again each time
-    /// it reaches its end, until something stops it
+    /// Whether an audio or video cue plays from the start of its loop again
+    /// each time it reaches the end of its loop, until something stops it or
+    /// a devamp cue lets it go on from its loop to the end of its clip
     #[builder(default)]
     pub looping: bool,
-    /// Cue a fade or stop cue acts on
+    /// Time in the file at which the loop of an audio or video cue starts,
+    /// which is the start of the cue when the text reads as no time
+    #[builder(default, into)]
+    pub loop_start: Seconds,
+    /// Time in the file at which the loop of an audio or video cue ends,
+    /// which is the end of the cue when the text reads as no time
+    #[builder(default, into)]
+    pub loop_end: Seconds,
+    /// Cue that a fade, start, stop, pause, devamp, or GoTo cue acts on
     pub target: Option<CueId>,
     #[builder(default, into)]
     pub pre_wait: Seconds,
@@ -180,9 +191,9 @@ impl Cue {
     }
 
     /// Returns the length of the cue's action, which for an audio or video
-    /// cue is one pass through its clip.  It is zero for instant cues, for
-    /// audio and video cues without a clip to play, and for picture cues,
-    /// whose action has no end.
+    /// cue is its clip from start to end, without going round its loop.  It
+    /// is zero for instant cues, for audio and video cues without a clip to
+    /// play, and for picture cues, whose action has no end.
     pub fn action(&self) -> f32 {
         match self.kind {
             kind if kind.plays_file() => self.clip().map_or(0.0, |clip| clip.length() as f32),
@@ -199,6 +210,7 @@ impl Cue {
         other.id != self.id
             && match self.kind {
                 Kind::Fade => other.kind.has_file(),
+                Kind::Devamp => other.kind.plays_file(),
                 Kind::Start | Kind::Stop | Kind::Pause | Kind::GoTo => true,
                 Kind::Audio
                 | Kind::Video

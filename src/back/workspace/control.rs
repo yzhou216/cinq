@@ -3,11 +3,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Rules of control cues: a start cue fires or resumes its target, a pause
-//! cue holds it, and a GoTo cue moves standby to it
+//! cue holds it, a devamp cue lets it leave its loop, and a GoTo cue moves
+//! standby to it
 
 use std::iter;
 
 use super::{Active, Workspace};
+
+/// Seconds before the end of a pass through its loop that a devamp cue has
+/// to act for its target to leave the loop there, rather than at the end of
+/// the next pass.  The audio output decodes a sound about a third of a
+/// second ahead, and a sound that has decoded the start of its next pass
+/// plays that pass.
+pub(super) const RELEASE_NOTICE: f64 = 0.5;
 use crate::back::{Cue, CueId, Kind};
 
 impl Workspace {
@@ -31,6 +39,15 @@ impl Workspace {
     /// stays where it is.  A target with no run is left alone.
     pub(super) fn held(self, target: CueId) -> Self {
         self.with_pause_of(target, true)
+    }
+
+    /// Carries out a devamp cue, which lets the run of its target leave its
+    /// loop at the end of the first pass that ends more than
+    /// [`RELEASE_NOTICE`] seconds after where the run is, paused or not, and
+    /// play on to the end of its clip.  A run that a devamp cue has let go
+    /// on already keeps the pass that it leaves at.
+    pub(super) fn devamped(self, target: CueId) -> Self {
+        self.with_active(target, |active| active.released(RELEASE_NOTICE))
     }
 
     /// Carries out a GoTo cue, which moves the standby of the list that

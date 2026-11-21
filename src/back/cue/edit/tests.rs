@@ -14,6 +14,8 @@ fn cue() -> Cue {
         .start(1.0)
         .end(9.0)
         .looping(true)
+        .loop_start(3.0)
+        .loop_end(7.0)
         .target(CueId(7))
         .pre_wait(2.0)
         .duration(3.0)
@@ -38,6 +40,8 @@ fn edits() -> Vec<Edit> {
         Edit::Start(2.5.into()),
         Edit::End(8.5.into()),
         Edit::Loop(false),
+        Edit::LoopStart(4.5.into()),
+        Edit::LoopEnd(8.0.into()),
         Edit::Target(None),
         Edit::Notes("Indoors".to_owned()),
         Edit::PreWait(0.5.into()),
@@ -80,6 +84,14 @@ fn edit_changes_the_setting_it_names_and_no_other() {
         },
         Cue {
             looping: false,
+            ..cue()
+        },
+        Cue {
+            loop_start: 4.5.into(),
+            ..cue()
+        },
+        Cue {
+            loop_end: 8.0.into(),
             ..cue()
         },
         Cue {

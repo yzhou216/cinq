@@ -24,11 +24,20 @@ use kira::sound::{
 use super::voice;
 use crate::back::{Clip, CueId, items::taken};
 
-/// Part of a file that a run of an audio or video cue may start
-#[derive(Clone, PartialEq)]
+/// Part of a file that a run of an audio or video cue may start.  Two asks
+/// are the same where they differ only in whether a devamp cue has let the
+/// clip go on from its loop, since the sound made ready ahead plays either,
+/// and its voice takes the loop away when the run reaches its last pass.
+#[derive(Clone)]
 pub(super) struct Wanted {
     pub(super) path: PathBuf,
     pub(super) clip: Clip,
+}
+
+impl PartialEq for Wanted {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path && self.clip.unreleased() == other.clip.unreleased()
+    }
 }
 
 pub(super) struct Preloaded {
@@ -129,7 +138,7 @@ impl Preloader {
 
 fn preloaded(wanted: &Wanted, level: f32) -> Result<Preloaded, String> {
     let data = StreamingSoundData::from_file(&wanted.path).map_err(super::reason)?;
-    let (sound, handle) = voice::clipped(data, wanted.clip, wanted.clip.start, level)
+    let (sound, handle) = voice::clipped(data, wanted.clip, 0.0, level)
         .into_sound()
         .map_err(super::reason)?;
     Ok(Preloaded { sound, handle })

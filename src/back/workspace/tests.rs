@@ -7,6 +7,8 @@
 //! outputs borrow
 
 mod adding;
+mod devamp_cues;
+mod devamping;
 mod editing;
 mod files;
 mod going;
@@ -14,6 +16,7 @@ mod history;
 mod holding;
 mod levels;
 mod light;
+mod loop_progress;
 mod network;
 mod output_pasting;
 mod outputs;
@@ -21,6 +24,7 @@ mod pasting;
 mod picture;
 mod playback;
 mod show;
+mod show_loops;
 mod starting;
 mod stopping;
 mod video;
@@ -182,6 +186,22 @@ fn pause_cue(id: u32, target: u32) -> Cue {
 
 fn goto_cue(id: u32, target: u32) -> Cue {
     control(id, Kind::GoTo, target)
+}
+
+pub(in crate::back) fn devamp_cue(id: u32, target: u32) -> Cue {
+    control(id, Kind::Devamp, target)
+}
+
+/// Returns an audio cue that loops from 2 to 6 seconds into its file of ten
+/// seconds, so that it reaches the end of its loop first after 6 seconds
+/// and goes round the loop every 4
+pub(in crate::back) fn vamp(id: u32) -> Cue {
+    Cue {
+        looping: true,
+        loop_start: 2.0.into(),
+        loop_end: 6.0.into(),
+        ..audio(id)
+    }
 }
 
 fn stop_cue(id: u32, target: u32) -> Cue {
