@@ -146,6 +146,7 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         | Kind::Devamp
         | Kind::GoTo
         | Kind::Network
+        | Kind::Group
         | Kind::Wait
         | Kind::Memo => {
             return text(format!("{} cues have no level", cue.kind)).into();

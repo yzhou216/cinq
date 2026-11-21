@@ -2,7 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Cue lists, each with its own standby position
+//! Cue lists, each with its own standby position, the groups in them in
+//! [`groups`], and the depth that a cue takes where it lands in [`placing`]
+
+mod groups;
+mod placing;
+
+pub use groups::Groups;
 
 use crate::back::{Cue, CueId, Edit, Kind, Media, Place, items::replaced_where};
 
@@ -34,18 +40,6 @@ impl CueList {
             .map(|cue| cue.id)
     }
 
-    /// Returns the cues one GO on `start` fires, each paired with its delay
-    /// after the GO.  The chain follows auto-continue and auto-follow until
-    /// it reaches a cue that waits for GO.
-    pub fn chain(&self, start: CueId) -> impl Iterator<Item = (&Cue, f32)> {
-        let from = self.position(start).unwrap_or(self.cues.len());
-        self.cues[from..].iter().scan(Some(0.0), |next, cue| {
-            let delay = (*next)?;
-            *next = cue.next_delay().map(|gap| delay + gap);
-            Some((cue, delay))
-        })
-    }
-
     /// Moves standby to a cue, treating a cue of another list as the end
     pub(in crate::back) fn with_standby(self, standby: Option<CueId>) -> Self {
         let standby = standby.filter(|&id| self.position(id).is_some());
@@ -62,26 +56,34 @@ impl CueList {
         .unwrap_or(self.cues.len())
     }
 
-    /// Inserts a new cue of `kind` with an identity and a number at a place
-    /// in the list, named as new cues of its kind are.  As in QLab, a new
-    /// cue that acts on another cue targets the cue it follows when it can
-    /// act on that cue.  A cue that goes at the end of a list whose standby
-    /// waits past the end goes on standby, so that GO fires the first cue of
-    /// a new list, and the cue added to a list played to its end.
+    /// Inserts a new cue of `kind` with an identity, a number, and a depth at
+    /// a place in the list, named as new cues of its kind are.  As in QLab, a
+    /// new cue that acts on another cue targets the cue it follows when it
+    /// can act on that cue, but never a group that holds the new cue, which
+    /// a cue added below a group is in.  A cue that goes at the end of a list
+    /// whose standby waits past the end goes on standby, so that GO fires the
+    /// first cue of a new list, and the cue added to a list played to its
+    /// end.
     pub(in crate::back) fn with_new_cue(
         self,
         id: CueId,
         number: String,
         kind: Kind,
         at: Place,
+        depth: u8,
     ) -> Self {
         let index = self.index_at(at);
-        let cue = Cue::new(id, number, kind, Cue::new_name(kind)).build();
+        let cue = Cue::new(id, number, kind, Cue::new_name(kind))
+            .depth(depth)
+            .build();
+        let depths = self.depths();
         let target = index
             .checked_sub(1)
-            .and_then(|before| self.cues.get(before))
-            .filter(|before| cue.can_target(before))
-            .map(|before| before.id);
+            .and_then(|before| Some((before, self.cues.get(before)?)))
+            .filter(|&(row, before)| {
+                cue.can_target(before) && !(before.kind == Kind::Group && depth > depths[row])
+            })
+            .map(|(_, before)| before.id);
         Self {
             standby: self.standby.or((index == self.cues.len()).then_some(id)),
             ..self

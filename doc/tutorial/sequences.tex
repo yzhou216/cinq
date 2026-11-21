@@ -162,6 +162,56 @@ does not loop cannot be devamped: its devamp cue reads \texttt{NO LOOP}, and GO
 skips it.  A loop that starts at or after its end cannot play either, and its
 cue reads \texttt{BROKEN}\@.
 
+\section{Groups}
+
+A group cue holds the cues below it and fires them all at once.  One GO on a
+group starts every cue in it, each after its own pre-wait, so that a group
+makes a scene out of several cues.  The group takes no time of its own, and
+the cue list shows what it holds by indenting those cues below it.
+
+A cue lies in the group above it when it is indented one level deeper, and
+groups can nest.  A new cue added below a group goes into it, as its first
+cue, and one added below a cue of a group joins that group.  Inside a group,
+the \ui{Then} setting of a cue has no effect, since the group fires the cues
+beside it, and the inspector shows the setting disabled.
+
+Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
+
+\begin{enumerate}
+\item Press \ui{Panic}, select the rain, and press \key{yy} to copy it.  Then
+  select the last cue of the list, choose \ui{Group} in the \ui{New cue} list,
+  and press \ui{Add cue}\@.  The group appears at the end of the list.
+\item Select the group and press \key{p}.  The copy of the rain pastes below
+  the group, indented, so that it lies in the group.  Select the copy, choose
+  \ui{Audio} in the \ui{New cue} list, and press \ui{Add cue}\@.  The new cue
+  appears below the copy and joins the group.  Choose
+  \texttt{sounds/thunder.wav} as its file, as in Chapter~\ref{ch:cues}, and
+  type \texttt{2} in its \ui{Pre-wait}.
+\item Select the group, press \ui{Standby selected}, and press \ui{GO}\@.  The
+  rain starts at once, and the thunder two seconds later.  The
+  \texttt{State} column of the group reads \texttt{running} for as long as the
+  rain loops, and the standby cue moves past the whole group.
+\item Press the group's \ui{Stop} button in the sidebar.  The group, the rain,
+  and the thunder all stop.
+\end{enumerate}
+
+A cue moves in and out of a group with the keys for indent and outdent.  Select
+the thunder cue, choose \ui{Memo} in the \ui{New cue} list, and press
+\ui{Add cue}\@.  The memo joins the group.  Press \key{<<} to move it out of
+the group, to just below it, and press \key{>>} to move it back into the group
+above it.  The cua keymap uses \key{Control+[} and \key{Control+]}.  Both
+move a cue together with the cues that it holds, and both take a number
+and the motions of \key{d} and \key{y}, so that \key{3>>} indents three cues.
+
+A group goes on by its own \ui{Then} setting, to the cue below everything that
+it holds: auto-continue fires that cue after the group's post-wait, and
+auto-follow fires it once the last cue in the group ends, which a looping
+cue never does.  A stop cue, a pause cue, a start cue, and a GoTo cue can name
+a group and act on it as a whole, and a stop cue stops every cue in it.  A fade
+cue or a devamp cue cannot, since a fade needs a sound or picture and a devamp
+cue an audio or video cue.  Moving, cutting, copying, and deleting a group takes
+it together with every cue that it holds, and undo brings them back together.
+
 \section*{Exercise}
 
 You can now make one GO fire a whole sequence.  In your own show, move the

@@ -138,7 +138,8 @@ Each cue is a table in the array *cue* of its list:
 
 *kind*
 	What the cue does: *audio*, *video*, *picture*, *light*, *network*,
-	*fade*, *start*, *stop*, *pause*, *devamp*, *goto*, *wait*, or *memo*.
+	*fade*, *start*, *stop*, *pause*, *devamp*, *goto*, *group*, *wait*, or
+	*memo*.
 	An audio cue plays a sound file, a video cue plays a video file, and a
 	picture cue shows a picture file, as *STAGE* describes.
 	A light cue fades instruments of the light patch, as *LIGHTS*
@@ -147,6 +148,8 @@ Each cue is a table in the array *cue* of its list:
 	A start cue starts another cue, a pause cue pauses it, a devamp cue lets
 	it leave its loop, and a GoTo cue moves the standby cue of its list to
 	it, as *CONTROL CUES* describes.
+	A group cue fires the cues below it that it holds all at once, as
+	*GROUPS* describes.
 	The clock of an audio or video cue follows its sound as the audio device
 	plays it.
 	Its fades, its end, and the cues that follow it therefore stay with what
@@ -197,6 +200,21 @@ Each cue is a table in the array *cue* of its list:
 	A fade cue acts on an audio, video, or picture cue, a devamp cue on an
 	audio or video cue, and each of the others on any cue but itself, in any
 	list of the show.
+	A stop, pause, start, or GoTo cue may name a group cue, as *GROUPS*
+	describes, while a fade or devamp cue may not.
+
+*depth*
+	How many groups deep the cue lies, which is 0 by default, for a cue that
+	lies in no group.
+	A cue lies in the nearest group cue above it that is one level less deep,
+	so that a group holds the cues below it, up to the first that lies no
+	deeper than the group, and groups nest.
+	A depth counts only as far as the cues above allow: no deeper than the cue
+	above, or one level deeper where that cue is a group.
+	A depth that goes further, as one left by a group that is no longer there,
+	counts as the deepest that the cues above allow, so that no depth breaks
+	the structure.
+	Saving writes it for a cue that is not 0.
 
 *pre_wait*
 	Seconds between the cue firing and its action, which are none by
@@ -477,6 +495,91 @@ moves of standby that undo could have taken back before it in that list are
 dropped.
 A GoTo cue in the chain that a GO fires sets the standby cue that the GO
 leaves, since it acts after the GO has moved standby past the chain.
+
+# GROUPS
+
+A group cue fires the cues that it holds all at once, as the timeline group of
+QLab does, so that one GO starts a whole scene.
+It does nothing else itself, and it takes no *target*.
+Each cue below it that lies one level deeper, as *depth* describes, belongs to
+the group, along with the cues that those hold in turn.
+A group that holds no cue does nothing.
+
+GO on a group fires it together with every cue that it holds, at any depth.
+Each of those begins its action once its own pre-wait is over, plus the
+pre-waits of the groups that hold it, counted from the GO.
+Standby moves past the whole group, as it moves past any chain that GO fires.
+GO with a cue inside a group on standby fires that cue alone, together with
+the cues that it holds where it is a group, and standby moves to the next cue
+below it, whether that is in the group or not.
+
+The *advance* of a cue inside a group has no effect, since the group fires the
+cues beside it, and the inspector shows the setting disabled.
+The group goes on by its own *advance*, to the cue below everything that it
+holds:
+
+- *continue* fires that cue once the pre-wait and the post-wait of the group
+  are over.
+- *follow* fires it once the action of the group ends, which is when the
+  last of the actions of the cues that it holds ends, each counted from the end
+  of the pre-wait of the group.
+  A group never ends its action where a cue in it never ends, as a cue that
+  loops, or a picture cue, never does, so that it fires nothing by *follow*.
+
+The run of a group begins its action once its pre-wait is over, and lasts while
+any cue that the group holds runs.
+It ends once its action has begun and none of those runs, which happens when
+they all end or all stop, and its end stops nothing.
+The cue list and the sidebar show it as they show any run: the time that is
+left, while the group has an end, and _running_ while a cue in it never ends.
+
+The cues that act on other cues act on a group as follows:
+
+- A stop cue stops the run of the group and the run of every cue that it
+  holds, each as a stopped cue, so that the cues that wait for them are stopped
+  as well.
+  The Stop button of the sidebar does the same.
+- A pause cue pauses the run of the group and the runs of the cues that it
+  holds, along with the runs that each would start.
+- A start cue fires the group as GO does, together with every cue that it
+  holds, or resumes the group and those cues where it is paused.
+  A start cue inside the group that it starts cannot play, since the group
+  would fire it again without end, so that GO skips it and the cue list shows
+  NO TARGET.
+- A GoTo cue puts the group on standby.
+- A fade or devamp cue cannot name a group, as in QLab, since a fade needs a
+  sound, video, or picture, and a devamp cue an audio or video cue.
+
+Panic and Pause all act on every run, those of groups and of the cues in them
+alike.
+
+Editing keeps a group together with the cues that it holds:
+
+- A new cue below a cue takes the deepest depth that cue allows, which is its
+  own, or one more where it is a group.
+  A cue added below a group therefore goes into it, as its first cue, and one
+  added below a cue in a group joins that group.
+  A cue added above a cue takes the depth of that cue.
+  A new cue that acts on another cue targets the cue above it where it can
+  act on that cue, but never a group that holds it, so that a stop, pause,
+  start, or GoTo cue added below a group goes into the group with no target.
+- Pasted cues keep their shape, with all their depths moved by the same
+  amount, so that the first of them takes the depth that a new cue would take
+  there.
+- Moving a group up or down moves it as one block, together with the cues that
+  it holds, and the depths of the block move so that its first cue takes the
+  depth that a new cue would take at its new place.
+  Moving a cue by one row onto a group therefore takes it into the group or out
+  of it.
+  Undo takes the move back in one step.
+- Deleting, cutting, and copying a group takes it together with every cue that
+  it holds, and undo brings them all back where they were.
+- Indenting a cue moves it into the group above it, together with the cues that
+  it holds.
+  Outdenting a cue moves it out of its group to just below the group, together
+  with the cues that it holds, so that the cues of the group that lay below it
+  stay in the group.
+  *cinq*(5) lists the keys.
 
 # UNSAVED CHANGES
 
@@ -801,6 +904,46 @@ number = "2"
 kind = "devamp"
 name = "Leave vamp"
 target = 1
+```
+
+A list in which one GO plays a storm and, two seconds later, a thunder crack,
+which a group holds at one level deeper than itself, and the group goes on to
+the applause once both sounds have ended:
+
+```
+[[list]]
+name = "Main"
+
+[[list.cue]]
+id = 1
+number = "1"
+kind = "group"
+name = "Storm scene"
+advance = "follow"
+
+[[list.cue]]
+id = 2
+number = "1.1"
+kind = "audio"
+name = "Storm"
+file = "sounds/storm.ogg"
+depth = 1
+
+[[list.cue]]
+id = 3
+number = "1.2"
+kind = "audio"
+name = "Thunder"
+file = "sounds/thunder.wav"
+pre_wait = 2.0
+depth = 1
+
+[[list.cue]]
+id = 4
+number = "2"
+kind = "audio"
+name = "Applause"
+file = "sounds/applause.ogg"
 ```
 
 # SEE ALSO

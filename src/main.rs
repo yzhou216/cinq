@@ -10,8 +10,9 @@
 //! audio or video cue and fade out the pictures of the cues that they stop,
 //! start cues start another cue and pause cues pause it, devamp cues let a
 //! looping cue leave its loop, stop cues end another cue, GoTo cues move
-//! standby to another cue, network cues send OSC messages, and wait and memo
-//! cues pace and annotate the show.
+//! standby to another cue, group cues fire the cues that they hold all at
+//! once, network cues send OSC messages, and wait and memo cues pace and
+//! annotate the show.
 //! GO fires the standby cue together with every cue that auto-continue or
 //! auto-follow chains to it.  Selection and standby are independent:
 //! inspecting a cue never changes what the next GO fires.

@@ -79,6 +79,8 @@ impl Preset {
             Action::Delete => [&[], &["Delete"]],
             Action::MoveDown => [&["Alt+j", "Alt+ArrowDown"], &["Alt+ArrowDown"]],
             Action::MoveUp => [&["Alt+k", "Alt+ArrowUp"], &["Alt+ArrowUp"]],
+            Action::Indent => [&["> >"], &["Control+]"]],
+            Action::Outdent => [&["< <"], &["Control+["]],
             Action::Undo => [&["u"], &["Control+z"]],
             Action::Redo => [&["Control+r"], &["Control+y", "Control+Z"]],
             Action::Open => [&["Control+l"], &["Control+o"]],

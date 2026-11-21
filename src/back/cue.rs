@@ -24,7 +24,7 @@ pub(in crate::back) use clip::Loop;
 pub(in crate::back) use clip::{Clip, Pass, Shown};
 pub use edit::Edit;
 pub use kind::{Advance, Kind};
-pub use list::CueList;
+pub use list::{CueList, Groups};
 pub use media::{Media, Problem};
 pub use seconds::Seconds;
 
@@ -115,6 +115,10 @@ pub struct Cue {
     /// which is the end of the cue when the text reads as no time
     #[builder(default, into)]
     pub loop_end: Seconds,
+    /// How many groups the cue lies in, as far as the rows above it allow,
+    /// as [`CueList::depths`] tells
+    #[builder(default)]
+    pub depth: u8,
     /// Cue that a fade, start, stop, pause, devamp, or GoTo cue acts on
     pub target: Option<CueId>,
     #[builder(default, into)]
@@ -217,19 +221,20 @@ impl Cue {
                 | Kind::Picture
                 | Kind::Light
                 | Kind::Network
+                | Kind::Group
                 | Kind::Wait
                 | Kind::Memo => false,
             }
     }
 
-    /// Returns the delay between this cue firing and it firing the next cue,
-    /// or `None` when the next cue waits for GO
-    fn next_delay(&self) -> Option<f32> {
+    /// Returns the delay between this cue firing and it firing the next cue
+    /// of the list of `groups`, or `None` when the next cue waits for GO
+    fn next_delay_in(&self, groups: &Groups) -> Option<f32> {
         match self.advance {
             Advance::Manual => None,
             Advance::Continue => Some(self.pre_wait.value() + self.post_wait.value()),
-            Advance::Follow if self.endless() => None,
-            Advance::Follow => Some(self.pre_wait.value() + self.action()),
+            Advance::Follow if groups.endless(self) => None,
+            Advance::Follow => Some(self.pre_wait.value() + groups.action_of(self)),
         }
     }
 }

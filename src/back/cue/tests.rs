@@ -8,6 +8,12 @@ mod passing;
 
 use super::*;
 
+/// Returns the delay between a cue firing and it firing the next cue of a
+/// list that holds no group
+fn next_delay(cue: &Cue) -> Option<f32> {
+    cue.next_delay_in(&CueList::new("Main", Vec::new()).groups())
+}
+
 fn audio(name: &str, file: &str) -> Cue {
     Cue::new(CueId(1), "1", Kind::Audio, name)
         .file(file)
@@ -130,12 +136,12 @@ fn audio_cue_that_loops_follows_on_to_nothing() {
         advance: Advance::Follow,
         ..loaded(audio("rain", "rain.ogg"))
     };
-    assert_eq!(looping.next_delay(), None);
+    assert_eq!(next_delay(&looping), None);
     let continuing = Cue {
         advance: Advance::Continue,
         ..looping
     };
-    assert_eq!(continuing.next_delay(), Some(0.0));
+    assert_eq!(next_delay(&continuing), Some(0.0));
 }
 
 #[test]
@@ -188,7 +194,7 @@ fn picture_cue_shows_its_file_whole_and_follows_on_to_nothing() {
         (None, Some(Shown::Still))
     );
     assert!(picture.endless() && !picture.sounds());
-    assert_eq!(picture.next_delay(), None);
+    assert_eq!(next_delay(&picture), None);
     let named = picture.playing("slides/preshow.png".to_owned());
     assert!(matches!(named, Edit::FileAndName { name, .. } if name == "preshow"));
 }
@@ -203,7 +209,7 @@ fn audio_cue_that_follows_goes_on_when_its_clip_ends() {
         ..loaded(audio("rain", "rain.ogg"))
     };
     // Auto-follow ignores the post-wait
-    assert_eq!(following.next_delay(), Some(9.5));
+    assert_eq!(next_delay(&following), Some(9.5));
 }
 
 #[test]
@@ -214,12 +220,12 @@ fn audio_cue_that_continues_goes_on_after_its_waits() {
         post_wait: 2.0.into(),
         ..loaded(audio("rain", "rain.ogg"))
     };
-    assert_eq!(continuing.next_delay(), Some(3.5));
+    assert_eq!(next_delay(&continuing), Some(3.5));
 }
 
 #[test]
 fn audio_cue_that_waits_for_go_goes_on_to_nothing() {
-    assert_eq!(loaded(audio("rain", "rain.ogg")).next_delay(), None);
+    assert_eq!(next_delay(&loaded(audio("rain", "rain.ogg"))), None);
 }
 
 #[test]

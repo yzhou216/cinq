@@ -40,6 +40,10 @@ pub enum Problem<'a> {
     EmptyLoop,
     #[strum(to_string = "no target cue")]
     NoTarget,
+    /// Start cue lies in the group that it starts, which would fire it
+    /// again and so never end
+    #[strum(to_string = "lies in the group that it starts")]
+    InTarget,
     /// Devamp cue targets a cue that does not loop, which it cannot let go
     /// on
     #[strum(to_string = "target cue does not loop")]

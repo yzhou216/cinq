@@ -43,6 +43,8 @@ impl Message {
                     | Message::ShowTab(_)
                     | Message::Add(..)
                     | Message::Move(_)
+                    | Message::Indent(_)
+                    | Message::Outdent(_)
                     | Message::Copy(_)
                     | Message::Cut(_)
                     | Message::Paste(..)

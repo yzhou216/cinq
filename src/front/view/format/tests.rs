@@ -29,9 +29,10 @@ fn target_goes_by_its_number_or_else_by_its_quoted_name() {
     let numbered = Cue::new(CueId(1), "1", Kind::Audio, "Rain").build();
     let unnumbered = Cue::new(CueId(2), "", Kind::Audio, "Thunder").build();
     let workspace = Workspace::new(vec![CueList::new("Main", vec![numbered, unnumbered])]);
-    assert_eq!(target(&workspace, &fade(1)), "1");
-    assert_eq!(target(&workspace, &fade(2)), "\"Thunder\"");
-    assert_eq!(target(&workspace, &fade(3)), "");
+    let groups = &workspace.lists()[0].groups();
+    assert_eq!(target(&workspace, groups, &fade(1)), "1");
+    assert_eq!(target(&workspace, groups, &fade(2)), "\"Thunder\"");
+    assert_eq!(target(&workspace, groups, &fade(3)), "");
 }
 
 #[test]

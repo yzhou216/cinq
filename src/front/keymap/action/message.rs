@@ -63,6 +63,8 @@ impl Action {
             Action::Delete => Message::Delete(times),
             Action::MoveDown => Message::Move(step),
             Action::MoveUp => Message::Move(-step),
+            Action::Indent => Message::Indent(times),
+            Action::Outdent => Message::Outdent(times),
             Action::Undo => Message::Undo(times),
             Action::Redo => Message::Redo(times),
             Action::Open => Message::Open,
@@ -90,6 +92,8 @@ impl Action {
                 | Action::Delete
                 | Action::MoveDown
                 | Action::MoveUp
+                | Action::Indent
+                | Action::Outdent
                 | Action::Undo
                 | Action::Redo
         )

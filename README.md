@@ -33,9 +33,10 @@ Minimal cue-based show controller, the
   keeping its level until a later light cue names it.
 - **Network cues** that send OSC over TCP or UDP, such as to fire the cues
   of a lighting console.
-- **Fade, start, stop, pause, devamp, GoTo, wait, and memo cues**, chained by
-  auto-continue and auto-follow, with pre-waits and post-waits.  A devamp cue
-  lets a looping sound or video leave its loop and play on to its end.
+- **Fade, start, stop, pause, devamp, GoTo, group, wait, and memo cues**,
+  chained by auto-continue and auto-follow, with pre-waits and post-waits.  A
+  devamp cue lets a looping sound or video leave its loop and play on to its
+  end, and a group cue fires the cues that it holds all at once.
 - **Panic** fades everything out in a second, and a second Panic stops at
   once.
 - **Show mode** locks editing during a performance.

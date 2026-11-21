@@ -13,7 +13,9 @@ use std::path::Path;
 
 use itertools::Itertools;
 
-use crate::back::{Active, Advance, Cue, CueList, Kind, Media, Output, Phase, SILENCE, Workspace};
+use crate::back::{
+    Active, Advance, Cue, CueList, Groups, Kind, Media, Output, Phase, SILENCE, Workspace,
+};
 pub use change::change;
 use consequences::short;
 pub use consequences::{consequences, consequences_of, leading};
@@ -34,9 +36,11 @@ pub fn wait(seconds: f64) -> String {
 }
 
 /// Formats the length of a cue's action, or a hold for a picture cue, whose
-/// action lasts until something stops it
-pub fn action(cue: &Cue) -> String {
-    let length = clock(cue.action().into());
+/// action lasts until something stops it.  The action of a group lasts until
+/// the last of those of the cues that it holds ends, which a cue that never
+/// ends makes a hold, and is none for a group that holds no cue.
+pub fn action(groups: &Groups, cue: &Cue) -> String {
+    let length = clock(groups.action_of(cue).into());
     match (cue.kind, &cue.media) {
         (Kind::Audio | Kind::Video, Media::Loaded { .. }) if cue.loops() => {
             format!("{length} loop")
@@ -55,6 +59,9 @@ pub fn action(cue: &Cue) -> String {
             | Kind::Memo,
             _,
         ) => "-".to_owned(),
+        (Kind::Group, _) if groups.endless(cue) => "hold".to_owned(),
+        (Kind::Group, _) if groups.members(cue.id).is_empty() => "-".to_owned(),
+        (Kind::Group, _) => length,
     }
 }
 
@@ -76,7 +83,9 @@ pub fn advance(advance: Advance) -> &'static str {
     }
 }
 
-pub fn target(workspace: &Workspace, cue: &Cue) -> String {
+/// Formats what a cue acts on: its file, its target, or, for a group, how
+/// many cues it holds
+pub fn target(workspace: &Workspace, groups: &Groups, cue: &Cue) -> String {
     match cue.kind {
         Kind::Audio | Kind::Video | Kind::Picture => cue
             .file_name()
@@ -94,6 +103,7 @@ pub fn target(workspace: &Workspace, cue: &Cue) -> String {
             "instrument",
         ),
         Kind::Network => cue.message.trim().to_owned(),
+        Kind::Group => count(groups.members(cue.id).len(), "cue"),
         Kind::Wait | Kind::Memo => String::new(),
     }
 }
@@ -117,6 +127,7 @@ pub fn phase(active: &Active) -> String {
         Phase::Running { remaining } => format!("{} left", clock(remaining)),
         Phase::Looping => "looping".to_owned(),
         Phase::Showing => "showing".to_owned(),
+        Phase::Endless => "running".to_owned(),
     }
 }
 

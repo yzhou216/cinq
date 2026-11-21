@@ -64,6 +64,24 @@ Major changes and improvements in each release of cinq, newest first.
   cues, pause cues, and panics act on it as on any run.  The chapter of the
   tutorial on sequences covers loop sections and devamp cues.  cinq 0.1.5 and
   older refuse a show with devamp cues.
+- Group cues, which act as the timeline group of QLab does, hold the cues
+  below them that lie one level deeper, and one GO on a group fires all of
+  them at once, each after its own pre-wait and those of the groups that hold
+  it.  Standby moves past the group, and the group goes on by its own Then
+  setting, to the cue below it: auto-follow once the last of its cues ends.
+  The Then setting of a cue inside a group has no effect, and the inspector
+  shows it disabled.  A group shows as running while any cue in it runs, with
+  the time left while the group has an end.  Stop, pause, start, and GoTo
+  cues, and the Stop button, act on a group and on every cue in it, while fade
+  and devamp cues cannot name one, and a start cue inside the group that it
+  starts cannot play.  A new cue below a group goes into it, and takes no
+  target from the group.  Pasted cues keep their shape, a group moves, is cut,
+  copied, and deleted with the cues it holds, and undo takes each back in one
+  step.  `>>` and `<<` in the vi keymap, and `Control+]` and `Control+[` in the
+  cua keymap, move a cue into the group above it and out of its group, and take
+  counts and motions as `d` and `y` do.  The show file keeps each cue's
+  `depth`.  cinq 0.1.5 and older refuse a show with group cues and ignore
+  `depth`.
 
 ## v0.1.5
 

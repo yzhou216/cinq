@@ -79,6 +79,8 @@ impl Action {
             Action::Delete => "Delete the selected cue, or output, without copying it",
             Action::MoveDown => "Move the selected cue, or output, down",
             Action::MoveUp => "Move the selected cue, or output, up",
+            Action::Indent => "Move the selected cue into the group above it",
+            Action::Outdent => "Move the selected cue out of its group",
             Action::Undo => "Undo the latest change to the show, or as many as counted",
             Action::Redo => "Redo the change undone last, or as many as counted",
             Action::Open => "Open a show",

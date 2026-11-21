@@ -367,6 +367,12 @@ of the help page.
 |  move_up
 :  Alt+k, Alt+ArrowUp
 :  Alt+ArrowUp
+|  indent
+:  > >
+:  Control+]
+|  outdent
+:  < <
+:  Control+[
 |  undo
 :  u
 :  Control+z
@@ -443,10 +449,10 @@ Digits typed before a sequence count it, as in *3 j* with the vi keymap.
 The count repeats *next*, *previous*, *next_list*, *previous_list*,
 *move_down*, *move_up*, *scroll_down*, *scroll_up*, *back*, *forward*,
 *next_match*, and *previous_match*.
-It copies, cuts, deletes, or adds as many cues for *copy*, *cut*, *delete*,
-*add_below*, and *add_above*, pastes as many times for *paste_below* and
-*paste_above*, undoes or redoes as many changes for *undo* and *redo*, and
-goes back as many tabs for *previous_tab*.
+It copies, cuts, deletes, indents, outdents, or adds as many cues for *copy*,
+*cut*, *delete*, *indent*, *outdent*, *add_below*, and *add_above*, pastes as
+many times for *paste_below* and *paste_above*, undoes or redoes as many
+changes for *undo* and *redo*, and goes back as many tabs for *previous_tab*.
 It gives the row, counted from one, that *first* and *last* select, and the
 tab, counted from one, that *next_tab* shows.
 It gives the row in view, counted from the top for *top_row* and from the bottom
@@ -464,11 +470,11 @@ behind, *9 g t* with fewer tabs, or *3 d d* on the last cue, makes *cinq* go as
 far as it can, where Vim would refuse it.
 Since digits count, no sequence can start with one.
 
-The actions *copy*, *cut*, and *delete* also act as operators, as *y* and *d*
-do in Vim.
-An operator key is the key that one of their bindings doubles: *d* for *d d*
-and *y* for *y y* in the vi keymap, and *D* for a binding *D D* that replaces
-*d d*.
+The actions *copy*, *cut*, *delete*, *indent*, and *outdent* also act as
+operators, as *y*, *d*, *>*, and *<* do in Vim.
+An operator key is the key that one of their bindings doubles: *d* for *d d*,
+*y* for *y y*, *>* for *> >*, and *<* for *< <* in the vi keymap, and *D* for a
+binding *D D* that replaces *d d*.
 A binding that does not double a key, such as *Control+x*, *x*, or *c v*, makes
 no operator.
 The operator key followed by any key bound to *next*, *previous*, *first*, or
@@ -483,11 +489,13 @@ A motion that cannot move, such as *d k* on the first cue, does nothing, and a
 count past the end stops at the last cue.
 The keys of *top_row*, *middle_row*, and *bottom_row* are no motions, since
 the rows in view are known only once the window has drawn the list.
-The cues of a cut leave the selection on the cue that takes their place, and a
-copy leaves it on the first cue copied.
+The cues of a cut leave the selection on the cue that takes their place, a
+copy leaves it on the first cue copied, and *> >* and *< <* with a motion leave
+it on the first cue moved.
 Cutting is one change for undo, and the clipboard holds the cues in order.
-Show mode locks *d* with a motion as it locks *cut* and *delete*, and leaves *y*
-with a motion alone, as it leaves *copy*.
+Show mode locks *d*, *>*, and *<* with a motion as it locks *cut*, *delete*,
+*indent*, and *outdent*, and leaves *y* with a motion alone, as it leaves
+*copy*.
 A key that is neither a count nor a motion drops the operator and itself, and
 the keys of *go* and *panic* act at once as usual.
 
@@ -664,17 +672,18 @@ nothing, since the keys typed there would never reach a field of the main
 window.
 The keys that change the show or fill the clipboard do nothing there either:
 *add_below*, *add_above*, *cut*, *copy*, *paste_below*, *paste_above*,
-*delete*, *move_down*, *move_up*, *undo*, and *redo*, and the operators that
-begin with a key of *cut*, *copy*, or *delete*, since the cue list is out of
-sight from that window and a held key could change cues unseen.
+*delete*, *move_down*, *move_up*, *indent*, *outdent*, *undo*, and *redo*, and
+the operators that begin with a key of *cut*, *copy*, *delete*, *indent*, or
+*outdent*, since the cue list is out of sight from that window and a held key
+could change cues unseen.
 The keys of *go*, *panic*, and *standby*, and those that move the selection,
 act as before.
 A click on the main window gives it the keyboard.
 
 Show mode locks editing: *edit*, *edit_start*, *change_name*, *add_below*,
-*add_above*, *move_down*, *move_up*, *delete*, *cut*, *paste_below*, and
-*paste_above* do nothing in it, and *undo* and *redo* only move standby back
-and forth.
+*add_above*, *move_down*, *move_up*, *indent*, *outdent*, *delete*, *cut*,
+*paste_below*, and *paste_above* do nothing in it, and *undo* and *redo* only
+move standby back and forth.
 Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
 read-only buffer.
 
@@ -1041,6 +1050,7 @@ page.
 	Copy the selected cue, or as many cues from it down as the count, to the
 	clipboard and delete them, so that *cut* and then *paste_below* moves a
 	cue.
+	A group goes with the cues that it holds.
 	The vi keymap binds *x* and *Delete* to it as well as *d d*, as Vim cuts
 	with all three, and *d* followed by a motion cuts the cues the motion
 	reaches, as *TYPING* describes.
@@ -1051,6 +1061,7 @@ page.
 *copy*
 	Copy the selected cue, or as many cues from it down as the count, to the
 	clipboard of *cinq*, in place of what it held.
+	A group goes with the cues that it holds.
 	The clipboard is *cinq*'s own and not that of the desktop.
 	It is no part of the show, and undo does not touch it.
 	It acts in show mode, since it changes no show.
@@ -1086,6 +1097,7 @@ page.
 *delete*
 	Delete the selected cue, or as many cues from it down as the count,
 	without copying them.
+	A group goes with the cues that it holds.
 	The vi keymap binds no key to it, since *cut* is what its *d d*, *x*, and
 	*Delete* do, as in Vim.
 	The cua keymap binds the Delete key to it, as desktop programs do.
@@ -1093,10 +1105,31 @@ page.
 *move_down*
 	Move the selected cue one place down its list, or as many places as the
 	count.
+	A group moves with the cues that it holds, as one block.
 
 *move_up*
 	Move the selected cue one place up its list, or as many places as the
 	count.
+	A group moves with the cues that it holds, as one block.
+
+*indent*
+	Move the selected cue into the group above it, together with the cues that it
+	holds, or the selected cue and as many cues below it as the count.
+	A cue goes one level deeper where the cue above it is a group, or lies deeper
+	than the cue, and stays where it is elsewhere, as at the top of a list.
+	The vi keymap binds *> >*, and *> j* indents the cues that a motion reaches,
+	as *TYPING* describes.
+	It is one change that undo takes back, and the selection stays on the first
+	cue moved.
+
+*outdent*
+	Move the selected cue out of its group, together with the cues that it holds,
+	or the selected cue and as many cues below it as the count.
+	The cue goes to just below the group, so that the cues of the group that were
+	below it stay in the group.
+	The vi keymap binds *< <*, and *< j* outdents the cues that a motion reaches.
+	It is one change that undo takes back, and the selection stays on the first
+	cue moved.
 
 *undo*
 	Undo the latest change to the show, or as many of the latest changes as the

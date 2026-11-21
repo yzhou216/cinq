@@ -101,6 +101,8 @@ impl App {
             Message::Forward(count) => self.walking(|app| app.went_forward(count)),
             Message::Add(place, count) => self.with_new_cue(place, count).revealed(),
             Message::Move(by) => self.with_selected_moved(by).revealed(),
+            Message::Indent(count) => self.regrouped(count, Command::Indent).revealed(),
+            Message::Outdent(count) => self.regrouped(count, Command::Outdent).revealed(),
             Message::Cut(count) => self.cut(count).revealed(),
             Message::Paste(place, count) => self.with_pasted(place, count).revealed(),
             Message::Delete(count) => self.without_selected(count).revealed(),

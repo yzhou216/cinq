@@ -179,6 +179,12 @@ pub enum Message {
     /// Moves the selected cue by a number of places, downwards when
     /// positive
     Move(isize),
+    /// Moves a number of cues from the selection down into the group above
+    /// them, with the cues that they hold
+    Indent(usize),
+    /// Moves a number of cues from the selection down out of their groups,
+    /// with the cues that they hold
+    Outdent(usize),
     /// Copies a number of cues from the selection down to the clipboard
     Copy(usize),
     /// Copies a number of cues from the selection down to the clipboard and
@@ -189,9 +195,10 @@ pub enum Message {
     Paste(fn(CueId) -> Place, usize),
     /// Deletes a number of cues from the selection down
     Delete(usize),
-    /// Applies the operator `Cut`, `Copy`, or `Delete` to the cues from the
-    /// selection to where the motion `Next`, `Previous`, `First`, or `Last`
-    /// would move it, counted as the motion is
+    /// Applies the operator `Cut`, `Copy`, `Delete`, `Indent`, or `Outdent`
+    /// to the cues from the selection to where the motion `Next`,
+    /// `Previous`, `First`, or `Last` would move it, counted as the motion
+    /// is
     Across(Action, Action, Option<usize>),
     Edit(CueId, Edit),
     Patch(PatchEdit),

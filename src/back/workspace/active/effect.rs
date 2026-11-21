@@ -71,6 +71,9 @@ pub(in crate::back::workspace) enum Effect {
     Devamp(CueId),
     /// Moves the standby of the list that holds a cue to that cue
     GoTo(CueId),
+    /// Takes as long as the cues that a group holds last, which
+    /// [`Active::spanning`] sets, and ends with them
+    Group { endless: bool },
     /// Sends the message of a network cue
     Send,
     /// Takes time and does nothing else, as wait and memo cues do

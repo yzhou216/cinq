@@ -91,12 +91,15 @@ impl App {
     /// shows in its columns, but for the state, as Vim searches a whole line
     pub(super) fn row_texts(&self) -> Vec<Vec<String>> {
         match self.rows() {
-            Rows::Cues(_) => self
-                .current()
-                .cues
-                .iter()
-                .map(|cue| view::cue_texts(&self.workspace, self.current(), cue))
-                .collect(),
+            Rows::Cues(_) => {
+                let groups = self.current().groups();
+                groups
+                    .list()
+                    .cues
+                    .iter()
+                    .map(|cue| view::cue_texts(&self.workspace, &groups, cue))
+                    .collect()
+            }
             Rows::Outputs => self
                 .workspace
                 .outputs()

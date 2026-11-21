@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Cutting, copying, and deleting the rows that a motion reaches, as `d`
-//! and `y` do in Vim
+//! Cutting, copying, deleting, indenting, and outdenting the rows that a
+//! motion reaches, as `d`, `y`, `>`, and `<` do in Vim
 //!
 //! The motions are the actions that move the selection, and the rows are
 //! whole rows of the cue list, or of the outputs while they show, from the
@@ -11,7 +11,10 @@
 
 use std::ops::RangeInclusive;
 
-use crate::front::{App, keymap::Action};
+use crate::{
+    back::Command,
+    front::{App, keymap::Action},
+};
 
 impl App {
     /// Applies `operator` to the rows that `motion` reaches and leaves the
@@ -19,11 +22,14 @@ impl App {
     /// when the operator takes the rows away.  Nothing happens without a
     /// selection, where the motion cannot move, or, for the operators that
     /// change the show, in show mode, which leaves copying alone as it does
-    /// elsewhere.
+    /// elsewhere.  Outputs lie in no group, so that indenting and
+    /// outdenting do nothing while they show.
     pub(super) fn across(self, operator: Action, motion: Action, count: Option<usize>) -> Self {
+        let grouping = matches!(operator, Action::Indent | Action::Outdent);
         let span = self
             .row()
             .filter(|_| self.editable() || operator == Action::Copy)
+            .filter(|_| !(grouping && self.outputs_shown))
             .and_then(|row| rows(motion, count, row, self.row_count()));
         let Some(span) = span else {
             return self;
@@ -33,6 +39,8 @@ impl App {
         match (app.outputs_shown, operator) {
             (false, Action::Copy) => app.with_copied(rows),
             (false, Action::Delete) => app.without_selected(rows),
+            (false, Action::Indent) => app.regrouped(rows, Command::Indent),
+            (false, Action::Outdent) => app.regrouped(rows, Command::Outdent),
             (false, _) => app.cut(rows),
             (true, Action::Copy) => app.copied_outputs(rows),
             (true, Action::Delete) => app.without_outputs(rows),

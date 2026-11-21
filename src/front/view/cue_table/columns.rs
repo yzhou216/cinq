@@ -10,7 +10,7 @@ use unicode_width::UnicodeWidthStr;
 
 use super::{RADIO, STATE_ROOM, TARGET_ROOM};
 use crate::{
-    back::{Cue, CueList, Problem, Workspace},
+    back::{Cue, Groups, Problem, Workspace},
     front::view::{char_width, format, theme},
 };
 
@@ -43,32 +43,40 @@ impl Column {
         self.into()
     }
 
-    pub(super) fn text(self, workspace: &Workspace, list: &CueList, cue: &Cue) -> String {
+    pub(super) fn text(self, workspace: &Workspace, groups: &Groups, cue: &Cue) -> String {
         match self {
             Column::Number => cue.number.clone(),
             Column::Type => cue.kind.to_string(),
             Column::Name => cue.name.clone(),
-            Column::Target => format::target(workspace, cue),
+            Column::Target => format::target(workspace, groups, cue),
             Column::Pre => format::wait(cue.pre_wait.value().into()),
-            Column::Action => format::action(cue),
+            Column::Action => format::action(groups, cue),
+            // A cue in a group goes on to no cue and ignores its post-wait
+            Column::Post | Column::Then if cue.depth > 0 && groups.group_of(cue.id).is_some() => {
+                String::new()
+            }
             Column::Post => format::post_wait(cue),
             Column::Then => format::advance(cue.advance).to_owned(),
-            Column::State => state(workspace, list, cue, false).0,
+            Column::State => state(workspace, groups, cue, false).0,
         }
     }
 
-    pub(super) fn holds_text(self, workspace: &Workspace, list: &CueList) -> bool {
-        list.cues
+    pub(super) fn holds_text(self, workspace: &Workspace, groups: &Groups) -> bool {
+        groups
+            .list()
+            .cues
             .iter()
-            .any(|cue| !self.text(workspace, list, cue).is_empty())
+            .any(|cue| !self.text(workspace, groups, cue).is_empty())
     }
 
     /// Returns none for the name, which takes the room left
-    pub(super) fn width(self, workspace: &Workspace, list: &CueList) -> Option<f32> {
+    pub(super) fn width(self, workspace: &Workspace, groups: &Groups) -> Option<f32> {
         let widest = || {
-            list.cues
+            groups
+                .list()
+                .cues
                 .iter()
-                .map(|cue| self.text(workspace, list, cue).width())
+                .map(|cue| self.text(workspace, groups, cue).width())
                 .fold(self.title().width(), usize::max)
         };
         let width = |columns: usize| columns as f32 * char_width();
@@ -91,7 +99,7 @@ impl Column {
 /// selected row.
 pub(super) fn state(
     workspace: &Workspace,
-    list: &CueList,
+    groups: &Groups,
     cue: &Cue,
     selected: bool,
 ) -> (String, fn(&Theme) -> text::Style) {
@@ -99,7 +107,7 @@ pub(super) fn state(
     match (workspace.problem(cue), workspace.active_of(cue.id)) {
         (Some(Problem::NotLoaded), _) => ("loading".to_owned(), text::default),
         (Some(Problem::NoFile), _) => ("NO FILE".to_owned(), danger),
-        (Some(Problem::NoTarget), _) => ("NO TARGET".to_owned(), danger),
+        (Some(Problem::NoTarget | Problem::InTarget), _) => ("NO TARGET".to_owned(), danger),
         (Some(Problem::NotLooping), _) => ("NO LOOP".to_owned(), danger),
         (Some(Problem::NoDestination), _) => ("NO DESTINATION".to_owned(), danger),
         (Some(Problem::NoMessage), _) => ("NO MESSAGE".to_owned(), danger),
@@ -109,7 +117,7 @@ pub(super) fn state(
         (None, Some(active)) if active.paused => ("paused".to_owned(), text::warning),
         (None, Some(active)) => (format::phase(active), text::success),
         (None, None) if workspace.sends_nowhere(cue) => ("NO OUTPUT".to_owned(), text::warning),
-        (None, None) if list.standby == Some(cue.id) => ("NEXT".to_owned(), text::primary),
+        (None, None) if groups.list().standby == Some(cue.id) => ("NEXT".to_owned(), text::primary),
         (None, None) => (String::new(), text::default),
     }
 }

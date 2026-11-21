@@ -14,8 +14,12 @@ mod columns;
 #[cfg(test)]
 mod tests;
 
+use std::{collections::HashMap, rc::Rc};
+
 use iced::{
-    Element, Fill, Length, padding,
+    Element, Fill, Font, Length,
+    font::Weight,
+    padding,
     widget::{
         Radio, column, container, mouse_area, radio, responsive, rule, scrollable, space, table,
         text, text::Wrapping,
@@ -24,9 +28,9 @@ use iced::{
 use itertools::Itertools;
 use strum::VariantArray;
 
-use super::{CUES, SELECTED, char_width, giving_way, marked_row};
+use super::{CUES, FONT, SELECTED, char_width, giving_way, marked_row};
 use crate::{
-    back::{Cue, CueList, Workspace},
+    back::{Cue, CueId, CueList, Groups, Kind, Workspace},
     front::{App, Message, keymap::Action},
 };
 use columns::{Column, state};
@@ -37,12 +41,12 @@ use columns::{Column, state};
 /// shows of the cue, as Vim finds the text of a line
 pub(in crate::front) fn searchable(
     workspace: &Workspace,
-    list: &CueList,
+    groups: &Groups,
     cue: &Cue,
 ) -> Vec<String> {
     use Column::{Action, Name, Number, Target, Then, Type};
     [Number, Type, Name, Target, Action, Then]
-        .map(|column| column.text(workspace, list, cue))
+        .map(|column| column.text(workspace, groups, cue))
         .to_vec()
 }
 
@@ -73,6 +77,10 @@ const NAME_ROOM: usize = 16;
 /// long file name wraps
 const TARGET_ROOM: usize = 24;
 
+/// Columns of the font that a name moves right for each group that holds its
+/// cue
+const INDENT: usize = 2;
+
 /// Columns of the font that the State column holds, so that the column
 /// keeps its width as cues run: as many as `10:00.0 left` takes, the
 /// longest state of a cue whose sound is under a hundred minutes
@@ -83,11 +91,13 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 }
 
 fn list<'a>(app: &'a App, room: f32) -> Element<'a, Message> {
-    let fitting = fitting(app, room);
+    let layout = Rc::new(Layout::of(app.current()));
+    let fitting = fitting(app, &layout.groups, room);
     let table = |titled: bool, cues: &'a [Cue]| {
-        let columns = fitting
-            .iter()
-            .map(move |&(column, width)| table_column(app, column, width, titled));
+        let layout = Rc::clone(&layout);
+        let columns = fitting.iter().map(move |&(column, width)| {
+            table_column(app, column, width, titled, Rc::clone(&layout))
+        });
         table::table(columns, cues)
             .padding_x(CELL_PADDING)
             .separator_x(SEPARATOR)
@@ -141,15 +151,14 @@ fn empty(app: &App) -> Element<'_, Message> {
 /// When showing them all leaves a name less than [`NAME_ROOM`] columns of
 /// the font, the yielding columns give way in turn, those without text in
 /// any row first, as they tell nothing, and the inspector shows them all.
-fn fitting(app: &App, room: f32) -> Vec<(Column, Option<f32>)> {
-    let list = app.current();
+fn fitting(app: &App, groups: &Groups, room: f32) -> Vec<(Column, Option<f32>)> {
     let all: Vec<(Column, Option<f32>)> = Column::VARIANTS
         .iter()
-        .map(|&column| (column, column.width(&app.workspace, list)))
+        .map(|&column| (column, column.width(&app.workspace, groups)))
         .collect();
     let yielding: Vec<Column> = Column::YIELDING
         .into_iter()
-        .sorted_by_cached_key(|column| column.holds_text(&app.workspace, list))
+        .sorted_by_cached_key(|column| column.holds_text(&app.workspace, groups))
         .collect();
     let name_room = |columns: &[(Column, Option<f32>)]| {
         room - columns
@@ -174,33 +183,74 @@ fn table_column<'a>(
     column: Column,
     width: Option<f32>,
     titled: bool,
+    layout: Rc<Layout<'a>>,
 ) -> table::Column<'a, 'a, &'a Cue, Message> {
     let header: Element<'a, Message> = if titled {
         text(column.title()).into()
     } else {
         space().into()
     };
-    table::column(header, move |cue| cell(app, column, cue))
+    table::column(header, move |cue| cell(app, column, cue, &layout))
         .width(width.map_or(Fill, Length::Fixed))
 }
 
 /// Returns the cell of `cue` in `column`, padded inside rather than by the
-/// table, so that a click anywhere in it selects the cue
-fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue) -> Element<'a, Message> {
-    let list = app.current();
+/// table, so that a click anywhere in it selects the cue.  A name moves right
+/// by the depth of its cue, and that of a group is bold, so that the cues
+/// that a group holds read as inside it.
+fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue, layout: &Layout) -> Element<'a, Message> {
+    let groups = &layout.groups;
     let content: Element<'a, Message> = match column {
+        Column::Name => {
+            let name = text(column.text(&app.workspace, groups, cue));
+            let name = if cue.kind == Kind::Group {
+                name.font(Font {
+                    weight: Weight::Bold,
+                    ..FONT
+                })
+            } else {
+                name
+            };
+            let indent = usize::from(layout.depth(cue)) * INDENT;
+            container(name)
+                .padding(padding::left(indent as f32 * char_width()))
+                .into()
+        }
         Column::Number => radio(cue.number.clone(), cue.id, app.selected, Message::Select).into(),
-        Column::Target => text(column.text(&app.workspace, list, cue))
+        Column::Target => text(column.text(&app.workspace, groups, cue))
             .wrapping(Wrapping::WordOrGlyph)
             .into(),
         Column::State => {
-            let (state, style) = state(&app.workspace, list, cue, app.selected == Some(cue.id));
+            let (state, style) = state(&app.workspace, groups, cue, app.selected == Some(cue.id));
             text(state).style(style).into()
         }
-        _ => text(column.text(&app.workspace, list, cue)).into(),
+        _ => text(column.text(&app.workspace, groups, cue)).into(),
     };
     let cell = container(content)
         .width(Fill)
         .padding(padding::vertical(ROW_PADDING));
     mouse_area(cell).on_press(Message::Select(cue.id)).into()
+}
+
+/// How the cues of a list lie in groups, worked out once for a view
+struct Layout<'a> {
+    groups: Groups<'a>,
+    depths: HashMap<CueId, u8>,
+}
+
+impl<'a> Layout<'a> {
+    fn of(list: &'a CueList) -> Self {
+        let groups = list.groups();
+        let depths = list
+            .cues
+            .iter()
+            .map(|cue| cue.id)
+            .zip(groups.depths().iter().copied())
+            .collect();
+        Self { groups, depths }
+    }
+
+    fn depth(&self, cue: &Cue) -> u8 {
+        self.depths.get(&cue.id).copied().unwrap_or(0)
+    }
 }
