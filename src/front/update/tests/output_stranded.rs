@@ -32,7 +32,7 @@ fn a_cut_that_takes_every_output_of_a_cue_counts_the_cues_that_send_nowhere() {
     let clipped = cut.clipped.as_ref().map(|clipped| clipped.told.as_str());
     assert_eq!(
         clipped,
-        Some("1 cue now sends nowhere, cues without sends play on Sub, cut 2 outputs")
+        Some("1 cue now sends to no output, cues without sends play on Sub, cut 2 outputs")
     );
     assert_eq!(cut.workspace.stranded().count(), 1);
     // One output of the two is enough for the cue to play
@@ -48,7 +48,7 @@ fn a_delete_counts_them_too_and_undo_and_redo_tell_only_what_they_bring_about() 
     let deleted = after(sending_to_the_house(), [Message::Delete(2)]);
     assert_eq!(
         noticed(&deleted),
-        "1 cue now sends nowhere, cues without sends play on Sub, deleted 2 outputs"
+        "1 cue now sends to no output, cues without sends play on Sub, deleted 2 outputs"
     );
     // Undo brings the sound back, and the cue sends nowhere no more
     let undone = typed(deleted, "u");
@@ -58,7 +58,7 @@ fn a_delete_counts_them_too_and_undo_and_redo_tell_only_what_they_bring_about() 
         "Cues without sends play on House L, deleted 2 outputs"
     );
     let redone = after(undone, [Message::Redo(1)]);
-    assert!(noticed(&redone).contains("1 cue now sends nowhere"));
+    assert!(noticed(&redone).contains("1 cue now sends to no output"));
 }
 
 #[test]

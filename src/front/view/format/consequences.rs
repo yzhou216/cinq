@@ -23,9 +23,9 @@ use crate::{
 /// shortest name of the show
 const NAME_ROOM: usize = 10;
 
-/// Tells how many cues send nowhere and where the cues that name no outputs
-/// play, when a change to the outputs, from `before` to `after`, changed
-/// either, the worse first, in lower case
+/// Tells how many cues send to no output and where the cues that name no
+/// outputs play, when a change to the outputs, from `before` to `after`,
+/// changed either, the worse first, in lower case
 pub fn consequences(workspace: &Workspace, before: &[Output], after: &[Output]) -> Option<String> {
     let was = came_from(workspace, before, after);
     let told = [stranding(workspace, was), rerouting(workspace, was)]
@@ -78,11 +78,11 @@ fn rerouting(workspace: &Workspace, was: &[Output]) -> Option<String> {
     (moved && unrouted).then(|| format!("cues without sends play on {}", short(&first.name)))
 }
 
-/// Tells how many cues send nowhere now, when the change added to them
+/// Tells how many cues send to no output now, when the change added to them
 fn stranding(workspace: &Workspace, was: &[Output]) -> Option<String> {
     let now = workspace.stranded().count();
     (now > workspace.stranded_among(was)).then(|| {
         let verb = if now == 1 { "sends" } else { "send" };
-        format!("{} now {verb} nowhere", count(now, "cue"))
+        format!("{} now {verb} to no output", count(now, "cue"))
     })
 }

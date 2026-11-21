@@ -93,9 +93,10 @@ fn going_back_or_forward_takes_the_keyboard_out_of_a_field() {
         let (moved, task) = app.next(message);
         (place(&moved) != before, task.units())
     };
-    // Reveal with the measure that follows it, and the unfocus
-    assert_eq!(leaves(jumped(), Message::Back(1)), (true, 3));
-    assert_eq!(leaves(backed(), Message::Forward(1)), (true, 3));
+    // Reveal with the measure that follows it, the unfocus, and the scroll of
+    // the sidebar to the list
+    assert_eq!(leaves(jumped(), Message::Back(1)), (true, 4));
+    assert_eq!(leaves(backed(), Message::Forward(1)), (true, 4));
     // Nothing to walk to, so the keyboard stays where it is and no unfocus
     assert_eq!(leaves(show(cue(5)), Message::Back(1)), (false, 2));
     let forward = after(backed(), [Message::Forward(1)]);

@@ -5,7 +5,7 @@
 //! Tests of which outputs that cannot play the Levels tab counts, and of how
 //! it names them
 
-use super::{named, silent};
+use super::{cut, named, silent, widest};
 use crate::{
     back::{Command, Cue, CueId, CueList, Fault, Kind, OutputId, Sends, Workspace},
     front::App,
@@ -31,7 +31,7 @@ fn only_outputs_that_the_cue_sends_to_count_as_unable_to_play() {
 
 #[test]
 fn an_output_that_cannot_play_is_named_with_what_is_wrong_with_it() {
-    assert_eq!(named("House L", None), "House L");
+    assert_eq!(named("House L", 20, None), "House L");
     let faults = [
         (Fault::Missing("gone".to_owned()), "House L (not found)"),
         (Fault::Refused("busy".to_owned()), "House L (cannot open)"),
@@ -42,5 +42,45 @@ fn an_output_that_cannot_play_is_named_with_what_is_wrong_with_it() {
     ];
     faults
         .iter()
-        .for_each(|(fault, words)| assert_eq!(named("House L", Some(fault)), *words));
+        .for_each(|(fault, words)| assert_eq!(named("House L", 20, Some(fault)), *words));
+}
+
+#[test]
+fn a_long_name_is_cut_at_its_start_and_its_fault_is_not() {
+    let long = "Missing speaker box number five";
+    assert_eq!(named(long, 20, None), "\u{2026}ker box number five");
+    assert_eq!(
+        named(long, 20, Some(&Fault::Unanswered)),
+        "\u{2026}ker box number five (not answering)"
+    );
+}
+
+#[test]
+fn names_that_share_a_beginning_stay_apart_when_cut() {
+    let cut = |name| cut(name, 20);
+    assert_ne!(cut("House speaker pair 01"), cut("House speaker pair 02"));
+    assert_eq!(cut("House speaker pair 16"), "\u{2026}use speaker pair 16");
+    assert_eq!(cut("House L"), "House L");
+    // Wide characters take two columns each
+    assert_eq!(
+        cut(
+            "\u{4e3b}\u{97f3}\u{54cd}\u{5ea6}\u{6781}\u{4f4e}\u{97f3}\u{5e95}\u{6d4b}\u{8bd5}\u{4e00}"
+        ),
+        "\u{2026}\u{54cd}\u{5ea6}\u{6781}\u{4f4e}\u{97f3}\u{5e95}\u{6d4b}\u{8bd5}\u{4e00}"
+    );
+}
+
+#[test]
+fn the_room_of_the_names_counts_the_columns_that_a_wide_character_takes() {
+    let names = |names: &[&str]| {
+        widest(
+            &names
+                .iter()
+                .map(|name| (*name).to_owned())
+                .collect::<Vec<_>>(),
+        )
+    };
+    assert_eq!(names(&["House L", "Sub"]), 7);
+    assert_eq!(names(&["\u{4e3b}\u{97f3}\u{54cd}"]), 6);
+    assert_eq!(names(&[]), 0);
 }

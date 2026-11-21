@@ -35,14 +35,14 @@ fn a_long_name_gives_way_before_any_hint() {
         "{hints}"
     );
     // Name keeps the columns that the status and the hints leave
-    let rest = " | Edit mode | 0 warnings".width();
+    let rest = " | Edit mode".width();
     assert_eq!(name.width() + rest + hints.width(), COLUMNS);
 }
 
 #[test]
 fn hints_give_way_once_the_name_is_down_to_its_least() {
     let app = named(&format!("{}.cinq.toml", "a".repeat(55)));
-    let rest = " | Edit mode | 0 warnings".width();
+    let rest = " | Edit mode".width();
     let help = "?: help".width();
     let (name, hints) = shown(&app, rest + 16 + help);
     assert_eq!((name.width(), hints.as_str()), (16, "?: help"));

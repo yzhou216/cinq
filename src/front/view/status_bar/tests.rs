@@ -7,15 +7,23 @@
 
 mod adding;
 mod cancel;
+mod changes;
+mod fields;
+mod lists;
+mod menu;
 mod name;
+mod next_list;
 mod outputs;
 mod places;
+mod standby;
 
 use super::{
-    SEARCH_ROOM, YIELDING,
+    GAP, SEARCH_ROOM,
     fit::{fitted, shown},
-    hints::{clipped, hints as hinted},
-    mark, search_columns,
+    hints::{hints as hinted, notices::clipped},
+    mark,
+    order::YIELDING,
+    search_columns,
 };
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Workspace},
@@ -149,7 +157,7 @@ fn hints_give_way_to_the_text_of_the_search_line_and_its_note() {
     assert_eq!(search_columns(&"x".repeat(40), false, false), 41);
     assert_eq!(
         search_columns(&"x".repeat(40), true, false),
-        41 + NO_MATCH.len() + 1
+        41 + NO_MATCH.len() + GAP
     );
 }
 
@@ -157,20 +165,6 @@ fn hints_give_way_to_the_text_of_the_search_line_and_its_note() {
 fn the_search_line_starts_with_a_slash_or_a_question_mark_for_a_search_up() {
     assert_eq!((mark(false), mark(true)), ("/", "?"));
 }
-
-/// Returns the hints that an open menu adds, beside those of the keys of
-/// GO and Panic
-fn in_menu(app: App) -> Vec<String> {
-    hinted(&app)
-        .into_iter()
-        .filter_map(|(action, hint)| {
-            action
-                .filter(|action| matches!(action, Action::Pick | Action::CloseMenu))
-                .map(|_| hint)
-        })
-        .collect()
-}
-
 fn opened(preset: Preset, menu: bool, help: bool) -> App {
     let mut config = Config::default();
     config.keymap = Keymap::from(preset);
@@ -181,55 +175,6 @@ fn opened(preset: Preset, menu: bool, help: bool) -> App {
         ..App::default()
     }
 }
-
-#[test]
-fn an_open_menu_hints_the_keys_that_pick_and_close_it() {
-    assert_eq!(
-        in_menu(opened(Preset::Vi, true, false)),
-        ["Control+y: pick", "Control+e: close"]
-    );
-    assert_eq!(
-        in_menu(opened(Preset::Cua, true, false)),
-        ["Enter: pick", "F4: close"]
-    );
-}
-
-#[test]
-fn a_closed_menu_and_a_menu_under_the_help_page_hint_nothing() {
-    assert!(in_menu(opened(Preset::Vi, false, false)).is_empty());
-    assert!(in_menu(opened(Preset::Vi, true, true)).is_empty());
-}
-
-#[test]
-fn hints_of_a_menu_give_way_after_the_rest_when_the_bar_is_short() {
-    let hints = owned([
-        (Some(Action::Pick), "Control+y: pick"),
-        (Some(Action::CloseMenu), "Control+e: close"),
-        (Some(Action::Go), "Space: GO"),
-        (Some(Action::Help), "F1: help"),
-    ]);
-    assert_eq!(
-        fitted(&hints, 45, &YIELDING),
-        "Control+y: pick | Control+e: close | F1: help"
-    );
-    assert_eq!(
-        fitted(&hints, 34, &YIELDING),
-        "Control+y: pick | Control+e: close"
-    );
-    assert_eq!(fitted(&hints, 20, &YIELDING), "Control+y: pick");
-}
-
-#[test]
-fn the_help_hint_beside_an_open_menu_names_the_first_help_key_of_the_keymap() {
-    let help = |preset| {
-        hinted(&opened(preset, true, false))
-            .into_iter()
-            .find_map(|(action, hint)| (action == Some(Action::Help)).then_some(hint))
-    };
-    assert_eq!(help(Preset::Vi).as_deref(), Some("?: help"));
-    assert_eq!(help(Preset::Cua).as_deref(), Some("F1: help"));
-}
-
 #[test]
 fn a_notice_that_does_not_fit_drops_the_key_that_teaches_then_gives_way_at_a_word() {
     let told = "Cut the output House L, so that cues play on House R | p: paste | u: undo";
@@ -239,7 +184,7 @@ fn a_notice_that_does_not_fit_drops_the_key_that_teaches_then_gives_way_at_a_wor
             .chain([(Some(Action::Go), "Space: GO".to_owned())])
             .collect()
     };
-    let shown = |room| shown(with_go, Some(told.to_owned()), room, &YIELDING);
+    let shown = |room| shown(with_go, Some(told.to_owned()), room, &YIELDING, &[]);
     assert_eq!(shown(85), format!("{told} | Space: GO"));
     assert_eq!(shown(73), told, "the key gives way first");
     // The key that pastes gives way before the notice does, and the key that
@@ -257,7 +202,11 @@ fn a_notice_that_does_not_fit_drops_the_key_that_teaches_then_gives_way_at_a_wor
         "a cut at a comma ends a clause that is whole"
     );
     assert_eq!(shown(29), "Cut the output… | u: undo");
-    assert_eq!(shown(5), told, "with no word to cut at, it shows whole");
+    assert_eq!(
+        shown(5),
+        "Cut …",
+        "with no word to cut at, it ends in an ellipsis at the edge"
+    );
 }
 
 #[test]
@@ -267,7 +216,7 @@ fn a_notice_cut_where_a_name_ended_in_an_ellipsis_gets_no_second_one() {
         told.into_iter().map(|told| (None, told)).collect()
     };
     assert_eq!(
-        shown(bare, Some(told.to_owned()), 45, &YIELDING),
+        shown(bare, Some(told.to_owned()), 45, &YIELDING, &[]),
         "Cues play on Dante Virtual S… | u: undo"
     );
 }

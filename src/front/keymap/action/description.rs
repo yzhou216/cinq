@@ -64,7 +64,7 @@ impl Action {
             }
             Action::NextMatch => "Select the next match of the search, in its direction",
             Action::PreviousMatch => {
-                "Select the next match of the search, in the opposite direction"
+                "Select the match that lies in the opposite direction from the last search"
             }
             Action::Edit => {
                 "Edit the name of the selected cue, or output, with the caret at its end"
@@ -96,8 +96,8 @@ impl Action {
             Action::Save => "Save the show",
             Action::SaveAs => "Save the show in another file",
             Action::Fullscreen => "Toggle fullscreen on the stage window",
-            Action::Help => "Show or hide this help",
-            Action::CloseHelp => "Hide this help",
+            Action::Help => "Show or hide the help page",
+            Action::CloseHelp => "Hide the help page",
         }
     }
 }

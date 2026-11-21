@@ -63,7 +63,7 @@ impl Keymap {
         }
     }
 
-    fn with(self, action: Action, keys: Vec<Vec<Press>>) -> Self {
+    pub(in crate::front) fn with(self, action: Action, keys: Vec<Vec<Press>>) -> Self {
         // Pair chained last wins over the keys that the action had
         let bindings = self.bindings.into_iter().chain([(action, keys)]).collect();
         Self { bindings, ..self }

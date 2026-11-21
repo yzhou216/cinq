@@ -19,7 +19,9 @@ by itself, so that a single GO plays a whole sequence.  Three settings on the
 \end{description}
 
 The \texttt{Pre}, \texttt{Post}, and \texttt{Then} columns of the cue list
-show the same settings.
+show the same settings, and \texttt{Then} shows \ui{auto-continue} and
+\ui{auto-follow} as \texttt{continue} and \texttt{follow}.  The list leaves
+out a column that no cue fills.
 
 \section{A sequence in the storm}
 
@@ -46,7 +48,8 @@ Press \key{Control+l} and open \texttt{storm.cinq.toml} again.
 
 Cue~3 auto-continues to cue~4 after a post-wait of 4 seconds, and cue~4
 continues to cue~5 after 1.5 seconds.  Cue~5 waits for GO, so the sequence
-ends there.  While a cue waits to start, the sidebar counts down to it.
+ends there.  While a cue waits to start, its \texttt{State} column reads
+\texttt{in} and the seconds left.
 
 \section{Pre-wait and post-wait}
 
@@ -91,8 +94,10 @@ Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
 \begin{enumerate}
 \item Select the rain.  On its \ui{Time \& Loops} tab, check \ui{Loop until
   stopped or devamped} if it is not checked, so that the rain keeps playing
-  while you work.
-\item Choose \ui{Pause} in the \ui{New cue} list of the toolbar and press
+  while you work.  With the keys, \key{Tab} reaches the checkbox and
+  \key{Enter} checks it, as in Chapter~\ref{ch:cues}.
+\item Choose \ui{Pause} in the \ui{New cue} drop-down list of the toolbar,
+  with the keys of Chapter~\ref{ch:fades} if you like, and press
   \ui{Add cue}\@.  The new cue appears below the rain and targets it, since a
   new pause cue targets the cue above it.
 \item With the pause cue selected, choose \ui{Start} in the \ui{New cue} list
@@ -141,8 +146,8 @@ next four the vamp, and the last two the ending.
 
 \begin{enumerate}
 \item Press \ui{Panic}, and select the rain.  On its \ui{Time \& Loops} tab,
-  check \ui{Loop until stopped or devamped} if it is not checked, and type
-  \texttt{2} in \ui{Loop start} and \texttt{6} in \ui{Loop end}.
+  check \ui{Loop until stopped or devamped} if it is not checked, as above,
+  and type \texttt{2} in \ui{Loop start} and \texttt{6} in \ui{Loop end}.
 \item With the rain selected, choose \ui{Devamp} in the \ui{New cue} list
   and press \ui{Add cue}\@.  The new cue appears below the rain and targets
   it, as a new pause cue does.

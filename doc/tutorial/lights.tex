@@ -41,7 +41,8 @@ Universes count from 1, as in sACN, and each holds 512 addresses.  The
 another universe, it shows the universe, a slash, and the address, as
 \texttt{2/1} for the lightning.  \ui{Add instrument} adds an instrument at
 the address after the last one.  \ui{Remove} removes an instrument from the
-patch, and no cue sets it afterward.
+patch, and no cue sets it afterward.  With the keys, \key{Tab} reaches each of
+these buttons, in the order of the window, and \key{Enter} presses it.
 
 \section{Light cues}
 
@@ -93,9 +94,9 @@ is an address that starts with a slash, followed by arguments.  Each argument
 is a number or text.  Double quotes keep text with spaces whole.
 
 \begin{enumerate}
-\item Select cue~6 and click the \ui{Basics} tab.  The \ui{Message} row holds
-  the destination, UDP port 9000 on this computer, and the message, as in
-  Figure~\ref{fig:network}.
+\item Select cue~6 and click the \ui{Basics} tab.  The \ui{Destination} and
+  \ui{Message} rows hold the destination, UDP port 9000 on this computer, and
+  the message, as in Figure~\ref{fig:network}.
 \item In a terminal, start a program that prints the OSC messages that it
   receives on that port, such as \texttt{oscdump 9000} from liblo.
 \item Press \ui{GO}\@.  After the thunder, cue~6 is on standby, so GO fires
@@ -123,7 +124,7 @@ fires late can do more harm than one that does not fire.
 \section*{Exercise}
 
 Add an instrument with \ui{Add instrument}.  Then choose \ui{Light} in the
-\ui{New cue} list and press \ui{Add cue}.  Set the \ui{Duration} of the new
-cue to 2 seconds, and on the \ui{Levels} tab of the cue, set the level of the
-new instrument to 50.  Press \ui{Standby selected}, then \ui{GO}\@.  Watch
-the level in the \ui{Now} column or in your sACN monitor.
+\ui{New cue} drop-down list and press \ui{Add cue}.  Set the \ui{Duration} of
+the new cue to 2 seconds, and on the \ui{Levels} tab of the cue, set the
+level of the new instrument to 50.  Press \ui{Standby selected}, then
+\ui{GO}\@.  Watch the level in the \ui{Now} column or in your sACN monitor.

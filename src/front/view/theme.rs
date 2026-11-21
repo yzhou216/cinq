@@ -18,7 +18,10 @@
 //! has the keyboard no thicker than any other, [`line`], which drops the border
 //! of the search line so that it fits the status bar, and [`LINK`] and
 //! [`SELECTION`], since iced has no role for links or for the selected row of
-//! a table.
+//! a table.  On that row the blue, green, and red state words read at 4.5:1
+//! and not at 7:1, since no blue, green, or red of modus-vivendi reaches 7:1
+//! there, and the words carry the meaning, so that the color is never the
+//! only sign.
 
 use iced::{
     Border, Color, color,
@@ -47,7 +50,9 @@ const BG_HOVER: Color = color!(0x45605e);
 const BG_HL_LINE: Color = color!(0x2f3849);
 const BG_COMPLETION: Color = color!(0x2f447f);
 const BLUE: Color = color!(0x2fafff);
-const BLUE_COOLER: Color = color!(0x00bcff);
+/// Color of the keys that a waiting key sequence offers, since it reads at 7:1
+/// on the dim background, which blue does not
+pub(super) const BLUE_COOLER: Color = color!(0x00bcff);
 const BLUE_WARMER: Color = color!(0x79a8ff);
 const GREEN: Color = color!(0x44bc44);
 const YELLOW_WARMER: Color = color!(0xfec43f);

@@ -5,18 +5,18 @@
 //! The hints of the status bar: the keys typed so far, what the latest
 //! change told, and the keys that can act now
 
-use std::iter;
+pub(super) mod notices;
 
-use itertools::Itertools;
+use iced::keyboard::{Key, Modifiers, key::Named};
 
-use super::{LINE, format};
+use super::format;
 use crate::{
     back::{Change, Turn},
     front::{
         App,
-        keymap::{Action, shown},
+        keymap::{Action, Press, shown},
         update::Spot,
-        view::{answered, widget::shortened},
+        view::widget::shortened,
     },
 };
 
@@ -24,18 +24,12 @@ use crate::{
 /// give way
 #[cfg(test)]
 pub(super) fn hints(app: &App) -> Vec<(Option<Action>, String)> {
-    hints_told(app, told(app))
+    hints_told(app, notices::told(app))
 }
 
-/// Tells what a key remarked, why a field was left unapplied, or the latest
-/// copy or cut, opening or saving, or change to the show told, whichever is
-/// latest
-pub(super) fn told(app: &App) -> Option<String> {
-    clipped(app)
-        .or_else(|| app.remark.map(str::to_owned))
-        .or_else(|| app.unapplied.clone())
-        .or_else(|| app.told.clone())
-        .or_else(|| notice(app))
+/// Returns whether a menu is open, which the help page covers
+pub(super) fn menu_open(app: &App) -> bool {
+    app.menu && !app.help
 }
 
 /// Returns the hints as [`hints`] does, with `told` for what the latest
@@ -44,6 +38,9 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     let keymap = &app.config.keymap;
     let key =
         |action: Action, label: &str| keymap.hint(action, label).map(|hint| (Some(action), hint));
+    // Key that is hinted only where it acts, which a field or a list that
+    // has the keyboard may keep from it
+    let here = |action: Action, label: &str| key(action, label).filter(|_| acts_here(app, action));
     let typed = (!app.keys.is_empty()).then(|| (None, shown(&app.keys)));
     let told = told.map(|told| (None, told));
     let back = going(app, Action::Back, app.back_to());
@@ -51,14 +48,14 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     // Two keys that a newcomer to the outputs needs, and none that destroys
     let teaching = (app.outputs_shown && app.editable()).then(|| {
         [
-            key(Action::AddBelow, "add output"),
-            key(Action::Edit, "rename"),
+            here(Action::AddBelow, "add output"),
+            here(Action::Edit, "rename"),
         ]
     });
     let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
     // The page covers an open menu, and takes its keys.  Enter picks
     // whichever key is bound to pick, so that it stands in where none is.
-    let in_menu = app.menu && !app.help;
+    let in_menu = menu_open(app);
     let pick =
         key(Action::Pick, "pick").or_else(|| Some((Some(Action::Pick), "Enter: pick".to_owned())));
     let close = key(Action::CloseMenu, "close");
@@ -70,9 +67,46 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
         .map(|(_, hint)| (None, hint));
     // A pick or a close by key, and a Tab, leave the keyboard on a field or a
     // list, from which Escape would panic and no click is at hand
-    let in_field = app.held && !app.help && !in_menu && app.search.is_none();
+    let in_field = in_field(app);
     let next_field = key(Action::NextField, "next field").filter(|_| in_field);
-    let leave = key(Action::Cancel, "leave").filter(|_| in_field && app.keys.is_empty());
+    // Enter flips a checkbox, presses a button, and opens a closed list, where
+    // a newcomer may take Space, which is GO, for the key that does.  A text
+    // field keeps Enter for leaving, and a key bound to act at once keeps it
+    // from any of them.
+    let enter = (in_field && !app.text_held && enter_leaves(app)).then(|| {
+        let does = match (app.check_held, app.button_held) {
+            (true, _) => "flip",
+            (false, true) => "press",
+            (false, false) => "open",
+        };
+        (Some(Action::Pick), format!("Enter: {does}"))
+    });
+    // The keymap may bind no key to cancel, as CUA does, while Enter leaves a
+    // text field, though it opens the menu of a drop-down list
+    let leave = key(Action::Cancel, "leave")
+        .or_else(|| {
+            (app.text_held && enter_leaves(app))
+                .then(|| (Some(Action::Cancel), "Enter: leave".to_owned()))
+        })
+        .filter(|_| in_field && app.keys.is_empty());
+    // A cue just added bears a default name, which the key of renaming
+    // selects whole, so that typing names it
+    let rename = here(Action::ChangeName, "rename")
+        .filter(|_| renaming(app) && notices::asked(app).is_none());
+    // Tabs of the inspector show with the cues, and no field keeps the key
+    let in_cues = !app.outputs_shown && !app.held && !app.help && !in_menu && app.search.is_none();
+    let tab = key(Action::NextTab, "next tab").filter(|_| in_cues);
+    // The way to the next list, and at last to the outputs, which only the
+    // keys teach
+    let next_list = key(Action::NextList, "next list").filter(|_| in_cues);
+    // Enter moves standby to the selected cue, which no button of the toolbar
+    // teaches by key, while the selection is elsewhere
+    let standby = key(Action::Standby, "standby").filter(|_| {
+        in_cues
+            && app
+                .selected_here()
+                .is_some_and(|cue| app.current().standby != Some(cue))
+    });
     // Tab skips the Choose button, so that Enter says how to reach the chooser
     // while the empty File field has the keyboard
     let choose = (in_field && app.file_held)
@@ -80,6 +114,19 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
         .flatten()
         .filter(|cue| cue.file.is_empty())
         .map(|_| (None, "Enter: choose a file".to_owned()));
+    // Space types a space while a text field has the keyboard, so that GO
+    // is hinted by a key that is no character, or by none
+    let go = if app.text_held {
+        keymap
+            .hint_over_text(Action::Go, "GO")
+            .map(|hint| (Some(Action::Go), hint))
+    } else {
+        key(Action::Go, "GO")
+    };
+    // A field or a list that has the keyboard keeps the key of help from
+    // acting, and `?` types there, while an open menu and the page itself take it
+    let help = key(Action::Help, Action::Help.name())
+        .filter(|_| app.help || in_menu || acts_here(app, Action::Help));
     typed
         .into_iter()
         .chain(told)
@@ -87,16 +134,33 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
         .chain(close.filter(|_| in_menu))
         .chain(cancel)
         .chain(choose)
+        .chain(enter)
         .chain(next_field)
         .chain(leave)
         .chain(teaching.into_iter().flatten().flatten())
+        .chain(rename)
         .chain(back)
         .chain(forward)
         .chain(save)
-        .chain(key(Action::Go, "GO"))
+        .chain(go)
         .chain(key(Action::Panic, "Panic"))
-        .chain(key(Action::Help, Action::Help.name()))
+        .chain(help)
+        .chain(standby)
+        .chain(tab)
+        .chain(next_list)
         .collect()
+}
+
+/// Returns whether a text field, a checkbox, or a closed drop-down list has
+/// the keyboard, from which a pick or a close by key, and a Tab, leave it
+pub(super) fn in_field(app: &App) -> bool {
+    app.held && !app.help && !menu_open(app) && app.search.is_none()
+}
+
+/// Returns whether standby lies past the end of the cue list on show while a
+/// later list exists, where GO fires nothing
+pub(super) fn list_ended(app: &App) -> bool {
+    app.current().standby.is_none() && app.list + 1 < app.workspace.lists().len()
 }
 
 /// Fewest columns of a place that stay, as the name of a cue list may be
@@ -136,47 +200,32 @@ fn going(app: &App, action: Action, spot: Option<Spot>) -> Option<(Option<Action
         .map(|hint| (Some(action), hint))
 }
 
-/// Tells what the latest copy or cut took, with the key that pastes it and,
-/// for a cut, the key that takes it back
-pub(super) fn clipped(app: &App) -> Option<String> {
-    let keymap = &app.config.keymap;
-    let clipped = app.clipped.as_ref()?;
-    let paste = keymap
-        .hint(Action::PasteBelow, "paste")
-        .filter(|_| app.editable());
-    let undo = keymap
-        .hint(Action::Undo, Action::Undo.name())
-        .filter(|_| clipped.cut && app.workspace.undoable().is_some());
-    Some(
-        iter::once(clipped.told.clone())
-            .chain(paste)
-            .chain(undo)
-            .join(LINE),
-    )
+/// Returns whether Enter leaves a text field, which it does unless the keymap
+/// binds it to an action that acts in fields, such as GO, which then takes it
+fn enter_leaves(app: &App) -> bool {
+    Press::from_key(&Key::Named(Named::Enter), Modifiers::empty())
+        .is_none_or(|enter| !app.config.keymap.acts_in_fields(enter))
 }
 
-/// Tells the latest change to the show, with the key that takes it back,
-/// or that makes it again after an undo, while that key can act
-pub(super) fn notice(app: &App) -> Option<String> {
-    let workspace = &app.workspace;
-    let (turn, change) = workspace.latest_change()?;
-    let told = format::change(workspace, change);
-    let facts = format::consequences_of(workspace, change);
-    let (told, action, next) = match turn {
-        Turn::Done => (told, Action::Undo, workspace.undoable()),
-        Turn::Undone => (format!("undid: {told}"), Action::Redo, workspace.redoable()),
-        Turn::Redone => (format!("redid: {told}"), Action::Undo, workspace.undoable()),
-    };
-    let told = format::leading(facts, &told);
-    // A cue just added bears a default name, which the key of renaming
-    // selects whole, so that typing names it
-    let renaming = matches!((turn, change), (Turn::Done, Change::Added { .. }))
-        .then(|| app.config.keymap.hint(Action::ChangeName, "rename"))
-        .flatten()
-        .filter(|_| app.editable());
-    let told = match renaming {
-        Some(hint) => format!("{told}{LINE}{hint}"),
-        None => told,
-    };
-    next.map(|_| answered(told, &app.config.keymap, action))
+/// Returns whether a key of `action` acts where the keyboard is.  A text
+/// field keeps every key but those of [`Action::acts_in_fields`], and a
+/// closed drop-down list those but for [`Action::acts_in_lists`].
+pub(super) fn acts_here(app: &App, action: Action) -> bool {
+    match (app.text_held, app.held) {
+        (true, _) => action.acts_in_fields(),
+        (false, true) => action.acts_in_lists(),
+        (false, false) => true,
+    }
+}
+
+/// Returns whether the latest change added a cue, whose default name the key
+/// of renaming selects whole, while the cue list is in view
+fn renaming(app: &App) -> bool {
+    app.editable()
+        && !app.outputs_shown
+        && matches!(
+            app.workspace.latest_change(),
+            Some((Turn::Done, Change::Added { .. }))
+        )
+        && app.workspace.undoable().is_some()
 }

@@ -100,6 +100,12 @@ impl Press {
         self == self.bare()
     }
 
+    /// Returns whether the key is a character or the space bar, which a
+    /// text field takes for typing
+    pub(super) fn is_character(self) -> bool {
+        matches!(self.key, Name::Char(_))
+    }
+
     /// Returns whether the key types a character other than the space
     fn types_character(self) -> bool {
         matches!(self, Self { key: Name::Char(c), ctrl: false, alt: false, shift: false } if c != ' ')

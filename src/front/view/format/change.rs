@@ -36,8 +36,9 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
             match redo {
                 Edit::Number(_) => format!("changed the number of cue {cue}"),
                 Edit::Name(_) => format!("changed the name of cue {cue}"),
-                Edit::File(_) => format!("changed the file of cue {cue}"),
-                Edit::FileAndName { .. } => format!("chose the file of cue {cue}"),
+                Edit::File(_) | Edit::FileAndName { .. } => {
+                    format!("changed the file of cue {cue}")
+                }
                 Edit::Start(_) => format!("changed the start of cue {cue}"),
                 Edit::End(_) => format!("changed the end of cue {cue}"),
                 Edit::Loop(_) => format!("changed whether cue {cue} loops"),

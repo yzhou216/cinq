@@ -41,7 +41,10 @@ use super::{
     App, Message,
     keymap::{Action, Keymap},
 };
-use widget::{button, dropdown, dropdown_width, hide, keep_keys, line_keys, marked_row};
+use widget::{
+    button, check, check_and_leave, dropdown, dropdown_width, hide, keep_keys, line_keys,
+    marked_row,
+};
 
 /// Identity of the cue list, through which the selection scrolls into view
 pub const CUES: &str = "cues";
@@ -58,9 +61,18 @@ pub const OUTPUTS: &str = "outputs";
 /// scrolls into view
 pub const SENDS: &str = "sends";
 
+/// Identity of the forms of a tab that lie one above the other in a narrow
+/// window, and of the settings of an output, through which the field that Tab
+/// reached scrolls into view
+pub const FORMS: &str = "forms";
+
 /// Identity of the sidebar, through which the list that Tab reached scrolls
 /// into view
 pub const SIDEBAR_SCROLL: &str = "sidebar";
+
+/// Identity of the entry of the sidebar that shows, through which the sidebar
+/// finds where to scroll
+pub const CURRENT_LIST: &str = "current list";
 
 /// Identity of the help page, which the keys that move the selection
 /// scroll while it is open
@@ -77,6 +89,18 @@ pub const INSPECTOR: &str = "inspector";
 /// Identity of the File field of an audio, video, or picture cue, which the
 /// status bar hints Enter for while it is empty and has the keyboard
 pub const FILE: &str = "file";
+
+/// Identity of every checkbox that takes the keyboard, which the status bar
+/// hints Enter for as it flips the box
+pub const CHECK: &str = "check";
+
+/// Identity of every button that takes the keyboard, which the status bar
+/// hints Enter for as it presses the button
+pub const BUTTON: &str = "button";
+
+/// Identity of the address fields of the light patch, which show the help on
+/// addresses while one of them has the keyboard
+pub const ADDRESS: &str = "address";
 
 /// Identity of the search line in the status bar, through which the key of
 /// the search action gives it the keyboard focus
@@ -112,7 +136,7 @@ pub fn line_height() -> f32 {
 pub const SPACING: f32 = 10.0;
 
 /// Widest that the sidebar grows
-const SIDEBAR: f32 = 300.0;
+const SIDEBAR: f32 = 560.0;
 
 /// Line between the parts of the status bar, and between a message and the
 /// hint of the key that answers it
@@ -135,31 +159,31 @@ pub fn answered(told: String, keymap: &Keymap, action: Action) -> String {
 /// hidden rather than left out, so that it comes back as it was, with the
 /// keyboard focus where it was.
 pub fn view(app: &App) -> Element<'_, Message> {
-    let parts = column![
-        transport::view(app),
-        rule::horizontal(1),
-        toolbar::view(app),
-        rule::horizontal(1),
-        responsive(move |size| {
-            // Sidebar takes at most a quarter of the width, so that a narrow
-            // window, such as one tiled beside another, leaves the cue list
-            // room
-            let sidebar = (size.width / 4.0).min(SIDEBAR);
-            row![
-                container(if app.outputs_shown {
-                    outputs::view(app)
-                } else {
-                    cue_table::view(app)
-                })
-                .clip(true),
-                rule::vertical(1),
-                sidebar::view(app, sidebar),
-            ]
-            .into()
-        }),
-        rule::horizontal(1),
-        inspector::view(app),
-    ];
+    let parts = responsive(move |window| {
+        column![
+            transport::view(app, window.width),
+            rule::horizontal(1),
+            toolbar::view(app, window.width),
+            rule::horizontal(1),
+            responsive(move |size| {
+                let sidebar = sidebar::width(size.width);
+                row![
+                    container(if app.outputs_shown {
+                        outputs::view(app)
+                    } else {
+                        cue_table::view(app)
+                    })
+                    .clip(true),
+                    rule::vertical(1),
+                    sidebar::view(app, sidebar),
+                ]
+                .into()
+            }),
+            rule::horizontal(1),
+            inspector::view(app, window.height),
+        ]
+        .into()
+    });
     let window = column![
         stack![parts, next_keys::view(app)],
         rule::horizontal(1),

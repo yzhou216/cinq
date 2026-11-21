@@ -8,6 +8,7 @@
 //! keys while it has the keyboard
 
 mod editing;
+mod fullscreen;
 mod keys;
 mod search;
 mod starting;

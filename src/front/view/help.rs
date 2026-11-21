@@ -15,25 +15,39 @@ use std::ffi::OsString;
 use iced::{
     Element, Fill,
     widget::{
-        column, container, rich_text, scrollable, span, table, text,
+        column, container, responsive, rich_text, scrollable, span, table, text,
         text::{IntoFragment, Span},
     },
 };
 use strum::VariantArray;
+use unicode_width::UnicodeWidthStr;
 
-use super::{HELP, SPACING, button, theme};
+use super::{
+    HELP, SPACING, button, char_width,
+    cue_table::{CELL_SPACE, SCROLL_BAR},
+    theme,
+};
 use crate::front::{
     App, Message,
     keymap::{Action, Keymap, config::Source},
 };
 
-/// Widest that the text of the page grows, so that its lines stay easy to
+/// Widest that the paragraphs of the page grow, so that their lines stay easy to
 /// read in a window that the page fills
 const WIDTH: f32 = 960.0;
+
+/// Widest that the table of keys grows, which is wider than the paragraphs
+/// since its descriptions wrap in half of that, but not so wide that a key
+/// lies far from its name in a window that the page fills
+const TABLE_WIDTH: f32 = 1.5 * WIDTH;
 
 /// Space above and below the text of each row of the table, closer than in
 /// the cue list, so that the page fits the window without scrolling
 const ROW_GAP: f32 = 2.0;
+
+/// Columns that the descriptions keep beside the keys and the names in the
+/// configuration file, so that most of them wrap to two lines or fewer
+const DESCRIPTION_ROOM: f32 = 40.0;
 
 const KEY_VALUES: &str = "https://www.w3.org/TR/uievents-key/";
 
@@ -48,18 +62,49 @@ const NOTICE: [&str; 3] = [
 ];
 
 pub(super) fn view(app: &App) -> Element<'_, Message> {
-    let keymap = &app.config.keymap;
-    let bindings = table::table(
-        [
-            table::column(text("Keys"), |action: Action| text(keymap.listed(action))),
-            table::column(text("Action"), |action: Action| text(action.description())).width(Fill),
-            table::column(text("Name in config.toml"), |action: Action| {
-                text(action.name())
-            }),
-        ],
+    responsive(move |window| page(app, window.width)).into()
+}
+
+/// Returns the table of the actions that have a key, with the names that the
+/// configuration file gives them where `names` is set
+fn bindings(keymap: &Keymap, names: bool) -> Element<'_, Message> {
+    let keys = table::column(text("Keys"), |action: Action| text(keymap.listed(action)));
+    let actions =
+        table::column(text("Action"), |action: Action| text(action.description())).width(Fill);
+    let named = table::column(text("Name in config.toml"), |action: Action| {
+        text(action.name())
+    });
+    table::table(
+        [keys, actions]
+            .into_iter()
+            .chain(names.then_some(named))
+            .collect::<Vec<_>>(),
         bound(keymap),
     )
-    .padding_y(ROW_GAP);
+    .padding_y(ROW_GAP)
+    .into()
+}
+
+/// Returns whether a table in `room` pixels keeps its column of names in
+/// the configuration file, which it does while the descriptions keep
+/// [`DESCRIPTION_ROOM`] columns beside it and the keys, and cinq(5) lists the
+/// names for any window that is too narrow
+fn names_fit(keymap: &Keymap, room: f32) -> bool {
+    let widest = |title: &str, text: &dyn Fn(Action) -> String| {
+        bound(keymap)
+            .into_iter()
+            .map(|action| text(action).width())
+            .fold(title.width(), usize::max)
+    };
+    let columns = widest("Keys", &|action| keymap.listed(action))
+        + widest("Name in config.toml", &|action| action.name().to_owned());
+    (columns as f32 + DESCRIPTION_ROOM) * char_width() + 3.0 * CELL_SPACE <= room
+}
+
+fn page(app: &App, window: f32) -> Element<'_, Message> {
+    let keymap = &app.config.keymap;
+    let room = (window - 2.0 * SPACING - SCROLL_BAR).min(TABLE_WIDTH);
+    let bindings = bindings(keymap, names_fit(keymap, room));
     let operators = Some(keymap.operator_keys())
         .filter(|keys| !keys.is_empty())
         .map(|keys| text(format!("After {}, a key that selects the next, previous, first, or last cue or output applies the action to the cues or outputs from the selection to where that key would move it.  A count before the operator, before the key, or both counts the move, and the two multiply.", keys.join(" or "))));
@@ -75,24 +120,26 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         " shows step by step how to run a show and how to make one.",
         |()| Message::OpenTutorial,
     );
-    let page = column![
+    let top = column![
         text(format!("Keys of the {} keymap", keymap.name())).size(24),
         text(first_steps(keymap)),
         tutorial,
-        bindings,
-        text(counts(keymap)),
     ]
-    .extend(operators.map(Element::from))
-    .push(text("Actions that this keymap binds to no key are left out of the table, and cinq(5) lists them all."))
-    .push(text("The keys of a sequence are typed one after another with no Space between them, since Space is GO."))
-    .push(text("The keys of GO and Panic act at once, even halfway through another command."))
-    .push(source(&app.config.source))
-    .push(key_values)
-    .extend(notice())
-    .push(button("Close").on_press(Message::CloseHelp))
-    .spacing(SPACING)
-    .width(Fill)
-    .max_width(WIDTH);
+    .spacing(SPACING);
+    let bottom = column![text(counts(keymap))]
+        .extend(operators.map(Element::from))
+        .push(text("Actions that this keymap binds to no key are left out of the table, and cinq(5) lists them all."))
+        .push(text("The keys of a sequence are typed one after another with no Space between them, since Space is GO."))
+        .push(text("The keys of GO and Panic act at once, even halfway through another command."))
+        .push(source(&app.config.source))
+        .push(key_values)
+        .extend(notice())
+        .push(button("Close").on_press(Message::CloseHelp))
+        .spacing(SPACING);
+    // The table takes the window up to [`TABLE_WIDTH`], since its descriptions
+    // wrap in half of the width of the paragraphs
+    let bindings = container(bindings).width(Fill).max_width(TABLE_WIDTH);
+    let page = column![prose(top), bindings, prose(bottom)].spacing(SPACING);
     let scrolling = scrollable(page)
         .id(HELP)
         .spacing(0)
@@ -106,6 +153,11 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         .map(|why| container(text(why)).max_width(WIDTH).into());
     let parts = column![scrolling].extend(problem).spacing(SPACING);
     container(parts).padding(SPACING).into()
+}
+
+/// Returns `part` no wider than [`WIDTH`]
+fn prose<'a>(part: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
+    container(part).width(Fill).max_width(WIDTH).into()
 }
 
 /// Returns the actions that the keymap binds to a key, in the order of the
@@ -124,7 +176,7 @@ fn source(source: &Source) -> Element<'_, Message> {
         Source::Missing(file) => (
             "These are the default keys, which a file at ",
             file,
-            " can change.  Following the link makes it.",
+            " can change.  Following the link creates it.",
         ),
         Source::NoDirectory => return text("These are the default keys.").into(),
     };
@@ -167,7 +219,7 @@ fn link<'a, Link>(label: impl IntoFragment<'a>, target: Link) -> Span<'a, Link> 
 fn first_steps(keymap: &Keymap) -> String {
     let key = |action| keymap.key(action).unwrap_or_else(|| "(no key)".to_owned());
     format!(
-        "First steps: {go} is GO, which fires the standby cue, and {panic} is Panic, which stops everything.  {next} and {previous} move the selection, and {standby} puts the selected cue on standby.  {add} adds a cue below the selection, {name} names it, and {undo} undoes the last change.  The table lists every key, and cinq(5) describes the rest.",
+        "First steps: {go} is GO, which fires the standby cue, and {panic} is Panic, which stops everything.  {next} and {previous} move the selection, and {standby} puts the selected cue on standby.  {add} adds a cue below the selection, {name} names it, and {undo} undoes the last change.  {close} closes this page, and {standby} opens the tutorial.  The table lists every key, and cinq(5) describes the rest.",
         go = key(Action::Go),
         panic = key(Action::Panic),
         next = key(Action::Next),
@@ -176,6 +228,7 @@ fn first_steps(keymap: &Keymap) -> String {
         add = key(Action::AddBelow),
         name = key(Action::ChangeName),
         undo = key(Action::Undo),
+        close = key(Action::CloseHelp),
     )
 }
 

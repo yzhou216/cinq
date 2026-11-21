@@ -36,13 +36,19 @@ use crate::{
 /// that a long name leaves the device room
 const NAME_ROOM: f32 = 24.0;
 
-/// Columns that a name and a state keep once they have to give way
-const SQUEEZED: f32 = 12.0;
+/// Columns that a name and a state keep once they have to give way, few enough
+/// for a table beside the sidebar of a window of 512 pixels to keep the device
+const SQUEEZED: f32 = 8.0;
 
 /// Fewest columns that the Device column keeps, since a device told in a
 /// few characters a line is of no use, and the other columns give way
 /// before it does
 const DEVICE_ROOM: f32 = 20.0;
+
+/// Fewest columns that the Device column keeps once the State column has
+/// gone, enough for `Default device` on one line, so that a narrow table
+/// keeps the channels beside it for as long as it can
+const DEVICE_LEAST: f32 = 14.0;
 
 /// Most columns that the Device column asks for to keep a name on one line,
 /// past which the name wraps as it does in a narrow table
@@ -51,8 +57,9 @@ const DEVICE_WIDEST: f32 = 32.0;
 /// What gives way to the Device column, the first to go first
 #[derive(PartialEq)]
 enum Yield {
-    /// The New cues column goes
-    NewCues,
+    /// The column goes, since the inspector and the sidebar tell the same of
+    /// the selected output
+    Drop(Column),
     /// The state wraps within [`SQUEEZED`] columns
     State,
     /// The name wraps within [`SQUEEZED`] columns
@@ -148,27 +155,51 @@ fn device_wanted(app: &App) -> f32 {
 
 /// Returns the columns that show and their widths, as many as keep the
 /// device on one line, or [`DEVICE_ROOM`] columns once the New cues column
-/// has gone, in `room`, with the others giving way in turn, or as few as
-/// they can
+/// has gone, in `room`, with the others giving way in turn, the State and
+/// Channels columns last of all, or as few as they can, and then the name and
+/// the state back at the width of their text for as much as the device does
+/// not need
 fn fitting(app: &App, room: f32) -> Vec<(Column, Length)> {
-    giving_way(
-        &[Yield::NewCues, Yield::State, Yield::Name],
+    let columns = giving_way(
+        &[
+            Yield::Drop(Column::NewCues),
+            Yield::State,
+            Yield::Name,
+            Yield::Drop(Column::State),
+            Yield::Drop(Column::Channels),
+        ],
         |gone| {
             Column::VARIANTS
                 .iter()
-                .filter(|&&column| column != Column::NewCues || !gone.contains(&Yield::NewCues))
+                .filter(|&&column| !gone.contains(&Yield::Drop(column)))
                 .map(|&column| (column, column.width(app, gone)))
                 .collect::<Vec<_>>()
         },
         |columns| {
-            let wanted = if columns.iter().any(|(column, _)| *column == Column::NewCues) {
-                device_wanted(app)
-            } else {
-                DEVICE_ROOM * char_width()
+            let shows = |shown: Column| columns.iter().any(|(column, _)| *column == shown);
+            let wanted = match (shows(Column::NewCues), shows(Column::State)) {
+                (true, _) => device_wanted(app),
+                (false, true) => DEVICE_ROOM * char_width(),
+                (false, false) => DEVICE_LEAST * char_width(),
             };
             device_room(columns, room) >= wanted
         },
-    )
+    );
+    let spare = device_room(&columns, room) - device_wanted(app);
+    columns
+        .into_iter()
+        .scan(spare.max(0.0), |spare, (column, width)| {
+            let grown = match (column, width, column.width(app, &[])) {
+                (Column::Name | Column::State, Length::Fixed(now), Length::Fixed(whole)) => {
+                    let grown = whole.min(now + *spare).max(now);
+                    *spare -= grown - now;
+                    Length::Fixed(grown)
+                }
+                _ => width,
+            };
+            Some((column, grown))
+        })
+        .collect()
 }
 
 /// Returns the width that the Device column has in `room` beside the other

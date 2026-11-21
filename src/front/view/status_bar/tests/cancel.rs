@@ -4,22 +4,21 @@
 
 //! Tests of the hint of the key that cancels what is typed
 
+use super::{
+    super::{order::yielding, status},
+    YIELDING, fitted, hinted, opened,
+};
+use crate::front::{
+    App,
+    keymap::{Action, Preset, Press},
+};
 use iced::keyboard::{Key, Modifiers};
 use unicode_width::UnicodeWidthStr;
-
-use super::{super::status, YIELDING, fitted, hinted, opened};
-use crate::{
-    back::{Cue, CueId, CueList, Kind, Workspace},
-    front::{
-        App,
-        keymap::{Action, Preset, Press},
-    },
-};
 
 /// Columns of a bar 1024 pixels wide in DejaVu Sans Mono at 16 pixels.
 /// The test counts them rather than measuring the font, since the
 /// monospace font that a build finds differs from one system to another.
-pub(super) const COLUMNS: usize = 103;
+pub(super) const COLUMNS: usize = 104;
 
 /// Returns the hint of the key of cancel, if the bar shows one
 fn cancel_hint(app: &App) -> Option<String> {
@@ -63,7 +62,7 @@ fn the_key_of_cancel_stays_in_a_bar_of_1024_pixels_while_go_and_panic_give_way()
         fitted(&hinted(&app), COLUMNS - taken, &YIELDING)
     };
     // GO gives way first, then Panic, while cancel stays
-    let short = shown("Copied cue 1");
+    let short = shown("Copied cue 1 to the clipboard");
     assert!(short.contains("Control+c: cancel") && short.contains("Escape: Panic"));
     assert!(!short.contains("GO"));
     let long = shown("Searched for a cue whose name holds the words that were typed");
@@ -110,24 +109,32 @@ fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
 }
 
 #[test]
-fn the_hints_of_leaving_a_field_give_way_after_the_help_page() {
+fn the_hints_of_a_field_give_way_in_turn_with_go_and_panic_before_the_key_that_leaves() {
     let app = App {
         held: true,
         ..opened(Preset::Vi, false, false)
     };
-    let all = fitted(&hinted(&app), COLUMNS, &YIELDING);
+    // No help hint here: a field or a list that has the keyboard keeps the
+    // key of help from acting, and `?` types in a field
+    let shown = |room| fitted(&hinted(&app), room, yielding(&app));
+    let all = shown(COLUMNS);
     assert_eq!(
         all,
-        "Tab: next field | Control+c: leave | Space: GO | Escape: Panic | ?: help"
+        "Enter: open | Tab: next field | Control+c: leave | Space: GO | Escape: Panic"
     );
+    // The key of the next field goes first, as the border shows the field, and
+    // what Enter does stays with the rest in a bar of 1024 pixels that has the
+    // name of a show and two statuses at its left
     assert_eq!(
-        fitted(&hinted(&app), 44, &YIELDING),
-        "Tab: next field | Control+c: leave | ?: help"
+        shown(all.len() - 1),
+        "Enter: open | Control+c: leave | Space: GO | Escape: Panic"
     );
-    assert_eq!(
-        fitted(&hinted(&app), 43, &YIELDING),
-        "Tab: next field | Control+c: leave"
-    );
+    assert_eq!(shown(58), shown(all.len() - 1));
+    assert_eq!(shown(57), "Control+c: leave | Space: GO | Escape: Panic");
+    // Then GO, whose button the transport shows, and Panic, while the key that
+    // leaves the field outlasts both
+    assert_eq!(shown(43), "Control+c: leave | Escape: Panic");
+    assert_eq!(shown(31), "Control+c: leave");
 }
 
 #[test]
@@ -137,28 +144,4 @@ fn the_bar_shows_keys_typed_so_far_joined_without_the_space_that_is_go() {
         ..opened(Preset::Vi, false, false)
     };
     assert_eq!(hinted(&app)[0].1, "2d");
-}
-
-#[test]
-fn the_bar_hints_enter_while_the_empty_file_field_has_the_keyboard() {
-    let cue = |file: &str| {
-        Cue::new(CueId(1), "1", Kind::Audio, "Rain")
-            .file(file)
-            .build()
-    };
-    let told = |file: &str, file_held: bool| {
-        let app = App {
-            held: true,
-            file_held,
-            selected: Some(CueId(1)),
-            workspace: Workspace::new(vec![CueList::new("Main", vec![cue(file)])]),
-            ..opened(Preset::Vi, false, false)
-        };
-        hinted(&app)
-            .iter()
-            .any(|(_, hint)| hint == "Enter: choose a file")
-    };
-    assert!(told("", true));
-    assert!(!told("rain.flac", true), "a named file needs no chooser");
-    assert!(!told("", false), "another field has the keyboard");
 }

@@ -6,7 +6,7 @@
 
 use super::{App, Measured, Message};
 use crate::{
-    back::{Command, OutputEdit},
+    back::{Command, Edit, OutputEdit},
     front::Tab,
 };
 
@@ -41,6 +41,16 @@ impl App {
             },
             Message::Held(held) => Self { held, ..self },
             Message::FileHeld(file_held) => Self { file_held, ..self },
+            Message::CheckHeld(check_held) => Self { check_held, ..self },
+            Message::ButtonHeld(button_held) => Self {
+                button_held,
+                ..self
+            },
+            Message::AddressHeld(address_held) => Self {
+                address_held,
+                ..self
+            },
+            Message::TextHeld(text_held) => Self { text_held, ..self },
             Message::DefaultHighlighted(highlighted) => Self {
                 default_highlighted: highlighted,
                 ..self
@@ -94,12 +104,14 @@ impl App {
                 stage: self.stage.with_keyboard_in(window),
                 ..self
             },
+            // The File field applies each key, so the name follows the path
+            // as it is typed
+            Message::Edit(id, Edit::File(file)) => self.with_file(id, file),
             Message::Edit(id, edit) => self.send(Command::Edit(id, edit)),
             Message::Patch(edit) => self.send(Command::Patch(edit)),
             Message::FileChosen(id, path) => {
                 let file = self.workspace.file_name_of(&path);
-                let playing = self.workspace.cue(id).map(|cue| cue.playing(file));
-                self.send_all(playing.map(|edit| Command::Edit(id, edit)))
+                self.with_file(id, file)
             }
             Message::ToggleHelp => Self {
                 help: !self.help,

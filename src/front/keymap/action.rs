@@ -174,11 +174,11 @@ impl Action {
 
     /// Returns whether a key of the action acts while a closed drop-down
     /// list has the keyboard, beside those that act in every field
-    pub(super) fn acts_in_lists(self) -> bool {
+    pub fn acts_in_lists(self) -> bool {
         self.acts_in_fields() || matches!(self, Action::Undo | Action::Redo)
     }
 
-    pub(super) fn acts_in_fields(self) -> bool {
+    pub fn acts_in_fields(self) -> bool {
         self.acts_at_once()
             || matches!(
                 self,

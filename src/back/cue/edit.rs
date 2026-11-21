@@ -48,10 +48,15 @@ pub enum Edit {
 }
 
 impl Edit {
-    /// Light levels of different instruments are different settings
+    /// Light levels of different instruments are different settings, and a
+    /// file with a name that follows it is the setting of the file
     pub(in crate::back) fn same_setting(&self, next: &Edit) -> bool {
         match (self, next) {
             (Edit::Light(id, _), Edit::Light(next, _)) => id == next,
+            (
+                Edit::File(_) | Edit::FileAndName { .. },
+                Edit::File(_) | Edit::FileAndName { .. },
+            ) => true,
             _ => mem::discriminant(self) == mem::discriminant(next),
         }
     }

@@ -6,14 +6,34 @@
 
 use iced::{
     Element, Fill,
-    widget::{checkbox, column, container, row, text, text::Wrapping},
+    widget::{
+        column, container, responsive, row, text,
+        text::{LineHeight, Wrapping},
+    },
 };
 use itertools::Itertools;
 
-use super::{SPACING, button, format, line_height, theme};
+use super::{SPACING, TEXT_SIZE, button, char_width, faults, format, theme, widget::shortened};
 use crate::front::{App, Message};
 
-pub(super) fn view(app: &App) -> Element<'_, Message> {
+/// Size of the title, which names the standby cue
+const TITLE: f32 = 24.0;
+
+/// Columns of the font that a window needs to keep the buttons beside the
+/// title and leave it 16 columns of its own size, as the GO button, the
+/// buttons, and the spacing take the rest
+const BESIDE: f32 = 68.0;
+
+/// Returns whether a window `window` wide keeps the buttons beside the title
+fn beside(window: f32) -> bool {
+    window >= BESIDE * char_width()
+}
+
+fn height_of(size: f32) -> f32 {
+    f32::from(LineHeight::default().to_absolute(size.into()))
+}
+
+pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
     let list = app.current();
     let standby = list.standby.and_then(|id| app.workspace.cue(id));
     // Summary keeps to three lines, so that the parts below stay where they are
@@ -28,7 +48,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
             [
                 format!("Standby: {cue}"),
                 format!("Notes: {notes}"),
-                format::chain(&app.workspace, list, cue),
+                format::chain(&app.workspace, list, cue, &faults::failing(app)),
             ]
         }
         None => [
@@ -37,19 +57,27 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
             "GO fires nothing".to_owned(),
         ],
     };
-    // Notes and chain each wrap to one line, which gives way at a word, so that
-    // none is cut through a word beside the controls
-    let [title, notes, chain] = lines.map(|line| text(line).wrapping(Wrapping::Word));
-    let one_line = |line| container(line).height(line_height()).clip(true);
-    let summary = column![
-        title.size(24).wrapping(Wrapping::None),
-        one_line(notes),
-        one_line(chain),
-    ];
+    let [title, notes, chain] = lines;
+    let paused = app.workspace.active().iter().any(|active| active.paused);
+    let buttons = row![
+        button("Pause all").on_press_maybe(app.running().then_some(Message::PauseAll)),
+        button("Resume all").on_press_maybe(paused.then_some(Message::ResumeAll)),
+        button("Panic").style(theme::panic).on_press(Message::Panic),
+    ]
+    .spacing(SPACING);
+    // The notes and the chain take the width under the title and the buttons,
+    // which a narrow window puts under the title, so that it reads
+    let head: Vec<Element<'_, Message>> = if beside(window) {
+        vec![row![line(title, TITLE), buttons].spacing(SPACING).into()]
+    } else {
+        vec![line(title, TITLE), buttons.into()]
+    };
+    let summary = column(head)
+        .push(line(notes, TEXT_SIZE.0))
+        .push(line(chain, TEXT_SIZE.0));
     // GO still presses with nothing to fire, since it steps standby past cues that
     // cannot play, but it looks as a disabled button does
     let fires = app.workspace.next_go(list).next().is_some();
-    let paused = app.workspace.active().iter().any(|active| active.paused);
     row![
         button(text("GO").size(40))
             .style(if fires {
@@ -59,20 +87,35 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
             })
             .on_press_maybe(standby.map(|_| Message::Go)),
         container(summary).width(Fill).clip(true),
-        column![
-            row![
-                button("Pause all").on_press_maybe(app.running().then_some(Message::PauseAll)),
-                button("Resume all").on_press_maybe(paused.then_some(Message::ResumeAll)),
-                button("Panic").style(theme::panic).on_press(Message::Panic),
-            ]
-            .spacing(SPACING),
-            checkbox(app.workspace.show_mode())
-                .label("Show mode")
-                .on_toggle(Message::ShowMode),
-        ]
-        .spacing(SPACING),
     ]
     .spacing(SPACING)
     .padding(SPACING)
     .into()
+}
+
+/// Returns `told` of text `size`, which ends in an ellipsis where the room
+/// runs out, so that the operator sees that a note goes on
+fn line<'a>(told: String, size: f32) -> Element<'a, Message> {
+    responsive(move |room| {
+        let columns = (room.width / (char_width() * size / TEXT_SIZE.0)) as usize;
+        text(shortened(&told, columns))
+            .size(size)
+            .wrapping(Wrapping::None)
+            .into()
+    })
+    .height(height_of(size))
+    .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BESIDE, beside};
+    use crate::front::view::char_width;
+
+    #[test]
+    fn a_window_too_narrow_for_the_title_puts_the_buttons_under_it() {
+        let least = BESIDE * char_width();
+        assert!(!beside(least - 1.0));
+        assert!(beside(least));
+    }
 }

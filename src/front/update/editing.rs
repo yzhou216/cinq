@@ -40,6 +40,13 @@ impl App {
         app.showing(last, None)
     }
 
+    /// Makes cue `id` play or show `file`, whether chosen or typed, which
+    /// names the cue after the file as [`crate::back::Cue::playing`] says
+    pub(super) fn with_file(self, id: CueId, file: String) -> Self {
+        let playing = self.workspace.cue(id).map(|cue| cue.playing(file));
+        self.send_all(playing.map(|edit| Command::Edit(id, edit)))
+    }
+
     pub(super) fn choose_cue_file(&self, id: CueId) -> Task<Message> {
         let Some(cue) = self.workspace.cue(id) else {
             return Task::none();

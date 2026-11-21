@@ -6,6 +6,7 @@
 //! menu, and those of GO and Panic, which act at once
 
 use super::{Action, Keymap, Press};
+use crate::front::keymap::shown;
 
 impl Keymap {
     pub fn acts_in_fields(&self, press: Press) -> bool {
@@ -37,6 +38,16 @@ impl Keymap {
     pub fn acts_when_captured(&self, press: Press, character: bool) -> bool {
         (!character && self.acts_at_once(press))
             || (self.cancels(press) && (!character || press.holds_control_or_alt()))
+    }
+
+    /// Writes the hint of the first key of an action that acts although a
+    /// text field has the keyboard, which is a key of [`Action::AT_ONCE`]
+    /// that is no character, since a character types there
+    pub fn hint_over_text(&self, action: Action, label: &str) -> Option<String> {
+        self.keys(action)
+            .iter()
+            .find(|keys| matches!(keys[..], [press] if !press.is_character()))
+            .map(|keys| format!("{}: {label}", shown(keys)))
     }
 
     pub fn alone(&self, press: Press) -> Option<Action> {

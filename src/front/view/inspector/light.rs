@@ -6,74 +6,132 @@
 
 use iced::{
     Center, Element, Fill,
-    widget::{column, row, scrollable, space, table, text, text_input},
+    widget::{
+        button::DEFAULT_PADDING, column, responsive, row, scrollable, space, table, text,
+        text_input,
+    },
 };
+use unicode_width::UnicodeWidthStr;
 
 use super::{
     SPACING, lock,
-    output::{help, typing},
+    locked::locked,
+    output::{address_help, help, styled, typing},
     rejection,
 };
 use crate::{
     back::{Cue, Instrument, PatchEdit},
     front::{
         App, Message, Setting,
-        view::{button, theme},
+        view::{
+            ADDRESS, button, char_width,
+            cue_table::{CELL_SPACE, SCROLL_BAR},
+            theme,
+        },
     },
 };
 
 /// Characters that `32768/512` and `unchanged` take, with one to spare
 const ROOM: f32 = 10.0;
 
+/// Columns of the font that the name of an instrument keeps before the Now
+/// column gives way, enough to read what a name starts with
+const NAME_ROOM: f32 = 16.0;
+
+#[cfg(test)]
+mod tests;
+
 pub(super) fn patch(app: &App) -> Element<'_, Message> {
+    responsive(move |size| page(app, size.width)).into()
+}
+
+/// Returns whether the table of the patch keeps its Now column in `room`
+/// pixels, which it does while the Name column keeps [`NAME_ROOM`] columns
+/// beside the others
+fn now_fits(room: f32) -> bool {
+    let button = "Remove".width() as f32 * char_width() + 2.0 * DEFAULT_PADDING.x();
+    let now = "100%".width() as f32 * char_width();
+    let name = NAME_ROOM * char_width() + text_input::DEFAULT_PADDING.x();
+    name + now + button + address_room() + 4.0 * CELL_SPACE + SCROLL_BAR <= room
+}
+
+fn address_room() -> f32 {
+    super::output::room(ROOM)
+}
+
+/// Returns the light patch laid out for an inspector `width` pixels wide
+fn page(app: &App, width: f32) -> Element<'_, Message> {
     let editable = app.editable();
     let edit = move |edit| editable.then_some(Message::Patch(edit));
-    let reason = app
-        .typed
-        .as_ref()
-        .filter(|(setting, _)| matches!(setting, Setting::Address(_)))
-        .and_then(|(setting, typed)| rejection(app, *setting, typed));
+    let reason = refusal(app, |setting| matches!(setting, Setting::Address(_)));
+    let name = table::column(text("Name"), move |instrument: &Instrument| {
+        let id = instrument.id;
+        if editable {
+            text_input("", &instrument.name)
+                .style(theme::field(true))
+                .on_input(move |name| Message::Patch(PatchEdit::Name(id, name)))
+                .into()
+        } else {
+            locked(&instrument.name, "", None, Fill)
+        }
+    })
+    .width(Fill);
+    let address = table::column(text("Address"), |instrument: &Instrument| {
+        field(
+            app,
+            Setting::Address(instrument.id),
+            instrument.address_text(),
+            "",
+        )
+    });
+    // Gives way to the name, which the operator reads and edits
+    let now = table::column(text("Now"), |instrument: &Instrument| {
+        text(format!("{:.0}%", app.workspace.light_level(instrument.id)))
+    });
+    let remove = table::column(text(""), move |instrument: &Instrument| {
+        button("Remove")
+            .on_press_maybe(edit(PatchEdit::Remove(instrument.id)))
+            .reachable_and_leave(&app.config.keymap)
+    });
     let instruments = table::table(
-        [
-            table::column(text("Name"), move |instrument: &Instrument| {
-                let id = instrument.id;
-                text_input("", &instrument.name).on_input_maybe(
-                    editable.then_some(move |name| Message::Patch(PatchEdit::Name(id, name))),
-                )
-            })
-            .width(Fill),
-            table::column(text("Address"), |instrument: &Instrument| {
-                input(
-                    app,
-                    Setting::Address(instrument.id),
-                    instrument.address_text(),
-                    "",
-                )
-                .0
-            }),
-            table::column(text("Now"), |instrument: &Instrument| {
-                text(format!("{:.0}%", app.workspace.light_level(instrument.id)))
-            }),
-            table::column(text(""), move |instrument: &Instrument| {
-                button("Remove").on_press_maybe(edit(PatchEdit::Remove(instrument.id)))
-            }),
-        ],
+        [name, address]
+            .into_iter()
+            .chain(now_fits(width).then_some(now))
+            .chain([remove])
+            .collect::<Vec<_>>(),
         app.workspace.patch(),
     );
+    let body: Element<'_, Message> = if app.workspace.patch().is_empty() {
+        text("The light patch has no instruments yet").into()
+    } else {
+        scrollable(instruments).height(Fill).into()
+    };
+    // Below the table, since the column of addresses is too narrow for it.  A
+    // row of its own takes the room of an instrument at 1024x768, so it shows
+    // only while it helps.
+    let help = shows_help(app, &reason).then(|| help(address_help(), reason));
     column![
         row![
             text(format!("Light patch of the show{}", lock(app))),
             space::horizontal(),
-            button("Add instrument").on_press_maybe(edit(PatchEdit::Add)),
+            button("Add instrument")
+                .on_press_maybe(edit(PatchEdit::Add))
+                .reachable(&app.config.keymap),
         ]
+        .spacing(SPACING)
         .align_y(Center),
-        scrollable(instruments).height(Fill),
+        body,
     ]
-    // Below the table, since the column of addresses is too narrow for it
-    .extend(reason.map(|reason| help("", Some(reason))))
+    .extend(help)
     .spacing(SPACING)
     .width(Fill)
     .into()
+}
+
+/// Returns whether the help on addresses shows, which it does while an address
+/// has the keyboard or one is refused
+fn shows_help(app: &App, refusal: &Option<String>) -> bool {
+    app.address_held || refusal.is_some()
 }
 
 pub(super) fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
@@ -102,33 +160,38 @@ pub(super) fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         ],
         app.workspace.patch(),
     );
-    scrollable(instruments).height(Fill).into()
+    // Under the table, since a reason wrapped in a cell would move the rows
+    let reason = refusal(
+        app,
+        |setting| matches!(setting, Setting::Light(id, _) if *id == cue.id),
+    );
+    column![scrollable(instruments).height(Fill)]
+        .extend(reason.map(|reason| help("", Some(reason))))
+        .spacing(SPACING)
+        .into()
 }
 
-/// Returns the field of `setting`, red while the text in it is not applied,
-/// with the reason that it is not
-fn input<'a>(
-    app: &App,
-    setting: Setting,
-    value: String,
-    placeholder: &str,
-) -> (text_input::TextInput<'a, Message>, Option<String>) {
-    let (input, shown) = typing(app, setting, placeholder, value, ROOM);
-    let rejection = rejection(app, setting, &shown);
-    (input.style(theme::field(rejection.is_none())), rejection)
+/// Returns the reason that the text typed into the latest field is not
+/// applied, if the field is of a setting that `of` accepts and it is not
+fn refusal(app: &App, of: impl Fn(&Setting) -> bool) -> Option<String> {
+    app.typed
+        .as_ref()
+        .filter(|(setting, _)| of(setting))
+        .and_then(|(setting, typed)| rejection(app, *setting, typed))
 }
 
-/// Returns the field of `setting`, with beside it the reason that the text
-/// in it is not applied, if it is not
+/// Returns the field of `setting`, red while the text in it is not applied
 fn field<'a>(
     app: &App,
     setting: Setting,
     value: String,
     placeholder: &str,
 ) -> Element<'a, Message> {
-    let (input, rejection) = input(app, setting, value, placeholder);
-    row![input, help("", rejection)]
-        .spacing(SPACING)
-        .align_y(Center)
-        .into()
+    let (input, shown) = typing(app, setting, placeholder, value, ROOM);
+    let input = match setting {
+        Setting::Address(_) => input.id(ADDRESS),
+        _ => input,
+    };
+    let valid = rejection(app, setting, &shown).is_none();
+    styled(app, input, &shown, placeholder, ROOM, valid)
 }

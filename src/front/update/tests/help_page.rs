@@ -84,3 +84,26 @@ fn help_page_comes_and_goes_without_touching_the_main_window() {
         (1, Tab::Levels, Some(CueId(20)))
     );
 }
+
+#[test]
+fn the_key_of_standby_opens_the_tutorial_from_the_help_page_and_leaves_it_open() {
+    let enter = press(Key::Named(Named::Enter));
+    let page = |help| App { help, ..show(None) };
+    let (open, task) = page(true).typed(enter, false);
+    assert_eq!((open.help, task.units() > 0), (true, true));
+    // With the page shut the key moves standby and opens nothing
+    let (_, task) = page(false).typed(enter, false);
+    assert_eq!(task.units(), 0);
+}
+
+#[test]
+fn a_held_enter_opens_the_tutorial_once() {
+    let enter = press(Key::Named(Named::Enter));
+    let page = || App {
+        help: true,
+        ..show(None)
+    };
+    let (_, first) = page().typed(enter, false);
+    let (_, repeat) = page().typed(enter, true);
+    assert_eq!((first.units() > 0, repeat.units() > 0), (true, false));
+}

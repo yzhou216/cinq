@@ -50,6 +50,6 @@ pub enum Problem<'a> {
     NotLooping,
     #[strum(to_string = "no destination as host:port")]
     NoDestination,
-    #[strum(to_string = "no OSC message")]
+    #[strum(to_string = "no OSC message as /address arguments")]
     NoMessage,
 }

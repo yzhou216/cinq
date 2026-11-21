@@ -94,3 +94,38 @@ fn new_cues_stays_only_while_the_device_shows_on_one_line() {
 fn a_device_name_too_long_for_any_table_does_not_drive_new_cues_away() {
     assert!(shows_new_cues(&on_device(&"x".repeat(60)), 166.0));
 }
+
+/// Returns whether the table of `room` columns shows the `column`
+fn shows(app: &App, column: Column, room: f32) -> bool {
+    fitting(app, wide(room))
+        .iter()
+        .any(|(shown, _)| *shown == column)
+}
+
+#[test]
+fn the_state_and_channels_columns_go_last_so_that_a_narrow_window_keeps_the_device() {
+    let app = app();
+    [Column::State, Column::Channels]
+        .into_iter()
+        .for_each(|column| {
+            let kept: Vec<f32> = (30..200)
+                .map(|room| room as f32)
+                .filter(|&room| shows(&app, column, room))
+                .collect();
+            assert!(!shows(&app, column, 30.0) && shows(&app, column, 199.0));
+            // The column does not come and go as the window grows
+            assert!(kept.windows(2).all(|pair| pair[1] == pair[0] + 1.0));
+        });
+    // State goes before Channels does
+    let narrowest = |column| (30..200).find(|&room| shows(&app, column, room as f32));
+    assert!(narrowest(Column::State) > narrowest(Column::Channels));
+}
+
+#[test]
+fn the_device_keeps_a_name_of_two_words_whole_in_a_window_of_512_pixels() {
+    // The table has about 35 columns there, beside the sidebar
+    let app = on_device("Default device");
+    let room = 35.0;
+    let columns = fitting(&app, wide(room));
+    assert!(device_room(&columns, wide(room)) >= 14.0 * char_width());
+}

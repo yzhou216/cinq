@@ -52,7 +52,7 @@ fn network_cue_without_destination_or_message_cannot_play() {
     );
     assert_eq!(
         problem(cue("ion:3037", "eos/ping")).as_deref(),
-        Some("no OSC message")
+        Some("no OSC message as /address arguments")
     );
     assert_eq!(problem(cue("udp://ion:8000", "/eos/ping")), None);
     let (_, messages) = workspace(vec![cue("ion", "/eos/ping")]).apply(GO).drained();

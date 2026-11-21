@@ -25,7 +25,7 @@ use crate::front::{
     keymap::KeyPress,
     reveal,
     view::{
-        line_height,
+        char_width, line_height,
         widget::{dropdown::PADDING, key_pressed, pressed},
     },
 };
@@ -45,16 +45,7 @@ impl<'b> Menu<'b> {
         tree: &'b mut Tree,
         target: Rectangle,
     ) -> Self {
-        let content = Element::from(container(scrollable(rows(choice))).style(|theme| {
-            let look = overlay::menu::default(theme);
-            container::Style {
-                text_color: Some(look.text_color),
-                background: Some(look.background),
-                border: look.border,
-                shadow: look.shadow,
-                ..container::Style::default()
-            }
-        }));
+        let content = content(choice, usize::MAX);
         tree.diff(content.as_widget());
         Self {
             choice,
@@ -65,17 +56,50 @@ impl<'b> Menu<'b> {
     }
 }
 
+/// Returns the width of a menu under a list of `list` pixels whose widest
+/// name takes `widest`, in a window of `window`: as wide as the names need,
+/// and at least as wide as the list, but never wider than the window
+pub(super) fn width(list: f32, widest: f32, window: f32) -> f32 {
+    list.max(widest + PADDING.x()).min(window)
+}
+
+/// Returns the columns of the font that the names keep in a menu of `width`
+pub(super) fn columns(width: f32) -> usize {
+    ((width - PADDING.x()) / char_width()).max(0.0) as usize
+}
+
+/// Returns the box of the rows of the menu, whose names keep to `columns`
+/// columns of the font, each ending in an ellipsis where it is cut
+fn content(choice: Choice<'_>, columns: usize) -> Element<'_, Message> {
+    container(scrollable(rows(choice, columns)))
+        .style(|theme| {
+            let look = overlay::menu::default(theme);
+            container::Style {
+                text_color: Some(look.text_color),
+                background: Some(look.background),
+                border: look.border,
+                shadow: look.shadow,
+                ..container::Style::default()
+            }
+        })
+        .into()
+}
+
 impl Overlay<Message, Theme, Renderer> for Menu<'_> {
     /// A menu wider than its list, as the menu of a list that cuts its
     /// label short is, moves left as far as it has to for the window to
-    /// hold it, as it does under a list at the right edge.
+    /// hold it, as it does under a list at the right edge, and is no wider
+    /// than the window, where it cuts its names short with an ellipsis.
     fn layout(&mut self, renderer: &Renderer, bounds: Size) -> layout::Node {
         let below = bounds.height - self.target.y - self.target.height;
         let above = self.target.y;
-        let width = self
-            .target
-            .width
-            .max(self.choice.dropdown.widest() + PADDING.x());
+        let width = width(
+            self.target.width,
+            self.choice.dropdown.widest(),
+            bounds.width,
+        );
+        self.content = content(self.choice, columns(width));
+        self.tree.diff(self.content.as_widget());
         let left = self.target.x.min(bounds.width - width).max(0.0);
         let limits =
             layout::Limits::new(Size::ZERO, Size::new(bounds.width - left, below.max(above)))

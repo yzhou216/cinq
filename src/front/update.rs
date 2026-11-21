@@ -24,6 +24,7 @@ mod operators;
 mod outputs;
 mod paging;
 mod reveal_focused;
+mod reveal_list;
 mod rows;
 mod scroll;
 mod search;
@@ -206,6 +207,10 @@ impl App {
             | Message::MenuOpen(_)
             | Message::Held(_)
             | Message::FileHeld(_)
+            | Message::CheckHeld(_)
+            | Message::ButtonHeld(_)
+            | Message::AddressHeld(_)
+            | Message::TextHeld(_)
             | Message::DefaultHighlighted(_)
             | Message::Copy(_)
             | Message::PauseAll

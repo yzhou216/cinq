@@ -15,6 +15,7 @@
 //! scroll, lines up with them.
 
 mod columns;
+mod fitting;
 mod layout;
 mod name;
 #[cfg(test)]
@@ -29,15 +30,14 @@ use iced::{
         text, text::Wrapping,
     },
 };
-use itertools::Itertools;
-use strum::VariantArray;
 
-use super::{CUES, SELECTED, char_width, giving_way, marked_row};
+use super::{CUES, SELECTED, faults, marked_row};
 use crate::{
     back::{Cue, Groups, Workspace},
     front::{App, Message, keymap::Action},
 };
-use columns::{Column, hidden_problem, state};
+use columns::{Column, hidden_problem, lines};
+use fitting::fitting;
 use layout::Layout;
 
 /// Returns the texts of a cue that a search matches, which are those of the
@@ -75,21 +75,48 @@ pub(super) const CELL_SPACE: f32 = 2.0 * CELL_PADDING + SEPARATOR;
 pub(super) const RADIO: f32 = Radio::<Message>::DEFAULT_SIZE + Radio::<Message>::DEFAULT_SPACING;
 
 /// Fewest columns of the font that the list keeps for a name before any
-/// column gives way
-const NAME_ROOM: usize = 16;
+/// column gives way, however short its names
+const NAME_LEAST: usize = 16;
 
-/// Most columns of the font that the Target column takes, past which a
-/// long file name wraps
-const TARGET_ROOM: usize = 24;
+/// Most columns of the font that the Target column takes while the room
+/// is short, past which a long file name wraps
+const TARGET_MOST: usize = 48;
+
+/// Most columns of the font that the Target column grows to when the room
+/// leaves a name all that it needs, up to [`NAME_MOST`] columns
+const TARGET_GROWN: usize = 80;
+
+/// Most columns of the font that a name is given first call on, before any
+/// column that can gives way, so that a name of up to as many reads on one
+/// line however wide the window, and a very long name does not keep the Target
+/// column narrow in a wide window
+const NAME_MOST: usize = 48;
+
+/// Columns of the font that the Target column narrows to before any column
+/// gives way, where the list is too narrow for a name to keep what its widest
+/// name needs, enough for a long path to wrap onto two lines, since a column
+/// that wraps onto more makes every row taller than the name needs
+const TARGET_ROOM: usize = 36;
 
 /// Columns of the font that a name moves right for each group that holds its
 /// cue
 const INDENT: usize = 2;
 
-/// Columns of the font that the State column holds, so that the column
-/// keeps its width as cues run: as many as `10:00.0 left` takes, the
-/// longest state of a cue whose sound is under a hundred minutes
+/// Fewest columns of the font that the State column holds, so that the column
+/// keeps its width as cues run: as many as `10:00.0 left` takes, which is the
+/// longest state of a cue whose sound is under a hundred minutes.  It grows
+/// to what the longest problem of a row takes, such as `NO DESTINATION`, and
+/// to `OUTPUT FAILED` while a cue plays on a failed output, which no running
+/// cue changes, so that a short list keeps room for the Then column.
 const STATE_ROOM: usize = 12;
+
+/// Columns of the font that `OUTPUT FAILED` takes
+const FAILED_ROOM: usize = 13;
+
+/// Fewest columns of the font that the State column keeps, as many as
+/// `DESTINATION` takes, the longest word of its states, so that a narrow list
+/// never breaks a word of it
+const STATE_LEAST: usize = 11;
 
 pub(super) fn view(app: &App) -> Element<'_, Message> {
     responsive(move |size| list(app, size.width - SCROLL_BAR)).into()
@@ -152,39 +179,10 @@ fn empty(app: &App) -> Element<'_, Message> {
         .into()
 }
 
-/// Returns the columns that a list `room` wide shows, each with its width.
-/// When showing them all leaves a name less than [`NAME_ROOM`] columns of
-/// the font, past the gutter that a list holding a group keeps for the mark,
-/// the yielding columns give way in turn, those without text in any row
-/// first, as they tell nothing, and the inspector shows them all.
-fn fitting(app: &App, layout: &Layout, room: f32) -> Vec<(Column, Option<f32>)> {
-    let groups = &layout.groups;
-    let all: Vec<(Column, Option<f32>)> = Column::VARIANTS
-        .iter()
-        .map(|&column| (column, column.width(&app.workspace, groups)))
-        .collect();
-    let yielding: Vec<Column> = Column::YIELDING
-        .into_iter()
-        .sorted_by_cached_key(|column| column.holds_text(&app.workspace, groups))
-        .collect();
-    let name_room = |columns: &[(Column, Option<f32>)]| {
-        room - columns
-            .iter()
-            .map(|(_, width)| width.unwrap_or(0.0) + CELL_SPACE)
-            .sum::<f32>()
-    };
-    giving_way(
-        &yielding,
-        |gone| {
-            all.iter()
-                .copied()
-                .filter(|(column, _)| !gone.contains(column))
-                .collect()
-        },
-        |columns: &Vec<_>| {
-            name_room(columns) >= (NAME_ROOM + layout.gutter()) as f32 * char_width()
-        },
-    )
+/// Returns `content` as text that breaks a word too wide for its column
+/// rather than draws it over the next column
+fn broken<'a>(content: impl text::IntoFragment<'a>) -> text::Text<'a> {
+    text(content).wrapping(Wrapping::WordOrGlyph)
 }
 
 fn table_column<'a>(
@@ -213,9 +211,8 @@ fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue, layout: &Layout) -> Elem
     let (content, padded): (Element<'a, Message>, _) = match column {
         Column::Name => {
             let name = column.text(&app.workspace, groups, cue);
-            let hidden = groups.members(cue.id).len();
             (
-                name::cell(cue, name, layout.depth(cue), hidden, layout.gutter()),
+                name::cell(cue, name, layout.depth(cue), layout.gutter()),
                 false,
             )
         }
@@ -224,18 +221,29 @@ fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue, layout: &Layout) -> Elem
             true,
         ),
         Column::Target => (
-            text(column.text(&app.workspace, groups, cue))
-                .wrapping(Wrapping::WordOrGlyph)
-                .into(),
+            broken(column.text(&app.workspace, groups, cue)).into(),
             true,
         ),
         Column::State => {
             let selected = app.selected == Some(cue.id);
             let hidden = hidden_problem(&app.workspace, groups, cue);
-            let (state, style) = state(&app.workspace, cue, layout.is_next(cue), hidden, selected);
-            (text(state).style(style).into(), true)
+            let failing = faults::failing(app);
+            let lines = lines(
+                &app.workspace,
+                cue,
+                layout.is_next(cue),
+                hidden,
+                &failing,
+                selected,
+            )
+            .into_iter()
+            .map(|(line, style)| broken(line).style(style).into());
+            (iced::widget::column(lines).into(), true)
         }
-        _ => (text(column.text(&app.workspace, groups, cue)).into(), true),
+        _ => (
+            broken(column.text(&app.workspace, groups, cue)).into(),
+            true,
+        ),
     };
     let cell =
         container(content)

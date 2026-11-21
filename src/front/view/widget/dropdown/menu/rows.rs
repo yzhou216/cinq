@@ -20,16 +20,18 @@ use super::Choice;
 use crate::front::{
     Message,
     view::widget::{
-        dropdown::PADDING,
+        dropdown::{PADDING, shortened},
         pressed,
         wrap::{Intercept, wrap},
     },
 };
 
-pub(super) fn rows<'b>(choice: Choice<'b>) -> Element<'b, Message> {
+/// Returns the rows of the menu, each name cut short to `columns` columns of
+/// the font, with an ellipsis, where it is longer
+pub(super) fn rows<'b>(choice: Choice<'b>, columns: usize) -> Element<'b, Message> {
     let highlight = choice.highlighted();
     let rows = choice.dropdown.names.iter().enumerate().map(|(row, name)| {
-        container(text(name.as_str()).wrapping(text::Wrapping::None))
+        container(text(shortened(name, columns)).wrapping(text::Wrapping::None))
             .style(move |theme| {
                 let style = container::Style::default();
                 if highlight == Some(row) {

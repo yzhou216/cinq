@@ -274,7 +274,7 @@ Each cue is a table in the array *cue* of its list:
 	The cue plays on those outputs alone, after its *level*, which fade cues
 	move.
 	A cue without one sends to the first output at 0 dB, and one with an empty
-	table sends nowhere.
+	table sends to no output.
 
 *notes*
 	Notes of the cue, for the operator.
@@ -470,8 +470,8 @@ It pauses as well the cues that wait for the target to start them, so that the
 chain holds where it is.
 A target that does not run, or no longer does, is left alone, even where cues
 that it fired still wait out its post-wait.
-Pausing holds the fades of a cue, as Pause all does.
-A start cue that targets the paused cue, or Resume all, resumes it.
+Pausing holds the fades of a cue, as *Pause all* does.
+A start cue that targets the paused cue, or *Resume all*, resumes it.
 
 A devamp cue lets its target leave its loop, as the devamp cue of QLab does.
 Its target is an audio or video cue that loops, in any list.
@@ -547,7 +547,7 @@ The cues that act on other cues act on a group as follows:
 - A stop cue stops the run of the group and the run of every cue that it
   holds, each as a stopped cue, so that the cues that wait for them are stopped
   as well.
-  The Stop button of the sidebar does the same.
+  The *Stop* button of the sidebar does the same.
 - A pause cue pauses the run of the group and the runs of the cues that it
   holds, along with the runs that each would start.
 - A start cue fires the group as GO does, together with every cue that it
@@ -559,8 +559,8 @@ The cues that act on other cues act on a group as follows:
 - A fade or devamp cue cannot name a group, as in QLab, since a fade needs a
   sound, video, or picture, and a devamp cue an audio or video cue.
 
-Panic and Pause all act on every run, those of groups and of the cues in them
-alike.
+*Panic* and *Pause all* act on every run, those of groups and of the cues in
+them alike.
 
 A group may be collapsed, as the *collapsed* key tells, which only changes how
 the cue list shows it: as one row, with the cues that it holds hidden at any

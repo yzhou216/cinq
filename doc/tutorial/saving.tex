@@ -2,7 +2,7 @@
 %
 % SPDX-License-Identifier: GPL-3.0-or-later
 
-\chapter{Saving and Show mode}
+\chapter{Saving and show mode}
 \label{ch:saving}
 
 \section{Saving}
@@ -19,10 +19,11 @@ cinq never discards unsaved changes:
 \item In your own show, change the level of a cue, then close the main
   window without saving.
 \item Start cinq again, press \key{Control+l}, and open
-  \texttt{my-show.cinq.toml}.  The change is still there, and the status bar
-  shows \texttt{(unsaved)}.
-\item Press the undo key that the status bar names.  The show returns to its
-  saved state.
+  \texttt{my-show.cinq.toml}.  The status bar shows \texttt{(unsaved)} and
+  says that it brought the changes back.
+\item Press the undo key that the status bar names.  The bar says what it
+  undid, the changes that it brought back, and the show returns to its saved
+  state, which shows that the change was there.
 \end{enumerate}
 
 cinq records unsaved changes as they happen, in a separate file, so they
@@ -56,16 +57,20 @@ shown.  Lists are added to a show file in a text editor, as the manual page
 Lock editing before a performance:
 
 \begin{enumerate}
-\item Check \ui{Show mode} in the transport.  The status bar shows
-  \ui{Show mode} instead of \ui{Edit mode}, and the inspector becomes
-  read-only.
+\item Check \ui{Show mode} in the toolbar above the cue list.  With the keys,
+  press \key{Shift+Tab} three times from the cue list, which reaches
+  \ui{Show mode} from the end of the order of the fields, and press
+  \key{Enter}.  The status bar shows \ui{Show mode} instead of \ui{Edit
+  mode}, and the inspector becomes read-only.  The keyboard goes back to the
+  cue list, so that the keys of the list work at once.
 \item Run the show as usual.  \ui{Add cue} and \ui{Delete cue} are disabled,
   and undo and redo only move standby back and forth.
-\item Clear \ui{Show mode} to edit again.
+\item Clear \ui{Show mode} to edit again, with the same keys.  Show mode never
+  locks this checkbox.
 \end{enumerate}
 
 \section*{Exercise}
 
 You can now protect a show: save it to a file, rely on cinq to keep unsaved
-changes, and lock it for the performance.  Run the whole storm show in Show
+changes, and lock it for the performance.  Run the whole storm show in show
 mode, from cue~1 of Act~1 to the film in Act~2.

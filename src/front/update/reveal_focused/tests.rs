@@ -80,12 +80,10 @@ fn scrolling_in(
     list.0
 }
 
-fn sends_label() -> f32 {
-    view::line_height() + view::SPACING / 2.0
-}
-
+/// Scrolls the sends, each of which lies in one row with its name, so that
+/// no label shows above its field
 fn scrolling(outside: bool, field_y: f32, scrolled: f32) -> Option<f32> {
-    scrolling_in(view::SENDS, sends_label(), outside, field_y, scrolled)
+    scrolling_in(view::SENDS, 0.0, outside, field_y, scrolled)
 }
 
 #[test]
@@ -93,10 +91,11 @@ fn the_sends_scroll_only_to_a_field_of_theirs_that_lies_out_of_view() {
     // Field 450 pixels down is 150 below the start of the content, and
     // ends at 180, which a view of 100 shows from 80 on
     assert_eq!(scrolling(false, 450.0, 0.0), Some(80.0));
-    // Above the view, the field scrolls down to its name
-    assert_eq!(scrolling(false, 350.0, 200.0), Some(50.0 - sends_label()));
+    // Above the view, the field scrolls down to its own top, with no room
+    // spared for a label that is not there
+    assert_eq!(scrolling(false, 350.0, 200.0), Some(50.0));
     // In view, or outside the sends, they stay where they are
-    assert_eq!(scrolling(false, 300.0 + sends_label() + 10.0, 0.0), None);
+    assert_eq!(scrolling(false, 310.0, 0.0), None);
     assert_eq!(scrolling(true, 450.0, 0.0), None);
 }
 

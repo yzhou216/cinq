@@ -97,6 +97,104 @@ Major changes and improvements in each release of cinq, newest first.
   list switched to selects the collapsed group that hides its standby cue.
   Collapsing is no change for undo, show mode allows it, and the show file
   keeps it as `collapsed = true` on the group.
+- The transport ends the name and the notes of the standby cue in an ellipsis
+  where they run out of room, where they were cut without a sign, and the Show
+  mode checkbox moves to the toolbar, so that the notes take the whole width
+  under the title: a long note shows 89 characters instead of 56 at 1024x768.
+- A standby cue that has a problem reads NEXT and the problem on lines of their
+  own in the State column, where the problem used to hide NEXT, and the column
+  holds NO DESTINATION on one line.  The column reads `fading` for a cue that a
+  fade or Panic is fading, and OUTPUT FAILED in yellow, under its state, for a
+  cue that sends only to outputs whose devices failed, which the line under the
+  standby cue tells as silent, as it tells a cue that sends to no output.  The
+  cue list leaves out a Pre, Post, Then, or Target column that no cue fills,
+  lets other columns give way while a name lacks the room that its names need,
+  and lets the Target column grow into the room that the names leave, so that
+  a long file name wraps as late as it can.
+- The sidebar keeps each cue list to one line, cutting a long name short in an
+  ellipsis and keeping the number of its cues, and scrolls to the list that
+  shows whenever it changes, and back to it as Tab moves on.  A running cue
+  keeps its name and its status to a line each, around its bar, with the time
+  left and the level first, so that a status cut short loses the words of its
+  phase before them.  The sidebar grows to 560 pixels on a wide window, and an
+  empty Active or Warnings list leaves out the gap of its empty body.
+- The status bar hints a key only where it acts: while a text field has the
+  keyboard it no longer offers undo, redo, paste, add, rename, or help, which
+  would only type there, and while a closed drop-down list has it, only undo
+  and redo of these.  Where the keymap binds no key to cancel, as the cua
+  keymap does, it hints Enter to leave a field.  It hints the key of standby
+  while the selected cue is not the standby cue, tells no notice while a menu
+  is open, so that the keys that pick and close it show, and in the outputs
+  view tells changes to the outputs only, so that the keys of that view show.
+  The rename of a cue just added outlasts the hints of GO, Panic, and saving
+  at 1024x768, the key of the next inspector tab is hinted last of all, and a
+  gap keeps the status apart from the hints.  The status counts warnings only
+  while there are any, which leaves the hints the room of `0 warnings`.  A key
+  that edits in show mode, or while the stage window has the keyboard, now
+  says once why it did nothing.
+- The inspector tells in words what the color of a field told alone: its header
+  says why GO skips the selected cue, such as a missing file or no target, and
+  which time reads as no time, with the forms that a time takes, and a refused
+  level, send, light level, or address gives its reason beside the field or
+  above or under its table.  A field that the cue ignores says why, as
+  "(in a group)", "(with auto-follow)", or "(not looping)", and a value that
+  cannot change draws on the black of the window, where it reads at 7:1, in a
+  box of the height of a field that shows the dim placeholder where the value
+  is empty, so that the inspector keeps its height as GO moves the selection.
+  Tab no longer stops on a field that cannot change, and it reaches the Loop
+  and Stop target checkboxes, which Enter flips and show mode locks.  The sends
+  of the Levels tab lie side by side in rows that wrap, so that most of them
+  show at once, each with as much of its output name as names need, up to 32
+  columns, keeping the end of a longer one.  The inspector grows to a quarter
+  of a window taller than 960 pixels, the Basics tab gives the larger share to
+  the name and the file, the destination of a network cue has a row of its
+  own, a kind with no target has no Target row, and the Light Patch tells that
+  it has no instruments, and what an address takes only while an address has
+  the keyboard or is refused.
+- Tab reaches the Show mode checkbox, which show mode never locks, and Enter
+  flips it and gives the keys back to the cue list, so that the keyboard alone
+  locks the show before a performance and unlocks it after.  On the Light
+  Patch, Tab reaches Add instrument and each Remove, which Enter presses and
+  show mode locks.  Tab past the last field, and Shift+Tab before the first,
+  leave every field and give the keys back to the cue list, or the outputs, so
+  that a checkbox or a closed list no longer keeps them in the cua keymap,
+  which has no key to leave a field.  F11 out of fullscreen gives the main
+  window the keyboard.
+- The status bar hints `Enter: flip` while a checkbox has the keyboard,
+  `Enter: open` while a closed drop-down list does, and `Enter: press` while a
+  button does, and the key that shows the next cue list, or the outputs after
+  the last one, as `l: next list` in vi.  At the end of a list that another
+  follows, where GO fires nothing, that hint stays on a short bar until after
+  GO and Panic.  While a field has the keyboard, GO, Panic, and the key that
+  leaves it outlast the keys that only teach, and while a text field has it,
+  the bar hints a key of GO that types nothing there, or none, since Space
+  types a space.  The rename of a cue just added outlasts the help hint too.
+- The first paragraph of the help page names the key that closes it, the key of
+  standby opens the tutorial from the page, and the table of keys takes the
+  width of the window up to one and a half times that of the paragraphs, so
+  that most descriptions fit one line, while the paragraphs keep their width.
+- The outputs view hands the room that the device does not need to the name
+  and the state, so that they wrap later in a narrow window, and its notices
+  say that a cue sends to no output, as the State column does.
+- A path typed into the File field of an audio, video, or picture cue names the
+  cue after the file, as the file chooser does, while the cue goes by the name
+  it was added with or by the name of its previous file.  The name follows the
+  path as it is typed, and a name that was typed stays.  While a field has the
+  keyboard, the key that leaves it outlasts a long notice in the status bar.
+- A narrow main window, as one that a tiling compositor sets beside the stage
+  window on one display, keeps every control and value readable: the toolbar
+  wraps onto a second line, the buttons of the transport go under the title,
+  the two forms of the inspector stack and its header wraps, the inspector of
+  an output scrolls, the sidebar keeps 160 pixels, and each cell of the cue
+  list keeps within its column, breaking a word that does not fit, while the
+  State column keeps its words whole and the Action column gives way last.
+  The outputs view lets State and then Channels give way, the Light Patch its
+  Now column, and the help page the names in the configuration file, and an
+  open menu stays within the window, shortening its rows.  A column that gave
+  way returns only while every name keeps the room it needs, up to 48 columns,
+  so that a wider window never wraps a name that a narrower one did not.  A
+  notice too long for the status bar ends in an ellipsis, and the search line
+  keeps a gap before its note.
 
 ## v0.1.5
 

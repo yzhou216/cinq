@@ -7,13 +7,14 @@
 //!
 //! Cutting the status where the room ends would leave half a word of the
 //! name of the show, so a notice that does not fit gives way itself, at a
-//! word, and ends in an ellipsis.
+//! word, and ends in an ellipsis, as it does at the edge of a room too short
+//! for even its first word.
 
 use itertools::Itertools;
 use unicode_width::UnicodeWidthStr;
 
 use super::{LINE, giving_way};
-use crate::front::keymap::Action;
+use crate::front::{keymap::Action, view::widget::shortened as cut_short};
 
 /// Ends a notice that was shortened
 const ELLIPSIS: &str = "…";
@@ -42,23 +43,42 @@ pub(super) fn fitted(
 /// as [`fitted`] joins them in `room` columns, and where they still do not
 /// fit once every key has given way, with the notice cut after the longest
 /// of its words that lets them fit.  The keys that follow the notice after
-/// a separator give way first, but for the last.
+/// a separator give way first, but for the last.  The keys of `outlasting`
+/// give way only after the notice has been cut to its shortest, so that
+/// the key that leaves a field stays where a long notice would take its room.
+/// Where not even that fits, the hints are cut at the edge of the room with an
+/// ellipsis, so that no text runs past it.
 pub(super) fn shown(
     hints: impl Fn(Option<String>) -> Vec<(Option<Action>, String)>,
     told: Option<String>,
     room: usize,
     yielding: &[Action],
+    outlasting: &[Action],
 ) -> String {
-    let joined = |told: Option<String>| fitted(&hints(told), room, yielding);
-    let full = joined(told.clone());
-    if full.width() <= room {
-        return full;
-    }
-    told.iter()
-        .flat_map(|told| shortened(told))
-        .map(|short| joined(Some(short)))
-        .find(|joined| joined.width() <= room)
-        .unwrap_or(full)
+    let fits = |joined: &String| joined.width() <= room;
+    let giving = yielding
+        .iter()
+        .copied()
+        .filter(|action| !outlasting.contains(action))
+        .collect::<Vec<_>>();
+    let cut = |yielding: &[Action]| {
+        let joined = |told: Option<String>| fitted(&hints(told), room, yielding);
+        let full = joined(told.clone());
+        if fits(&full) {
+            return Some(full);
+        }
+        told.iter()
+            .flat_map(|told| shortened(told))
+            .map(|short| joined(Some(short)))
+            .find(fits)
+    };
+    cut(&giving)
+        .or_else(|| cut(yielding))
+        .unwrap_or_else(|| match room {
+            // An ellipsis alone would take a column that is not there
+            0 => String::new(),
+            _ => cut_short(&fitted(&hints(told), room, yielding), room),
+        })
 }
 
 /// Returns `told` with the keys after its first part that only teach given up,

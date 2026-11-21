@@ -113,7 +113,7 @@ impl Window {
 }
 
 /// Polls of a task that give nothing, after which it has nothing more to say
-const POLLS_TO_SETTLE: usize = 3;
+const POLLS_TO_SETTLE: usize = 4;
 
 /// What the status bar learns last, which is what it shows
 fn last(messages: &[Message]) -> (Option<bool>, Option<bool>) {
@@ -138,4 +138,46 @@ fn the_answer_after_tab_is_for_the_field_that_tab_reached() {
         last(&Window::new().run(Task::batch([tab(), held()]))),
         (Some(true), Some(false))
     );
+}
+
+#[test]
+fn only_a_text_field_counts_when_the_keyboard_is_asked_for_in_text() {
+    let visit = |text: bool| {
+        let mut holding = Holding::in_text();
+        let mut field = Field::new(true);
+        if text {
+            holding.text_input(None, Rectangle::default(), &mut field);
+        }
+        holding.focusable(None, Rectangle::default(), &mut field);
+        matches!(holding.finish(), Outcome::Some(true))
+    };
+    assert!(visit(true));
+    assert!(!visit(false), "a drop-down list offers no text input");
+}
+
+#[test]
+fn any_address_of_the_light_patch_counts_for_the_help_on_addresses() {
+    let holding = || Holding::in_field(view::ADDRESS);
+    assert!(found(
+        holding(),
+        &[
+            (Some("address"), false),
+            (Some("address"), true),
+            (Some("address"), false)
+        ]
+    ));
+    assert!(!found(
+        holding(),
+        &[(Some("address"), false), (Some("name"), true)]
+    ));
+}
+
+#[test]
+fn a_check_box_and_a_button_are_told_from_a_drop_down_list_by_their_identity() {
+    [view::CHECK, view::BUTTON].into_iter().for_each(|field| {
+        let holding = || Holding::in_field(field);
+        let (idle, focused) = ((Some(field), false), (Some(field), true));
+        assert!(found(holding(), &[idle, focused]));
+        assert!(!found(holding(), &[(None, true), idle]));
+    });
 }

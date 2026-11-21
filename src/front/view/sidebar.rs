@@ -8,45 +8,65 @@
 //! window
 
 mod devices;
+mod running;
+#[cfg(test)]
+mod tests;
 
 use iced::{
     Element, Fill,
-    widget::{column, progress_bar, radio, row, rule, scrollable, text},
+    widget::{Radio, column, container, radio, rule, scrollable, text},
 };
+use unicode_width::UnicodeWidthStr;
 
 use super::{
-    SIDEBAR_SCROLL, SPACING, button,
+    CURRENT_LIST, SIDEBAR, SIDEBAR_SCROLL, SPACING, button, char_width,
+    cue_table::{RADIO, SCROLL_BAR},
     faults::{self, Warning},
     format, outputs, warnings,
+    widget::shortened,
 };
-use crate::{
-    back::{Active, Cue},
-    front::{App, Message},
-};
-
-/// Thickness of the progress bars of running cues, thin enough that several
-/// running cues fit in the sidebar at once
-const BAR: f32 = 10.0;
+use crate::front::{App, Message};
 
 /// Most warnings that the sidebar lists, so that the Default device list
 /// below them stays in view, the rest being counted in a line of their own
 const WARNINGS: usize = 3;
 
+/// Least width of the sidebar, enough for the name of a short cue list, such
+/// as `Act 1`, with its count beside the radio button, so that a narrow
+/// window does not cut the names of the lists to the same two letters
+const LEAST: f32 = 160.0;
+
+/// Returns the width of the sidebar in a window `window` wide, which is a
+/// quarter of it, so that a narrow window, such as one tiled beside another,
+/// leaves the cue list room, but at least [`LEAST`] and at most [`SIDEBAR`]
+pub(super) fn width(window: f32) -> f32 {
+    (window / 4.0).clamp(LEAST, SIDEBAR)
+}
+
 pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
     let workspace = &app.workspace;
+    let columns = (width - 2.0 * SPACING - SCROLL_BAR) / char_width();
+    // Each list takes one line, so that the rest of the sidebar stays in view,
+    // and the inspector holds the whole name
+    let room = columns - RADIO / char_width();
     let lists = workspace.lists().iter().enumerate().map(|(index, list)| {
-        radio(
-            format!("{} ({})", list.name, list.cues.len()),
+        let entry = radio(
+            label(&list.name, list.cues.len(), room as usize),
             index,
             (!app.outputs_shown).then_some(app.list),
             Message::SwitchList,
-        )
-        .into()
+        );
+        current(entry, !app.outputs_shown && index == app.list)
     });
     let active = workspace
         .active()
         .iter()
-        .filter_map(|active| workspace.cue(active.id).map(|cue| active_cue(active, cue)));
+        .filter_map(|active| {
+            workspace
+                .cue(active.id)
+                .map(|cue| running::active_cue(active, cue, columns as usize))
+        })
+        .collect::<Vec<_>>();
     let outputs_failing = faults::warnings(app).into_iter().map(|warning| {
         let told = match &warning {
             Warning::Device {
@@ -109,18 +129,22 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             text("Cue lists"),
             column(lists).spacing(SPACING),
             rule::horizontal(1),
-            radio(
-                format!("Outputs ({})", workspace.outputs().len()),
-                (),
-                app.outputs_shown.then_some(()),
-                |()| Message::ShowOutputs,
+            current(
+                radio(
+                    format!("Outputs ({})", workspace.outputs().len()),
+                    (),
+                    app.outputs_shown.then_some(()),
+                    |()| Message::ShowOutputs,
+                ),
+                app.outputs_shown,
             ),
             rule::horizontal(1),
             text(format!("Active ({})", workspace.active().len())),
-            column(active).spacing(SPACING),
+            // An empty list leaves out its body, as the header tells that it is empty
+            (!active.is_empty()).then(|| column(active).spacing(SPACING)),
             rule::horizontal(1),
             warned,
-            column(shown.into_iter().chain(more)).spacing(SPACING),
+            (!shown.is_empty()).then(|| column(shown.into_iter().chain(more)).spacing(SPACING)),
             rule::horizontal(1),
             text("Default device"),
             devices::view(app),
@@ -136,27 +160,18 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
     .into()
 }
 
+/// Returns `entry`, marked for the sidebar to scroll to when it `shows`
+fn current<'a>(entry: Radio<'a, Message>, shows: bool) -> Element<'a, Message> {
+    if shows {
+        container(entry).id(CURRENT_LIST).into()
+    } else {
+        entry.into()
+    }
+}
+
 /// Returns a warning that `message` answers when it is pressed
 fn pressing(told: String, message: Message) -> Element<'static, Message> {
     button(text(told)).on_press(message).width(Fill).into()
-}
-
-fn active_cue<'a>(active: &Active, cue: &Cue) -> Element<'a, Message> {
-    column![
-        row![
-            text(cue.to_string()).width(Fill),
-            button("Stop").on_press(Message::Stop(cue.id)),
-        ]
-        .spacing(SPACING),
-        progress_bar(0.0..=1.0, active.progress()).girth(BAR),
-        text(format::activity(active, cue)).style(if active.paused {
-            text::warning
-        } else {
-            text::success
-        }),
-    ]
-    .spacing(SPACING / 2.0)
-    .into()
 }
 
 /// Splits `warnings` into the first that the sidebar lists and how many it
@@ -166,14 +181,12 @@ fn limited<T>(warnings: Vec<T>) -> (Vec<T>, usize) {
     (warnings.into_iter().take(WARNINGS).collect(), left)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::limited;
-
-    #[test]
-    fn the_sidebar_lists_three_warnings_and_counts_the_rest() {
-        assert_eq!(limited(vec![1, 2, 3]), (vec![1, 2, 3], 0));
-        assert_eq!(limited(vec![1, 2, 3, 4, 5, 6, 7, 8]), (vec![1, 2, 3], 5));
-        assert_eq!(limited(Vec::<u8>::new()), (Vec::new(), 0));
-    }
+/// Returns the name of a list with the number of its cues, in `columns`
+/// columns, where the name gives way and the number stays whole
+fn label(name: &str, count: usize, columns: usize) -> String {
+    let count = format!(" ({count})");
+    format!(
+        "{}{count}",
+        shortened(name, columns.saturating_sub(count.width()))
+    )
 }

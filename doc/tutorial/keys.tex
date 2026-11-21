@@ -40,15 +40,18 @@ Change the name, selecting all of it & \key{cc}, \key{S} & \key{F2} \\
 Undo the latest change & \key{u} & \key{Control+z} \\
 Redo the change undone last & \key{Control+r} & \key{Control+y} \\
 Open a show & \key{Control+l} & \key{Control+o} \\
+Put the selected cue on standby & \key{Enter} & \key{Enter} \\
 Show the next cue list, then the outputs & \key{l} & \key{Control+PageDown} \\
+Show the previous cue list & \key{h} & \key{Control+PageUp} \\
 Move down half a page & \key{Control+d} & none \\
 Move down a page & \key{Control+f} & \key{PageDown} \\
 Show the next inspector tab & \key{gt} & \key{Control+Tab} \\
+Show inspector tab number 2, or another & \key{2gt} & \key{2}, then \key{Control+Tab} \\
 Go back to the place before the last jump, or leave the outputs & \key{Control+o} & \key{Alt+ArrowLeft} \\
 Go forward again & \key{Control+i} & \key{Alt+ArrowRight} \\
 Search the cues, or the outputs, by their text & \key{/} & \key{Control+f} \\
 Select the next match & \key{n} & \key{F3} \\
-Show or hide the help & \key{?} or \key{F1} & \key{F1} or \key{?} \\
+Show or hide the help page & \key{?} or \key{F1} & \key{F1} or \key{?} \\
 Pick the highlighted option of an open menu & \key{Control+y} & \key{Enter} \\
 Close an open menu without picking & \key{Control+e} & \key{F4} \\
 \hline
@@ -67,6 +70,8 @@ bar names the keys that pick and close it, and \key{PageDown}, \key{PageUp},
   page opens with a paragraph of first steps, then lists
   every action that has a key, with its keys and its name in the
   configuration file, as Figure~\ref{fig:help} shows.
+\item Press \key{Enter} on the page to open the tutorial, which the first
+  paragraph names.
 \item Press the same key again to close the page.  GO and Panic also close
   it, so that the show stays in view while it runs.
 \end{enumerate}
@@ -105,8 +110,9 @@ pastes the copied cues three times, and \key{3u} undoes three changes.
 the next, \key{yk} copies it and the previous, and \key{dG} cuts down to the
 last cue.  A number before the operator, before the motion, or both
 multiplies, so that \key{2d3j} cuts seven cues.  A key that does not
-continue the sequence cancels it and does nothing, as Vim beeps and drops the
-keys typed so far, so that a mistyped \key{dx} cuts nothing.  The keys for GO
+continue the sequence cancels it and does nothing: cinq drops the keys typed
+so far without a sound or a message, so that a mistyped \key{dx} cuts nothing
+and the status bar goes back to its usual hints.  The keys for GO
 and Panic act immediately, even in the middle of a sequence.  \key{Control+c}
 cancels a sequence in the vi keymap, as it does in Vim, and the status bar
 hints it while a sequence waits or a text field has the keyboard, so that no one

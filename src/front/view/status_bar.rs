@@ -8,26 +8,46 @@
 //! that cancels while keys wait or the search line is open, the keys that go
 //! back and forward between the places jumped to while there is a place to
 //! go to, the key that saves unsaved changes, the keys of GO, Panic, and the
-//! help page, and, while a text field or a drop-down list has the keyboard,
-//! the keys that go to the next field and that leave the field
+//! help page, and, while a text field, a checkbox, or a drop-down list has
+//! the keyboard, the keys that go to the next field and that leave the field,
+//! which are Enter where the keymap binds no key to cancel and a text field
+//! has the keyboard, and what Enter does in a checkbox, which flips it, and
+//! in a closed list, which opens it, while no field has the keyboard, the key
+//! of the next inspector tab, the key of the next cue list, and, while the
+//! selected cue is not the standby cue, the key of standby
 //!
-//! The bar keeps to one line.  When it is too narrow for all of it, the name
+//! A text field keeps every key, so that the keys of undoing, redoing,
+//! pasting, renaming, and the help page are never hinted while one has the
+//! keyboard.
+//!
+//! The bar keeps to one line, with two columns between the
+//! status and the hints.  When it is too narrow for all of it, the name
 //! of the show is cut short at its end with an ellipsis, down to 16 columns,
-//! and then the keys of going forward and back, of GO, of Panic, of saving,
-//! of the help page, of the next field, and of leaving it give way in turn,
+//! and then the keys of the next list, of the next tab, of standby, of going
+//! forward and back, of GO, of Panic, of saving, of the help page, of renaming a
+//! cue just added, of the next field, and of leaving it give way in turn,
 //! each one whole, and then what the latest change told gives way, at a word,
 //! with an ellipsis, so that the status shows in full, while the keys typed so
 //! far and the key of cancel always show in full.
 //! While the outputs show, the bar names the keys that add and rename an
 //! output, and the key that goes back always, since it is the way out, so
-//! that the keys give way in another order: forward, add, rename, GO, Panic,
+//! that the keys give way in another order: rename a cue, forward, add,
+//! rename an output, GO, Panic,
 //! saving, back, the help page, the next field, and leaving a field.
+//! Where standby lies past the end of a list that another follows, GO fires
+//! nothing, so that the key of the next list gives way after those of the help
+//! page and of renaming instead.
+//! While a field has the keyboard, the key of the next field gives way first,
+//! then the keys of other places and what Enter does, and only then GO,
+//! Panic, and saving, which act there, while the key that leaves goes last,
+//! and outlasts the words of the latest change, which are cut instead.
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
 
 mod fit;
 mod hints;
 mod name;
+mod order;
 #[cfg(test)]
 mod tests;
 
@@ -41,49 +61,7 @@ use super::{
     LINE, SEARCH, SPACING, char_width, format, giving_way, keep_keys, line_height, line_keys,
     no_match, theme, warnings,
 };
-use crate::front::{App, Message, Search, keymap::Action};
-
-/// Hints in turn of giving way, the first to go first
-const YIELDING: [Action; 10] = [
-    Action::Forward,
-    Action::Back,
-    Action::Go,
-    Action::Panic,
-    Action::Save,
-    Action::Help,
-    Action::NextField,
-    Action::Cancel,
-    Action::CloseMenu,
-    Action::Pick,
-];
-
-/// Hints in turn of giving way while the outputs show, the first to go
-/// first.  The keys that add and rename an output go right after Forward,
-/// as they only teach, and Back stays until after GO, Panic, and Save,
-/// since it is the way out of the outputs, while the transport has buttons
-/// for GO and Panic.
-const YIELDING_IN_OUTPUTS: [Action; 12] = [
-    Action::Forward,
-    Action::AddBelow,
-    Action::Edit,
-    Action::Go,
-    Action::Panic,
-    Action::Save,
-    Action::Back,
-    Action::Help,
-    Action::NextField,
-    Action::Cancel,
-    Action::CloseMenu,
-    Action::Pick,
-];
-
-fn yielding(app: &App) -> &'static [Action] {
-    if app.outputs_shown {
-        &YIELDING_IN_OUTPUTS
-    } else {
-        &YIELDING
-    }
-}
+use crate::front::{App, Message, Search};
 
 /// Mark that opens the search line, or the one that opens it for a search that
 /// goes up the list, as in Vim
@@ -126,7 +104,7 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
         }
     };
     row![left, text(shown).wrapping(Wrapping::None)]
-        .spacing(SPACING)
+        .spacing(gap())
         .padding(SPACING)
         .align_y(Center)
         .into()
@@ -136,22 +114,33 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
 fn hints_in(app: &App, room: usize) -> String {
     fit::shown(
         |told| hints::hints_told(app, told),
-        hints::told(app),
+        hints::notices::told(app),
         room,
-        yielding(app),
+        order::yielding(app),
+        order::outlasting(app),
     )
+}
+
+/// Columns between the status and the hints, the fewest that keep a count
+/// and a notice on a tight bar from reading as one phrase, so that the hints
+/// keep the room that a wider gap would take
+const GAP: usize = 2;
+
+/// Returns the space between the status and the hints
+fn gap() -> f32 {
+    GAP as f32 * char_width()
 }
 
 /// Returns the columns of text that fit in the bar of `width` pixels
 fn columns(width: f32) -> usize {
-    ((width - 3.0 * SPACING) / char_width()).floor() as usize
+    ((width - 2.0 * SPACING - gap()) / char_width()).floor() as usize
 }
 
 /// Columns that the search line keeps for its text, and for what it tells,
 /// so that the hints never cover them
 fn search_columns(text: &str, warned: bool, outputs: bool) -> usize {
     let told = if warned {
-        no_match(outputs).width() + 1
+        no_match(outputs).width() + GAP
     } else {
         0
     };
@@ -175,13 +164,15 @@ fn search_line<'a>(app: &'a App, search: &'a Search) -> Element<'a, Message> {
                     .color(theme::PALETTE.warning)
                     .wrapping(Wrapping::None),
             )
-            .padding(Padding::ZERO.right(SPACING))
+            .padding(Padding::ZERO.left(gap()).right(SPACING))
         }))
         .align_y(Center);
     keep_keys(line_keys(line), &app.config.keymap)
 }
 
-/// Returns the status of the show with `name` for the name of its file
+/// Returns the status of the show with `name` for the name of its file, and
+/// the number of its warnings only while it has any, since silence tells that
+/// nothing is wrong
 fn status(app: &App, name: String) -> Vec<text::Span<'_>> {
     let count = warnings(app);
     let mode = if app.editable() {
@@ -189,13 +180,19 @@ fn status(app: &App, name: String) -> Vec<text::Span<'_>> {
     } else {
         "Show mode"
     };
-    vec![
+    let warned = (count > 0).then(|| {
+        [
+            span(LINE),
+            span(format::count(count, "warning")).color(theme::PALETTE.warning),
+        ]
+    });
+    [
         span(name),
         span(app.show.mark()).color(theme::PALETTE.warning),
         span(LINE),
         span(mode).color_maybe((!app.editable()).then_some(theme::PALETTE.primary)),
-        span(LINE),
-        span(format::count(count, "warning"))
-            .color_maybe((count > 0).then_some(theme::PALETTE.warning)),
     ]
+    .into_iter()
+    .chain(warned.into_iter().flatten())
+    .collect()
 }

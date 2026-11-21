@@ -4,8 +4,11 @@
 
 //! Tests of which actions the help page lists
 
-use super::{bound, counts, first_steps};
-use crate::front::keymap::{Action, Keymap, Preset};
+use super::{bound, counts, first_steps, names_fit};
+use crate::front::{
+    keymap::{Action, Keymap, Preset},
+    view::char_width,
+};
 
 #[test]
 fn actions_with_no_key_in_the_keymap_in_use_have_no_row() {
@@ -30,9 +33,11 @@ fn first_steps_name_the_keys_of_the_keymap_in_use_in_at_most_five_lines() {
     assert!(vi.contains("Space is GO") && vi.contains("Escape is Panic"));
     assert!(vi.contains("j and k move") && vi.contains("cc names it"));
     assert!(vi.contains("o adds a cue") && vi.contains("u undoes"));
+    assert!(vi.contains("q closes this page"));
     let cua = steps(Preset::Cua);
     assert!(cua.contains("ArrowDown and ArrowUp move") && cua.contains("F2 names it"));
     assert!(cua.contains("Control+n adds a cue") && cua.contains("Control+z undoes"));
+    assert!(cua.contains("Control+w closes this page"));
     // Page is 960 pixels wide in a font 9 pixels wide
     assert!([&vi, &cua].iter().all(|steps| steps.len() <= 5 * 100));
 }
@@ -41,4 +46,22 @@ fn first_steps_name_the_keys_of_the_keymap_in_use_in_at_most_five_lines() {
 fn the_count_paragraph_names_the_outputs_that_a_count_acts_on() {
     let vi = counts(&Keymap::from(Preset::Vi));
     assert!(vi.contains("adds that many cues or outputs") && vi.contains("as in 3 j"));
+}
+
+#[test]
+fn the_names_in_the_configuration_file_give_way_in_a_window_too_narrow_for_them() {
+    let wide = |columns: f32| columns * char_width();
+    [Preset::Vi, Preset::Cua]
+        .map(Keymap::from)
+        .iter()
+        .for_each(|keymap| {
+            assert!(names_fit(keymap, wide(160.0)), "{}", keymap.name());
+            assert!(!names_fit(keymap, wide(60.0)), "{}", keymap.name());
+            // Every width from the narrowest that keeps the names keeps them
+            let kept: Vec<f32> = (60..160)
+                .map(|room| room as f32)
+                .filter(|&room| names_fit(keymap, wide(room)))
+                .collect();
+            assert!(kept.windows(2).all(|pair| pair[1] == pair[0] + 1.0));
+        });
 }

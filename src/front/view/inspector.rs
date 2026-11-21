@@ -7,28 +7,35 @@
 //! output, without tabs, while the outputs show
 
 mod field;
+mod forms;
 mod light;
+mod locked;
 mod output;
 pub(in crate::front) use output::rejection;
-use output::typing;
+use output::{refused, styled, typing};
 mod sends;
 
 use iced::{
     Center, Element, Fill,
-    widget::{checkbox, column, container, progress_bar, radio, row, rule, slider, table, text},
+    widget::{column, container, progress_bar, radio, row, rule, slider, text},
 };
 use strum::VariantArray;
 
-use super::{INSPECTOR, SPACING, format, keep_keys, theme};
+use super::{INSPECTOR, SPACING, check, format, keep_keys};
 use crate::{
-    back::{Cue, Edit, Kind, LEVELS, Media, parse_level},
+    back::{Cue, Edit, Kind, LEVELS, Media, Problem},
     front::{App, Message, Setting, Tab},
 };
-use field::Field;
+use field::{Field, unread};
+use forms::forms;
 
 /// Characters that the level field holds, as many as `-60.0` takes, with
 /// one to spare
 const LEVEL_ROOM: f32 = 6.0;
+
+/// Least height of the inspector, which a window of 1280 by 960 pixels or
+/// less keeps
+const LEAST_HEIGHT: f32 = 240.0;
 
 /// Fields of the Basics tab, one column after the other
 const BASICS: [&[Field]; 2] = [
@@ -41,6 +48,11 @@ const BASICS: [&[Field]; 2] = [
     ],
 ];
 
+/// Shares of the width that the two forms of the Basics tab take: the first
+/// holds the name and the file, which are long, and the second numbers and a
+/// drop-down list, which need less
+const BASICS_SHARES: [u16; 2] = [3, 2];
+
 /// Fields of the Time & Loops tab, one column after the other: the clip with
 /// its length, and the loop within the clip
 const TIME: [&[Field]; 2] = [
@@ -48,7 +60,14 @@ const TIME: [&[Field]; 2] = [
     &[Field::LoopStart, Field::LoopEnd],
 ];
 
-pub(super) fn view(app: &App) -> Element<'_, Message> {
+/// Returns the height of the inspector in a window `window` high, which is
+/// [`LEAST_HEIGHT`] or a quarter of the window, whichever is more, so that a
+/// tall window shows more sends, instruments, and levels at once
+fn height(window: f32) -> f32 {
+    LEAST_HEIGHT.max(window / 4.0)
+}
+
+pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
     let tabs = column![text("Inspector")]
         .extend(
             Tab::VARIANTS
@@ -60,12 +79,19 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     let body = match (app.tab, app.selected.and_then(|id| app.workspace.cue(id))) {
         _ if app.outputs_shown => output::view(app),
         (Tab::Patch, _) => light::patch(app),
-        (Tab::Basics, Some(cue)) => {
-            let basics = row(BASICS.map(|fields| form(app, cue, fields))).spacing(SPACING);
-            inspected(app, cue, basics.into())
-        }
-        (Tab::Time, Some(cue)) => inspected(app, cue, time(app, cue)),
-        (Tab::Levels, Some(cue)) => inspected(app, cue, levels(app, cue)),
+        (Tab::Basics, Some(cue)) => inspected(
+            app,
+            cue,
+            &BASICS,
+            forms(app, cue, BASICS, BASICS_SHARES, || None),
+        ),
+        (Tab::Time, Some(cue)) => inspected(
+            app,
+            cue,
+            if cue.kind.plays_file() { &TIME } else { &[] },
+            time(app, cue),
+        ),
+        (Tab::Levels, Some(cue)) => inspected(app, cue, &[], levels(app, cue)),
         (_, None) if app.current().cues.is_empty() => {
             text("This list has no cues to inspect").into()
         }
@@ -76,21 +102,45 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
             row![tabs, rule::vertical(1), body]
                 .spacing(SPACING)
                 .padding(SPACING)
-                .height(240),
+                .height(height(window)),
         )
         .id(INSPECTOR),
         &app.config.keymap,
     )
 }
 
-fn inspected<'a>(app: &'a App, cue: &Cue, fields: Element<'a, Message>) -> Element<'a, Message> {
-    column![
-        text(format!("{cue}, {} cue{}", cue.kind, lock(app))),
-        fields
-    ]
-    .spacing(SPACING)
-    .width(Fill)
-    .into()
+/// Returns the header of a cue over `fields`, which tells what keeps GO from
+/// playing the cue, and which of the `times` that it shows reads as no time
+fn inspected<'a>(
+    app: &'a App,
+    cue: &Cue,
+    times: &[&[Field]],
+    fields: Element<'a, Message>,
+) -> Element<'a, Message> {
+    let header = row![text(format!("{cue}, {} cue{}", cue.kind, lock(app)))]
+        .extend(trouble(app, cue))
+        .extend(unread(cue, times).map(|reason| text(reason).style(text::danger).into()))
+        .spacing(3.0 * SPACING)
+        .align_y(Center)
+        // Sentences of trouble go under the title where a narrow window has no room beside it
+        .wrap()
+        .vertical_spacing(SPACING / 2.0);
+    column![header, fields].spacing(SPACING).width(Fill).into()
+}
+
+/// Returns what keeps GO from playing the cue, in words, as the State column
+/// and the sidebar tell it, so that the place where the fix is made says it
+/// too.  A file that has yet to load is no fault.
+fn trouble<'a>(app: &App, cue: &Cue) -> Option<Element<'a, Message>> {
+    let problem = app
+        .workspace
+        .problem(cue)
+        .filter(|problem| *problem != Problem::NotLoaded)?;
+    Some(
+        text(format!("GO skips this cue: {problem}"))
+            .style(text::danger)
+            .into(),
+    )
 }
 
 fn lock(app: &App) -> &'static str {
@@ -99,17 +149,6 @@ fn lock(app: &App) -> &'static str {
     } else {
         " (read-only in show mode)"
     }
-}
-
-fn form<'a>(app: &'a App, cue: &'a Cue, fields: &[Field]) -> Element<'a, Message> {
-    table::table(
-        [
-            table::column(text("Setting"), move |field: Field| text(field.label(cue))),
-            table::column(text("Value"), move |field: Field| field.input(app, cue)).width(Fill),
-        ],
-        fields.iter().copied(),
-    )
-    .into()
 }
 
 fn time<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
@@ -121,14 +160,16 @@ fn time<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         _ => {}
     }
     let id = cue.id;
-    let looping = checkbox(cue.looping)
-        .label("Loop until stopped or devamped")
-        .on_toggle_maybe(
+    let looping = move || {
+        Some(check(
+            "Loop until stopped or devamped",
+            cue.looping,
             app.editable()
                 .then_some(move |looping| Message::Edit(id, Edit::Loop(looping))),
-        );
-    let times = row(TIME.map(|fields| form(app, cue, fields))).spacing(SPACING);
-    column![times, looping].spacing(SPACING).into()
+            &app.config.keymap,
+        ))
+    };
+    forms(app, cue, TIME, [1, 1], looping)
 }
 
 fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
@@ -161,7 +202,8 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         format::decibels(cue.level),
         LEVEL_ROOM,
     );
-    let field = field.style(theme::field(parse_level(&typed).is_some()));
+    let reason = rejection(app, Setting::Level(id), &typed);
+    let field = styled(app, field, &typed, "", LEVEL_ROOM, reason.is_none());
     let level: Element<'_, Message> = if editable {
         slider(LEVELS, cue.level, move |db| {
             Message::Edit(id, Edit::Level(db))
@@ -172,14 +214,16 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         progress_bar(LEVELS, cue.level).into()
     };
     let stop = (cue.kind == Kind::Fade).then(|| {
-        checkbox(cue.stop_target)
-            .label("Stop target when done")
-            .on_toggle_maybe(
-                editable.then_some(move |stop| Message::Edit(id, Edit::StopTarget(stop))),
-            )
+        check(
+            "Stop target when done",
+            cue.stop_target,
+            editable.then_some(move |stop| Message::Edit(id, Edit::StopTarget(stop))),
+            &app.config.keymap,
+        )
     });
     column![
         row![text(label), level, field, text("dB")]
+            .extend(reason.map(|reason| refused(&reason).into()))
             .spacing(SPACING)
             .align_y(Center),
         stop,
@@ -187,4 +231,16 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
     ]
     .spacing(SPACING)
     .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{LEAST_HEIGHT, height};
+
+    #[test]
+    fn the_inspector_keeps_its_least_height_until_a_quarter_of_the_window_is_more() {
+        assert_eq!(height(768.0), LEAST_HEIGHT);
+        assert_eq!(height(960.0), LEAST_HEIGHT);
+        assert_eq!(height(1440.0), 360.0);
+    }
 }

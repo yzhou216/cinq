@@ -53,7 +53,7 @@ fn channels_that_are_neither_one_nor_two_are_rejected_and_the_help_names_what_a_
         .for_each(|text| {
             assert_eq!(
                 reasons::channels(text).as_deref(),
-                Some("channels are 1 to 256: 3 for one, 1-2 or 1,3 for two"),
+                Some("channels are 3 for one or 1-2 for two, up to 256"),
                 "{text:?}"
             );
         });
@@ -85,7 +85,7 @@ fn a_device_that_is_not_there_gets_help_and_one_that_is_gets_none() {
     };
     assert_eq!(
         device::hint(&missing, &main(&missing)),
-        "Connect it, or set the sidebar default"
+        "Connect it, or choose another Default device in the sidebar"
     );
     let channels = App {
         audio_problems: vec![(OutputId(1), Fault::Channels(2))],
@@ -113,7 +113,7 @@ fn a_missing_default_device_keeps_its_name_and_points_to_the_sidebar() {
     );
     assert_eq!(
         device::hint(&gone, &main(&gone)),
-        "Connect it, or set the sidebar default"
+        "Connect it, or choose another Default device in the sidebar"
     );
     // Device that is there needs neither, and a named device keeps its own
     let there = App {

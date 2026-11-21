@@ -7,6 +7,7 @@
 
 mod announcing;
 mod mouse;
+mod narrow;
 mod pages;
 mod picking;
 

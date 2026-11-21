@@ -6,7 +6,8 @@
 
 use super::{activity, chain, change, clipped, target};
 use crate::back::{
-    Advance, Command, Cue, CueId, CueList, Edit, Kind, Place, Workspace, loaded, sound,
+    Advance, Command, Cue, CueId, CueList, Edit, Kind, OutputId, Place, Sends, Workspace, loaded,
+    sound,
 };
 
 fn memo(id: u32) -> Cue {
@@ -81,7 +82,7 @@ fn a_chain_with_nothing_to_fire_says_so_and_names_each_cue_with_its_reason() {
         let standby = workspace
             .cue(list.standby.expect("a standby cue"))
             .expect("it exists");
-        chain(&workspace, list, standby)
+        chain(&workspace, list, standby, &[])
     };
     assert_eq!(
         words(vec![audio(1)]),
@@ -168,4 +169,48 @@ fn a_devamped_run_is_told_by_the_time_it_has_left_instead_of_looping() {
         .into_iter()
         .fold(workspace, Workspace::apply);
     assert_eq!(told(&devamped), "0:08.0 left, +0.0 dB");
+}
+
+#[test]
+fn a_chain_tells_a_cue_that_plays_in_silence_and_still_fires_it() {
+    let audio = |id: u32, sends: Sends| Cue {
+        sends: Some(sends),
+        ..Cue::new(CueId(id), id.to_string(), Kind::Audio, "Rain")
+            .file("sound.ogg")
+            .advance(Advance::Continue)
+            .build()
+    };
+    let workspace = Workspace::new(vec![CueList::new(
+        "Main",
+        vec![
+            audio(1, [(OutputId(1), 0.0)].into()),
+            audio(2, [(OutputId(9), 0.0)].into()),
+        ],
+    )]);
+    let workspace = [1, 2]
+        .into_iter()
+        .map(|id| loaded(id, "sound.ogg", sound(10.0)))
+        .fold(workspace, Workspace::apply);
+    let list = &workspace.lists()[0];
+    let standby = workspace.cue(CueId(1)).expect("it exists");
+    assert_eq!(
+        chain(&workspace, list, standby, &[]),
+        "GO fires 2 cues: 1, 2 (+0.0s, silent: no output)"
+    );
+    assert_eq!(
+        chain(&workspace, list, standby, &[OutputId(1)]),
+        "GO fires 2 cues: 1 (silent: output failed), 2 (+0.0s, silent: no output)"
+    );
+}
+
+#[test]
+fn a_file_typed_into_an_unnamed_cue_is_told_by_a_short_notice() {
+    let workspace = Workspace::new(vec![CueList::new("Main", vec![memo(1)])]).apply(Command::Edit(
+        CueId(1),
+        Edit::FileAndName {
+            file: "knock.ogg".into(),
+            name: "knock".into(),
+        },
+    ));
+    assert_eq!(told(&workspace), "changed the file of cue 1");
 }
