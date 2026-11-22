@@ -10,6 +10,8 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+## v0.1.6
+
 - A level typed into a field, that of a cue, a send, the new cues of an
   output, or an instrument of a light cue, applies once the field is left, by
   Enter, Tab, a click, GO, or any other key or click.  A cue that plays no
