@@ -19,9 +19,10 @@ use itertools::Itertools;
 use strum::VariantArray;
 
 use super::{
-    Action, Keymap, Preset, Press, Rows, binding, config,
+    Action, Keymap, Press, Rows, binding, config, declared, desk,
     press::{sequence, shown, written},
     typing::Outcome,
+    vi,
 };
 
 fn keys(text: &str) -> Vec<Press> {
@@ -36,8 +37,8 @@ fn press(text: &str) -> Press {
     one(text).expect("a key")
 }
 
-fn listed(preset: Preset, action: Action) -> String {
-    Keymap::from(preset).listed(action)
+fn listed(action: Action) -> String {
+    Keymap::default().listed(action)
 }
 
 /// Returns what the last key amounts to on a keymap
@@ -64,32 +65,22 @@ fn assert_actions(wanted: &[(&str, Action, Option<usize>)]) {
 }
 
 #[test]
-fn shipped_keymaps_are_valid_and_hide_no_binding() {
-    let invalid: Vec<_> = Preset::VARIANTS
+fn the_shipped_keymap_is_valid_and_hides_no_binding() {
+    let invalid: Vec<_> = Action::VARIANTS
         .iter()
-        .flat_map(|preset| Action::VARIANTS.iter().map(|&action| preset.keys(action)))
-        .flatten()
+        .flat_map(|&action| vi::keys(action))
         .copied()
         .filter(|keys| binding(keys).is_err())
         .collect();
     assert!(invalid.is_empty(), "{invalid:?}");
-    let conflicts: Vec<_> = Preset::VARIANTS
-        .iter()
-        .map(|&preset| (preset.name(), Keymap::from(preset).conflicts()))
-        .filter(|(_, conflicts)| !conflicts.is_empty())
-        .collect();
+    let conflicts = Keymap::default().conflicts();
     assert!(conflicts.is_empty(), "{conflicts:?}");
 }
 
 #[test]
-fn open_is_control_l_in_vi_and_control_o_in_cua() {
-    let opens = |preset: Preset| {
-        Keymap::from(preset)
-            .key(Action::Open)
-            .expect("both keymaps bind open")
-    };
-    assert_eq!(opens(Preset::Vi), "Control+l");
-    assert_eq!(opens(Preset::Cua), "Control+o");
+fn open_is_control_l_in_vi_since_control_o_goes_back() {
+    assert_eq!(listed(Action::Open), "Control+l");
+    assert_eq!(listed(Action::Back), "Control+o");
 }
 
 #[test]
@@ -111,47 +102,36 @@ fn keys_of_go_and_panic_hide_every_other_sequence_that_holds_them() {
 
 #[test]
 fn back_and_forward_keys_follow_vim_and_the_browsers_and_act_in_fields() {
-    assert_eq!(listed(Preset::Vi, Action::Back), "Control+o");
-    assert_eq!(listed(Preset::Vi, Action::Forward), "Control+i");
-    assert_eq!(listed(Preset::Cua, Action::Back), "Alt+ArrowLeft");
-    assert_eq!(listed(Preset::Cua, Action::Forward), "Alt+ArrowRight");
-    let acting = |preset: Preset, text: &str| Keymap::from(preset).acts_in_fields(press(text));
-    assert!(acting(Preset::Vi, "Control+o") && acting(Preset::Vi, "Control+i"));
-    assert!(acting(Preset::Cua, "Alt+ArrowLeft") && acting(Preset::Cua, "Alt+ArrowRight"));
-    assert!(!acting(Preset::Cua, "Control+i"));
+    assert_eq!(listed(Action::Back), "Control+o");
+    assert_eq!(listed(Action::Forward), "Control+i");
+    let acting = |text: &str| Keymap::default().acts_in_fields(press(text));
+    assert!(acting("Control+o") && acting("Control+i"));
 }
 
 #[test]
-fn no_key_is_bound_twice_in_one_place_of_a_shipped_keymap() {
+fn no_key_is_bound_twice_in_one_place_of_the_shipped_keymap() {
     let places: [fn(Action) -> bool; 2] = [Action::acts_in_cue_list, Action::acts_in_menu];
-    let twice: Vec<_> = Preset::VARIANTS
-        .iter()
-        .flat_map(|preset| {
-            places.into_iter().flat_map(move |acts_in| {
-                Action::VARIANTS
-                    .iter()
-                    .filter(move |&&action| acts_in(action))
-                    .flat_map(|&action| preset.keys(action))
-                    .duplicates()
-                    .map(|keys| (preset.name(), *keys))
-            })
+    let twice: Vec<_> = places
+        .into_iter()
+        .flat_map(|acts_in| {
+            Action::VARIANTS
+                .iter()
+                .filter(move |&&action| acts_in(action))
+                .flat_map(|&action| vi::keys(action))
+                .duplicates()
         })
         .collect();
     assert!(twice.is_empty(), "{twice:?}");
 }
 
 #[test]
-fn question_mark_and_f1_show_the_help_in_both_keymaps_and_search_up_has_no_key() {
-    assert_eq!(listed(Preset::Vi, Action::Help), "?, F1");
-    assert_eq!(listed(Preset::Cua, Action::Help), "F1, ?");
-    assert_eq!(listed(Preset::Vi, Action::SearchBackward), "none");
-    assert_eq!(listed(Preset::Cua, Action::SearchBackward), "none");
-    Preset::VARIANTS.iter().for_each(|&preset| {
-        let keymap = Keymap::from(preset);
-        assert_eq!(keymap.alone(press("?")), Some(Action::Help), "{preset:?}");
-        assert!(!keymap.acts_in_fields(press("?")), "{preset:?}");
-        assert!(!keymap.acts_when_captured(press("?"), true), "{preset:?}");
-    });
+fn question_mark_and_f1_show_the_help_and_search_up_has_no_key() {
+    assert_eq!(listed(Action::Help), "?, F1");
+    assert_eq!(listed(Action::SearchBackward), "none");
+    let keymap = Keymap::default();
+    assert_eq!(keymap.alone(press("?")), Some(Action::Help));
+    assert!(!keymap.acts_in_fields(press("?")));
+    assert!(!keymap.acts_when_captured(press("?"), true));
 }
 
 #[test]

@@ -7,29 +7,29 @@
 use super::{
     super::{hints::notices::notice, order::yielding},
     cancel::COLUMNS,
-    fitted, hinted, opened,
+    fitted, hinted, opened, opened_with,
 };
 use crate::{
     back::{Command, OutputId, Workspace},
     front::{
         App,
-        keymap::{Action, Preset},
+        keymap::{Action, Keymap, desk},
         update::Show,
     },
 };
 
-fn in_outputs(preset: Preset) -> App {
+fn in_outputs(keymap: Keymap) -> App {
     App {
         outputs_shown: true,
-        ..opened(preset, false, false)
+        ..opened_with(keymap, false, false)
     }
 }
 
 /// Returns the state with a file for the show, which names no key to open one
-fn on_file(preset: Preset) -> App {
+fn on_file() -> App {
     App {
         show: Show::in_file("/shows/storm.cinq.toml"),
-        ..opened(preset, false, false)
+        ..opened(false, false)
     }
 }
 
@@ -41,12 +41,12 @@ pub(super) fn shown(app: &App, room: usize) -> String {
 #[test]
 fn the_outputs_hint_the_way_back_and_the_keys_to_add_and_to_rename_an_output() {
     assert_eq!(
-        shown(&in_outputs(Preset::Vi), COLUMNS),
+        shown(&in_outputs(Keymap::default()), COLUMNS),
         "o: add output | i: rename | Control+o: back to Main | Space: GO | Escape: Panic | ?: help | f: hint"
     );
     // Cue list needs none of them, and has nowhere to go back to
     assert_eq!(
-        shown(&on_file(Preset::Vi), COLUMNS),
+        shown(&on_file(), COLUMNS),
         "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list | f: hint"
     );
 }
@@ -55,7 +55,7 @@ fn the_outputs_hint_the_way_back_and_the_keys_to_add_and_to_rename_an_output() {
 fn show_mode_locks_the_outputs_so_that_no_key_to_edit_them_is_hinted() {
     let locked = App {
         workspace: Workspace::default().apply(Command::ShowMode(true)),
-        ..in_outputs(Preset::Vi)
+        ..in_outputs(Keymap::default())
     };
     assert_eq!(
         shown(&locked, COLUMNS),
@@ -65,7 +65,7 @@ fn show_mode_locks_the_outputs_so_that_no_key_to_edit_them_is_hinted() {
 
 #[test]
 fn hints_of_the_outputs_give_way_with_the_way_back_lasting_longest_after_help() {
-    let app = in_outputs(Preset::Vi);
+    let app = in_outputs(Keymap::default());
     let in_turn: Vec<_> = [81, 65, 53, 41, 25, 6]
         .into_iter()
         .map(|room| shown(&app, room))
@@ -104,7 +104,7 @@ fn the_cue_list_keeps_its_order_of_giving_way() {
             Action::ChangeName
         ]
     );
-    assert_ne!(cues, yielding(&in_outputs(Preset::Vi)));
+    assert_ne!(cues, yielding(&in_outputs(Keymap::default())));
 }
 
 #[test]
@@ -141,22 +141,23 @@ fn a_cut_output_stays_a_cut_in_the_notice_and_in_undo_and_redo() {
 }
 
 #[test]
-fn the_outputs_of_the_cua_keymap_hint_the_key_that_changes_the_name_to_rename() {
-    let told = |room| shown(&in_outputs(Preset::Cua), room);
+fn the_outputs_hint_the_key_that_changes_the_name_to_rename_in_a_keymap_with_no_cancel() {
+    let keymap = desk("edit = []\nchange_name = \"F2\"\nadd_below = \"Control+a\"");
+    let told = |room| shown(&in_outputs(keymap.clone()), room);
     assert!(told(COLUMNS).contains("F2: rename"));
     assert!(
-        told(COLUMNS).find("Control+n: add output") < told(COLUMNS).find("F2: rename"),
+        told(COLUMNS).find("Control+a: add output") < told(COLUMNS).find("F2: rename"),
         "the order of the hints stays"
     );
     // Gives way before add output, and so before GO and Panic
     assert!(!told(70).contains("F2: rename") && told(70).contains("Escape: Panic"));
     assert!(
         (1..COLUMNS).all(|room| !told(room).contains("F2: rename")
-            || told(room).contains("Control+n: add output")),
+            || told(room).contains("Control+a: add output")),
         "add output shows at every width where rename does"
     );
     assert!(
-        (1..COLUMNS).any(|room| told(room).contains("Control+n: add output")
+        (1..COLUMNS).any(|room| told(room).contains("Control+a: add output")
             && !told(room).contains("F2: rename")),
         "rename gives way first"
     );

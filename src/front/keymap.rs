@@ -6,11 +6,13 @@
 
 mod action;
 pub mod config;
-mod preset;
+#[cfg(test)]
+mod desk;
 mod press;
 #[cfg(test)]
 mod tests;
 mod typing;
+mod vi;
 
 use std::collections::HashMap;
 
@@ -18,7 +20,8 @@ use itertools::Itertools;
 use strum::VariantArray;
 
 pub use action::{Action, Rows};
-pub use preset::Preset;
+#[cfg(test)]
+pub(in crate::front) use desk::{declared, desk};
 #[cfg(test)]
 pub use press::sequence;
 pub use press::{KeyPress, Press, shown, written};
@@ -29,22 +32,16 @@ pub struct Keymap {
     bindings: HashMap<Action, Vec<Vec<Press>>>,
 }
 
-impl From<Preset> for Keymap {
-    fn from(preset: Preset) -> Self {
+impl Default for Keymap {
+    fn default() -> Self {
         let bindings = Action::VARIANTS.iter().map(|&action| {
-            let keys = preset.keys(action).iter();
+            let keys = vi::keys(action).iter();
             (action, keys.filter_map(|keys| binding(keys).ok()).collect())
         });
         Self {
-            name: preset.name().to_owned(),
+            name: vi::NAME.to_owned(),
             bindings: bindings.collect(),
         }
-    }
-}
-
-impl Default for Keymap {
-    fn default() -> Self {
-        Preset::default().into()
     }
 }
 

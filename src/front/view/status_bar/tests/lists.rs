@@ -4,12 +4,12 @@
 
 //! Tests of the hints while a drop-down list or a checkbox has the keyboard
 
-use super::{clipped, hinted, opened};
+use super::{clipped, hinted, opened_with};
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Place, Workspace},
     front::{
         App,
-        keymap::{Action, Preset},
+        keymap::{Action, Keymap, desk},
         update::Clipped,
     },
 };
@@ -20,11 +20,11 @@ fn all(app: &App) -> Vec<String> {
 }
 
 /// Returns an app in which a list has the keyboard, or a text field does
-fn held(preset: Preset, text: bool) -> App {
+fn held(keymap: Keymap, text: bool) -> App {
     App {
         held: true,
         text_held: text,
-        ..opened(preset, false, false)
+        ..opened_with(keymap, false, false)
     }
 }
 
@@ -41,7 +41,7 @@ fn added() -> Workspace {
 fn a_list_hints_undo_but_not_the_rename_of_the_cue_just_added() {
     let list = App {
         workspace: added(),
-        ..held(Preset::Vi, false)
+        ..held(Keymap::default(), false)
     };
     assert_eq!(all(&list)[0], "Added cue 1 | u: undo");
     assert!(all(&list).iter().all(|hint| !hint.contains("rename")));
@@ -51,7 +51,7 @@ fn a_list_hints_undo_but_not_the_rename_of_the_cue_just_added() {
 fn a_list_hints_the_key_to_add_an_output_but_not_to_rename_one_nor_paste() {
     let outputs = App {
         outputs_shown: true,
-        ..held(Preset::Vi, false)
+        ..held(Keymap::default(), false)
     };
     assert!(all(&outputs).contains(&"o: add output".to_owned()));
     assert!(all(&outputs).iter().all(|hint| !hint.contains("rename")));
@@ -69,36 +69,38 @@ fn a_list_hints_the_key_to_add_an_output_but_not_to_rename_one_nor_paste() {
     };
     // Undo acts in a list, where paste does not
     assert_eq!(
-        clipped(&cut(held(Preset::Vi, false))).as_deref(),
+        clipped(&cut(held(Keymap::default(), false))).as_deref(),
         Some("Cut cue 1 | u: undo")
     );
     assert_eq!(
-        clipped(&cut(held(Preset::Vi, true))).as_deref(),
+        clipped(&cut(held(Keymap::default(), true))).as_deref(),
         Some("Cut cue 1")
     );
 }
 
 #[test]
 fn the_show_mode_check_box_hints_the_next_field_go_and_panic_in_show_mode_too() {
-    [Preset::Vi, Preset::Cua].into_iter().for_each(|preset| {
-        let app = App {
-            workspace: added().apply(Command::ShowMode(true)),
-            ..held(preset, false)
-        };
-        let hints = all(&app);
-        assert!(
-            hints.iter().any(|hint| hint.contains("next field")),
-            "{hints:?}"
-        );
-        assert!(hints.iter().any(|hint| hint.contains("GO")), "{hints:?}");
-        assert!(hints.iter().any(|hint| hint.contains("Panic")), "{hints:?}");
-        assert!(
-            hints
-                .iter()
-                .all(|hint| !hint.contains("rename") && !hint.contains("standby")),
-            "{hints:?}"
-        );
-    });
+    [Keymap::default(), desk("")]
+        .into_iter()
+        .for_each(|keymap| {
+            let app = App {
+                workspace: added().apply(Command::ShowMode(true)),
+                ..held(keymap.clone(), false)
+            };
+            let hints = all(&app);
+            assert!(
+                hints.iter().any(|hint| hint.contains("next field")),
+                "{hints:?}"
+            );
+            assert!(hints.iter().any(|hint| hint.contains("GO")), "{hints:?}");
+            assert!(hints.iter().any(|hint| hint.contains("Panic")), "{hints:?}");
+            assert!(
+                hints
+                    .iter()
+                    .all(|hint| !hint.contains("rename") && !hint.contains("standby")),
+                "{hints:?}"
+            );
+        });
 }
 
 /// Returns the hint that tells what Enter does in a field of `app`, if any,
@@ -114,29 +116,32 @@ fn enter(app: &App) -> Option<String> {
 
 #[test]
 fn enter_is_hinted_to_flip_a_check_box_and_to_open_a_list() {
-    for preset in [Preset::Vi, Preset::Cua] {
+    for keymap in [Keymap::default(), desk("")] {
         let check = App {
             check_held: true,
-            ..held(preset, false)
+            ..held(keymap.clone(), false)
         };
         assert_eq!(enter(&check).as_deref(), Some("Enter: flip"));
-        assert_eq!(enter(&held(preset, false)).as_deref(), Some("Enter: open"));
+        assert_eq!(
+            enter(&held(keymap.clone(), false)).as_deref(),
+            Some("Enter: open")
+        );
     }
 }
 
 #[test]
 fn enter_is_hinted_in_no_text_field_and_where_no_field_has_the_keyboard() {
-    // Enter leaves a text field in cua, where its own hint says so
+    // Enter leaves a text field where the keymap binds no key to cancel, and its own hint says so
     assert_eq!(
-        enter(&held(Preset::Cua, true)).as_deref(),
+        enter(&held(desk(""), true)).as_deref(),
         Some("Enter: leave")
     );
-    assert_eq!(enter(&held(Preset::Vi, true)), None);
-    assert_eq!(enter(&opened(Preset::Cua, false, false)), None);
+    assert_eq!(enter(&held(Keymap::default(), true)), None);
+    assert_eq!(enter(&opened_with(desk(""), false, false)), None);
     let check = |change: fn(App) -> App| {
         change(App {
             check_held: true,
-            ..held(Preset::Vi, false)
+            ..held(Keymap::default(), false)
         })
     };
     assert_eq!(enter(&check(|app| App { menu: true, ..app })), None);
@@ -147,7 +152,7 @@ fn enter_is_hinted_in_no_text_field_and_where_no_field_has_the_keyboard() {
 fn enter_is_not_hinted_to_open_or_flip_where_a_key_binding_takes_it_over() {
     let mut app = App {
         check_held: true,
-        ..held(Preset::Cua, false)
+        ..held(desk(""), false)
     };
     let key = vec![crate::front::keymap::sequence("Enter").expect("a key")];
     app.config.keymap = app.config.keymap.clone().with(Action::Go, key);
@@ -156,10 +161,10 @@ fn enter_is_not_hinted_to_open_or_flip_where_a_key_binding_takes_it_over() {
 
 #[test]
 fn enter_is_hinted_to_press_a_button_and_not_to_open_it() {
-    for preset in [Preset::Vi, Preset::Cua] {
+    for keymap in [Keymap::default(), desk("")] {
         let button = App {
             button_held: true,
-            ..held(preset, false)
+            ..held(keymap.clone(), false)
         };
         assert_eq!(enter(&button).as_deref(), Some("Enter: press"));
         assert!(all(&button).iter().all(|hint| hint != "Enter: open"));
@@ -169,11 +174,14 @@ fn enter_is_hinted_to_press_a_button_and_not_to_open_it() {
 #[test]
 fn go_is_hinted_over_a_text_field_only_by_a_key_that_types_no_character() {
     let go = |app: &App| all(app).into_iter().find(|hint| hint.ends_with(": GO"));
-    for preset in [Preset::Vi, Preset::Cua] {
-        assert_eq!(go(&held(preset, false)).as_deref(), Some("Space: GO"));
-        assert_eq!(go(&held(preset, true)), None);
+    for keymap in [Keymap::default(), desk("")] {
+        assert_eq!(
+            go(&held(keymap.clone(), false)).as_deref(),
+            Some("Space: GO")
+        );
+        assert_eq!(go(&held(keymap.clone(), true)), None);
     }
-    let mut app = held(Preset::Vi, true);
+    let mut app = held(Keymap::default(), true);
     let keys = vec![
         crate::front::keymap::sequence("Space").expect("a key"),
         crate::front::keymap::sequence("F9").expect("a key"),
@@ -184,8 +192,10 @@ fn go_is_hinted_over_a_text_field_only_by_a_key_that_types_no_character() {
 
 #[test]
 fn a_list_hints_the_key_of_hint_mode_but_a_text_field_does_not() {
-    [Preset::Vi, Preset::Cua].into_iter().for_each(|preset| {
-        assert!(all(&held(preset, false)).contains(&"f: hint".to_owned()));
-        assert!(!all(&held(preset, true)).contains(&"f: hint".to_owned()));
-    });
+    [Keymap::default(), desk("")]
+        .into_iter()
+        .for_each(|keymap| {
+            assert!(all(&held(keymap.clone(), false)).contains(&"f: hint".to_owned()));
+            assert!(!all(&held(keymap.clone(), true)).contains(&"f: hint".to_owned()));
+        });
 }

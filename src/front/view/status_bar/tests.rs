@@ -32,7 +32,7 @@ use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Workspace},
     front::{
         App,
-        keymap::{Action, Keymap, Preset, config::Config},
+        keymap::{Action, Keymap, config::Config},
         update::Clipped,
         view::NO_MATCH,
     },
@@ -168,9 +168,14 @@ fn hints_give_way_to_the_text_of_the_search_line_and_its_note() {
 fn the_search_line_starts_with_a_slash_or_a_question_mark_for_a_search_up() {
     assert_eq!((mark(false), mark(true)), ("/", "?"));
 }
-fn opened(preset: Preset, menu: bool, help: bool) -> App {
+
+fn opened(menu: bool, help: bool) -> App {
+    opened_with(Keymap::default(), menu, help)
+}
+
+fn opened_with(keymap: Keymap, menu: bool, help: bool) -> App {
     let mut config = Config::default();
-    config.keymap = Keymap::from(preset);
+    config.keymap = keymap;
     App {
         config,
         menu,
@@ -178,6 +183,7 @@ fn opened(preset: Preset, menu: bool, help: bool) -> App {
         ..App::default()
     }
 }
+
 #[test]
 fn a_notice_that_does_not_fit_drops_the_key_that_teaches_then_gives_way_at_a_word() {
     let told = "Cut the output House L, so that cues play on House R | p: paste | u: undo";

@@ -11,7 +11,7 @@
 //! is no letter leaves the mode and does nothing else, apart from the keys of
 //! GO and Panic, which act as everywhere and leave the mode, and Backspace,
 //! which takes a letter back, or leaves the mode where none is typed, since
-//! the key of the mode is a letter of the labels in both keymaps.  A click
+//! the key of the mode is a letter of the labels in the vi keymap.  A click
 //! leaves it too, and so do a turn of the wheel, a resize of the window, a
 //! start or an end of a run of the Active list, and a warning that comes or
 //! goes, since the labels would no longer lie on their places.

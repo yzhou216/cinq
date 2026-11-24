@@ -13,38 +13,37 @@ use super::{
         hints_in,
         order::{self, YIELDING_IN_FIELD},
     },
-    hinted, opened,
+    hinted, opened, opened_with,
 };
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Place, Workspace},
     front::{
         App,
-        keymap::{Action, Preset, sequence},
+        keymap::{Action, Keymap, desk, sequence},
     },
 };
 
 #[test]
 fn the_help_key_is_hinted_only_where_it_acts() {
     let told = |app: App| hinted(&app).iter().any(|(_, hint)| hint == "?: help");
-    let vi = |menu, help| opened(Preset::Vi, menu, help);
-    assert!(told(vi(false, false)));
+    assert!(told(opened(false, false)));
     assert!(!told(App {
         held: true,
         text_held: true,
-        ..vi(false, false)
+        ..opened(false, false)
     }));
     assert!(!told(App {
         held: true,
-        ..vi(false, false)
+        ..opened(false, false)
     }));
     assert!(told(App {
         held: true,
-        ..vi(true, false)
+        ..opened(true, false)
     }));
     assert!(told(App {
         held: true,
         text_held: true,
-        ..vi(false, true)
+        ..opened(false, true)
     }));
 }
 
@@ -61,7 +60,7 @@ fn the_bar_hints_enter_while_the_empty_file_field_has_the_keyboard() {
             file_held,
             selected: Some(CueId(1)),
             workspace: Workspace::new(vec![CueList::new("Main", vec![cue(file)])]),
-            ..opened(Preset::Vi, false, false)
+            ..opened(false, false)
         };
         hinted(&app)
             .iter()
@@ -78,7 +77,7 @@ fn a_keymap_with_no_key_to_cancel_hints_enter_to_leave_a_text_field_only() {
         let app = App {
             held: true,
             text_held,
-            ..opened(Preset::Cua, false, false)
+            ..opened_with(desk(""), false, false)
         };
         hinted(&app).iter().any(|(_, hint)| hint == "Enter: leave")
     };
@@ -88,7 +87,7 @@ fn a_keymap_with_no_key_to_cancel_hints_enter_to_leave_a_text_field_only() {
 
 #[test]
 fn enter_is_not_hinted_to_leave_the_empty_file_field_where_it_chooses_a_file() {
-    let told = |preset, file: &str| {
+    let told = |keymap, file: &str| {
         let app = App {
             held: true,
             text_held: true,
@@ -102,32 +101,35 @@ fn enter_is_not_hinted_to_leave_the_empty_file_field_where_it_chooses_a_file() {
                         .build(),
                 ],
             )]),
-            ..opened(preset, false, false)
+            ..opened_with(keymap, false, false)
         };
         hinted(&app)
             .into_iter()
             .map(|(_, hint)| hint)
             .collect::<Vec<_>>()
     };
-    let empty = told(Preset::Cua, "");
+    let empty = told(desk(""), "");
     assert!(empty.contains(&"Enter: choose a file".to_owned()));
     assert!(!empty.contains(&"Enter: leave".to_owned()));
-    assert!(told(Preset::Cua, "rain.flac").contains(&"Enter: leave".to_owned()));
+    assert!(told(desk(""), "rain.flac").contains(&"Enter: leave".to_owned()));
 }
 
 #[test]
 fn tab_outlasts_the_words_of_a_notice_where_no_key_cancels_in_a_checkbox_or_list() {
-    let outlasting = |preset, text_held| {
+    let outlasting = |keymap, text_held| {
         order::outlasting(&App {
             held: true,
             text_held,
-            ..opened(preset, false, false)
+            ..opened_with(keymap, false, false)
         })
         .contains(&Action::NextField)
     };
-    assert!(outlasting(Preset::Cua, false));
-    assert!(!outlasting(Preset::Cua, true), "Enter leaves a text field");
-    assert!(!outlasting(Preset::Vi, false), "the key of cancel leaves");
+    assert!(outlasting(desk(""), false));
+    assert!(!outlasting(desk(""), true), "Enter leaves a text field");
+    assert!(
+        !outlasting(Keymap::default(), false),
+        "the key of cancel leaves"
+    );
 }
 
 #[test]
@@ -146,7 +148,7 @@ fn tab_outlasts_the_words_of_a_notice_in_the_empty_file_field_where_enter_choose
                         .build(),
                 ],
             )]),
-            ..opened(Preset::Cua, false, false)
+            ..opened_with(desk(""), false, false)
         })
         .contains(&Action::NextField)
     };
@@ -159,7 +161,7 @@ fn the_key_of_the_next_tab_is_hinted_late_while_no_field_has_the_keyboard() {
     let hints = |held| {
         hinted(&App {
             held,
-            ..opened(Preset::Vi, false, false)
+            ..opened(false, false)
         })
     };
     assert_eq!(
@@ -183,7 +185,7 @@ fn enter_is_not_hinted_to_leave_where_a_key_binding_takes_it_over() {
         let mut app = App {
             held: true,
             text_held: true,
-            ..opened(Preset::Cua, false, false)
+            ..opened_with(desk(""), false, false)
         };
         let enter = vec![sequence("Enter").expect("a key")];
         app.config.keymap = app.config.keymap.clone().with(action, enter);
@@ -292,7 +294,7 @@ fn a_notice_that_is_cut_keeps_the_words_that_tell_which_cue_before_those_that_do
 
 #[test]
 fn what_enter_does_outlasts_the_words_of_a_notice_that_is_cut() {
-    for (preset, room) in [(Preset::Vi, 52), (Preset::Cua, 62)] {
+    for (keymap, room) in [(Keymap::default(), 52), (desk(""), 62)] {
         let app = App {
             held: true,
             workspace: Workspace::default().apply(Command::Add {
@@ -301,7 +303,7 @@ fn what_enter_does_outlasts_the_words_of_a_notice_that_is_cut() {
                 at: Place::End,
                 count: 1,
             }),
-            ..opened(preset, false, false)
+            ..opened_with(keymap, false, false)
         };
         let shown = hints_in(&app, room);
         assert!(shown.contains("Enter: open"), "{shown}");

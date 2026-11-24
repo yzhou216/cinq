@@ -18,6 +18,7 @@ use taplo::{
     formatter::{self, Options},
     parser,
 };
+use toml::de::DeTable;
 
 pub(super) fn reformat(file: &Path) {
     if let Ok(text) = fs::read_to_string(file)
@@ -31,6 +32,10 @@ pub(super) fn reformat(file: &Path) {
 }
 
 fn formatted(text: &str) -> Option<String> {
+    // Taplo recurses once for each level of nesting, so that a file of thousands
+    // of brackets would overflow the stack of the thread that formats it and
+    // abort the program, while the toml crate stops at a depth of its own
+    DeTable::parse(text).ok()?;
     let parsed = parser::parse(text);
     let options = Options {
         reorder_keys: false,

@@ -130,8 +130,12 @@ fn sidebar_lists_each_problem_after_the_line_it_lies_on() {
         ]
     );
     assert_eq!(
-        warnings("keymap = \"cua\"\n[keys\n"),
+        warnings("keymap = \"vi\"\n[keys\n"),
         ["config.toml:2: is not TOML: unclosed table, expected `]`"]
+    );
+    assert_eq!(
+        warnings("# Keys\nkeymap = \"cua\"\n"),
+        ["config.toml:2: cinq no longer ships the cua keymap, so vi stands in for it"]
     );
 }
 

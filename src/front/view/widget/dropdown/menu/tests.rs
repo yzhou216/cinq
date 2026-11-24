@@ -19,7 +19,7 @@ use iced::{
 use super::{Choice, Reply, Shared, reply};
 use crate::front::{
     Message,
-    keymap::{Keymap, Preset, Press},
+    keymap::{Keymap, Press, desk},
     step,
     view::widget::{dropdown::dropdown, wrap::Intercept},
 };
@@ -110,55 +110,59 @@ fn pressed(keys: &[Key]) -> Outcome {
 
 #[test]
 fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
-    let (none, ctrl, alt) = (Modifiers::empty(), Modifiers::CTRL, Modifiers::ALT);
+    let (none, ctrl) = (Modifiers::empty(), Modifiers::CTRL);
     let cases = [
-        (Preset::Vi, letter("n"), ctrl, Reply::Step(1)),
-        (Preset::Vi, letter("p"), ctrl, Reply::Step(-1)),
-        (Preset::Vi, named(Named::ArrowDown), none, Reply::Step(1)),
-        (Preset::Vi, letter("k"), none, Reply::Step(-1)),
-        (Preset::Cua, named(Named::ArrowUp), none, Reply::Step(-1)),
-        (Preset::Cua, letter("n"), ctrl, Reply::Keep),
-        (Preset::Vi, named(Named::Enter), none, Reply::Pick),
-        (Preset::Vi, letter("y"), ctrl, Reply::Pick),
-        (Preset::Vi, letter("e"), ctrl, Reply::Dismiss),
-        (Preset::Vi, letter("c"), ctrl, Reply::Dismiss),
-        (Preset::Cua, letter("c"), ctrl, Reply::Keep),
-        (Preset::Cua, named(Named::F4), none, Reply::Dismiss),
-        (Preset::Cua, letter("y"), ctrl, Reply::Keep),
-        (Preset::Cua, letter("e"), ctrl, Reply::Keep),
-        (Preset::Vi, letter("y"), none, Reply::Keep),
-        (Preset::Vi, named(Named::Escape), none, Reply::Close),
-        (Preset::Vi, named(Named::Space), none, Reply::Close),
-        (Preset::Vi, named(Named::F1), none, Reply::Pass),
-        (Preset::Vi, letter("?"), none, Reply::Pass),
-        (Preset::Cua, letter("?"), none, Reply::Pass),
-        (Preset::Cua, named(Named::F1), none, Reply::Pass),
-        (Preset::Vi, letter("q"), none, Reply::Keep),
-        (Preset::Vi, letter("n"), none, Reply::Keep),
-        (Preset::Vi, letter("d"), none, Reply::Keep),
-        (Preset::Vi, letter("o"), ctrl, Reply::Keep),
-        (Preset::Vi, letter("i"), ctrl, Reply::Keep),
-        (Preset::Cua, named(Named::ArrowLeft), alt, Reply::Keep),
-        (Preset::Vi, letter("d"), ctrl, Reply::Keep),
-        (Preset::Vi, named(Named::PageDown), none, Reply::Page(1)),
-        (Preset::Vi, letter("f"), ctrl, Reply::Page(1)),
-        (Preset::Vi, letter("b"), ctrl, Reply::Page(-1)),
-        (Preset::Cua, named(Named::PageUp), none, Reply::Page(-1)),
-        (Preset::Vi, named(Named::Home), none, Reply::First),
-        (Preset::Vi, named(Named::End), none, Reply::Last),
-        (Preset::Vi, letter("G"), none, Reply::Last),
-        (Preset::Cua, named(Named::Home), none, Reply::First),
-        (Preset::Cua, named(Named::End), none, Reply::Last),
-        (Preset::Cua, named(Named::PageDown), ctrl, Reply::Keep),
-        (Preset::Vi, named(Named::Home), ctrl, Reply::First),
-        (Preset::Vi, named(Named::F5), none, Reply::Keep),
+        (Keymap::default(), letter("n"), ctrl, Reply::Step(1)),
+        (Keymap::default(), letter("p"), ctrl, Reply::Step(-1)),
+        (
+            Keymap::default(),
+            named(Named::ArrowDown),
+            none,
+            Reply::Step(1),
+        ),
+        (Keymap::default(), letter("k"), none, Reply::Step(-1)),
+        (Keymap::default(), named(Named::Enter), none, Reply::Pick),
+        (Keymap::default(), letter("y"), ctrl, Reply::Pick),
+        (Keymap::default(), letter("e"), ctrl, Reply::Dismiss),
+        (Keymap::default(), letter("c"), ctrl, Reply::Dismiss),
+        (desk(""), letter("c"), ctrl, Reply::Keep),
+        (
+            desk("close_menu = \"F4\""),
+            named(Named::F4),
+            none,
+            Reply::Dismiss,
+        ),
+        (Keymap::default(), letter("y"), none, Reply::Keep),
+        (Keymap::default(), named(Named::Escape), none, Reply::Close),
+        (Keymap::default(), named(Named::Space), none, Reply::Close),
+        (Keymap::default(), named(Named::F1), none, Reply::Pass),
+        (Keymap::default(), letter("?"), none, Reply::Pass),
+        (Keymap::default(), letter("q"), none, Reply::Keep),
+        (Keymap::default(), letter("n"), none, Reply::Keep),
+        (Keymap::default(), letter("d"), none, Reply::Keep),
+        (Keymap::default(), letter("o"), ctrl, Reply::Keep),
+        (Keymap::default(), letter("i"), ctrl, Reply::Keep),
+        (Keymap::default(), letter("d"), ctrl, Reply::Keep),
+        (
+            Keymap::default(),
+            named(Named::PageDown),
+            none,
+            Reply::Page(1),
+        ),
+        (Keymap::default(), letter("f"), ctrl, Reply::Page(1)),
+        (Keymap::default(), letter("b"), ctrl, Reply::Page(-1)),
+        (Keymap::default(), named(Named::Home), none, Reply::First),
+        (Keymap::default(), named(Named::End), none, Reply::Last),
+        (Keymap::default(), letter("G"), none, Reply::Last),
+        (Keymap::default(), named(Named::Home), ctrl, Reply::First),
+        (Keymap::default(), named(Named::F5), none, Reply::Keep),
     ];
     let wrong: Vec<_> = cases
         .into_iter()
-        .map(|(preset, key, modifiers, expected)| {
+        .map(|(keymap, key, modifiers, expected)| {
             let press = Press::from_key(&key, modifiers);
-            let got = reply(&Keymap::from(preset), &key, press);
-            (preset, key, modifiers, expected, got)
+            let got = reply(&keymap, &key, press);
+            (keymap.name().to_owned(), key, modifiers, expected, got)
         })
         .filter(|(.., expected, got)| expected != got)
         .collect();

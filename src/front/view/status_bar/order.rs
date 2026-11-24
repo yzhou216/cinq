@@ -14,10 +14,10 @@ use crate::front::{App, keymap::Action};
 /// of every table teach, since it is told only right after a cue is added and
 /// nowhere else.  The keys of the next cue list and of the next tab go first
 /// of all, as they only teach, and that of hint mode follows them, so that a
-/// narrow bar of the cua keymap, where its key is long, still shows it.  The
-/// key of opening a show follows them, since it only teaches, but goes before
-/// the keys that act, since the show with no file and no cues, where alone it
-/// shows, gives them nothing to act on.
+/// narrow bar, where the key may be long, still shows it.  The key of opening
+/// a show follows them, since it only teaches, but goes before the keys that
+/// act, since the show with no file and no cues, where alone it shows, gives
+/// them nothing to act on.
 pub(super) const YIELDING: [Action; 17] = [
     Action::NextList,
     Action::NextTab,

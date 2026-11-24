@@ -22,8 +22,8 @@ fn new_setting_goes_after_the_comments_and_before_the_tables() {
             "# Settings of cinq\naudio_device = \"alsa:plughw:CARD=1,DEV=0\"\n",
         ),
         (
-            "# Settings of cinq\n\nkeymap = \"cua\" # Booth keys\n[keys]\ngo = \"F5\"\n",
-            "# Settings of cinq\n\naudio_device = \"alsa:plughw:CARD=1,DEV=0\"\nkeymap = \"cua\" # Booth keys\n[keys]\ngo = \"F5\"\n",
+            "# Settings of cinq\n\nkeymap = \"vi\" # Booth keys\n[keys]\ngo = \"F5\"\n",
+            "# Settings of cinq\n\naudio_device = \"alsa:plughw:CARD=1,DEV=0\"\nkeymap = \"vi\" # Booth keys\n[keys]\ngo = \"F5\"\n",
         ),
         (
             "# No line break at the end",
@@ -41,14 +41,14 @@ fn new_setting_goes_after_the_comments_and_before_the_tables() {
 
 #[test]
 fn setting_there_changes_in_place_or_goes_for_the_default_device() {
-    let text = "keymap = \"cua\"\naudio_device = \"alsa:default\" # House\nready_ahead = 5\n";
+    let text = "keymap = \"vi\"\naudio_device = \"alsa:default\" # House\nready_ahead = 5\n";
     assert_eq!(
         with_audio_device(text, Some("alsa:pipewire")).as_deref(),
-        Ok("keymap = \"cua\"\naudio_device = \"alsa:pipewire\" # House\nready_ahead = 5\n")
+        Ok("keymap = \"vi\"\naudio_device = \"alsa:pipewire\" # House\nready_ahead = 5\n")
     );
     assert_eq!(
         with_audio_device(text, None).as_deref(),
-        Ok("keymap = \"cua\"\nready_ahead = 5\n")
+        Ok("keymap = \"vi\"\nready_ahead = 5\n")
     );
     assert_eq!(with_audio_device(MADE, None).as_deref(), Ok(MADE));
 }
@@ -82,4 +82,48 @@ fn missing_file_is_made_to_keep_the_device() -> io::Result<()> {
     assert_eq!(keep_audio_device(&file, Some("alsa:default")), Ok(()));
     assert!(fs::read_to_string(&file)?.ends_with("\naudio_device = \"alsa:default\"\n"));
     Ok(())
+}
+
+#[test]
+fn new_setting_goes_after_the_byte_order_mark_that_an_editor_wrote() {
+    let device = Some("alsa:default");
+    let cases = [
+        ("\u{feff}", "\u{feff}\naudio_device = \"alsa:default\"\n"),
+        (
+            "\u{feff}# Booth\n",
+            "\u{feff}# Booth\naudio_device = \"alsa:default\"\n",
+        ),
+        (
+            "\u{feff}keymap = \"vi\"\n",
+            "\u{feff}audio_device = \"alsa:default\"\nkeymap = \"vi\"\n",
+        ),
+    ];
+    cases.into_iter().for_each(|(text, expected)| {
+        let kept = with_audio_device(text, device).expect("the text is TOML");
+        assert_eq!(kept, expected, "{text:?}");
+        assert!(toml::from_str::<toml::Table>(&kept).is_ok(), "{kept:?}");
+    });
+}
+
+#[test]
+fn table_named_audio_device_stays_since_it_has_no_line_to_replace() {
+    let cases = [
+        "[audio_device]\ngo = 1\n",
+        "keymap = \"vi\"\n[[audio_device]]\na = 1\n",
+        "audio_device.a = 1\nkeymap = \"vi\"\n",
+    ];
+    cases.into_iter().for_each(|text| {
+        [Some("alsa:default"), None].into_iter().for_each(|device| {
+            assert_eq!(
+                with_audio_device(text, device),
+                Err("audio_device is a table, not an ID".to_owned()),
+                "{text:?}"
+            );
+        });
+    });
+    let inline = "audio_device = { a = 1 }\n";
+    assert_eq!(
+        with_audio_device(inline, Some("alsa:default")).as_deref(),
+        Ok("audio_device = \"alsa:default\"\n")
+    );
 }

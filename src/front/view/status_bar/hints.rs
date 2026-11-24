@@ -117,9 +117,9 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     // Tab skips the Choose button, so that Enter says how to reach the chooser
     // while the empty File field has the keyboard
     let choose = choosing(app).then(|| (None, "Enter: choose a file".to_owned()));
-    // The keymap may bind no key to cancel, as CUA does, while Enter leaves a
-    // text field, though it opens the menu of a drop-down list and chooses a
-    // file in the empty File field
+    // A keymap of the file's own may bind no key to cancel, while Enter
+    // leaves a text field, though it opens the menu of a drop-down list and
+    // chooses a file in the empty File field
     let leave = key(Action::Cancel, "leave")
         .or_else(|| {
             (app.text_held && enter_leaves(app) && choose.is_none())

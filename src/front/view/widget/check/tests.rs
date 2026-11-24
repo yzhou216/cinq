@@ -8,14 +8,13 @@ use iced::{
     advanced::widget::operation::Focusable,
     keyboard::{Key, Modifiers, key::Named},
 };
-use strum::VariantArray;
 
 use super::{focus::State, *};
 use crate::{
     back::{CueId, Edit},
     front::{
         Focus,
-        keymap::{Action, Preset, Press},
+        keymap::{Action, Press},
     },
 };
 
@@ -52,13 +51,11 @@ fn enter_flips_the_checkbox_that_has_the_keyboard_and_keeps_the_key_from_the_bin
 }
 
 #[test]
-fn enter_is_the_key_of_standby_and_no_key_that_acts_at_once_in_both_keymaps() {
-    Preset::VARIANTS.iter().for_each(|&preset| {
-        let keymap = Keymap::from(preset);
-        let press = Press::from_key(&enter(), Modifiers::empty()).expect("a key");
-        assert_eq!(keymap.alone(press), Some(Action::Standby));
-        assert!(!keymap.acts_at_once(press));
-    });
+fn enter_is_the_key_of_standby_and_no_key_that_acts_at_once() {
+    let keymap = Keymap::default();
+    let press = Press::from_key(&enter(), Modifiers::empty()).expect("a key");
+    assert_eq!(keymap.alone(press), Some(Action::Standby));
+    assert!(!keymap.acts_at_once(press));
 }
 
 #[test]

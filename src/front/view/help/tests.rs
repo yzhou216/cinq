@@ -6,30 +6,29 @@
 
 use super::{bound, counts, first_steps, names_fit};
 use crate::front::{
-    keymap::{Action, Keymap, Preset},
+    keymap::{Action, Keymap, declared, desk},
     view::char_width,
 };
 
 #[test]
 fn actions_with_no_key_in_the_keymap_in_use_have_no_row() {
-    let vi = bound(&Keymap::from(Preset::Vi));
+    let vi = bound(&Keymap::default());
     assert!(!vi.contains(&Action::Delete));
     assert!(vi.contains(&Action::Cut) && vi.contains(&Action::EditStart));
-    let cua = bound(&Keymap::from(Preset::Cua));
-    assert!(cua.contains(&Action::Delete));
-    assert!(!cua.contains(&Action::HalfPageDown) && !cua.contains(&Action::SearchBackward));
+    let own = bound(&declared("delete = \"Delete\"\nnext = \"ArrowDown\""));
+    assert!(own.contains(&Action::Delete));
+    assert!(!own.contains(&Action::HalfPageDown) && !own.contains(&Action::SearchBackward));
 }
 
 #[test]
 fn rows_keep_the_order_of_the_actions_with_go_and_panic_first() {
-    let vi = bound(&Keymap::from(Preset::Vi));
+    let vi = bound(&Keymap::default());
     assert_eq!(vi[..3], [Action::Go, Action::Panic, Action::Standby]);
 }
 
 #[test]
 fn first_steps_name_the_keys_of_the_keymap_in_use_in_at_most_five_lines() {
-    let steps = |preset| first_steps(&Keymap::from(preset));
-    let vi = steps(Preset::Vi);
+    let vi = first_steps(&Keymap::default());
     assert!(vi.contains("Space is GO") && vi.contains("Escape is Panic"));
     assert!(vi.contains("j and k move") && vi.contains("cc names it"));
     assert!(vi.contains("o adds a cue") && vi.contains("u undoes"));
@@ -38,41 +37,40 @@ fn first_steps_name_the_keys_of_the_keymap_in_use_in_at_most_five_lines() {
         vi.contains("Tab moves through the fields to the File field, where Enter chooses a file")
             && vi.contains("f labels each place to click")
     );
-    let cua = steps(Preset::Cua);
-    assert!(cua.contains("ArrowDown and ArrowUp move") && cua.contains("F2 names it"));
-    assert!(cua.contains("Control+n adds a cue") && cua.contains("Control+z undoes"));
-    assert!(cua.contains("Control+w closes this page"));
-    assert!(cua.contains("Tab moves through the fields to the File field"));
+    let own = first_steps(&desk(
+        "next = \"ArrowDown\"\nprevious = \"ArrowUp\"\nchange_name = \"F2\"\nadd_below = \"Control+a\"\nundo = \"Control+z\"\nclose_help = \"Control+w\"",
+    ));
+    assert!(own.contains("ArrowDown and ArrowUp move") && own.contains("F2 names it"));
+    assert!(own.contains("Control+a adds a cue") && own.contains("Control+z undoes"));
+    assert!(own.contains("Control+w closes this page"));
+    assert!(own.contains("Tab moves through the fields to the File field"));
     // Page is 960 pixels wide in a font 9 pixels wide
-    assert!([&vi, &cua].iter().all(|steps| steps.len() <= 5 * 100));
+    assert!([&vi, &own].iter().all(|steps| steps.len() <= 5 * 100));
 }
 
 #[test]
 fn only_a_keymap_with_sequences_says_how_to_type_them() {
-    assert!(Keymap::from(Preset::Vi).has_sequences());
-    assert!(!Keymap::from(Preset::Cua).has_sequences());
+    assert!(Keymap::default().has_sequences());
+    assert!(!declared("next = \"ArrowDown\"").has_sequences());
 }
 
 #[test]
 fn the_count_paragraph_names_the_outputs_that_a_count_acts_on() {
-    let vi = counts(&Keymap::from(Preset::Vi));
+    let vi = counts(&Keymap::default());
     assert!(vi.contains("adds that many cues or outputs") && vi.contains("as in 3 j"));
 }
 
 #[test]
 fn the_names_in_the_configuration_file_give_way_in_a_window_too_narrow_for_them() {
     let wide = |columns: f32| columns * char_width();
-    [Preset::Vi, Preset::Cua]
-        .map(Keymap::from)
-        .iter()
-        .for_each(|keymap| {
-            assert!(names_fit(keymap, wide(160.0)), "{}", keymap.name());
-            assert!(!names_fit(keymap, wide(60.0)), "{}", keymap.name());
-            // Every width from the narrowest that keeps the names keeps them
-            let kept: Vec<f32> = (60..160)
-                .map(|room| room as f32)
-                .filter(|&room| names_fit(keymap, wide(room)))
-                .collect();
-            assert!(kept.windows(2).all(|pair| pair[1] == pair[0] + 1.0));
-        });
+    [Keymap::default(), desk("")].iter().for_each(|keymap| {
+        assert!(names_fit(keymap, wide(160.0)), "{}", keymap.name());
+        assert!(!names_fit(keymap, wide(60.0)), "{}", keymap.name());
+        // Every width from the narrowest that keeps the names keeps them
+        let kept: Vec<f32> = (60..160)
+            .map(|room| room as f32)
+            .filter(|&room| names_fit(keymap, wide(room)))
+            .collect();
+        assert!(kept.windows(2).all(|pair| pair[1] == pair[0] + 1.0));
+    });
 }

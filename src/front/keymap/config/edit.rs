@@ -42,6 +42,14 @@ pub(super) fn with_audio_device(text: &str, device: Option<&str>) -> Result<Stri
         .iter()
         .find(|(key, _)| key.get_ref() == AUDIO_DEVICE)
         .map(|(key, value)| (key.span(), value.span()));
+    // A table of that name, as `[audio_device]` or `audio_device.a = 1` makes
+    // one, has no line of its own to replace or to take out
+    if found.as_ref().is_some_and(|(key, value)| {
+        text.get(key.end..value.start)
+            .is_none_or(|gap| gap.trim() != "=")
+    }) {
+        return Err("audio_device is a table, not an ID".to_owned());
+    }
     let quoted = device.map(|id| Value::String(id.to_owned()).to_string());
     Ok(match (found, quoted) {
         (Some((_, value)), Some(quoted)) => spliced(text, value, &quoted),
@@ -72,10 +80,18 @@ fn lines(text: &str, range: Range<usize>) -> Range<usize> {
     start..end
 }
 
-/// Returns where the first line that is neither blank nor a comment starts
+/// Returns where the first line that is neither blank nor a comment starts,
+/// counted after the byte order mark that some editors write at the start of
+/// a file, since a setting before the mark would leave the file unreadable
 fn first_setting(text: &str) -> Option<usize> {
-    text.split_inclusive('\n')
-        .scan(0, |start, line| {
+    let mark = if text.starts_with('\u{feff}') {
+        '\u{feff}'.len_utf8()
+    } else {
+        0
+    };
+    text[mark..]
+        .split_inclusive('\n')
+        .scan(mark, |start, line| {
             let at = *start;
             *start += line.len();
             Some((at, line.trim_start()))

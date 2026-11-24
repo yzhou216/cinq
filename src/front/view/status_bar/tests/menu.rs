@@ -6,13 +6,13 @@
 
 use super::{
     super::{fit::fitted, hints::hints as hinted, order::YIELDING},
-    opened, owned,
+    opened, opened_with, owned,
 };
 use crate::{
     back::{Command, Kind, Place, Workspace},
     front::{
         App,
-        keymap::{Action, Preset},
+        keymap::{Action, Keymap, desk},
     },
 };
 
@@ -32,19 +32,15 @@ fn in_menu(app: App) -> Vec<String> {
 #[test]
 fn an_open_menu_hints_the_keys_that_pick_and_close_it() {
     assert_eq!(
-        in_menu(opened(Preset::Vi, true, false)),
+        in_menu(opened(true, false)),
         ["Control+y: pick", "Control+e: close"]
-    );
-    assert_eq!(
-        in_menu(opened(Preset::Cua, true, false)),
-        ["Enter: pick", "F4: close"]
     );
 }
 
 #[test]
 fn a_closed_menu_and_a_menu_under_the_help_page_hint_nothing() {
-    assert!(in_menu(opened(Preset::Vi, false, false)).is_empty());
-    assert!(in_menu(opened(Preset::Vi, true, true)).is_empty());
+    assert!(in_menu(opened(false, false)).is_empty());
+    assert!(in_menu(opened(true, true)).is_empty());
 }
 
 #[test]
@@ -68,13 +64,16 @@ fn hints_of_a_menu_give_way_after_the_rest_when_the_bar_is_short() {
 
 #[test]
 fn the_help_hint_beside_an_open_menu_names_the_first_help_key_of_the_keymap() {
-    let help = |preset| {
-        hinted(&opened(preset, true, false))
+    let help = |keymap| {
+        hinted(&opened_with(keymap, true, false))
             .into_iter()
             .find_map(|(action, hint)| (action == Some(Action::Help)).then_some(hint))
     };
-    assert_eq!(help(Preset::Vi).as_deref(), Some("?: help"));
-    assert_eq!(help(Preset::Cua).as_deref(), Some("F1: help"));
+    assert_eq!(help(Keymap::default()).as_deref(), Some("?: help"));
+    assert_eq!(
+        help(desk("help = [\"F1\", \"?\"]")).as_deref(),
+        Some("F1: help")
+    );
 }
 
 #[test]
@@ -87,9 +86,9 @@ fn an_open_menu_tells_no_notice_so_that_its_keys_come_first() {
             count: 1,
         }),
         remark: Some("The clipboard is empty"),
-        ..opened(Preset::Cua, menu, false)
+        ..opened(menu, false)
     };
-    let shown = |menu| fitted(&hinted(&app(menu)), 30, &YIELDING);
-    assert_eq!(shown(true), "Enter: pick | F4: close");
+    let shown = |menu| fitted(&hinted(&app(menu)), 34, &YIELDING);
+    assert_eq!(shown(true), "Control+y: pick | Control+e: close");
     assert!(shown(false).starts_with("The clipboard"));
 }

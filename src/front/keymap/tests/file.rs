@@ -23,15 +23,15 @@ fn messages(problems: &[config::Problem]) -> Vec<&str> {
 #[test]
 fn file_chooses_a_keymap_and_replaces_the_keys_of_the_actions_it_names() {
     let (keymap, _, _, problems) = config::parse(
-        "keymap = \"cua\"\n[keys]\ngo = \"F5\"\nnext = [\"n\", \"ArrowDown\", \"n\"]\ndelete = []\n",
+        "keymap = \"vi\"\n[keys]\ngo = \"F5\"\nnext = [\"m\", \"ArrowDown\", \"m\"]\ncut = []\n",
     );
     assert!(problems.is_empty(), "{problems:?}");
-    assert_eq!(keymap.name(), "cua");
+    assert_eq!(keymap.name(), "vi");
     assert_eq!(keymap.keys(Action::Go), [keys("F5")]);
     // Keys listed twice for one action are bound once
-    assert_eq!(keymap.keys(Action::Next), [keys("n"), keys("ArrowDown")]);
-    assert!(keymap.keys(Action::Delete).is_empty());
-    assert_eq!(keymap.keys(Action::Undo), [keys("Control+z")]);
+    assert_eq!(keymap.keys(Action::Next), [keys("m"), keys("ArrowDown")]);
+    assert!(keymap.keys(Action::Cut).is_empty());
+    assert_eq!(keymap.keys(Action::Undo), [keys("u")]);
 }
 
 #[test]
@@ -136,18 +136,91 @@ fn file_is_in_the_directory_named_on_the_command_line_or_else_that_of_the_platfo
 #[test]
 fn file_defines_keymaps_of_its_own_from_others_or_from_no_keys() {
     let (keymap, _, _, problems) = config::parse(
-        "keymap = \"booth\"\n[keymaps.booth]\nfrom = \"cua\"\ngo = \"F5\"\n[keys]\nhelp = \"F12\"\n",
+        "keymap = \"booth\"\n[keymaps.booth]\nfrom = \"vi\"\ngo = \"F5\"\n[keys]\nhelp = \"F12\"\n",
     );
     assert!(problems.is_empty(), "{problems:?}");
     assert_eq!(keymap.name(), "booth");
     assert_eq!(keymap.keys(Action::Go), [keys("F5")]);
-    assert_eq!(keymap.keys(Action::Undo), [keys("Control+z")]);
+    assert_eq!(keymap.keys(Action::Undo), [keys("u")]);
     assert_eq!(keymap.keys(Action::Help), [keys("F12")]);
     let (keymap, _, _, problems) =
         config::parse("keymap = \"mine\"\n[keymaps.mine]\ngo = \"Space\"\npanic = \"Escape\"\n");
     assert!(problems.is_empty(), "{problems:?}");
     assert_eq!(keymap.keys(Action::Go), [keys("Space")]);
     assert!(keymap.keys(Action::Next).is_empty());
+}
+
+const RETIRED: &str = "cinq no longer ships the cua keymap, so vi stands in for it";
+
+/// Returns the part of `text` that the first problem lies in
+fn lying<'a>(problems: &[config::Problem], text: &'a str) -> Option<&'a str> {
+    problems
+        .first()
+        .and_then(|problem| problem.span.clone())
+        .map(|span| &text[span])
+}
+
+#[test]
+fn file_that_chooses_the_cua_keymap_is_told_so_and_gets_the_keys_of_vi() {
+    let text = "keymap = \"cua\"\n";
+    let (keymap, _, _, problems) = config::parse(text);
+    assert_eq!(messages(&problems), [RETIRED]);
+    assert_eq!(lying(&problems, text), Some("\"cua\""));
+    assert_eq!(keymap.name(), "vi");
+    [Action::Go, Action::Panic, Action::Next, Action::Cancel]
+        .into_iter()
+        .for_each(|action| {
+            assert_eq!(keymap.keys(action), Keymap::default().keys(action));
+        });
+}
+
+#[test]
+fn keymap_of_the_file_that_starts_from_cua_starts_from_vi_and_the_file_is_told_so() {
+    let text = "keymap = \"booth\"\n[keymaps.booth]\nfrom = \"cua\"\ngo = \"F5\"\n";
+    let (keymap, _, _, problems) = config::parse(text);
+    assert_eq!(messages(&problems), [RETIRED]);
+    assert_eq!(lying(&problems, text), Some("\"cua\""));
+    assert_eq!(keymap.name(), "booth");
+    assert_eq!(keymap.keys(Action::Go), [keys("F5")]);
+    assert_eq!(keymap.keys(Action::Panic), [keys("Escape")]);
+    assert_eq!(
+        keymap.keys(Action::Next),
+        Keymap::default().keys(Action::Next)
+    );
+}
+
+#[test]
+fn file_that_declares_a_keymap_named_cua_uses_it_and_raises_nothing() {
+    let text = "keymap = \"cua\"\n[keymaps.cua]\ngo = \"F5\"\n[keymaps.booth]\nfrom = \"cua\"\n";
+    let (keymap, _, _, problems) = config::parse(text);
+    assert!(problems.is_empty(), "{problems:?}");
+    assert_eq!(keymap.name(), "cua");
+    assert_eq!(keymap.keys(Action::Go), [keys("F5")]);
+    assert!(keymap.keys(Action::Next).is_empty());
+    let (keymap, _, _, problems) = config::parse(
+        "keymap = \"booth\"\n[keymaps.cua]\ngo = \"F5\"\n[keymaps.booth]\nfrom = \"cua\"\n",
+    );
+    assert!(problems.is_empty(), "{problems:?}");
+    assert_eq!(keymap.keys(Action::Go), [keys("F5")]);
+}
+
+#[test]
+fn a_name_that_only_looks_like_cua_is_an_unknown_keymap() {
+    let (keymap, _, _, problems) = config::parse("keymap = \"cua2\"\n");
+    assert_eq!(messages(&problems), ["no keymap is named `cua2`"]);
+    assert_eq!(keymap.keys(Action::Go), Keymap::default().keys(Action::Go));
+}
+
+#[test]
+fn a_line_of_thousands_of_keymaps_each_starting_from_the_next_keeps_the_last_keys() {
+    let line: String = (0..5000)
+        .map(|at| format!("[keymaps.k{at}]\nfrom = \"k{}\"\n", at + 1))
+        .collect();
+    let text = format!("keymap = \"k0\"\n{line}[keymaps.k5000]\nfrom = \"vi\"\ngo = \"F5\"\n");
+    let (keymap, _, _, problems) = config::parse(&text);
+    assert!(problems.is_empty(), "{problems:?}");
+    assert_eq!(keymap.name(), "k0");
+    assert_eq!(keymap.keys(Action::Go), [keys("F5")]);
 }
 
 #[test]
@@ -161,6 +234,10 @@ fn file_reports_what_is_wrong_with_its_keymaps() {
     assert_eq!(messages(&problems), ["keymap a starts from itself"]);
     assert_eq!(keymap.name(), "a");
     assert!(keymap.keys(Action::Go).is_empty());
+    let (_, _, _, problems) = config::parse(
+        "keymap = \"a\"\n[keymaps.a]\nfrom = \"b\"\n[keymaps.b]\nfrom = \"c\"\n[keymaps.c]\nfrom = \"b\"\n",
+    );
+    assert_eq!(messages(&problems), ["keymap b starts from itself"]);
     let (_, _, _, problems) = config::parse("[keymaps.vi]\ngo = \"F5\"\n");
     assert_eq!(
         messages(&problems),
@@ -229,10 +306,10 @@ fn file_made_for_editing_changes_no_key_and_leaves_a_file_there_alone() -> io::R
     let made = config::load(Some(&file));
     assert!(matches!(&made.source, config::Source::File(read) if *read == file));
     assert!(made.problems.is_empty(), "{:?}", made.problems);
-    assert_eq!(made.keymap.name(), Preset::default().name());
-    fs::write(&file, "keymap = \"cua\"\n")?;
+    assert_eq!(made.keymap.name(), "vi");
+    fs::write(&file, "keymap = \"booth\"\n")?;
     config::make(&file)?;
-    assert_eq!(fs::read_to_string(&file)?, "keymap = \"cua\"\n");
+    assert_eq!(fs::read_to_string(&file)?, "keymap = \"booth\"\n");
     Ok(())
 }
 

@@ -6,11 +6,11 @@
 
 use super::{
     super::{order::yielding, status},
-    YIELDING, fitted, hinted, opened,
+    YIELDING, fitted, hinted, opened, opened_with,
 };
 use crate::front::{
     App,
-    keymap::{Action, Preset, Press},
+    keymap::{Action, Keymap, Press, desk},
 };
 use iced::keyboard::{Key, Modifiers};
 use unicode_width::UnicodeWidthStr;
@@ -34,17 +34,17 @@ fn press(key: &str) -> Option<Press> {
 
 #[test]
 fn the_bar_hints_the_key_of_cancel_while_keys_wait() {
-    let waiting = |preset| App {
+    let waiting = |keymap| App {
         keys: vec![press("d").expect("a key")],
-        ..opened(preset, false, false)
+        ..opened_with(keymap, false, false)
     };
-    assert_eq!(cancel_hint(&opened(Preset::Vi, false, false)), None);
+    assert_eq!(cancel_hint(&opened(false, false)), None);
     assert_eq!(
-        cancel_hint(&waiting(Preset::Vi)).as_deref(),
+        cancel_hint(&waiting(Keymap::default())).as_deref(),
         Some("Control+c: cancel")
     );
-    // Cua binds no key to it
-    assert_eq!(cancel_hint(&waiting(Preset::Cua)), None);
+    // A keymap that binds no key to it has no hint
+    assert_eq!(cancel_hint(&waiting(desk(""))), None);
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn the_key_of_cancel_stays_in_a_bar_of_1024_pixels_while_go_and_panic_give_way()
         let app = App {
             keys: vec![press("d").expect("a key")],
             remark: Some(remark),
-            ..opened(Preset::Vi, false, false)
+            ..opened(false, false)
         };
         let taken: usize = status(&app, app.show.name().into_owned())
             .iter()
@@ -70,11 +70,10 @@ fn the_key_of_cancel_stays_in_a_bar_of_1024_pixels_while_go_and_panic_give_way()
     assert!(!long.contains("GO") && !long.contains("Panic"));
 }
 
-/// Returns the hints that tell how to leave a field
-fn leaving(preset: Preset, held: bool) -> Vec<String> {
+fn leaving(keymap: Keymap, held: bool) -> Vec<String> {
     let app = App {
         held,
-        ..opened(preset, false, false)
+        ..opened_with(keymap, false, false)
     };
     hinted(&app)
         .into_iter()
@@ -85,13 +84,13 @@ fn leaving(preset: Preset, held: bool) -> Vec<String> {
 
 #[test]
 fn the_bar_hints_how_to_leave_a_field_that_has_the_keyboard() {
-    assert_eq!(leaving(Preset::Vi, false), Vec::<String>::new());
+    assert_eq!(leaving(Keymap::default(), false), Vec::<String>::new());
     assert_eq!(
-        leaving(Preset::Vi, true),
+        leaving(Keymap::default(), true),
         ["Tab: next field", "Control+c: leave"]
     );
-    // Cua binds no key to cancel, and gets no new one
-    assert_eq!(leaving(Preset::Cua, true), ["Tab: next field"]);
+    // A keymap that binds no key to cancel gets no new one
+    assert_eq!(leaving(desk(""), true), ["Tab: next field"]);
 }
 
 #[test]
@@ -99,7 +98,7 @@ fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
     let told = |menu, help| {
         let app = App {
             held: true,
-            ..opened(Preset::Vi, menu, help)
+            ..opened(menu, help)
         };
         hinted(&app).iter().any(|(_, hint)| hint.contains("leave"))
     };
@@ -112,7 +111,7 @@ fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
 fn the_hints_of_a_field_give_way_in_turn_with_go_and_panic_before_the_key_that_leaves() {
     let app = App {
         held: true,
-        ..opened(Preset::Vi, false, false)
+        ..opened(false, false)
     };
     // No help hint here: a field or a list that has the keyboard keeps the
     // key of help from acting, and `?` types in a field
@@ -146,7 +145,7 @@ fn the_hints_of_a_field_give_way_in_turn_with_go_and_panic_before_the_key_that_l
 fn the_bar_shows_keys_typed_so_far_joined_without_the_space_that_is_go() {
     let app = App {
         keys: ["2", "d"].into_iter().filter_map(press).collect(),
-        ..opened(Preset::Vi, false, false)
+        ..opened(false, false)
     };
     assert_eq!(hinted(&app)[0].1, "2d");
 }
@@ -154,7 +153,7 @@ fn the_bar_shows_keys_typed_so_far_joined_without_the_space_that_is_go() {
 #[test]
 fn the_search_line_of_a_keymap_with_no_key_to_cancel_names_the_key_that_leaves() {
     let hints = |text: &str| {
-        let (mut app, _) = opened(Preset::Cua, false, false).searching(false);
+        let (mut app, _) = opened_with(desk(""), false, false).searching(false);
         if let Some(search) = app.search.as_mut() {
             search.text = text.to_owned();
         }
@@ -165,7 +164,7 @@ fn the_search_line_of_a_keymap_with_no_key_to_cancel_names_the_key_that_leaves()
     };
     assert!(hints("").contains(&"Backspace: leave".to_owned()));
     assert!(hints("kno").contains(&"Enter: find".to_owned()));
-    let (vi, _) = opened(Preset::Vi, false, false).searching(false);
+    let (vi, _) = opened(false, false).searching(false);
     assert!(
         hinted(&vi)
             .iter()

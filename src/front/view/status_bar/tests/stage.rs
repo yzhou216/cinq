@@ -8,20 +8,20 @@ use strum::VariantArray;
 
 use super::{
     super::hints::{acts_here, notices},
-    hinted, opened,
+    hinted, opened, opened_with,
 };
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Place, Workspace, loaded, silent},
     front::{
         App,
-        keymap::{Action, Preset},
+        keymap::{Action, Keymap, desk},
         update::Stage,
     },
 };
 
 /// Returns the state with a video cue that shows once `go` fires it, and a
 /// stage window that the operator closed
-fn closed(preset: Preset, go: bool) -> App {
+fn closed(go: bool) -> App {
     let cue = Cue::new(CueId(1), "1", Kind::Video, "Film")
         .file("film.mp4")
         .build();
@@ -38,7 +38,7 @@ fn closed(preset: Preset, go: bool) -> App {
     App {
         workspace,
         stage: Stage::closed(),
-        ..opened(preset, false, false)
+        ..opened(false, false)
     }
 }
 
@@ -48,16 +48,15 @@ fn told(app: &App) -> Vec<String> {
 
 #[test]
 fn a_closed_stage_window_that_a_cue_shows_on_hints_the_key_that_opens_it() {
-    assert!(told(&closed(Preset::Vi, true)).contains(&"F11: open stage".to_owned()));
-    assert!(told(&closed(Preset::Cua, true)).contains(&"F11: open stage".to_owned()));
+    assert!(told(&closed(true)).contains(&"F11: open stage".to_owned()));
 }
 
 #[test]
 fn a_closed_stage_window_with_nothing_to_show_hints_nothing() {
-    assert!(!told(&closed(Preset::Vi, false)).contains(&"F11: open stage".to_owned()));
+    assert!(!told(&closed(false)).contains(&"F11: open stage".to_owned()));
     let open = App {
         stage: Stage::default(),
-        ..closed(Preset::Vi, true)
+        ..closed(true)
     };
     assert!(!told(&open).contains(&"F11: open stage".to_owned()));
 }
@@ -66,7 +65,7 @@ fn a_closed_stage_window_with_nothing_to_show_hints_nothing() {
 fn the_hint_of_opening_the_stage_window_stays_off_the_help_page() {
     let app = App {
         help: true,
-        ..closed(Preset::Vi, true)
+        ..closed(true)
     };
     assert!(!told(&app).contains(&"F11: open stage".to_owned()));
 }
@@ -74,49 +73,51 @@ fn the_hint_of_opening_the_stage_window_stays_off_the_help_page() {
 #[test]
 fn a_closed_stage_window_that_a_cue_shows_on_counts_as_a_warning() {
     let counted = |app: &App| crate::front::view::warnings(app);
-    let nothing = counted(&closed(Preset::Vi, false));
-    assert_eq!(counted(&closed(Preset::Vi, true)), nothing + 1);
+    let nothing = counted(&closed(false));
+    assert_eq!(counted(&closed(true)), nothing + 1);
     let open = App {
         stage: Stage::default(),
-        ..closed(Preset::Vi, true)
+        ..closed(true)
     };
     assert_eq!(counted(&open), nothing);
 }
 
-fn keyboard(preset: Preset) -> App {
+fn keyboard(keymap: Keymap) -> App {
     App {
         stage: Stage::holding_keyboard(),
-        ..opened(preset, false, false)
+        ..opened_with(keymap, false, false)
     }
 }
 
 #[test]
 fn the_stage_window_with_the_keyboard_gets_only_the_hints_of_keys_that_act_there() {
-    [Preset::Vi, Preset::Cua].into_iter().for_each(|preset| {
-        let hints = hinted(&App {
-            workspace: Workspace::default().apply(Command::Add {
-                list: 0,
-                kind: Kind::Audio,
-                at: Place::End,
-                count: 1,
-            }),
-            ..keyboard(preset)
-        });
-        let words = hints
-            .iter()
-            .map(|(_, hint)| hint.as_str())
-            .collect::<Vec<_>>();
-        assert!(words.contains(&"F11: fullscreen"), "{words:?}");
-        assert!(words.contains(&"Space: GO"), "{words:?}");
-        assert!(
-            hints
+    [Keymap::default(), desk("")]
+        .into_iter()
+        .for_each(|keymap| {
+            let hints = hinted(&App {
+                workspace: Workspace::default().apply(Command::Add {
+                    list: 0,
+                    kind: Kind::Audio,
+                    at: Place::End,
+                    count: 1,
+                }),
+                ..keyboard(keymap)
+            });
+            let words = hints
                 .iter()
-                .filter_map(|(action, _)| *action)
-                .all(|action| !action.stays_in_main_window()),
-            "{words:?}"
-        );
-        assert!(words.iter().all(|hint| !hint.contains("undo")), "{words:?}");
-    });
+                .map(|(_, hint)| hint.as_str())
+                .collect::<Vec<_>>();
+            assert!(words.contains(&"F11: fullscreen"), "{words:?}");
+            assert!(words.contains(&"Space: GO"), "{words:?}");
+            assert!(
+                hints
+                    .iter()
+                    .filter_map(|(action, _)| *action)
+                    .all(|action| !action.stays_in_main_window()),
+                "{words:?}"
+            );
+            assert!(words.iter().all(|hint| !hint.contains("undo")), "{words:?}");
+        });
 }
 
 #[test]
@@ -129,7 +130,7 @@ fn the_notice_of_a_change_names_no_undo_while_the_stage_window_has_the_keyboard(
             count: 1,
         }),
         stage,
-        ..opened(Preset::Vi, false, false)
+        ..opened(false, false)
     };
     let notice = |app: &App| notices::notice(app).expect("a change was made");
     assert!(notice(&app(Stage::default())).contains("u: undo"));
@@ -138,7 +139,7 @@ fn the_notice_of_a_change_names_no_undo_while_the_stage_window_has_the_keyboard(
 
 #[test]
 fn the_hints_and_the_refusals_agree_on_the_keys_that_act_in_the_stage_window() {
-    let app = keyboard(Preset::Vi);
+    let app = keyboard(Keymap::default());
     Action::VARIANTS.iter().for_each(|action| {
         assert_eq!(
             acts_here(&app, *action),

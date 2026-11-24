@@ -10,6 +10,24 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- cinq ships one keymap, `vi`, and no longer the `cua` keymap.  A configuration
+  file can still declare a keymap of its own under `keymaps`, starting from
+  another keymap or from no keys, as cinq(5) shows.  A file that names `cua`
+  in `keymap` or in `from`, and declares no keymap of that name, gets the
+  problem `cinq no longer ships the cua keymap, so vi stands in for it`, and
+  the keymap starts from the keys of `vi`, so that GO and Panic keep working.
+- Choosing an audio device in the sidebar keeps a `config.toml` that starts
+  with a byte order mark, as Notepad writes, readable, where the new setting
+  went before the mark and the file no longer opened.
+- Choosing an audio device leaves `config.toml` as it is when `audio_device` is
+  a table there, as `[audio_device]` or `audio_device.a = 1` makes it, and says
+  `config.toml cannot keep the audio device: audio_device is a table, not an
+  ID`, where it wrote a file that could not be read.
+- A `config.toml` nested thousands of levels deep no longer aborts cinq when it
+  is formatted after a save.
+- A `config.toml` of thousands of keymaps, each starting `from` the next, no
+  longer aborts cinq as it is read.
+
 ## v0.1.7
 
 - A new action, `hint`, bound to `f` in both keymaps, labels with a few letters

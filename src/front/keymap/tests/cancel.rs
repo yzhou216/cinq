@@ -39,10 +39,11 @@ fn control_left_bracket_cancels_beside_control_c_which_the_bar_names_first() {
 }
 
 #[test]
-fn control_c_stays_the_copy_of_the_cua_keymap_which_binds_nothing_to_cancel() {
-    let keymap = Keymap::from(Preset::Cua);
+fn control_c_stays_the_copy_of_a_keymap_that_binds_nothing_to_cancel() {
+    let keymap = desk("copy = \"Control+c\"");
     assert!(keymap.keys(Action::Cancel).is_empty());
     assert!(!keymap.cancels(press("Control+c")));
+    assert_eq!(keymap.alone(press("Control+c")), Some(Action::Copy));
 }
 
 #[test]

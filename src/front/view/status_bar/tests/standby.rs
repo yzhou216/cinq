@@ -7,7 +7,7 @@
 use super::{YIELDING, fitted, hinted, opened};
 use crate::{
     back::{Command, Cue, CueId, CueList, Kind, Workspace},
-    front::{App, keymap::Preset},
+    front::App,
 };
 
 /// Returns an app of two cues with standby on the first and `selected` selected
@@ -21,7 +21,7 @@ fn with(selected: Option<u32>) -> App {
             },
         ),
         selected: selected.map(CueId),
-        ..opened(Preset::Vi, false, false)
+        ..opened(false, false)
     }
 }
 

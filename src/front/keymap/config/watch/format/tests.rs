@@ -12,9 +12,9 @@ use super::{formatted, reformat};
 
 #[test]
 fn spaces_and_blank_lines_even_out_and_comments_line_up() {
-    let sloppy = "# Keys\nkeymap=\"booth\"\n\n\n\n[keymaps.booth]\n  from  =  \"cua\"   # base\n\
+    let sloppy = "# Keys\nkeymap=\"booth\"\n\n\n\n[keymaps.booth]\n  from  =  \"vi\"   # base\n\
                   go=[ \"Space\",\"F5\" ]\nfly = { action=\"go\" }";
-    let tidy = "# Keys\nkeymap = \"booth\"\n\n\n[keymaps.booth]\nfrom = \"cua\"            # base\n\
+    let tidy = "# Keys\nkeymap = \"booth\"\n\n\n[keymaps.booth]\nfrom = \"vi\"             # base\n\
                 go = [\"Space\", \"F5\"]\nfly = { action = \"go\" }\n";
     assert_eq!(formatted(sloppy).as_deref(), Some(tidy));
     assert_eq!(formatted(tidy), None);
@@ -49,11 +49,20 @@ fn line_endings_stay_and_what_is_not_toml_stays() {
 fn reformatting_writes_only_toml_that_formatting_changes() -> io::Result<()> {
     let home = TempDir::new()?;
     let file = home.path().join("config.toml");
-    fs::write(&file, "keymap=\"cua\"\n")?;
+    fs::write(&file, "keymap=\"vi\"\n")?;
     reformat(&file);
-    assert_eq!(fs::read_to_string(&file)?, "keymap = \"cua\"\n");
+    assert_eq!(fs::read_to_string(&file)?, "keymap = \"vi\"\n");
     fs::write(&file, "keymap=\n")?;
     reformat(&file);
     assert_eq!(fs::read_to_string(&file)?, "keymap=\n");
     Ok(())
+}
+
+#[test]
+fn file_nested_beyond_what_toml_reads_stays_since_taplo_would_overflow_its_stack() {
+    let depth = 100_000;
+    let arrays = format!("a={}{}\n", "[".repeat(depth), "]".repeat(depth));
+    let tables = format!("a={}1{}\n", "{a=".repeat(depth), "}".repeat(depth));
+    assert_eq!(formatted(&arrays), None);
+    assert_eq!(formatted(&tables), None);
 }

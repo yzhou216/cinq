@@ -23,14 +23,7 @@ fn keys_of_vim_enter_the_name_at_its_end_or_start_or_change_all_of_it() {
 }
 
 #[test]
-fn cua_selects_the_name_with_f2_as_renaming_does_and_has_no_key_for_its_end_or_start() {
-    assert_eq!(listed(Preset::Cua, Action::ChangeName), "F2");
-    assert_eq!(listed(Preset::Cua, Action::Edit), "none");
-    assert_eq!(listed(Preset::Cua, Action::EditStart), "none");
-}
-
-#[test]
 fn vi_lists_the_keys_that_enter_the_name_as_the_help_page_shows_them() {
-    assert_eq!(listed(Preset::Vi, Action::Edit), "i, a, A");
-    assert_eq!(listed(Preset::Vi, Action::ChangeName), "cc, S");
+    assert_eq!(listed(Action::Edit), "i, a, A");
+    assert_eq!(listed(Action::ChangeName), "cc, S");
 }

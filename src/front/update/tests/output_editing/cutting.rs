@@ -60,7 +60,7 @@ fn dd_x_and_delete_cut_the_output_and_select_the_one_that_takes_its_place() {
     assert_eq!(names(&typed(on(3), "x")), without(&[2]));
     // Last output leaves the one before it selected
     assert_eq!(at(&typed(on(10), "dd")), 9);
-    // Delete is the cut key of the vi keymap, and Control+x of cua
+    // Delete is a cut key of the vi keymap
     let delete = chord(Key::Named(Named::Delete), Modifiers::empty());
     assert_eq!(names(&on(3).typed(delete, false).0), without(&[2]));
 }

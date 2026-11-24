@@ -6,23 +6,23 @@
 
 use unicode_width::UnicodeWidthStr;
 
-use super::{YIELDING, fitted, hinted, opened, owned};
+use super::{YIELDING, fitted, hinted, opened, opened_with, owned};
 use crate::{
     back::{Command, Kind, Place, Workspace},
     front::{
         App,
-        keymap::{Action, Preset},
+        keymap::{Action, Keymap, desk},
     },
 };
 
 /// Returns the first two hints, which tell the latest change and then
 /// the key that renames the cue, after `command`
-fn told(preset: Preset, command: Command, text_held: bool) -> Vec<String> {
+fn told(keymap: Keymap, command: Command, text_held: bool) -> Vec<String> {
     let workspace = Workspace::default();
     let app = App {
         workspace: workspace.apply(command),
         text_held,
-        ..opened(preset, false, false)
+        ..opened_with(keymap, false, false)
     };
     hinted(&app)
         .into_iter()
@@ -43,21 +43,21 @@ fn add() -> Command {
 #[test]
 fn a_cue_just_added_hints_the_key_that_renames_it_after_the_key_of_undo() {
     assert_eq!(
-        told(Preset::Vi, add(), false),
+        told(Keymap::default(), add(), false),
         ["Added cue 1 | u: undo", "cc: rename"]
     );
     assert_eq!(
-        told(Preset::Cua, add(), false),
-        ["Added cue 1 | Control+z: undo", "F2: rename"]
+        told(desk("change_name = \"F2\""), add(), false),
+        ["Added cue 1 | u: undo", "F2: rename"]
     );
 }
 
 #[test]
 fn a_text_field_that_keeps_every_key_hints_neither_undo_nor_rename() {
-    assert_eq!(told(Preset::Vi, add(), true)[0], "Added cue 1");
-    assert_eq!(told(Preset::Cua, add(), true)[0], "Added cue 1");
+    assert_eq!(told(Keymap::default(), add(), true)[0], "Added cue 1");
+    assert_eq!(told(desk(""), add(), true)[0], "Added cue 1");
     assert!(
-        told(Preset::Vi, add(), true)
+        told(Keymap::default(), add(), true)
             .iter()
             .all(|hint| !hint.contains("rename"))
     );
@@ -70,7 +70,7 @@ fn the_show_mode_that_locks_the_name_hints_no_rename() {
         .apply(Command::ShowMode(true));
     let app = App {
         workspace: locked,
-        ..opened(Preset::Vi, false, false)
+        ..opened(false, false)
     };
     assert!(
         hinted(&app)
@@ -84,7 +84,7 @@ fn the_outputs_hint_the_rename_of_an_output_and_not_that_of_the_cue_just_added()
     let app = App {
         workspace: Workspace::default().apply(add()),
         outputs_shown: true,
-        ..opened(Preset::Vi, false, false)
+        ..opened(false, false)
     };
     let hints: Vec<_> = hinted(&app).into_iter().map(|(_, hint)| hint).collect();
     assert!(hints.contains(&"i: rename".to_owned()), "{hints:?}");

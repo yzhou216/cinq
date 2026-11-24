@@ -117,25 +117,6 @@ fn keys_of_delete_cut_and_help_stay_with_a_field_that_has_the_keyboard() {
 }
 
 #[test]
-fn counts_of_cua_keys_act_as_those_of_vi_keys_do() {
-    let cua = Keymap::from(Preset::Cua);
-    [
-        ("3 Control+z", Action::Undo, 3),
-        ("2 Control+y", Action::Redo, 2),
-        ("2 Control+Tab", Action::NextTab, 2),
-        ("2 Control+Shift+Tab", Action::PreviousTab, 2),
-    ]
-    .into_iter()
-    .for_each(|(text, action, count)| {
-        assert_eq!(
-            typed_on(&cua, text).action,
-            Some((action, Some(count))),
-            "{text}"
-        );
-    });
-}
-
-#[test]
 fn counts_of_vi_keys_reach_undo_redo_and_the_tabs() {
     assert_actions(&[
         ("3 u", Action::Undo, Some(3)),
@@ -178,15 +159,6 @@ fn keys_that_move_by_a_page_are_those_of_vim_and_act_in_no_field() {
 }
 
 #[test]
-fn cua_pages_by_the_whole_page_and_binds_no_key_to_the_half_pages() {
-    let keymap = Keymap::from(Preset::Cua);
-    assert_eq!(keymap.keys(Action::PageDown), [keys("PageDown")]);
-    assert_eq!(keymap.keys(Action::PageUp), [keys("PageUp")]);
-    assert!(keymap.keys(Action::HalfPageDown).is_empty());
-    assert!(keymap.keys(Action::HalfPageUp).is_empty());
-}
-
-#[test]
 fn vi_copies_with_y_y_cuts_with_d_d_and_pastes_with_p_and_capital_p() {
     assert_actions(&[
         ("y y", Action::Copy, None),
@@ -197,23 +169,6 @@ fn vi_copies_with_y_y_cuts_with_d_d_and_pastes_with_p_and_capital_p() {
     ]);
     // Cutting is what deleting does in Vim, so that no key only deletes
     assert!(Keymap::default().keys(Action::Delete).is_empty());
-}
-
-#[test]
-fn cua_copies_cuts_and_pastes_with_control_and_deletes_with_delete_alone() {
-    let keymap = Keymap::from(Preset::Cua);
-    [
-        ("Control+c", Action::Copy),
-        ("Control+x", Action::Cut),
-        ("Control+v", Action::PasteBelow),
-        ("Control+V", Action::PasteAbove),
-        ("Delete", Action::Delete),
-    ]
-    .into_iter()
-    .for_each(|(text, wanted)| {
-        let action = typed_on(&keymap, text).action.map(|(action, _)| action);
-        assert_eq!(action, Some(wanted), "{text}");
-    });
 }
 
 #[test]
@@ -243,31 +198,21 @@ fn counts_reach_the_actions_that_add_cues() {
 
 #[test]
 fn undo_and_redo_act_in_a_closed_list_and_not_in_a_text_field() {
-    let cua = Keymap::from(Preset::Cua);
-    let vi = Keymap::from(Preset::Vi);
-    assert!(cua.acts_in_lists(press("Control+z")) && !cua.acts_in_fields(press("Control+z")));
-    assert!(cua.acts_in_lists(press("Control+y")) && cua.acts_in_lists(press("Control+Z")));
-    assert!(vi.acts_in_lists(press("u")) && vi.acts_in_lists(press("Control+r")));
+    let vi = Keymap::default();
+    assert!(vi.acts_in_lists(press("u")) && !vi.acts_in_fields(press("u")));
+    assert!(vi.acts_in_lists(press("Control+r")) && !vi.acts_in_fields(press("Control+r")));
     // Keys of scrolling and of the other edits stay out of the list
     assert!(!vi.acts_in_lists(press("Control+e")) && !vi.acts_in_lists(press("j")));
-    assert!(!cua.acts_in_lists(press("Control+x")));
     // Keys that act in every field act in a list too
     assert!(vi.acts_in_lists(press("Tab")) && vi.acts_in_lists(press("Control+c")));
 }
 
 #[test]
 fn hint_mode_and_adding_a_cue_act_in_a_closed_list_and_not_in_a_text_field() {
-    let cua = Keymap::from(Preset::Cua);
-    let vi = Keymap::from(Preset::Vi);
+    let vi = Keymap::default();
     ["f", "o", "O"].into_iter().for_each(|key| {
         assert!(
             vi.acts_in_lists(press(key)) && !vi.acts_in_fields(press(key)),
-            "{key}"
-        );
-    });
-    ["Control+n", "Control+N"].into_iter().for_each(|key| {
-        assert!(
-            cua.acts_in_lists(press(key)) && !cua.acts_in_fields(press(key)),
             "{key}"
         );
     });

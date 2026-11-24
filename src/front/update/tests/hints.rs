@@ -235,10 +235,10 @@ fn a_resize_of_the_main_window_leaves_the_mode_and_that_of_another_does_not() {
 }
 
 #[test]
-fn the_key_of_the_action_is_a_label_letter_in_both_keymaps() {
-    let mut cua = labelled();
-    cua.config.keymap = crate::front::keymap::Keymap::from(crate::front::keymap::Preset::Cua);
-    [labelled(), cua].into_iter().for_each(|app| {
+fn the_key_of_the_action_is_a_label_letter_in_a_keymap_with_no_cancel_too() {
+    let mut own = labelled();
+    own.config.keymap = crate::front::keymap::desk("");
+    [labelled(), own].into_iter().for_each(|app| {
         let after = typing(app, "f");
         assert!(after.hints.is_some(), "no label of three begins with `f`");
     });

@@ -25,10 +25,7 @@ fn g_j_and_g_k_move_the_selection_as_j_and_k_do_for_a_vim_user_who_types_them() 
         ("g j", Action::Next, None),
         ("3 g k", Action::Previous, Some(3)),
     ]);
-    assert_eq!(
-        listed(Preset::Vi, Action::Next),
-        "j, gj, ArrowDown, Control+n, +"
-    );
+    assert_eq!(listed(Action::Next), "j, gj, ArrowDown, Control+n, +");
 }
 
 #[test]

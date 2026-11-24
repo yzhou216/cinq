@@ -15,7 +15,7 @@ use super::{
 };
 use crate::{
     back::{Command, Cue, CueId, CueList, Edit, Kind, OutputEdit, OutputId, Sends, Workspace},
-    front::{App, keymap::Preset, update::Clipped, view::format},
+    front::{App, update::Clipped, view::format},
 };
 
 /// Returns a show of one cue that plays a file, with a second output
@@ -159,7 +159,7 @@ fn a_change_to_a_cue_is_not_told_while_the_outputs_show_so_that_their_keys_stay(
     let app = |workspace: Workspace, outputs_shown| App {
         workspace,
         outputs_shown,
-        ..opened(Preset::Vi, false, false)
+        ..opened(false, false)
     };
     assert!(notice(&app(edited.clone(), false)).is_some());
     assert_eq!(notice(&app(edited.clone(), true)), None);
@@ -310,7 +310,7 @@ fn the_notice_of_a_cue_gone_silent_outlasts_what_enter_does_but_a_plain_one_does
         held: true,
         check_held: true,
         workspace: rain().apply(Command::Edit(CueId(1), Edit::Sends(sends))),
-        ..opened(Preset::Vi, false, false)
+        ..opened(false, false)
     };
     let room = 52;
     let silent = hints_in(&app(Some(Sends::new())), room);

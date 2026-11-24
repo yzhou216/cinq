@@ -135,8 +135,9 @@ fn own_binding_of_the_keys_wins_over_the_operator() {
 }
 
 #[test]
-fn cua_has_no_operator() {
-    let outcome = typed_on(&Keymap::from(Preset::Cua), "Control+x ArrowDown");
+fn a_keymap_of_single_keys_has_no_operator() {
+    let keymap = declared("cut = \"Control+x\"\nnext = \"ArrowDown\"");
+    let outcome = typed_on(&keymap, "Control+x ArrowDown");
     assert_eq!(outcome.across(), None);
     assert_eq!(outcome.action, Some((Action::Next, None)));
 }
@@ -254,7 +255,7 @@ fn descriptions_name_the_rows_that_show_and_never_both() {
 #[test]
 fn help_page_names_the_keys_that_begin_an_operator() {
     assert_eq!(Keymap::default().operator_keys(), ["d", "y", ">", "<"]);
-    assert!(Keymap::from(Preset::Cua).operator_keys().is_empty());
+    assert!(declared("next = \"ArrowDown\"").operator_keys().is_empty());
 }
 
 #[test]
@@ -296,8 +297,8 @@ fn descriptions_name_the_move_of_indent_and_outdent() {
 }
 
 #[test]
-fn cua_binds_indent_and_outdent_to_control_with_the_brackets() {
-    let keymap = Keymap::from(Preset::Cua);
+fn indent_and_outdent_bound_to_single_keys_take_counts_and_make_no_operator() {
+    let keymap = declared("indent = \"Control+]\"\noutdent = \"Control+[\"");
     assert_eq!(
         typed_on(&keymap, "Control+]").action,
         Some((Action::Indent, None))

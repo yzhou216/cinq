@@ -24,8 +24,9 @@ _%APPDATA%\\cinq\\config.toml_
 
 *cinq* is a cue-based show controller in the spirit of QLab, and the keyboard
 runs most of it.
-It ships two keymaps, *vi* and *cua*, as *KEYMAPS* describes them.
-A configuration file in TOML chooses one of them or builds keymaps of its own,
+It ships one keymap, *vi*, as *KEYMAPS* describes it.
+A configuration file in TOML keeps it or declares keymaps of its own under
+*keymaps*,
 binds actions to other keys, and sets the audio device that outputs play on by
 default and how far ahead *cinq* makes sounds ready.
 *cinq* reads the file when it starts and again whenever it changes, so that the
@@ -176,16 +177,22 @@ _tutorial.pdf_
 	It is the default device unless the file names another.
 
 *keymap*
-	Name of the keymap that the keys start from: one that *cinq* ships, *vi*
-	or *cua*, as *KEYMAPS* describes them, or one of the file's own under
-	*keymaps*.
+	Name of the keymap that the keys start from: *vi*, which *cinq* ships, as
+	*KEYMAPS* describes it, or one of the file's own under *keymaps*.
 	It is *vi* unless the file names another.
+	Earlier versions of *cinq* also shipped a keymap named *cua*.
+	Where the file names *cua*, here or in the *from* of a keymap of its own,
+	and declares no keymap of that name, *cinq* reports the problem
+	_cinq no longer ships the cua keymap, so vi stands in for it_
+	at that line, and the keymap starts from the keys of *vi*.
+	Any other name that no keymap bears is a problem too: *keymap* then keeps
+	*vi*, and a *from* starts from no keys.
 
 *keymaps*
 	Table of keymaps of the file's own, each of them a table named after its
 	keymap.
-	The *from* of such a keymap names the keymap that it starts from, a
-	shipped one or another of the file's own, and without *from* it starts
+	The *from* of such a keymap names the keymap that it starts from, *vi* or
+	another of the file's own, and without *from* it starts
 	with no keys at all.
 	Its other entries bind actions to keys as those of *keys* do.
 	A keymap of the file's own cannot take the name of a shipped one.
@@ -292,204 +299,138 @@ _tutorial.pdf_
 	them, some commands take two keys, such as *d d*, and the arrows and
 	Control with *n* and *p* move as well.
 
-*cua*
-	Keys of IBM's Common User Access, which most desktop programs follow: the
-	arrows, Home, and End move, Control with a letter edits, and F1 and ? show
-	the help page, which Control+w closes.
-
-Both keep GO on the space bar and Panic on Escape, as in QLab.
-The table lists the keys that each keymap binds to every action, in the order
-of the help page.
+It keeps GO on the space bar and Panic on Escape, as in QLab.
+A keymap of the file's own can start from it, as *EXAMPLES* shows, or from no
+keys at all.
+The table lists the keys that it binds to every action, in the order of the
+help page.
 
 |[ *Action*
 :< *vi*
-:< *cua*
 |  go
-:  Space
 :  Space
 |  panic
 :  Escape
-:  Escape
 |  standby
-:  Enter
 :  Enter
 |  cancel
 :  Control+c, Control+[
-:  none
 |  next
 :  j, g j, ArrowDown, Control+n, +
-:  ArrowDown
 |  previous
 :  k, g k, ArrowUp, Control+p, -
-:  ArrowUp
 |  first
 :  g g, Control+Home
-:  Home
 |  last
 :  G, Control+End
-:  End
 |  half_page_down
 :  Control+d
-:  none
 |  half_page_up
 :  Control+u
-:  none
 |  page_down
 :  Control+f, PageDown
-:  PageDown
 |  page_up
 :  Control+b, PageUp
-:  PageUp
 |  scroll_down
 :  Control+e
-:  none
 |  scroll_up
 :  Control+y
-:  none
 |  top_row
 :  H
-:  none
 |  middle_row
 :  M
-:  none
 |  bottom_row
 :  L
-:  none
 |  row_to_middle
 :  z z, z .
-:  none
 |  row_to_top
 :  z t, z Enter
-:  none
 |  row_to_bottom
 :  z b, z -
-:  none
 |  collapse
 :  z c
-:  ArrowLeft
 |  expand
 :  z o
-:  ArrowRight
 |  toggle_group
 :  z a
-:  none
 |  collapse_all
 :  z M
-:  none
 |  expand_all
 :  z R
-:  none
 |  next_list
 :  l, ArrowRight
-:  Control+PageDown
 |  previous_list
 :  h, ArrowLeft
-:  Control+PageUp
 |  next_tab
 :  g t
-:  Control+Tab
 |  previous_tab
 :  g T
-:  Control+Shift+Tab
 |  back
 :  Control+o
-:  Alt+ArrowLeft
 |  forward
 :  Control+i
-:  Alt+ArrowRight
 |  search
 :  /
-:  Control+f
 |  search_backward
-:  none
 :  none
 |  next_match
 :  n
-:  F3
 |  previous_match
 :  N
-:  Shift+F3
 |  edit
 :  i, a, A
-:  none
 |  edit_start
 :  I
-:  none
 |  change_name
 :  c c, S
-:  F2
 |  next_field
-:  Tab
 :  Tab
 |  previous_field
 :  Shift+Tab
-:  Shift+Tab
 |  hint
-:  f
 :  f
 |  pick
 :  Control+y
-:  none
 |  close_menu
 :  Control+e
-:  F4
 |  add_below
 :  o
-:  Control+n
 |  add_above
 :  O
-:  Control+N
 |  cut
 :  d d, x, Delete
-:  Control+x
 |  copy
 :  y y, Y
-:  Control+c
 |  paste_below
 :  p
-:  Control+v
 |  paste_above
 :  P
-:  Control+V
 |  delete
 :  none
-:  Delete
 |  move_down
 :  Alt+j, Alt+ArrowDown
-:  Alt+ArrowDown
 |  move_up
 :  Alt+k, Alt+ArrowUp
-:  Alt+ArrowUp
 |  indent
 :  > >
-:  Control+]
 |  outdent
 :  < <
-:  Control+[
 |  undo
 :  u
-:  Control+z
 |  redo
 :  Control+r
-:  Control+y, Control+Z
 |  open
 :  Control+l
-:  Control+o
 |  save
-:  Control+s
 :  Control+s
 |  save_as
 :  Control+S
-:  Control+S
 |  fullscreen
-:  F11
 :  F11
 |  help
 :  ?, F1
-:  F1, ?
 |  close_help
 :  q
-:  Control+w
 
 # KEYS
 
@@ -629,8 +570,8 @@ window back and forth, while every other key repeats as it is held.
 
 The key of *search* opens a search line at the left of the status bar, where
 the status stood, which reads a slash and then the text typed, and the key of
-*search_backward*, which neither keymap binds, opens it with a question mark
-for a search up the list.
+*search_backward*, which the vi keymap leaves unbound, opens it with a
+question mark for a search up the list.
 As the text changes, the selection moves to the first cue of the list on
 screen, from the cue after the selected one down, one of whose columns holds the
 text, in any case, and the list scrolls to it.
@@ -670,8 +611,9 @@ the line.
 Backspace on an empty line closes it, and so does Escape, which is also
 *panic*, and so does the key of *cancel*, which stops no playback.
 Each puts the selection back where it was when the line opened.
-Where the keymap binds no key to *cancel*, as the cua keymap does, the status
-bar names Backspace while the line is empty, and Enter once text is typed.
+Where the keymap binds no key to *cancel*, as a keymap of the file's own may,
+the status bar names Backspace while the line is empty, and Enter once text is
+typed.
 Any press of a mouse button closes the line and keeps the selection where it
 is, and a press on a cue selects that cue.
 Going *back* or *forward*, with the keys or the buttons of the mouse, moving
@@ -739,14 +681,14 @@ A text field of the inspector, a drop-down list, or a checkbox
 	which *previous_field* does the other way.
 	Past the last field, and before the first, no field has the keyboard, which
 	gives the keys back to the cue list, or the outputs, so that a checkbox or a
-	closed drop-down list never keeps them in the cua keymap, which binds no
+	closed drop-down list never keeps them, even in a keymap that binds no
 	*cancel*.
 	One more press goes round again.
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
 	*panic*, *cancel*, *next_field*, *previous_field*, *back*, *forward*, *open*,
 	*save*, and *save_as*, which act unless a text field takes them for typing.
 	A text field also takes Control+w, which deletes the word before the caret,
-	and Control+u, which deletes everything before it, in both keymaps, as Vim does
+	and Control+u, which deletes everything before it, as Vim does
 	in Insert mode, unless a key is bound to an action that acts in fields.
 	The edit is part of the typing around it, so that *undo* takes it back with
 	the rest.
@@ -901,8 +843,7 @@ Where the keyboard leaves a field that holds such a value, the status bar
 tells the reason, since the field shows the value that holds again.
 The actions that edit cues edit the outputs in the same way while they show.
 *edit*, *edit_start*, and *change_name* enter the Name field of the output
-with the caret at its end, at its start, or with all of it selected, as *F2*
-does in the cua keymap.
+with the caret at its end, at its start, or with all of it selected.
 *next_field* and *previous_field* move among the fields and lists of the
 output and select the text of a field that they reach, as they do for a cue.
 *add_below* and *add_above* add an output on the default device and its first
@@ -965,7 +906,7 @@ Every other action that acts on cues, such as *standby*, does nothing, since
 the cue list is out of sight.
 While the outputs show, the status bar names the keys of *add_below*, *edit*,
 and *back*, and the key of *change_name* in place of that of *edit* where the
-keymap binds none to it, as the cua keymap does with *F2*.  The bar gives way,
+keymap binds none to it.  The bar gives way,
 from the first to the last, to the key of *change_name*, *forward*,
 *add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that
 the key that leaves the outputs outlasts all but the help page.
@@ -1021,7 +962,6 @@ page.
 	the key to reach for when no show should stop.
 	It acts in text fields, where a text field that has a selection still copies
 	it first.
-	The cua keymap binds no key to it, since Control+c copies there.
 	While keys wait, the search line is open, or hint mode is on, the status bar
 	hints its key.
 	While a text field or a drop-down list has the keyboard, it hints the key
@@ -1289,8 +1229,8 @@ page.
 
 *search_backward*
 	Open the search line for a search up the list, which begins at the cue
-	before the selected one, as described under *SEARCHING*.  Neither keymap
-	binds it, since *?* shows the help page, so a keymap in *config.toml*
+	before the selected one, as described under *SEARCHING*.  The vi keymap
+	leaves it unbound, since *?* shows the help page, so a keymap in *config.toml*
 	binds it to a key.
 
 *next_match*
@@ -1317,8 +1257,6 @@ page.
 *change_name*
 	Edit the name of the selected cue with all of it selected, so that typing
 	replaces it, as Vim's *c c* and *S* change a whole line.
-	In the cua keymap it is *F2*, which selects the name as a rename does in
-	desktop file managers.
 	Enter leaves the field with the name unchanged unless a key was typed.
 	Unlike in Vim, *c* is no operator, so only *c c* begins a change, and a *c*
 	before any other key is dropped with that key, as *TYPING* describes.
@@ -1365,7 +1303,7 @@ page.
 	any press of a mouse button, any turn of the wheel, any change of the size of
 	the window, and any start or end of a cue in the Active list of the sidebar,
 	which moves the places below it.
-	The key of this action is a letter in both keymaps, so that it types a letter
+	The key of this action is a letter in the vi keymap, so that it types a letter
 	of a label while the mode is on.
 	The status bar hints this key where it acts, and the hint gives way right
 	after those of *next_list* and *next_tab*.
@@ -1466,7 +1404,6 @@ page.
 	A group goes with the cues that it holds.
 	The vi keymap binds no key to it, since *cut* is what its *d d*, *x*, and
 	*Delete* do, as in Vim.
-	The cua keymap binds the Delete key to it, as desktop programs do.
 
 *move_down*
 	Move the selected cue one place down its list, or as many places as the
@@ -1556,7 +1493,7 @@ page.
 
 *help*
 	Show the help page, or hide it.  It does nothing while the stage window
-	has the keyboard.  Both keymaps bind *?* and F1 to it.  The vi keymap
+	has the keyboard.  The vi keymap binds *?* and F1 to it, and
 	departs from Vim here, where *?* searches up the list, so that the most
 	common help key works everywhere.  *?* types in a text field and in the
 	search line, as any character does, so that the status bar hints this key
@@ -1637,13 +1574,20 @@ the keymap in use binds to no key.
 
 # EXAMPLES
 
-Use the cua keymap, with GO on F5 as well as on the space bar:
+Declare a keymap of one's own, *desk*, that starts from *vi* and adds desktop
+keys that *vi* leaves free: GO on F5 as well as on the space bar, F2 to change
+a name, and Control+z and Control+v to undo and to paste, each beside the keys
+of *vi*:
 
 ```
-keymap = "cua"
+keymap = "desk"
 
-[keys]
+[keymaps.desk]
+from = "vi"
 go = ["Space", "F5"]
+change_name = ["c c", "S", "F2"]
+undo = ["u", "Control+z"]
+paste_below = ["p", "Control+v"]
 ```
 
 Keep the vi keymap, but move through cues and menus with the arrows alone,

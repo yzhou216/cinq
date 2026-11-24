@@ -122,8 +122,7 @@ fn the_keys_that_enter_the_name_focus_the_field_of_the_output() {
 }
 
 #[test]
-fn f2_of_the_cua_keymap_selects_the_name_of_the_output_and_tab_selects_the_next_field() {
-    // F2 is bound to this action by the cua keymap, as its own tests show
+fn the_key_that_changes_the_name_selects_the_name_of_the_output_and_tab_selects_the_next_field() {
     assert!(matches!(
         Action::ChangeName.message(None),
         Message::Focus(Focus::Name(Caret::All))

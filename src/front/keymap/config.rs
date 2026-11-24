@@ -7,9 +7,9 @@
 //! ready, and gives the address on which OSC commands are taken
 //!
 //! `keymap` names the keymap that the keys start from, which is vi unless
-//! the file names another: a shipped one, or one of the `[keymaps]` table,
-//! which starts from the keymap that its `from` names, or from no keys at
-//! all without one.  A keymap of the file's own and the `[keys]` table bind
+//! the file names one of its own in the `[keymaps]` table.  Such a keymap
+//! starts from the keymap that its `from` names, or from no keys at all
+//! without one.  A keymap of the file's own and the `[keys]` table bind
 //! each action they name to a key sequence or a list of them, in place of
 //! the keys that the keymap they build on gives it.  `audio_device` gives
 //! the ID of an audio device in place of the default one, `ready_ahead`
@@ -24,7 +24,7 @@
 //! osc_listen = "127.0.0.1:53000"
 //!
 //! [keymaps.booth]
-//! from = "cua"
+//! from = "vi"
 //! go = ["Space", "F5"]
 //!
 //! [keys]

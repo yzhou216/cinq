@@ -13,7 +13,6 @@ fn z_waits_for_the_key_that_puts_the_selected_row_in_view() {
     assert_eq!(action("z z"), Some((Action::RowToMiddle, None)));
     assert_eq!(action("z t"), Some((Action::RowToTop, None)));
     assert_eq!(action("z b"), Some((Action::RowToBottom, None)));
-    assert!(Keymap::from(Preset::Cua).keys(Action::RowToTop).is_empty());
 }
 
 #[test]
@@ -51,5 +50,4 @@ fn plus_and_minus_move_to_the_next_and_previous_cue_as_in_vim() {
         typed("d +").across(),
         Some((Action::Cut, Action::Next, None))
     );
-    assert_eq!(typed_on(&Keymap::from(Preset::Cua), "+").action, None);
 }

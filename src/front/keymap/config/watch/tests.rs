@@ -22,10 +22,10 @@ use notify_debouncer_full::notify;
 use tempfile::TempDir;
 
 use super::{Errors, watch, watch_nearest};
-use crate::front::keymap::{
-    Preset,
-    config::{Config, Source},
-};
+use crate::front::keymap::config::{Config, Source};
+
+/// Text of a file that chooses a keymap of its own, which the defaults lack
+const BOOTH: &str = "keymap = \"booth\"\n[keymaps.booth]\nfrom = \"vi\"\n";
 
 /// Time that the watcher has to see a change before the test fails
 const PATIENCE: Duration = Duration::from_secs(10);
@@ -35,8 +35,8 @@ fn until(configs: &mpsc::Receiver<Config>, wanted: impl Fn(&Config) -> bool) {
     assert!(found, "the watcher sent no such configuration");
 }
 
-fn from_file(preset: Preset) -> impl Fn(&Config) -> bool {
-    move |config| matches!(config.source, Source::File(_)) && config.keymap.name() == preset.name()
+fn from_file(name: &'static str) -> impl Fn(&Config) -> bool {
+    move |config| matches!(config.source, Source::File(_)) && config.keymap.name() == name
 }
 
 fn defaults(config: &Config) -> bool {
@@ -79,13 +79,13 @@ fn keys_follow_the_file_as_it_comes_changes_and_goes() -> io::Result<()> {
     let configs = watched(file.clone(), Errors::Log(Box::new(io::sink())));
     until(&configs, defaults);
     fs::create_dir_all(&directory)?;
-    fs::write(&file, "keymap = \"cua\"\n")?;
-    until(&configs, from_file(Preset::Cua));
+    fs::write(&file, BOOTH)?;
+    until(&configs, from_file("booth"));
     // Saved as editors often save, by renaming another file over it
     let draft = directory.join("config.toml.draft");
     fs::write(&draft, "keymap = \"vi\"\n")?;
     fs::rename(&draft, &file)?;
-    until(&configs, from_file(Preset::Vi));
+    until(&configs, from_file("vi"));
     fs::remove_file(&file)?;
     until(&configs, defaults);
     Ok(())
@@ -95,9 +95,9 @@ fn keys_follow_the_file_as_it_comes_changes_and_goes() -> io::Result<()> {
 fn reading_the_file_does_not_make_the_watcher_read_it_again() -> io::Result<()> {
     let home = TempDir::new()?;
     let file = home.path().join("config.toml");
-    fs::write(&file, "keymap = \"cua\"\n")?;
+    fs::write(&file, BOOTH)?;
     let configs = watched(file, Errors::Log(Box::new(io::sink())));
-    until(&configs, from_file(Preset::Cua));
+    until(&configs, from_file("booth"));
     // Reading opens the file, which the watcher sees as well, so a watcher
     // that took the opening for a change would read the file over and over.
     // FSEvents on Darwin may still report the write made just before the
@@ -139,12 +139,12 @@ fn changes_by_the_real_path_of_a_linked_directory_touch_the_file() -> io::Result
 fn a_save_comes_back_formatted() -> io::Result<()> {
     let home = TempDir::new()?;
     let file = home.path().join("config.toml");
-    fs::write(&file, "keymap = \"cua\"\n")?;
+    fs::write(&file, BOOTH)?;
     let configs = watched(file.clone(), Errors::Log(Box::new(io::sink())));
-    until(&configs, from_file(Preset::Cua));
+    until(&configs, from_file("booth"));
     fs::write(&file, "keymap=\"vi\"\n")?;
     // Reading that brings the keys of the save formats the file first
-    until(&configs, from_file(Preset::Vi));
+    until(&configs, from_file("vi"));
     assert_eq!(fs::read_to_string(&file)?, "keymap = \"vi\"\n");
     Ok(())
 }
@@ -158,8 +158,8 @@ fn keys_follow_the_file_while_standard_error_takes_nothing() -> io::Result<()> {
     // Problems of the first reading leave the thread that writes them
     // waiting for good
     until(&configs, |config| !config.problems.is_empty());
-    fs::write(&file, "keymap = \"cua\"\n")?;
-    until(&configs, from_file(Preset::Cua));
+    fs::write(&file, BOOTH)?;
+    until(&configs, from_file("booth"));
     Ok(())
 }
 
