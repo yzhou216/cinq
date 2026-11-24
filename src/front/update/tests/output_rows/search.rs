@@ -5,7 +5,7 @@
 //! Tests of searching the outputs by name
 
 use super::{super::after, at, cue_list_kept, outputs};
-use crate::front::Message;
+use crate::front::{App, Message, update::search::Searched};
 
 /// Returns the messages that open the search line and type `text` into it
 fn searching(text: &str) -> [Message; 2] {
@@ -68,7 +68,14 @@ fn a_search_that_wraps_in_the_outputs_says_so_and_one_without_a_match_says_that(
     );
     assert_eq!(at(&wrapped), 1);
     assert_eq!(wrapped.remark, Some("Search continued at the top"));
-    let nothing = after(outputs(), [Message::SearchStep(1)]);
+    let lost = App {
+        searched: Searched {
+            text: "zzz".to_owned(),
+            ..Searched::default()
+        },
+        ..outputs()
+    };
+    let nothing = after(lost, [Message::SearchStep(1)]);
     assert_eq!(nothing.remark, Some("No output matches"));
     assert_eq!(at(&nothing), 1);
 }

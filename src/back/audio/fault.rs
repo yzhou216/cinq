@@ -40,6 +40,7 @@ impl Fault {
             Fault::Unplayable(_) => "Cannot open".to_owned(),
             Fault::Stopped(_) => "Stopped, retrying".to_owned(),
             Fault::Unanswered => "Not answering, retrying".to_owned(),
+            Fault::Channels(1) => "Past its 1 channel".to_owned(),
             Fault::Channels(count) => format!("Past its {count} channels"),
         }
     }

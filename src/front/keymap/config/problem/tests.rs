@@ -64,12 +64,12 @@ fn problems_lie_in_the_part_of_the_file_they_are_about() {
         lying(&config),
         [
             ("no setting is named `colour`", Some("colour")),
+            ("no keymap is named `emacs`", Some("\"emacs\"")),
+            ("keymaps.booth: no action is named `fly`", Some("fly")),
             (
                 "keymaps.vi goes unused, since vi is a shipped keymap",
                 Some("vi")
             ),
-            ("no keymap is named `emacs`", Some("\"emacs\"")),
-            ("keymaps.booth: no action is named `fly`", Some("fly")),
             ("next: `Foo` names no key", Some("\"Foo\"")),
             ("next should be keys or a list of keys", Some("2")),
         ]
@@ -151,4 +151,30 @@ fn standard_error_shows_each_problem_in_the_lines_around_it() {
     // Mark past the last character of a file without a final line break
     let drawn = draw(&read("[keys"));
     assert!(drawn.contains(" 1 | [keys\n   :      ^\n"), "{drawn}");
+}
+
+#[test]
+fn a_key_bound_twice_lies_in_the_entry_that_cannot_be_reached() {
+    let config = read("keymap = \"vi\"\n[keys]\ngo = [\"F9\"]\nnext = [\"F9\"]\n");
+    assert_eq!(
+        lying(&config),
+        [(
+            "`F9` is bound to both go and next, so go keeps it and next loses it",
+            Some("next")
+        )]
+    );
+    assert_eq!(
+        config.warnings().collect::<Vec<_>>(),
+        ["config.toml:4: `F9` is bound to both go and next, so go keeps it and next loses it"]
+    );
+}
+
+#[test]
+fn problems_come_in_the_order_of_the_file() {
+    let config = read("keymap = \"vi\"\n[keys]\nfly = \"f\"\ngo = [\"F9\"]\nnext = [\"F9\"]\n");
+    let lines = config
+        .warnings()
+        .map(|warning| warning.split(':').nth(1).unwrap_or_default().to_owned())
+        .collect::<Vec<_>>();
+    assert_eq!(lines, ["3", "5"]);
 }

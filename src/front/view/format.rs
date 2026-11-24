@@ -4,6 +4,7 @@
 
 //! Text for back-end values, kept apart from the widgets that show it
 
+mod chain;
 mod change;
 mod consequences;
 #[cfg(test)]
@@ -11,11 +12,8 @@ mod tests;
 
 use std::path::Path;
 
-use itertools::Itertools;
-
-use crate::back::{
-    Active, Advance, Cue, CueList, Groups, Kind, Media, Output, OutputId, Phase, SILENCE, Workspace,
-};
+use crate::back::{Active, Advance, Cue, Groups, Kind, Media, Output, Phase, SILENCE, Workspace};
+pub use chain::{chain, moving};
 pub use change::change;
 use consequences::short;
 pub use consequences::{consequences, consequences_of, leading};
@@ -24,6 +22,24 @@ pub use consequences::{consequences, consequences_of, leading};
 fn clock(seconds: f64) -> String {
     let tenths = (seconds.max(0.0) * 10.0).round() as u32;
     format!("{}:{:02}.{}", tenths / 600, tenths / 10 % 60, tenths % 10)
+}
+
+/// Formats a time ahead as `4.5s`, or as a clock from a minute on, so that it
+/// reads as the time left of a running cue does
+fn span(seconds: f64) -> String {
+    if seconds < 59.95 {
+        format!("{seconds:.1}s")
+    } else {
+        clock(seconds)
+    }
+}
+
+/// Tells the loop that a cue plays where it differs from the times typed, as
+/// when a time lies outside the clip, and nothing where the cue plays what was
+/// typed
+pub fn loop_played(cue: &Cue) -> Option<String> {
+    cue.loop_played()
+        .map(|(start, end)| format!("Loop plays from {} to {}", clock(start), clock(end)))
 }
 
 /// Leaves zero blank, so that real waits stand out
@@ -92,20 +108,29 @@ pub fn target(workspace: &Workspace, groups: &Groups, cue: &Cue) -> String {
             .and_then(|name| Path::new(name).file_name())
             .map_or_else(String::new, |name| name.to_string_lossy().into_owned()),
         Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo => {
-            workspace.target(cue).map_or_else(String::new, number)
+            workspace.target(cue).map_or_else(String::new, |target| {
+                format!("{}{}", number(target), elsewhere(workspace, cue, target))
+            })
         }
-        Kind::Light => count(
-            workspace
-                .patch()
-                .iter()
-                .filter(|instrument| cue.lights.contains_key(&instrument.id))
-                .count(),
-            "instrument",
-        ),
+        // Counts every instrument that the cue names, patched or not, as the
+        // Levels tab lists them
+        Kind::Light => count(cue.lights.len(), "instrument"),
         Kind::Network => cue.message.trim().to_owned(),
         Kind::Group => count(groups.members(cue.id).len(), "cue"),
         Kind::Wait | Kind::Memo => String::new(),
     }
+}
+
+/// Tells ` in Effects` for a `target` that lies in a cue list other than
+/// that of `cue`, where its number could be mistaken for one of this list,
+/// and nothing for one in the same list
+fn elsewhere(workspace: &Workspace, cue: &Cue, target: &Cue) -> String {
+    let own = workspace.list_of(cue.id);
+    workspace
+        .list_of(target.id)
+        .filter(|other| own.is_some_and(|own| own != *other))
+        .map(|other| format!(" in {}", workspace.lists()[other].name))
+        .unwrap_or_default()
 }
 
 /// Formats a level in dB without the unit, as the level field holds it
@@ -122,7 +147,7 @@ pub fn count(number: usize, noun: &str) -> String {
 pub fn phase(active: &Active) -> String {
     match active.phase() {
         Phase::Scheduled { starts_in: wait } | Phase::PreWait { remaining: wait } => {
-            format!("in {wait:.1}s")
+            format!("in {}", span(wait))
         }
         Phase::Running { remaining } => format!("{} left", clock(remaining)),
         Phase::Looping => "looping".to_owned(),
@@ -145,59 +170,66 @@ pub fn activity(active: &Active, cue: &Cue) -> String {
     format!("{}{level}{paused}{fading}", phase(active))
 }
 
-/// Describes every cue of the chain that the next GO starts by its number,
-/// with how long after GO each cue after the first fires, so that
-/// auto-continue and auto-follow chains are visible before they run.  The
-/// count leaves out the cues that cannot play, which GO skips, and each of
-/// them says why.  A cue that sends to no output that can play, among `failing`
-/// or in the show, is told as silent, though GO fires it.  A chain with no cue that can play says so in words
-/// before it names the cues and why each cannot play.
-pub fn chain(workspace: &Workspace, list: &CueList, standby: &Cue, failing: &[OutputId]) -> String {
-    let fired = workspace.next_go(list).count();
-    let cues = list.chain(standby.id);
-    if fired == 0 {
-        let reasons = cues.filter_map(|(cue, _)| {
-            let problem = workspace.problem(cue)?;
-            Some(format!("cue {} ({problem})", number(cue)))
-        });
-        return format!("GO fires nothing: {}", reasons.format(", "));
-    }
-    let described = cues.enumerate().map(|(index, (cue, delay))| {
-        let delay = (index > 0).then(|| format!("+{delay:.1}s"));
-        let skipped = workspace
-            .problem(cue)
-            .map(|problem| format!("skipped: {problem}"));
-        let silent = if workspace.sends_nowhere(cue) {
-            Some("silent: no output")
-        } else if workspace.sends_to_failing(cue, failing) {
-            Some("silent: output failed")
-        } else {
-            None
-        };
-        let notes = delay
-            .into_iter()
-            .chain(skipped)
-            .chain(silent.map(str::to_owned))
-            .join(", ");
-        if notes.is_empty() {
-            number(cue)
-        } else {
-            format!("{} ({notes})", number(cue))
-        }
-    });
-    format!(
-        "GO fires {}: {}",
-        count(fired, "cue"),
-        described.format(", ")
-    )
-}
-
 /// Tells what a copy or cut took with `verb`, by the number of the cue, or
 /// else by how many cues
 pub fn clipped(verb: &str, cues: &[Cue]) -> String {
     match cues {
         [cue] => format!("{verb} cue {}", number(cue)),
         cues => format!("{verb} {} cues", cues.len()),
+    }
+}
+
+/// Tells what a paste of `cues` cues left behind, `sends` sends to outputs
+/// and `targets` targets that the show has no namesake of, and how many of
+/// them are `unpatched` light cues, or nothing where it left none
+pub fn pasted_losses(
+    cues: usize,
+    sends: usize,
+    targets: usize,
+    unpatched: usize,
+) -> Option<String> {
+    let lost = [(sends, "send"), (targets, "target")]
+        .into_iter()
+        .filter(|&(number, _)| number > 0)
+        .map(|(number, noun)| count(number, noun))
+        .collect::<Vec<_>>();
+    let told = [
+        (!lost.is_empty()).then(|| format!("dropped {}", lost.join(" and "))),
+        (unpatched > 0).then(|| format!("{unpatched} unpatched")),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>();
+    (!told.is_empty()).then(|| format!("Pasted {}, {}", count(cues, "cue"), told.join(", ")))
+}
+
+/// Returns whether `told`, the notice of a change, says that a cue plays
+/// nowhere or sends to no output now, which the operator cannot see or hear,
+/// where an undo of it brings the sound back
+pub fn silences(told: &str) -> bool {
+    ["to play nowhere", "to no output"]
+        .iter()
+        .any(|phrase| told.contains(phrase))
+        && !told.to_lowercase().starts_with("undid")
+}
+
+/// Tells after `told`, which names what an edit did to `cut` cues, that
+/// `stopped` of them were running and stopped by it, since the silence has no
+/// other cause to read from the bar
+pub fn stopping(told: String, cut: usize, stopped: usize) -> String {
+    match (cut, stopped) {
+        (_, 0) => told,
+        (1, _) => format!("{told}, which stopped"),
+        (_, stopped) => format!("{told}, {stopped} of which stopped"),
+    }
+}
+
+/// Tells what an undo or a redo, by `verb`, took back or made again, which is
+/// `turns` changes, the last of them being `told`, or that one change alone
+pub fn turned(verb: &str, turns: usize, told: &str) -> String {
+    match turns {
+        0 | 1 => format!("{verb}: {told}"),
+        turns => format!("{verb} {turns} changes, the last: {told}"),
     }
 }
 
@@ -224,7 +256,7 @@ fn the_output(name: &str, terse: bool) -> String {
 
 pub(in crate::front::view) fn number(cue: &Cue) -> String {
     if cue.number.trim().is_empty() {
-        format!("\"{}\"", cue.name)
+        format!("\"{}\"", Cue::one_line(&cue.name))
     } else {
         cue.number.clone()
     }

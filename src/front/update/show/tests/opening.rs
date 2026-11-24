@@ -205,3 +205,10 @@ fn opening_a_show_over_the_outputs_selects_one_of_its_outputs() {
     assert!(opened.outputs_shown);
     assert!(opened.output_row().is_some());
 }
+
+#[test]
+fn directory_in_place_of_a_show_is_told_without_an_error_number() {
+    let directory = std::env::temp_dir();
+    let reason = crate::front::read(&directory).expect_err("a directory is no show");
+    assert!(!reason.contains("os error"), "{reason}");
+}

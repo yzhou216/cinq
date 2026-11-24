@@ -6,16 +6,17 @@
 //!
 //! [`Audio::sync`] runs after every change to the workspace.  The workspace
 //! stays the only record of what should be heard, so a sound that cannot
-//! start goes back to it as a file that cannot be played.  A thread of its
-//! own makes ready the sounds that runs may start next, so that GO waits on
-//! no file.  A thread for each audio device opens it and tries again if it
-//! fails, so that a device that is slow to answer never stops the
-//! window.  The sound of a video file plays from the file's sound track,
-//! along with the silence that AAC encoders put around the sound, since the
-//! decoder reads no edit list, which marks that silence for players to
-//! skip.  Each cue plays on the outputs that it sends to, which play on
-//! channels of audio devices, as [`patch`] tells, and a [`mixer`] of
-//! cinq's own plays each device, since kira mixes in stereo alone.
+//! start, or that stops before its file ends, goes back to it as a file that
+//! cannot be played.  A thread of its own makes ready the sounds that runs
+//! may start next, so that GO waits on no file.  A thread for each audio
+//! device opens it and tries again if it fails, so that a device that is
+//! slow to answer never stops the window.  The sound of a video file plays
+//! from the file's sound track, along with the silence that AAC encoders put
+//! around the sound, since the decoder reads no edit list, which marks that
+//! silence for players to skip.  Each cue plays on the outputs that it sends
+//! to, which play on channels of audio devices, as [`patch`] tells, and a
+//! [`mixer`] of cinq's own plays each device, since kira mixes in stereo
+//! alone.
 
 mod device;
 mod fault;
@@ -28,7 +29,7 @@ mod play;
 mod preload;
 mod probes;
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
 mod voice;
 
 use std::{collections::HashMap, path::Path, time::Instant};
@@ -201,9 +202,12 @@ pub(super) fn probe(file: &Path) -> Result<f32, String> {
         .map_err(reason)
 }
 
+/// Tells why a file cannot be played, in words of cinq's own where the
+/// decoder fails, since its errors name the library and the stage, as
+/// `unsupported feature: core (probe)` does
 fn reason(error: FromFileError) -> String {
     match error {
         FromFileError::IoError(error) => unreadable(error),
-        error => error.to_string(),
+        _ => "not a sound file that cinq can play".to_owned(),
     }
 }

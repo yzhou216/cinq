@@ -171,6 +171,12 @@ impl Active {
         self.elapsed < 0.0
     }
 
+    /// Returns the seconds until the action of a cue that has yet to begin,
+    /// which a pause holds off
+    pub(super) fn acts_in(&self) -> Option<f64> {
+        (!self.started && !self.paused).then_some(self.pre_wait - self.elapsed)
+    }
+
     /// Returns whether the action is to begin, which waits while the cue is
     /// paused, as one that a start cue has fired and a pause cue holds before
     /// it acts

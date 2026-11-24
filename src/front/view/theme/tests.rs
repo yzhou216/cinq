@@ -8,8 +8,8 @@
 use iced::{Color, widget::text_input::Status};
 
 use super::{
-    BG_MAIN, BLUE, BLUE_COOLER, FG_MAIN, FOCUS_WIDTH, HINT_BACKGROUND, HINT_TEXT, RED, RED_COOLER,
-    SELECTION, YELLOW_WARMER, danger, field, modus_vivendi,
+    BG_DIM, BG_MAIN, BLUE, BLUE_COOLER, FG_DIM, FG_MAIN, FOCUS_WIDTH, GREEN, HINT_BACKGROUND,
+    HINT_TEXT, RED, RED_COOLER, SELECTION, YELLOW_WARMER, danger, field, modus_vivendi,
 };
 
 #[test]
@@ -71,7 +71,7 @@ fn red_text_needs_the_lighter_red_on_the_selected_row_and_not_elsewhere() {
 
 #[test]
 fn the_other_colors_of_text_stay_legible_on_the_selected_row() {
-    [FG_MAIN, YELLOW_WARMER, BLUE]
+    [FG_MAIN, YELLOW_WARMER, BLUE, GREEN]
         .into_iter()
         .for_each(|color| {
             assert!(contrast(color, SELECTION) >= 4.5, "{color:?}");
@@ -87,4 +87,10 @@ fn the_letters_of_a_hint_label_read_at_7_to_1_on_its_box() {
         "9.3",
         "the ratio that the docs state"
     );
+}
+
+#[test]
+fn dim_text_reads_at_4_5_to_1_on_the_window_and_on_a_disabled_button() {
+    assert!(contrast(FG_DIM, BG_MAIN) >= 4.5);
+    assert!(contrast(FG_DIM, BG_DIM) >= 4.5);
 }

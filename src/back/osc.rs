@@ -27,6 +27,10 @@ use std::fmt;
 pub use listen::{Heard, listen};
 pub use remote::Remote;
 
+/// Characters that no host holds, of the names and IPv4 addresses that are
+/// taken: those of an IPv6 literal, of a URL, and of a second port
+const NOT_IN_HOST: [char; 4] = [':', '[', ']', '/'];
+
 /// Ends a SLIP frame and starts one too, so that a receiver drops any noise
 /// before it
 const END: u8 = 0xc0;
@@ -49,10 +53,13 @@ pub struct Outgoing {
     pub packet: Vec<u8>,
 }
 
+/// Writes the destination with its scheme, as `tcp://host:port` or
+/// `udp://host:port`, so that the two read alike and name the worker of the
+/// destination
 impl fmt::Display for Destination {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Tcp(address) => f.write_str(address),
+            Self::Tcp(address) => write!(f, "tcp://{address}"),
             Self::Udp(address) => write!(f, "udp://{address}"),
         }
     }
@@ -60,26 +67,47 @@ impl fmt::Display for Destination {
 
 impl Destination {
     /// Reads `host:port`, with or without a `tcp://` before it, or
-    /// `udp://host:port`, and returns none for text of any other form
+    /// `udp://host:port`, and returns none for text of any other form, as for
+    /// a host that holds a colon, a bracket, or a slash, which no lookup of
+    /// an IPv4 address could resolve
     pub fn parse(text: &str) -> Option<Self> {
+        let (destination, address) = Self::split(text);
+        let (host, port) = address.rsplit_once(':')?;
+        (Self::host_is_valid(host) && Self::port_is_valid(port))
+            .then(|| destination(address.to_owned()))
+    }
+
+    /// Returns whether `text` reads as `host:port` with a good host but a
+    /// port that is not a number from 1 to 65535
+    pub fn port_is_bad(text: &str) -> bool {
+        Self::split(text)
+            .1
+            .rsplit_once(':')
+            .is_some_and(|(host, port)| Self::host_is_valid(host) && !Self::port_is_valid(port))
+    }
+
+    fn split(text: &str) -> (fn(String) -> Self, &str) {
         let text = text.trim();
-        let (destination, address): (fn(String) -> Self, _) = match text.strip_prefix("udp://") {
+        match text.strip_prefix("udp://") {
             Some(address) => (Self::Udp, address),
             None => (Self::Tcp, text.strip_prefix("tcp://").unwrap_or(text)),
-        };
-        let (host, port) = address.rsplit_once(':')?;
-        let valid = !host.is_empty()
-            && !host.contains(char::is_whitespace)
-            && port.parse::<u16>().is_ok_and(|port| port > 0);
-        valid.then(|| destination(address.to_owned()))
+        }
+    }
+
+    fn host_is_valid(host: &str) -> bool {
+        !host.is_empty() && !host.contains(char::is_whitespace) && !host.contains(NOT_IN_HOST)
+    }
+
+    fn port_is_valid(port: &str) -> bool {
+        port.parse::<u16>().is_ok_and(|port| port > 0)
     }
 }
 
 /// Returns the OSC message that `text` reads as, or none unless it starts
-/// with an address and holds no null, which OSC reads as the end of a
-/// string
+/// with an address, holds no null, which OSC reads as the end of a string,
+/// and closes every double quote that it opens
 pub fn packet(text: &str) -> Option<Vec<u8>> {
-    if text.contains('\0') {
+    if text.contains('\0') || text.matches('"').count() % 2 == 1 {
         return None;
     }
     let mut words = words(text).into_iter();

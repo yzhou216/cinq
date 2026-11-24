@@ -67,6 +67,9 @@ Each output is a table in the array *output*, in order:
 *channels*
 	Channels of the device that the output plays on, counted from 1 to 256: _3_
 	for one channel, and _1-2_ or _1,3_ for two, the left first.
+	Every output has them, and a file whose output lacks them cannot be opened:
+	the warning names the output by its place among the *output* tables, as
+	*output 2*, and gives the line of its table.
 	A stereo file plays its left and right on the two channels of a stereo
 	output, and the average of them on the channel of a mono one, so that a
 	sound on one side alone is 6 dB quieter.
@@ -171,6 +174,26 @@ Each cue is a table in the array *cue* of its list:
 	picture file that a picture cue shows: an absolute path, or one relative
 	to the directory of the show file.
 	Sound files hold WAV, FLAC, Ogg Vorbis, MP3, or AAC in MP4.
+	A cue whose file cannot be played, as one whose file is not there,
+	reads *BROKEN* in its state, the warnings in the sidebar tell why, and
+	GO skips it.
+	A file that no decoder of sound reads, as one of another format or
+	one cut off within its first bytes, reads _not a sound file that cinq
+	can play_.
+	*cinq* looks at the size and the modification time of every file of the
+	show every two seconds, and reads again a file that has changed or gone,
+	so that a file that goes warns before its cue fires, and replacing or
+	restoring the file clears the warning.
+	A failure that only playing finds, such as a picture cut short, stays
+	until the file changes.
+	A sound that stops while more than a second of its file remains, or a
+	sound that loops and stops at all, while its audio device plays on,
+	is such a failure, as a file cut short or one of more than two channels,
+	which *cinq* cannot decode, makes it: its cue reads *BROKEN* with the
+	reason _its sound stopped early_, and *cinq* says so once on standard
+	error.
+	A device that stalls, a fade, a stop, a panic, or a devamp never
+	counts.
 
 *start*
 	Seconds into its file at which an audio or video cue starts, which are
@@ -179,7 +202,8 @@ Each cue is a table in the array *cue* of its list:
 *end*
 	Seconds into its file at which an audio or video cue ends, which is the
 	end of the file by default.
-	A cue that starts at or after its end cannot play.
+	A cue that starts at or after its end, or past the end of its file, cannot
+	play.
 
 *loop*
 	Whether an audio or video cue plays from the start of its loop again each
@@ -195,7 +219,8 @@ Each cue is a table in the array *cue* of its list:
 	loop start each time it reaches its loop end, so that one file can hold an
 	introduction, a section that repeats, and an ending.
 	The loop lies within the cue: a loop start before the *start* counts as the
-	*start*, and a loop end after the *end* counts as the *end*.
+	*start*, and a loop end after the *end* counts as the *end*, which the
+	header of the inspector tells as the loop that plays.
 	A cue whose loop then starts at or after its end cannot play, and shows
 	among the warnings.
 	Saving writes both for a cue that sets them, whether it loops or not, so
@@ -306,6 +331,12 @@ A video cue plays H.264 video of the Baseline, Main, or High profile in MP4, as
 files ending in _.mp4_, _.m4v_, or _.mov_ hold it, along with the sound of its
 AAC track, in mono or stereo.
 A file without a sound track plays its picture alone.
+A file that holds no index of its tracks, as a copy that stopped before its
+end does, or a file that is not MP4, reads _is cut short, or is not an MP4
+file_, and one that holds an index but no H.264 track reads _holds no H.264
+video_.
+One in another profile reads _holds H.264 video of a profile other than
+Baseline, Main, or High_.
 The picture of a video cue follows the clock of the cue, so that it stays with
 the sound over a long video.
 cinq reads no tags or cover art, and skips a track other than the picture's
@@ -342,11 +373,15 @@ Pausing holds the picture of a video, and a video cue that loops loops its
 picture with its sound.
 
 Closing the stage window closes it until a picture or video cue fires again,
-which opens it anew, fullscreen, wherever the platform puts it.
+or the key of *fullscreen* is typed, which opens it anew, fullscreen,
+wherever the platform puts it.
+While the stage window is closed and a picture or video cue shows on it, the
+main window says so, with a warning in the sidebar and a hint of the key of
+*fullscreen*, since the audience sees nothing of what the cue shows.
 Closing the main window quits *cinq*.
-The key of *fullscreen* toggles the stage window between fullscreen and a
-window, until the next GO that fires a picture or video cue, and the other
-keys act on the cue list from either window, as *cinq*(5) describes.
+The key of *fullscreen* otherwise toggles the stage window between fullscreen
+and a window, until the next GO that fires a picture or video cue, and the
+other keys act on the cue list from either window, as *cinq*(5) describes.
 
 # LIGHTS
 
@@ -392,7 +427,9 @@ A light cue that sets no instrument, or names one that the patch lacks, still
 fires, since its other instruments and its time count, but its *State* reads
 *NO LEVELS* or *UNPATCHED* in yellow, the header of its inspector says why in
 yellow, and the sidebar lists it among the warnings, as in _names instrument
-99, which the patch lacks_, until the cue or the patch is put right.
+99, which the patch lacks_, until the cue or the patch is put right.  The
+Levels tab lists such an instrument as _99 (unpatched)_, where emptying its
+field clears it.
 
 *cinq* sends the levels of each universe that the patch uses in two ways.
 Art-Net goes to the broadcast address of every IPv4 network that the computer
@@ -412,6 +449,12 @@ show, goes to level 0 on every address, and then its sACN stream says that it
 has ended, so that no receiver keeps its last levels.
 When *cinq* ends, receivers of sACN hold its levels for as long as they
 hold those of any source that has gone quiet.
+Light output that cannot go out is told while the patch has an instrument:
+where the computer has no IPv4 network, the socket cannot be opened, or every
+send of a round fails, the sidebar lists a warning, such as _Light output: no
+network interface_ or _Light output: not sent: network unreachable_, and
+counts it, and standard error says it once.
+The warning goes once a round of sending gets a packet out.
 
 # NETWORK
 
@@ -425,6 +468,9 @@ each packet with SLIP, as OSC 1.1 asks of streams, or _udp://host:port_ for
 UDP, with one packet in each datagram.
 The host is an IPv4 address, or a name that *cinq* reaches at its first IPv4
 address.
+It holds no colon, bracket, or slash, so that an IPv6 address and a URL read as
+no destination.
+A port that is not a number from 1 to 65535 reads *BAD PORT*.
 An address avoids waiting for a name to resolve, which holds up the messages
 behind it for as long as the name server takes.
 *cinq* keeps a TCP connection to a destination open while messages to it
@@ -437,7 +483,9 @@ followed by its arguments after spaces, each an integer, a decimal number, or
 else a string.
 Double quotes keep a string whole across spaces, and keep it a string where
 it reads as a number.
-A string cannot hold a double quote itself.
+A string cannot hold a double quote itself, and a message with a double quote
+left open, as in _/scene "Act 1_, reads as no message, and the warning says that
+the quote is open.
 
 A network cue whose destination or message does not read as one cannot play.
 A message that cannot go out within a second of its cue starting is lost,
@@ -445,9 +493,18 @@ since a cue that fires late can do more harm than one that does not fire.
 This happens when the destination refuses the connection, or does not take it
 in time, as a console that has lost its power or its cable does.
 It happens as well when the message waits behind others.
-The warnings in the sidebar say why until a message to the same destination
-gets there, or until no cue names the destination any more, and *cinq* says so
-on standard error as well, once for each reason.
+A UDP message reports no failure, since nothing answers it.
+The sidebar warns of it for the first cue that names the destination, as
+_3 Send: message not sent: connection refused_, and pressing the warning
+selects the cue, whose inspector shows the destination.
+The *State* of every network cue that names the destination reads *SEND
+FAILED* in yellow, as that of a cue that sends to a failed output reads
+*OUTPUT FAILED*, also while the cue is only next, so that the cue that was
+fired shows it whichever cue the sidebar names.
+The warning says why until a message to the same destination gets there, or
+until no cue names the destination any more, and *cinq* says so on standard
+error as well, once for each reason, with the destination and the error of
+the system.
 
 Consoles and programs tell in their manuals which messages they take, and on
 which ports.
@@ -568,10 +625,10 @@ The cues that act on other cues act on a group as follows:
   holds, or resumes the group and those cues where it is paused.
   A start cue inside the group that it starts cannot play, since the group
   would fire it again without end, so that GO skips it and the cue list shows
-  NO TARGET.
-- A GoTo cue puts the group on standby.
-- A fade or devamp cue cannot name a group, as in QLab, since a fade needs a
-  sound, video, or picture, and a devamp cue an audio or video cue.
+  IN TARGET.
+- A fade or devamp cue cannot name a group, as in QLab, and reads BAD TARGET,
+  since a fade needs a sound, video, or picture, and a devamp cue an audio or
+  video cue.
 
 *Panic* and *Pause all* act on every run, those of groups and of the cues in
 them alike.

@@ -8,7 +8,7 @@
 
 use std::iter;
 
-use super::{Active, Workspace};
+use super::{Active, Workspace, active::Effect};
 
 /// Seconds before the end of a pass through its loop that a devamp cue has
 /// to act for its target to leave the loop there, rather than at the end of
@@ -70,6 +70,21 @@ impl Workspace {
             Some(list) => self.with_standby(list, Some(target)).played_from(list),
             None => self,
         }
+    }
+
+    /// Returns the cue that the first GoTo cue to act among those that have
+    /// fired is to put on standby of `list`, with the seconds until it does,
+    /// so that the standby shown there is known to be about to move.  A GoTo
+    /// cue that is paused, has acted, or is stopped has none.
+    pub fn moving(&self, list: usize) -> Option<(&Cue, f64)> {
+        self.active
+            .iter()
+            .filter_map(|active| match active.effect {
+                Effect::GoTo(target) => Some((self.cue(target)?, active.acts_in()?)),
+                _ => None,
+            })
+            .filter(|(target, _)| self.list_of(target.id) == Some(list))
+            .min_by(|(_, first), (_, second)| first.total_cmp(second))
     }
 
     /// Returns the cues of `fired`, each with the seconds until it fires,

@@ -14,12 +14,12 @@ use super::locked::locked;
 use crate::{
     back::{Advance, Cue, Destination, Edit, Kind, osc_packet},
     front::{
-        App, Message,
+        App, Message, Setting,
         view::{FILE, NAME, SPACING, button, dropdown, format, reached, theme},
     },
 };
 
-#[derive(Clone, Copy, IntoStaticStr)]
+#[derive(Clone, Copy, PartialEq, IntoStaticStr)]
 pub(super) enum Field {
     Number,
     Name,
@@ -82,18 +82,23 @@ impl Field {
         let editable = app.editable();
         let inside = app.current().group_of(id).is_some();
         let ignored = self.ignored(cue, inside);
+        let has_file = cue.kind.has_file();
         let field = |value: &str, edit: fn(String) -> Edit| -> Element<'a, Message> {
             if !editable || ignored.is_some() {
                 return locked(value, self.placeholder(cue), ignored, Fill);
             }
             let input = text_input(self.placeholder(cue), value)
-                .on_input(move |text| Message::Edit(id, edit(text)))
+                .on_input(move |text| match self {
+                    // A path applies once the field is left, as a level does
+                    Field::Target if has_file => Message::SettingTyped(Setting::File(id), text),
+                    _ => Message::Edit(id, edit(text)),
+                })
                 .style(theme::field(self.valid(cue)));
             // Enter in the empty File field opens the chooser, since Tab skips
             // the Choose button, and leaves the field once a file is named
             reached(match self {
                 Field::Name => input.id(NAME),
-                Field::Target if cue.kind.has_file() => input
+                Field::Target if has_file => input
                     .id(FILE)
                     .on_submit_maybe(value.is_empty().then_some(Message::ChooseFile(id))),
                 _ => input,
@@ -104,7 +109,7 @@ impl Field {
             Field::Name => field(&cue.name, Edit::Name),
             Field::Target => match cue.kind {
                 Kind::Audio | Kind::Video | Kind::Picture => row![
-                    field(&cue.file, Edit::File),
+                    field(&typed_file(app, cue), Edit::File),
                     button("Choose").on_press_maybe(editable.then_some(Message::ChooseFile(id))),
                 ]
                 .spacing(SPACING)
@@ -148,10 +153,13 @@ impl Field {
     }
 
     /// Returns the field that takes this one's place in the cue: a network
-    /// cue has no duration, so its message takes the row
+    /// cue has no duration, so its notes take that row, and its message,
+    /// which is as long as a name, takes the row of the notes in the wide
+    /// form
     pub(super) fn of(self, cue: &Cue) -> Self {
         match self {
-            Field::Duration if cue.kind == Kind::Network => Field::Osc,
+            Field::Notes if cue.kind == Kind::Network => Field::Osc,
+            Field::Duration if cue.kind == Kind::Network => Field::Notes,
             _ => self,
         }
     }
@@ -187,7 +195,7 @@ impl Field {
             Field::Target if cue.kind == Kind::Audio => "path of a sound file",
             Field::Target if cue.kind == Kind::Video => "path of a video file",
             Field::Target if cue.kind == Kind::Picture => "path of a picture file",
-            Field::Target if cue.kind == Kind::Network => "host:port",
+            Field::Target if cue.kind == Kind::Network => "host:port or udp://host:port",
             Field::Osc => "/address arguments",
             Field::PreWait | Field::Duration | Field::PostWait | Field::Start => "0",
             Field::End => "end of file",
@@ -200,12 +208,15 @@ impl Field {
 
 /// Returns the sentence that tells which of the time fields in `columns`
 /// reads as no time, if one does, since such a time counts as zero, except
-/// for an end or a loop time, which is then left empty
-pub(super) fn unread(cue: &Cue, columns: &[&[Field]]) -> Option<String> {
+/// for an end or a loop time, which is then left empty.  A field that the
+/// cue ignores is passed over, as `inside` a group or not, since it does
+/// nothing and the view shows it greyed out.
+pub(super) fn unread(cue: &Cue, inside: bool, columns: &[&[Field]]) -> Option<String> {
     columns
         .iter()
         .copied()
         .flatten()
+        .filter(|field| field.ignored(cue, inside).is_none())
         .find(|field| field.unreadable(cue))
         .map(|field| {
             let reading = match field {
@@ -236,14 +247,34 @@ fn target_menu<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         .iter()
         .find(|target| Some(target.id) == cue.target)
         .copied();
+    let placeholder = target_placeholder(targets.is_empty());
     dropdown(
         targets,
         selected,
         move |target: &Cue| Message::Edit(id, Edit::Target(Some(target.id))),
         &app.config.keymap,
     )
-    .placeholder("choose a cue")
+    .placeholder(placeholder)
     .into()
+}
+
+/// Returns what the target menu says while nothing is chosen, which is not
+/// an invitation to choose where the list holds no cue to choose
+fn target_placeholder(none_to_choose: bool) -> &'static str {
+    if none_to_choose {
+        "no cue to choose"
+    } else {
+        "choose a cue"
+    }
+}
+
+/// Returns the path that the File field of `cue` shows: what was typed into
+/// it while the typing waits for the field to be left, or else the file
+fn typed_file(app: &App, cue: &Cue) -> String {
+    match &app.typed {
+        Some((Setting::File(typed), text)) if *typed == cue.id => text.clone(),
+        _ => cue.file.clone(),
+    }
 }
 
 #[cfg(test)]

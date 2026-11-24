@@ -10,7 +10,7 @@ pub(in crate::front::update::tests) use targets::{fading, targets};
 
 use super::{operators::rows, *};
 use crate::{
-    back::{Command, Cue, Kind, OutputEdit, OutputId, Sends},
+    back::{Command, Cue, InstrumentId, Kind, OutputEdit, OutputId, Sends},
     front::update::clipboard::Clipboard,
 };
 
@@ -189,6 +189,11 @@ fn with_outputs(cues: Vec<Cue>, names: &[&str]) -> Workspace {
 /// Returns the cue that a cue sending to House and Sub becomes once it is
 /// copied and pasted into another show, one with outputs of the `names`
 fn pasted_elsewhere(names: &[&str]) -> Cue {
+    pasted_app(names).workspace.lists()[0].cues[0].clone()
+}
+
+/// Returns the state after the paste that [`pasted_elsewhere`] makes
+fn pasted_app(names: &[&str]) -> App {
     let sends: Sends = [(OutputId(1), -3.0), (OutputId(2), -6.0)].into();
     let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
         .sends(sends)
@@ -210,8 +215,25 @@ fn pasted_elsewhere(names: &[&str]) -> Cue {
         selected: None,
         ..copied
     };
-    let pasted = after(elsewhere, [Message::Paste(Place::After, 1)]);
-    pasted.workspace.lists()[0].cues[0].clone()
+    after(elsewhere, [Message::Paste(Place::After, 1)])
+}
+
+#[test]
+fn a_paste_tells_the_sends_that_the_other_show_could_not_take() {
+    let told = |names| {
+        pasted_app(names)
+            .clipped
+            .map(|clipped| (clipped.told, clipped.cut))
+    };
+    assert_eq!(
+        told(&["Sub", "Foyer"]),
+        Some(("Pasted 1 cue, dropped 1 send".to_owned(), true))
+    );
+    assert_eq!(
+        told(&["Foyer"]),
+        Some(("Pasted 1 cue, dropped 2 sends".to_owned(), true))
+    );
+    assert_eq!(told(&["House", "Sub"]), None);
 }
 
 #[test]
@@ -224,4 +246,33 @@ fn cue_pasted_in_another_show_sends_to_the_outputs_of_the_same_names() {
 #[test]
 fn cue_pasted_where_no_output_has_its_names_plays_on_the_first_output() {
     assert_eq!(pasted_elsewhere(&["Foyer"]).sends, None);
+}
+
+#[test]
+fn a_paste_tells_the_light_cues_that_the_other_patch_lacks() {
+    let cue = Cue {
+        lights: [(InstrumentId(7), 50.0)].into(),
+        ..Cue::new(CueId(1), "1", Kind::Light, "").build()
+    };
+    let copied = after(
+        App {
+            workspace: Workspace::new(vec![CueList::new("Main", vec![cue])]),
+            selected: Some(CueId(1)),
+            ..App::default()
+        },
+        [Message::Copy(1)],
+    );
+    let elsewhere = App {
+        workspace: Workspace::default(),
+        clipboard: Clipboard {
+            show: copied.show.id().wrapping_add(1),
+            ..copied.clipboard
+        },
+        selected: None,
+        ..copied
+    };
+    let told = after(elsewhere, [Message::Paste(Place::After, 1)])
+        .clipped
+        .map(|clipped| clipped.told);
+    assert_eq!(told, Some("Pasted 1 cue, 1 unpatched".to_owned()));
 }

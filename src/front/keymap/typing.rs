@@ -58,6 +58,10 @@ impl Keymap {
         if let Some((action, _)) = self.at_once_bound(press) {
             return Outcome::of(action, None);
         }
+        // Zero is a motion in Vim, so that it never starts a count
+        if pending.is_empty() && press.digit() == Some(0) {
+            return Outcome::default();
+        }
         if press.digit().is_some() && saturated(pending) {
             return Outcome::waiting(pending);
         }
@@ -81,6 +85,11 @@ impl Keymap {
             .operators()
             .find(|&(_, key)| command.first() == Some(&key))?;
         let (digits, motion) = split_count(&command[1..]);
+        // Zero that would start the second count is a motion in Vim, which
+        // no binding here is, so that it drops the operator like any other
+        if digits.first().and_then(|key| key.digit()) == Some(0) {
+            return None;
+        }
         let waiting = Outcome::waiting(keys);
         let motions = || {
             self.motions()
@@ -120,6 +129,11 @@ impl Keymap {
             .filter(|(action, _)| Action::MOTIONS.contains(action))
     }
 
+    /// Returns whether any binding is a sequence of more than one key
+    pub fn has_sequences(&self) -> bool {
+        self.bound().any(|(_, keys)| keys.len() > 1)
+    }
+
     /// Writes the keys that begin an operator, such as `d` for `d d`, once
     /// each, in the order of the actions
     pub fn operator_keys(&self) -> Vec<String> {
@@ -127,6 +141,18 @@ impl Keymap {
             .map(|(_, key)| written(&[key]))
             .unique()
             .collect()
+    }
+
+    /// Returns the count that the `pending` keys hold for a motion, the
+    /// counts before and after an operator multiplied as `Outcome::across`
+    /// does, or nothing without a digit or an operator
+    pub fn pending_count(&self, pending: &[Press]) -> Option<usize> {
+        let (digits, typed) = split_count(pending);
+        let after = typed
+            .first()
+            .filter(|&&first| self.operators().any(|(_, key)| key == first))
+            .and_then(|_| counted(split_count(&typed[1..]).0));
+        product(counted(digits), after)
     }
 
     /// Returns what can follow the keys typed so far, apart from the counts

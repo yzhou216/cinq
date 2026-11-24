@@ -96,7 +96,7 @@ fn no_message_for_rows_reaches_the_cue_list_while_the_outputs_show() {
         Message::Across(Action::Delete, Action::Next, None),
         Message::Search { backward: false },
         Message::Searching("a".to_owned()),
-        Message::SearchKey(LineKey::DeleteAll),
+        Message::SearchKey(LineKey::Older),
         Message::SearchAccepted,
         Message::SearchStep(1),
     ];

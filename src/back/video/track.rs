@@ -39,6 +39,10 @@ use timing::{Sample, timeline};
 
 const NO_VIDEO: &str = "holds no H.264 video";
 
+/// Why a file holds no picture to play when it holds no index that fits in it,
+/// as a copy that stopped short has none, or a file that is not MP4
+const NO_INDEX: &str = "is cut short, or is not an MP4 file";
+
 /// Why a file holds no picture to play when its H.264 track, or a track that
 /// may be it, cannot be read
 const DAMAGED_INDEX: &str = "holds a damaged index";
@@ -97,12 +101,14 @@ impl Track {
         let file = File::open(path).map_err(unreadable)?;
         let length = file.metadata().map_err(|error| error.to_string())?.len();
         let mut file = BufReader::new(file);
-        let movie = moov::read(&mut file, length).ok_or(NO_VIDEO)?;
+        let movie = moov::read(&mut file, length).ok_or(NO_INDEX)?;
         let Some((trak, avc)) = &movie.video else {
             return Err(if movie.lost { DAMAGED_INDEX } else { NO_VIDEO }.to_owned());
         };
         if !PROFILES.contains(&avc.avc_profile_indication) {
-            return Err("holds H.264 video in a profile that cannot be decoded".to_owned());
+            return Err(
+                "holds H.264 video of a profile other than Baseline, Main, or High".to_owned(),
+            );
         }
         let stbl = &trak.mdia.minf.stbl;
         let places = places(stbl, length).ok_or(DAMAGED)?;

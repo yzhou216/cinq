@@ -62,7 +62,7 @@ fn undo_and_redo_wait_for_the_main_window_too() {
 #[test]
 fn a_refused_key_tells_why_and_a_key_that_edits_nothing_tells_nothing() {
     let refused = typing(focused(false), "o");
-    assert_eq!(refused.remark, Some("Edits act in the main window"));
+    assert_eq!(refused.remark, Some("Click the main window to edit"));
     assert_eq!(typing(focused(false), "j").remark, None);
     assert_eq!(typing(focused(true), "o").remark, None);
     // Next key that acts takes the remark back

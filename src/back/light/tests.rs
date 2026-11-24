@@ -7,13 +7,14 @@
 use std::{
     cell::Cell,
     collections::BTreeMap,
+    io,
     time::{Duration, Instant},
 };
 
 use ::sacn::packet::{AcnRootLayerProtocol, E131RootLayerData};
 use uuid::Uuid;
 
-use super::{artnet, leaving::Leaving, listing::Listing, sacn};
+use super::{artnet, leaving::Leaving, listing::Listing, sacn, status::Round};
 
 // Port-Address follows the 8-byte ID, opcode, protocol version, sequence,
 // and physical port of an ArtDmx packet
@@ -24,15 +25,10 @@ fn port_address(packet: &[u8]) -> u16 {
 #[test]
 fn universes_go_out_as_the_port_address_before_them_as_consoles_send_them() {
     let channels = [0; 512];
-    assert_eq!(
-        artnet::packet(1, &channels).map(|p| port_address(&p)),
-        Some(0)
-    );
-    assert_eq!(
-        artnet::packet(17, &channels).map(|p| port_address(&p)),
-        Some(16)
-    );
-    assert_eq!(artnet::packet(0, &channels), None);
+    let address = |universe| artnet::packet(universe, &channels).map(|p| port_address(&p));
+    assert_eq!(address(1), Some(0));
+    assert_eq!(address(17), Some(16));
+    assert_eq!(address(0), None);
 }
 
 #[test]
@@ -155,4 +151,40 @@ fn interfaces_are_read_again_only_once_a_second() {
     assert_eq!((reads.get(), listing.items()), (1, [1].as_slice()));
     let listing = listing.at(at(1.0), read).at(at(1.5), read);
     assert_eq!((reads.get(), listing.items()), (2, [2].as_slice()));
+}
+
+fn refused() -> io::Result<usize> {
+    Err(io::ErrorKind::NetworkUnreachable.into())
+}
+
+#[test]
+fn a_round_is_out_idle_or_stuck_in_words() {
+    [
+        // One packet out is out whatever the others do
+        (Round::of(2, true, &[refused(), Ok(512)]), Round::Out),
+        // Nothing due tells nothing
+        (Round::of(0, false, &[]), Round::Idle),
+        (Round::of(2, false, &[refused()]), Round::Idle),
+        (
+            Round::of(0, true, &[]),
+            Round::Stuck("no network interface".to_owned()),
+        ),
+        (
+            Round::of(1, true, &[refused(), refused()]),
+            Round::Stuck("not sent: network unreachable".to_owned()),
+        ),
+    ]
+    .into_iter()
+    .for_each(|(round, wanted)| assert_eq!(round, wanted));
+}
+
+#[test]
+fn a_problem_is_told_when_it_starts_and_when_it_ends_but_not_in_between() {
+    let stuck = Round::Stuck("no network interface".to_owned());
+    let problem = Some("no network interface".to_owned());
+    assert_eq!(stuck.told(&None), Some(problem.clone()));
+    assert_eq!(stuck.told(&problem), None);
+    assert_eq!(Round::Out.told(&problem), Some(None));
+    assert_eq!(Round::Out.told(&None), None);
+    assert_eq!(Round::Idle.told(&problem), None);
 }

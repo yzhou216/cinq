@@ -62,3 +62,41 @@ fn the_box_names_outputs_while_they_show_and_cues_while_a_cue_list_does() {
     let cues = listed(&after(&["d"]));
     assert!(cues.iter().all(|(_, shown)| !shown.contains("output")));
 }
+
+#[test]
+fn the_line_of_the_key_typed_again_comes_first() {
+    let lines = listed(&after(&["g"]));
+    assert_eq!(lines.first().map(|(keys, _)| keys.as_str()), Some("g"));
+    assert_eq!(
+        lines
+            .iter()
+            .skip(1)
+            .map(|(keys, _)| keys.as_str())
+            .collect::<Vec<_>>(),
+        ["j", "k", "t", "T"]
+    );
+    let after_d = listed(&after(&["d"]));
+    assert_eq!(after_d.first().map(|(keys, _)| keys.as_str()), Some("d"));
+}
+
+#[test]
+fn the_doubled_line_counts_the_rows_that_the_count_takes() {
+    let line = |keys: &[&str]| {
+        listed(&after(keys))
+            .into_iter()
+            .find(|(shown, _)| shown == "d")
+            .map(|(_, description)| description)
+    };
+    assert_eq!(
+        line(&["3", "d"]).as_deref(),
+        Some("Cut the selected cue and the next 2")
+    );
+    assert_eq!(
+        line(&["d"]).as_deref(),
+        Some("Cut the selected cue to the clipboard")
+    );
+    assert_eq!(
+        line(&["1", "d"]).as_deref(),
+        Some("Cut the selected cue to the clipboard")
+    );
+}

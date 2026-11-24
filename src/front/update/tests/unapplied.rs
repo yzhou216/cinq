@@ -46,7 +46,7 @@ fn leaving_a_field_with_a_value_that_was_rejected_tells_the_reason() {
     let channels = typed(Setting::Channels(MAIN), "1-3");
     assert_eq!(
         leaving(channels, Message::Focus(Focus::Previous)).as_deref(),
-        Some("Not applied: channels are 3 for one or 1-2 for two, up to 256")
+        Some("Not applied: channels are 3 for one, or 1-2 or 1,3 for two, up to 256")
     );
     let level = typed(Setting::NewCues(MAIN), "loud");
     assert_eq!(
@@ -74,7 +74,7 @@ fn typing_in_another_field_leaves_the_first_and_tells_why_it_did_not_apply() {
     let moved = Message::SettingTyped(Setting::NewCues(MAIN), "-6".to_owned());
     assert_eq!(
         leaving(typed(Setting::Channels(MAIN), "1-3"), moved).as_deref(),
-        Some("Not applied: channels are 3 for one or 1-2 for two, up to 256")
+        Some("Not applied: channels are 3 for one, or 1-2 or 1,3 for two, up to 256")
     );
 }
 

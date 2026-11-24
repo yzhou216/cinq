@@ -101,7 +101,7 @@ fn keys_of_search_help_and_hints_answer_from_the_stage_window_that_the_main_wind
         let (open, _) = show(Kind::Video).staged();
         focusing(open, in_stage).typed(press(key), false).0.remark
     };
-    let words = Some("Search, help, and hint mode act in the main window");
+    let words = Some("Click the main window for search, help, or hint mode");
     assert_eq!(typed(Key::Named(Named::F1), true), words);
     assert_eq!(typed(Key::Character("f".into()), true), words);
     assert_eq!(typed(Key::Named(Named::F1), false), None);

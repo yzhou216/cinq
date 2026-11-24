@@ -48,12 +48,12 @@ fn a_list_hints_undo_but_not_the_rename_of_the_cue_just_added() {
 }
 
 #[test]
-fn a_list_hints_neither_the_keys_to_add_and_rename_an_output_nor_paste() {
+fn a_list_hints_the_key_to_add_an_output_but_not_to_rename_one_nor_paste() {
     let outputs = App {
         outputs_shown: true,
         ..held(Preset::Vi, false)
     };
-    assert!(all(&outputs).iter().all(|hint| !hint.contains("output")));
+    assert!(all(&outputs).contains(&"o: add output".to_owned()));
     assert!(all(&outputs).iter().all(|hint| !hint.contains("rename")));
     let cut = |held: App| App {
         clipped: Some(Clipped {
@@ -180,4 +180,12 @@ fn go_is_hinted_over_a_text_field_only_by_a_key_that_types_no_character() {
     ];
     app.config.keymap = app.config.keymap.clone().with(Action::Go, keys);
     assert_eq!(go(&app).as_deref(), Some("F9: GO"));
+}
+
+#[test]
+fn a_list_hints_the_key_of_hint_mode_but_a_text_field_does_not() {
+    [Preset::Vi, Preset::Cua].into_iter().for_each(|preset| {
+        assert!(all(&held(preset, false)).contains(&"f: hint".to_owned()));
+        assert!(!all(&held(preset, true)).contains(&"f: hint".to_owned()));
+    });
 }

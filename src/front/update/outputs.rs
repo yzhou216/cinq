@@ -20,7 +20,7 @@ use iced::Task;
 use crate::{
     back::{
         Channels, Command, CueId, Edit, OutputEdit, PatchEdit, Place, parse_address, parse_level,
-        parse_percent,
+        parse_percent, parse_send,
     },
     front::{App, Message, Setting, view},
 };
@@ -63,8 +63,8 @@ impl App {
             Message::Paste(place, count) => self.with_pasted_outputs(above(place), count),
             Message::Delete(count) => self.without_outputs(count),
             Message::Across(operator, motion, count) => self.across(operator, motion, count),
-            Message::Undo(count) => self.undone_outputs(count),
-            Message::Redo(count) => self.redone_outputs(count),
+            Message::Undo(count) => self.counting(|app| app.undone_outputs(count)),
+            Message::Redo(count) => self.counting(|app| app.redone_outputs(count)),
             _ => return (self, Task::none()),
         };
         app.revealed()
@@ -80,9 +80,12 @@ impl App {
     /// Applies the text typed into a field that waits, once the operator has
     /// left it, and forgets the text, so that the field shows the value that
     /// holds.  Levels wait, since a playing cue follows each prefix that
-    /// reads, such as the `2` of `-25`, and so do the channels of an output,
+    /// reads, such as the `2` of `-25`, and so does the file of a cue, since
+    /// the first key would stop a cue that plays and every prefix of a path
+    /// names a file that does not exist.  So do the channels of an output,
     /// since a device would open for each of `1`, `12`, and `12-13` on the
-    /// way to the last.  The other settings apply as they read, for they
+    /// way to the last.  So does the address of an instrument, which each
+    /// prefix would move on the stage.  Names apply as they read, for they
     /// cost nothing.
     pub(super) fn settled(self) -> Self {
         let command = self
@@ -142,11 +145,13 @@ impl App {
     fn applying(&self, setting: Setting, text: &str) -> Option<Command> {
         // Level that the text gives, none for an empty field, or no level
         // at all for text that is no level yet
-        let level = || match text.trim() {
-            "" => Some(None),
-            typed => parse_level(typed).map(Some),
-        };
+        let level = || parse_send(text);
         match setting {
+            Setting::File(cue) => self
+                .workspace
+                .cue(cue)
+                .filter(|cue| cue.file != text)
+                .map(|cue| Command::Edit(cue.id, cue.playing(text.to_owned()))),
             Setting::Level(cue) => {
                 parse_level(text).map(|level| Command::Edit(cue, Edit::Level(level)))
             }

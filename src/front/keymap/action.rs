@@ -146,8 +146,10 @@ impl Action {
     }
 
     /// Describes the operator `self` applied over the rows that `motion`
-    /// reaches, which are `rows`
-    pub fn over(self, motion: Action, rows: Rows) -> String {
+    /// reaches, which are `rows`.  A `count` typed so far moves the motion
+    /// by that many rows, or to that row for `First` and `Last`, as the
+    /// operator will take it.
+    pub fn over(self, motion: Action, rows: Rows, count: Option<usize>) -> String {
         let verb = match self {
             Action::Copy => "Copy",
             Action::Cut => "Cut",
@@ -156,10 +158,17 @@ impl Action {
             _ => "Delete",
         };
         let (one, many) = rows.nouns();
-        let reached = match motion {
-            Action::Next => format!("the selected {one} and the next"),
-            Action::Previous => format!("the selected {one} and the previous"),
-            Action::First => format!("the {many} from the selection up to the first"),
+        let reached = match (motion, count) {
+            (Action::Next, Some(count)) => format!("the selected {one} and the next {count}"),
+            (Action::Previous, Some(count)) => {
+                format!("the selected {one} and the previous {count}")
+            }
+            (Action::First | Action::Last, Some(count)) => {
+                format!("the {many} from the selection to row {count}")
+            }
+            (Action::Next, _) => format!("the selected {one} and the next"),
+            (Action::Previous, _) => format!("the selected {one} and the previous"),
+            (Action::First, _) => format!("the {many} from the selection up to the first"),
             _ => format!("the {many} from the selection down to the last"),
         };
         format!("{verb} {reached}")
@@ -174,10 +183,48 @@ impl Action {
         self.acts_at_once() || matches!(self, Action::Fullscreen | Action::Hint)
     }
 
+    /// Returns whether a key of the action only moves the selection or the
+    /// list in view, which leaves the key to paste what a copy or cut took
+    /// where it was, since pasting into the other list takes such moves first
+    pub fn only_moves(self) -> bool {
+        matches!(
+            self,
+            Action::Next
+                | Action::Previous
+                | Action::First
+                | Action::Last
+                | Action::HalfPageDown
+                | Action::HalfPageUp
+                | Action::PageDown
+                | Action::PageUp
+                | Action::ScrollDown
+                | Action::ScrollUp
+                | Action::TopRow
+                | Action::MiddleRow
+                | Action::BottomRow
+                | Action::NextList
+                | Action::PreviousList
+                | Action::NextMatch
+                | Action::PreviousMatch
+                | Action::Back
+                | Action::Forward
+        )
+    }
+
     /// Returns whether a key of the action acts while a closed drop-down
-    /// list has the keyboard, beside those that act in every field
+    /// list has the keyboard, beside those that act in every field.  The
+    /// list has no text of its own, so that the keys of undo and redo act
+    /// there, and so do those of [`Action::leaves_lists`].
     pub fn acts_in_lists(self) -> bool {
-        self.acts_in_fields() || matches!(self, Action::Undo | Action::Redo)
+        self.acts_in_fields() || matches!(self, Action::Undo | Action::Redo) || self.leaves_lists()
+    }
+
+    /// Returns whether the action takes the keyboard out of a closed list, a
+    /// checkbox, or a button that has it, so that the keys of hint mode, whose
+    /// labels the list would swallow, and of the cue list, which a new cue
+    /// selects, act next
+    pub fn leaves_lists(self) -> bool {
+        matches!(self, Action::Hint | Action::AddBelow | Action::AddAbove)
     }
 
     pub fn acts_in_fields(self) -> bool {

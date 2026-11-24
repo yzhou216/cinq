@@ -10,7 +10,7 @@ use std::thread;
 
 use iced::{Task, futures::channel::oneshot};
 
-use super::reveal_list::reveal_current_list;
+use super::{reveal_list::reveal_current_list, stopping::Stopping};
 use crate::{
     back::Command,
     front::{App, Message},
@@ -53,11 +53,11 @@ pub(super) fn passive(message: &Message) -> bool {
 }
 
 impl App {
-    /// Returns whether `message` is a command for a cue number that no cue
-    /// has, which interrupts nothing that the operator was doing, as a
-    /// passive message does
+    /// Returns whether `message` is a command that changes nothing, as one
+    /// for a cue number that no cue has does, which interrupts nothing that
+    /// the operator was doing, as a passive message does
     fn aimless(&self, message: &Message) -> bool {
-        matches!(message, Message::Remote(_, remote) if self.unnumbered(remote).is_some())
+        matches!(message, Message::Remote(_, remote) if self.ignored(remote).is_some())
     }
 
     pub(super) fn with_task(
@@ -78,9 +78,13 @@ impl App {
                 command,
                 Command::Undo | Command::Redo | Command::Collapse { .. }
             );
+        let turns = self.turns + usize::from(matches!(command, Command::Undo | Command::Redo));
+        let stopping = Stopping::of(&command, &self.workspace);
         let workspace = self.workspace.apply(command);
         let app = Self {
             list: self.list.min(workspace.lists().len().saturating_sub(1)),
+            stopped: stopping.stopped(&self.stopped, &workspace),
+            turns,
             workspace,
             ..self
         };

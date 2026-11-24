@@ -4,15 +4,24 @@
 
 //! What a change to the show says of itself, as the status bar tells undo and redo
 
+use std::cmp::Ordering;
+
 use super::{consequences, number, short, the_output};
-use crate::back::{Change, Cue, Edit, Output, OutputId, Workspace, moved_output};
+use crate::back::{Change, Cue, CueId, Edit, Output, OutputId, Workspace, moved_output};
 
 /// Describes a change to the show in few words, starting in lower case, as
 /// the status bar tells what undo or redo acts on
 pub fn change(workspace: &Workspace, change: &Change) -> String {
     let named = |id| workspace.cue(id).map_or_else(String::new, number);
     match change {
-        Change::Added { cues, .. } => of_cues("added", cues.iter().map(|placed| &placed.cue)),
+        Change::Added { cues, .. } => {
+            let told = of_cues("added", cues.iter().map(|placed| &placed.cue));
+            // Every cue of one add takes the same depth
+            match cues.first() {
+                Some(placed) if placed.cue.depth > 0 => format!("{told} in a group"),
+                _ => told,
+            }
+        }
         Change::Pasted { cues, .. } => of_cues("pasted", cues.iter().map(|placed| &placed.cue)),
         Change::Deleted { cues, cut, .. } => of_cues(
             if *cut { "cut" } else { "deleted" },
@@ -20,10 +29,23 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
         ),
         Change::Moved { cue, .. } => format!("moved cue {}", named(*cue)),
         Change::Regrouped {
-            cues, moved: true, ..
-        } => cues
-            .first()
-            .map_or_else(String::new, |&cue| format!("moved cue {}", named(cue))),
+            cues,
+            moved: true,
+            before,
+            after,
+            ..
+        } => cues.first().map_or_else(String::new, |&cue| {
+            let depth = |arrangement: &[(CueId, u8)]| {
+                arrangement
+                    .iter()
+                    .find_map(|&(id, depth)| (id == cue).then_some(depth))
+            };
+            match depth(after).cmp(&depth(before)) {
+                Ordering::Greater => format!("moved cue {} into a group", named(cue)),
+                Ordering::Less => format!("moved cue {} out of a group", named(cue)),
+                Ordering::Equal => format!("moved cue {}", named(cue)),
+            }
+        }),
         Change::Regrouped { cues, deeper, .. } => {
             let way = if *deeper { "into" } else { "out of" };
             match cues.as_slice() {
@@ -33,7 +55,18 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
         }
         Change::Edited { cue, redo, .. } => {
             let cue = named(*cue);
-            match redo {
+            // A refused time stays in the field and counts as zero
+            let unread = match redo {
+                Edit::Start(time)
+                | Edit::End(time)
+                | Edit::LoopStart(time)
+                | Edit::LoopEnd(time)
+                | Edit::PreWait(time)
+                | Edit::Duration(time)
+                | Edit::PostWait(time) => !time.is_valid(),
+                _ => false,
+            };
+            let told = match redo {
                 Edit::Number(_) => format!("changed the number of cue {cue}"),
                 Edit::Name(_) => format!("changed the name of cue {cue}"),
                 Edit::File(_) | Edit::FileAndName { .. } => {
@@ -52,10 +85,18 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
                 Edit::Advance(_) => format!("changed what follows cue {cue}"),
                 Edit::Level(_) => format!("changed the level of cue {cue}"),
                 Edit::StopTarget(_) => format!("changed whether cue {cue} stops its target"),
+                Edit::Sends(Some(sends)) if sends.is_empty() => {
+                    format!("changed cue {cue} to play nowhere")
+                }
                 Edit::Sends(_) => format!("changed where cue {cue} plays"),
                 Edit::Light(..) => format!("changed the light levels of cue {cue}"),
                 Edit::Destination(_) => format!("changed the destination of cue {cue}"),
                 Edit::Message(_) => format!("changed the message of cue {cue}"),
+            };
+            if unread {
+                format!("{told} to zero")
+            } else {
+                told
             }
         }
         Change::Standby(standby) => match standby.after.and_then(|id| workspace.cue(id)) {
@@ -98,13 +139,13 @@ fn outputs(
     let edited = pairs().find_map(|(was, now)| {
         let name = &short(&now.name);
         if was.name != now.name {
-            Some(format!("renamed the output {} to {name}", short(&was.name)))
+            Some(format!("renamed {} to {name}", short(&was.name)))
         } else if was.device != now.device {
-            Some(format!("changed the device of the output {name}"))
+            Some(format!("changed the device of {name}"))
         } else if was.channels != now.channels {
-            Some(format!("changed the channels of the output {name}"))
+            Some(format!("changed the channels of {name}"))
         } else if was.new_cues != now.new_cues {
-            Some(format!("changed what new cues send to the output {name}"))
+            Some(format!("changed what new cues send to {name}"))
         } else {
             None
         }

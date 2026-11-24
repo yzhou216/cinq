@@ -273,8 +273,28 @@ fn read_problem(text: &str, error: &toml::de::Error) -> String {
                 .next()
                 .map_or(0, |row| row.chars().count())
                 + 1;
-            format!("line {line}, column {column}: {message}")
+            let place = table_place(text, span.start)
+                .map(|place| format!("{place}: "))
+                .unwrap_or_default();
+            format!("line {line}, column {column}: {place}{message}")
         }
         None => message,
     }
+}
+
+/// Returns which output the error at byte `start` of `text` lies in, as
+/// `output 2`, where it lies at the head of an `[[output]]` table, as a
+/// field that the table lacks does, so that a show with twenty outputs
+/// names the one
+fn table_place(text: &str, start: usize) -> Option<String> {
+    const HEAD: &str = "[[output]]";
+    text.get(start..)?.starts_with(HEAD).then(|| {
+        let before = text.get(..start).unwrap_or_default();
+        // A head may carry a comment after it
+        let earlier = before
+            .lines()
+            .filter(|line| line.trim_start().starts_with(HEAD))
+            .count();
+        format!("output {}", earlier + 1)
+    })
 }

@@ -5,17 +5,24 @@
 //! Status of the show, most important first, then at the right the keys of
 //! a command typed so far, what the latest opening or saving told or else
 //! the latest change to the show with the key that takes it back, the key
-//! that cancels while keys wait or the search line is open, the keys that go
-//! back and forward between the places jumped to while there is a place to
-//! go to, the key that saves unsaved changes, the keys of GO, Panic, and the
-//! help page, and, while a text field, a checkbox, or a drop-down list has
-//! the keyboard, the keys that go to the next field and that leave the field,
+//! that cancels while keys wait or the search line is open, which are
+//! Backspace on an empty line and Enter once text is typed where the keymap
+//! binds none, the keys that go back and forward between the places jumped to
+//! while there is a place to go to, the key that saves unsaved changes, the
+//! keys of GO, Panic, and the help page, the key of fullscreen while the stage
+//! window is closed with a cue showing on it, or has the keyboard, and, while
+//! a text field, a checkbox, or a drop-down list has the keyboard, the keys
+//! that go to the next field and that leave the field,
 //! which are Enter where the keymap binds no key to cancel and a text field
 //! has the keyboard, and what Enter does in a checkbox, which flips it, and
 //! in a closed list, which opens it, while no field has the keyboard, the key
 //! of the next inspector tab, the key of the next cue list, the key of hint
-//! mode, and, while the
-//! selected cue is not the standby cue, the key of standby
+//! mode, and, while the selected cue is not the standby cue, the key of
+//! standby, and, while the show has no file and no cues, the key of opening one
+//!
+//! The stage window leaves the keys that change the show, and those of search,
+//! help, and hint mode, to the main window, so that none of them is hinted
+//! while it has the keyboard, which holds no field.
 //!
 //! A text field keeps every key, so that the keys of undoing, redoing,
 //! pasting, renaming, and the help page are never hinted while one has the
@@ -24,25 +31,28 @@
 //! The bar keeps to one line, with two columns between the
 //! status and the hints.  When it is too narrow for all of it, the name
 //! of the show is cut short at its end with an ellipsis, down to 16 columns,
-//! and then the keys of hint mode, of the next list, of the next tab, of
-//! standby, of going forward and back, of GO, of Panic, of saving, of the help
-//! page, of renaming a cue just added, of the next field, and of leaving it
-//! give way in turn,
-//! each one whole, and then what the latest change told gives way, at a word,
-//! with an ellipsis, so that the status shows in full, while the keys typed so
-//! far and the key of cancel always show in full.
+//! and then the keys of hint mode, of opening a show, of the next list, of the
+//! next tab, of standby, of going forward and back, of GO, of Panic, of the
+//! stage window, of saving, of the help page, of renaming a cue just added,
+//! of the next field, and of leaving it give way in turn, each one whole, and
+//! then what the latest change told gives way, at a word, with an ellipsis, so
+//! that the status shows in full, while the keys typed so far and the key of
+//! cancel always show in full.
 //! While the outputs show, the bar names the keys that add and rename an
 //! output, and the key that goes back always, since it is the way out, so
 //! that the keys give way in another order: hint mode, rename a cue, forward,
-//! add, rename an output, GO, Panic, saving, back, the help page, the next
-//! field, and leaving a field.
+//! add, rename an output (by the key of editing or, where it has none, of
+//! changing the name), GO, Panic, the stage window, saving, back, the help
+//! page, the next field, and leaving a field.
 //! Where standby lies past the end of a list that another follows, GO fires
 //! nothing, so that the key of the next list gives way after those of the help
 //! page and of renaming instead.
 //! While a field has the keyboard, the key of the next field gives way first,
 //! then the keys of other places and what Enter does, and only then GO,
 //! Panic, and saving, which act there, while the key that leaves goes last,
-//! and outlasts the words of the latest change, which are cut instead.
+//! and outlasts the words of the latest change, which are cut instead.  Where
+//! the keymap binds no key to cancel, the key of the next field outlasts them
+//! too in a checkbox or a closed list, as the only key that leaves.
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
 //! While hint mode is on, the hints are only the letters of a label typed so
@@ -66,7 +76,7 @@ use super::{
     LINE, SEARCH, SPACING, char_width, format, giving_way, keep_keys, line_height, line_keys,
     no_match, theme, warnings,
 };
-use crate::front::{App, Message, Search};
+use crate::front::{App, Message, Search, keymap::Action};
 
 /// Mark that opens the search line, or the one that opens it for a search that
 /// goes up the list, as in Vim
@@ -117,12 +127,21 @@ fn bar(app: &App, width: f32) -> Element<'_, Message> {
 
 /// Returns the hints that fit in `room` columns
 fn hints_in(app: &App, room: usize) -> String {
+    let told = hints::notices::told(app);
+    // A cue gone silent is what the operator cannot hear, so that its notice
+    // outlasts what Enter does, which only teaches
+    let silent = told.as_deref().is_some_and(format::silences);
+    let outlasting = order::outlasting(app)
+        .iter()
+        .copied()
+        .filter(|action| !(silent && *action == Action::Pick))
+        .collect::<Vec<_>>();
     fit::shown(
         |told| hints::hints_told(app, told),
-        hints::notices::told(app),
+        told,
         room,
         order::yielding(app),
-        order::outlasting(app),
+        &outlasting,
     )
 }
 

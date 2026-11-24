@@ -196,19 +196,19 @@ fn box_lists_the_motions_after_an_operator_with_what_they_do() {
 #[test]
 fn descriptions_name_the_operator_and_the_rows_it_reaches() {
     assert_eq!(
-        Action::Cut.over(Action::Next, Rows::Cues),
+        Action::Cut.over(Action::Next, Rows::Cues, None),
         "Cut the selected cue and the next"
     );
     assert_eq!(
-        Action::Copy.over(Action::Last, Rows::Cues),
+        Action::Copy.over(Action::Last, Rows::Cues, None),
         "Copy the cues from the selection down to the last"
     );
     assert_eq!(
-        Action::Delete.over(Action::First, Rows::Outputs),
+        Action::Delete.over(Action::First, Rows::Outputs, None),
         "Delete the outputs from the selection up to the first"
     );
     assert_eq!(
-        Action::Cut.over(Action::Previous, Rows::Outputs),
+        Action::Cut.over(Action::Previous, Rows::Outputs, None),
         "Cut the selected output and the previous"
     );
 }
@@ -286,11 +286,11 @@ fn descriptions_name_the_move_of_indent_and_outdent() {
         "Move the selected cue out of its group"
     );
     assert_eq!(
-        Action::Indent.over(Action::Next, Rows::Cues),
+        Action::Indent.over(Action::Next, Rows::Cues, None),
         "Indent the selected cue and the next"
     );
     assert_eq!(
-        Action::Outdent.over(Action::Last, Rows::Cues),
+        Action::Outdent.over(Action::Last, Rows::Cues, None),
         "Outdent the cues from the selection down to the last"
     );
 }
@@ -307,4 +307,23 @@ fn cua_binds_indent_and_outdent_to_control_with_the_brackets() {
         Some((Action::Outdent, Some(3)))
     );
     assert!(keymap.operator_keys().is_empty());
+}
+
+#[test]
+fn descriptions_follow_the_count_typed_so_far() {
+    let keymap = Keymap::default();
+    let pending = |text| keymap.pending_count(&keys(text));
+    assert_eq!(pending("d"), None);
+    assert_eq!(pending("3 d"), Some(3));
+    assert_eq!(pending("2 d 3"), Some(6));
+    assert_eq!(pending("d 4"), Some(4));
+    assert_eq!(pending("3 g"), Some(3));
+    assert_eq!(
+        Action::Cut.over(Action::Next, Rows::Cues, Some(6)),
+        "Cut the selected cue and the next 6"
+    );
+    assert_eq!(
+        Action::Copy.over(Action::Last, Rows::Cues, Some(3)),
+        "Copy the cues from the selection to row 3"
+    );
 }

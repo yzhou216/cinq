@@ -19,7 +19,7 @@
 mod tests;
 
 use iced::{
-    Center, Element, Fill,
+    Center, Element, Fill, Length,
     widget::{column, row, scrollable, text, text::Wrapping},
 };
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -50,7 +50,8 @@ fn silent<'a>(app: &'a App, sends: &Sends) -> Vec<&'a Fault> {
 
 /// Most columns that the name of an output keeps in the sends, which lie in
 /// rows that wrap, so that more of them show.  The names take the room of
-/// the widest, up to this.  A fault told after the name is not cut.
+/// the widest, up to this.  A fault told after the name is not cut, and takes
+/// the room that it needs.
 const NAME_MOST: usize = 32;
 
 /// Space between the entries of a row, wider than the space inside an entry,
@@ -97,39 +98,52 @@ fn widest(names: &[String]) -> usize {
     names.iter().map(|name| name.width()).max().unwrap_or(0)
 }
 
-pub(super) fn view<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
-    let sends = app.workspace.sends(cue);
-    let columns = app
-        .workspace
-        .outputs()
+/// Returns the columns that the names of the outputs of `app` take in the
+/// sends, from their plain names, and each name as told, with its fault in
+/// words where it has one.  A fault does not widen the room, so that one
+/// output that fails leaves the other entries as narrow as they were.
+fn labels(app: &App) -> (usize, Vec<(String, Option<&Fault>)>) {
+    let outputs = app.workspace.outputs();
+    let columns = outputs
         .iter()
         .map(|output| output.name.width())
         .max()
         .unwrap_or(0)
         .min(NAME_MOST);
-    let names: Vec<String> = app
-        .workspace
-        .outputs()
+    let plain: Vec<String> = outputs
         .iter()
-        .map(|output| named(&output.name, columns, faults::fault(app, output.id)))
+        .map(|output| cut(&output.name, columns))
         .collect();
-    // Names take the room of the longest, so that the fields line up and every
-    // send takes the same width in the rows that wrap
-    let name_room = char_width() * widest(&names) as f32;
+    let names = outputs
+        .iter()
+        .map(|output| {
+            let fault = faults::fault(app, output.id);
+            (named(&output.name, columns, fault), fault)
+        })
+        .collect();
+    (widest(&plain), names)
+}
+
+pub(super) fn view<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
+    let sends = app.workspace.sends(cue);
+    let (room, names) = labels(app);
+    // Names take the room of the longest plain one, so that the fields line up
+    // and every send takes the same width in the rows that wrap, while a name
+    // that carries fault words takes what it needs
+    let name_room = char_width() * room as f32;
     let outputs = app
         .workspace
         .outputs()
         .iter()
         .zip(names)
-        .map(|(output, name)| {
+        .map(|(output, (name, fault))| {
             let level = sends.get(&output.id).map(|level| format::decibels(*level));
             let setting = Setting::Send(cue.id, output.id);
             let (field, shown) = typing(app, setting, "off", level.unwrap_or_default(), LEVEL_ROOM);
             let valid = rejection(app, setting, &shown).is_none();
             let field = styled(app, field, &shown, "off", LEVEL_ROOM, valid);
-            let fault = faults::fault(app, output.id);
             let name = text(name)
-                .width(name_room)
+                .width(fault.map_or(Length::Fixed(name_room), |_| Length::Shrink))
                 .wrapping(Wrapping::None)
                 .style(match fault {
                     Some(fault) if fault.retried() => text::warning,

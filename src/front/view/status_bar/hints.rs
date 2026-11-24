@@ -64,11 +64,14 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     let told = told.map(|told| (None, told));
     let back = going(app, Action::Back, app.back_to());
     let forward = going(app, Action::Forward, app.forward_to());
-    // Two keys that a newcomer to the outputs needs, and none that destroys
+    // Two keys that a newcomer to the outputs needs, and none that destroys.
+    // A keymap that binds no key to edit may bind one to change the name,
+    // which enters the same field, and the hint gives way before add output
+    // as that of renaming a cue does, so that the key to add still shows
     let teaching = (app.outputs_shown && app.editable()).then(|| {
         [
             here(Action::AddBelow, "add output"),
-            here(Action::Edit, "rename"),
+            here(Action::Edit, "rename").or_else(|| here(Action::ChangeName, "rename")),
         ]
     });
     let save = key(Action::Save, Action::Save.name()).filter(|_| app.show.unsaved());
@@ -80,10 +83,21 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     let close = key(Action::CloseMenu, "close");
     // Escape would panic, so that the key that only cancels is told while it
     // can.  Cancelling keys typed or a search never gives way, while the
-    // hint of leaving a field does, as it only teaches.
+    // hint of leaving a field does, as it only teaches.  Where the keymap binds
+    // no key to cancel, the search line is left by Backspace on an empty line
+    // and by Enter once text is typed, which accepts it.
     let cancel = key(Action::Cancel, "cancel")
+        .map(|(_, hint)| hint)
+        .or_else(|| {
+            app.search
+                .as_ref()
+                .map(|search| match search.text.is_empty() {
+                    true => "Backspace: leave".to_owned(),
+                    false => "Enter: find".to_owned(),
+                })
+        })
         .filter(|_| !app.keys.is_empty() || app.search.is_some())
-        .map(|(_, hint)| (None, hint));
+        .map(|hint| (None, hint));
     // A pick or a close by key, and a Tab, leave the keyboard on a field or a
     // list, from which Escape would panic and no click is at hand
     let in_field = in_field(app);
@@ -100,11 +114,15 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
         };
         (Some(Action::Pick), format!("Enter: {does}"))
     });
+    // Tab skips the Choose button, so that Enter says how to reach the chooser
+    // while the empty File field has the keyboard
+    let choose = choosing(app).then(|| (None, "Enter: choose a file".to_owned()));
     // The keymap may bind no key to cancel, as CUA does, while Enter leaves a
-    // text field, though it opens the menu of a drop-down list
+    // text field, though it opens the menu of a drop-down list and chooses a
+    // file in the empty File field
     let leave = key(Action::Cancel, "leave")
         .or_else(|| {
-            (app.text_held && enter_leaves(app))
+            (app.text_held && enter_leaves(app) && choose.is_none())
                 .then(|| (Some(Action::Cancel), "Enter: leave".to_owned()))
         })
         .filter(|_| in_field && app.keys.is_empty());
@@ -126,13 +144,6 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
                 .selected_here()
                 .is_some_and(|cue| app.current().standby != Some(cue))
     });
-    // Tab skips the Choose button, so that Enter says how to reach the chooser
-    // while the empty File field has the keyboard
-    let choose = (in_field && app.file_held)
-        .then(|| app.selected.and_then(|id| app.workspace.cue(id)))
-        .flatten()
-        .filter(|cue| cue.file.is_empty())
-        .map(|_| (None, "Enter: choose a file".to_owned()));
     // Space types a space while a text field has the keyboard, so that GO
     // is hinted by a key that is no character, or by none
     let go = if app.text_held {
@@ -144,8 +155,28 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     };
     // A field or a list that has the keyboard keeps the key of help from
     // acting, and `?` types there, while an open menu and the page itself take it
-    let help = key(Action::Help, Action::Help.name())
-        .filter(|_| app.help || in_menu || acts_here(app, Action::Help));
+    let help = key(Action::Help, Action::Help.name()).filter(|_| {
+        ((app.help || in_menu) && !app.stage.has_keyboard()) || acts_here(app, Action::Help)
+    });
+    // The first step with no show open is to open one, which no button of the
+    // toolbar teaches by key
+    let open = key(Action::Open, "open")
+        .filter(|_| in_cues && !app.show.has_file() && app.workspace.cues().next().is_none());
+    // Key of fullscreen, taught where the operator needs it: to open the window
+    // of the audience, closed while a cue shows on it, and to leave a
+    // fullscreen stage window that covers the main window on a single display,
+    // from which almost every other key is left to the main window
+    let stage = here(
+        Action::Fullscreen,
+        if app.stage.has_keyboard() {
+            "fullscreen"
+        } else {
+            "open stage"
+        },
+    )
+    .filter(|_| {
+        (app.stage.has_keyboard() || app.stage.missing(&app.workspace)) && !in_menu && !app.help
+    });
     // Key of hint mode, taught where it acts
     let hint_mode = here(Action::Hint, "hint").filter(|_| !in_menu);
     typed
@@ -163,8 +194,10 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
         .chain(back)
         .chain(forward)
         .chain(save)
+        .chain(open)
         .chain(go)
         .chain(key(Action::Panic, "Panic"))
+        .chain(stage)
         .chain(help)
         .chain(standby)
         .chain(tab)
@@ -174,9 +207,10 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
 }
 
 /// Returns whether a text field, a checkbox, or a closed drop-down list has
-/// the keyboard, from which a pick or a close by key, and a Tab, leave it
+/// the keyboard, from which a pick or a close by key, and a Tab, leave it, which
+/// the stage window never does, as it holds no field
 pub(super) fn in_field(app: &App) -> bool {
-    app.held && !app.help && !menu_open(app) && app.search.is_none()
+    app.held && !app.help && !menu_open(app) && app.search.is_none() && !app.stage.has_keyboard()
 }
 
 /// Returns whether standby lies past the end of the cue list on show while a
@@ -202,10 +236,11 @@ pub(super) fn place(app: &App, spot: Spot) -> String {
         Spot::Outputs | Spot::Output(_) => "the outputs".to_owned(),
         Spot::List(index) => list(index),
         Spot::Cue(id) => match app.workspace.list_of(id) {
-            Some(index) if index == app.list && !app.outputs_shown => app
-                .workspace
-                .cue(id)
-                .map_or_else(String::new, |cue| format!("cue {}", format::number(cue))),
+            Some(index) if index == app.list && !app.outputs_shown => {
+                app.workspace.cue(id).map_or_else(String::new, |cue| {
+                    format!("cue {}", shortened(&format::number(cue), PLACE))
+                })
+            }
             Some(index) => list(index),
             None => String::new(),
         },
@@ -222,6 +257,17 @@ fn going(app: &App, action: Action, spot: Option<Spot>) -> Option<(Option<Action
         .map(|hint| (Some(action), hint))
 }
 
+/// Returns whether the empty File field has the keyboard, where Enter opens
+/// the chooser of a file and does not leave
+pub(super) fn choosing(app: &App) -> bool {
+    in_field(app)
+        && app.file_held
+        && app
+            .selected
+            .and_then(|id| app.workspace.cue(id))
+            .is_some_and(|cue| cue.file.is_empty())
+}
+
 /// Returns whether Enter leaves a text field, which it does unless the keymap
 /// binds it to an action that acts in fields, such as GO, which then takes it
 fn enter_leaves(app: &App) -> bool {
@@ -233,6 +279,11 @@ fn enter_leaves(app: &App) -> bool {
 /// field keeps every key but those of [`Action::acts_in_fields`], and a
 /// closed drop-down list those but for [`Action::acts_in_lists`].
 pub(super) fn acts_here(app: &App, action: Action) -> bool {
+    // The stage window holds no field, and leaves the keys of
+    // [`Action::stays_in_main_window`] to the main window, as the update does
+    if app.stage.has_keyboard() {
+        return !action.stays_in_main_window();
+    }
     match (app.text_held, app.held) {
         (true, _) => action.acts_in_fields(),
         (false, true) => action.acts_in_lists(),

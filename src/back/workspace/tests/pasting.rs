@@ -24,6 +24,20 @@ fn number_of(workspace: &Workspace, id: u32) -> &str {
 }
 
 #[test]
+fn copy_of_a_cue_forgets_the_stamp_of_its_file_so_that_it_loads() {
+    let shown = workspace(vec![audio(1)]);
+    let stamp = crate::back::Stamp::of(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml"),
+    );
+    let stamped = Cue {
+        seen: stamp,
+        ..audio(1)
+    };
+    assert!(stamped.seen.is_some());
+    assert!(shown.copied(&stamped).seen.is_none());
+}
+
+#[test]
 fn pasted_cues_take_new_identities_and_keep_their_settings_in_order() {
     let shown = workspace(vec![audio(1), audio(2), audio(3)]);
     let cues = copies(&shown, &[1, 2]);

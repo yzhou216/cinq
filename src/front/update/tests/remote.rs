@@ -28,6 +28,7 @@ fn playable(selected: Option<CueId>) -> App {
                 duration: 10.0,
                 sound: Some(10.0),
             },
+            seen: None,
         })
         .collect();
     app.send_all(loads)
@@ -287,4 +288,30 @@ fn line_of_a_command_that_did_nothing_goes_with_the_address() {
         [Message::Reconfigured(Box::new(address("127.0.0.1:53001")))],
     );
     assert!(moved.osc_ignored.is_none());
+}
+
+#[test]
+fn start_of_a_cue_that_cannot_play_does_nothing_and_says_why_but_a_loading_cue_starts() {
+    let broken = || {
+        let app = playable(None);
+        let file = app.workspace.cue(CueId(21)).unwrap().file.clone();
+        app.send(Command::Loaded {
+            cue: CueId(21),
+            file,
+            media: Media::Failed("no such file".to_owned()),
+            seen: None,
+        })
+    };
+    let told = remote(broken(), Remote::Start(number("21")));
+    assert_eq!(
+        told.osc_ignored.as_deref(),
+        Some("OSC from 192.168.1.5: cue 21 cannot play: no such file")
+    );
+    assert!(running(&told).is_empty());
+    // Moving standby to such a cue is not a command that fails
+    let moved = remote(broken(), Remote::Playhead(number("21")));
+    assert!(moved.osc_ignored.is_none());
+    // A cue that only waits to load is no problem
+    let loading = remote(show(None), Remote::Start(number("1")));
+    assert!(loading.osc_ignored.is_none());
 }

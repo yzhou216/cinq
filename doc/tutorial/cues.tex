@@ -22,7 +22,8 @@ with an empty cue list, named \texttt{untitled} until you save it.
 \item Press \ui{Add cue} in the toolbar.  The drop-down list labeled
   \ui{New cue} sets the kind of cue to add, \ui{Audio} by default.  The new
   cue has no file yet, so its state reads \texttt{NO FILE}, and the sidebar
-  shows a warning, as in Figure~\ref{fig:added}.  The status bar names the
+  shows a warning, as in Figure~\ref{fig:added}.  The inspector shows the
+  \ui{Basics} tab for it, whichever tab was open, and the status bar names the
   key that renames the cue.
 \item Press \ui{Choose} next to the \ui{File} field of the inspector.  With
   the keys, press \key{Tab} from the cue list, which goes first to the
@@ -42,9 +43,11 @@ with an empty cue list, named \texttt{untitled} until you save it.
 \end{figure}
 
 GO skips a cue that cannot play, and clicking its warning selects it.  The
-sidebar lists three warnings at most and counts the rest.  The
+sidebar lists three warnings, or four where the fourth is the last, and counts
+the rest.  The
 \ui{File} field also accepts a typed path, either absolute or relative to the
-show file's directory, and the cue takes the file's name, as it does with the
+show file's directory.  The path applies once you press \key{Enter} or leave
+the field, and then the cue takes the file's name, as it does with the
 chooser.
 
 \section{Setting the level}

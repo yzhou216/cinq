@@ -9,10 +9,10 @@
 //! takes one line in Vim, so that the rows drawn are those of
 //! [`Groups::shown`], in order.  The selection only drives the inspector,
 //! while the State column marks the standby cue that GO fires as NEXT, on the
-//! row of the collapsed group that hides it where one does.  Widths are counted in columns of
-//! the monospace font, of which a wide character such as one of Chinese
-//! takes two, so that the header, a table of its own above the rows that
-//! scroll, lines up with them.
+//! row of the collapsed group that hides it where one does.  Widths are
+//! counted in columns of the monospace font, of which a wide character such
+//! as one of Chinese takes two, so that the header, a table of its own above
+//! the rows that scroll, lines up with them.
 
 mod columns;
 mod fitting;
@@ -36,7 +36,7 @@ use crate::{
     back::{Cue, Groups, Workspace},
     front::{App, Message, keymap::Action},
 };
-use columns::{Column, counted, hidden_problem, lines};
+use columns::{Column, counted, shown_lines};
 use fitting::fitting;
 use layout::Layout;
 
@@ -240,14 +240,14 @@ fn cell<'a>(
         ),
         Column::State => {
             let selected = app.selected == Some(cue.id);
-            let hidden = hidden_problem(&app.workspace, groups, cue);
             let failing = faults::failing(app);
-            let lines = lines(
+            let lines = shown_lines(
                 &app.workspace,
+                groups,
                 cue,
                 layout.is_next(cue),
-                hidden,
                 &failing,
+                &app.network_failed,
                 selected,
             )
             .into_iter()

@@ -2,13 +2,17 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the State column of a collapsed group that hides a problem
+//! Tests of the State column of a collapsed group that hides a problem or a
+//! cue that runs
+
+use iced::widget::text;
+
+use std::collections::BTreeSet;
 
 use super::{
     super::{
         Column,
-        columns::{counted, state},
-        hidden_problem, lines,
+        columns::{counted, hidden_problem, lines, shown_lines, state},
     },
     texts,
 };
@@ -66,7 +70,7 @@ fn a_collapsed_group_on_standby_reads_next_and_then_the_hidden_problem() {
     let cue = &list.cues[0];
     let hidden = hidden_problem(&workspace, &list.groups(), cue);
     let lines_of = |hidden| -> Vec<String> {
-        lines(&workspace, cue, true, hidden, &[], false)
+        lines(&workspace, cue, true, hidden, &[], &BTreeSet::new(), false)
             .into_iter()
             .map(|(line, _)| line)
             .collect()
@@ -106,4 +110,84 @@ fn only_a_collapsed_group_counts_the_cues_it_hides_after_its_name() {
     assert_eq!(count(&troubled(true), 0).as_deref(), Some(" (3 cues)"));
     assert_eq!(count(&troubled(true), 1), None);
     assert_eq!(count(&troubled(false), 0), None);
+}
+
+/// Returns a collapsed group 1 that holds the waits 2 and 3, on which each of
+/// `commands` acts, and the lines of the State column of the group
+fn counted_lines(commands: &[Command]) -> Vec<(String, bool)> {
+    let wait = |id: u32| {
+        Cue::new(CueId(id), id.to_string(), Kind::Wait, "Hold")
+            .duration(10.0)
+            .depth(1)
+            .build()
+    };
+    let group = Cue::new(CueId(1), "1", Kind::Group, "Group")
+        .collapsed(true)
+        .build();
+    let workspace = commands.iter().cloned().fold(
+        Workspace::new(vec![CueList::new("Main", vec![group, wait(2), wait(3)])]),
+        Workspace::apply,
+    );
+    let list = &workspace.lists()[0];
+    let theme = theme::modus_vivendi();
+    shown_lines(
+        &workspace,
+        &list.groups(),
+        &list.cues[0],
+        false,
+        &[],
+        &BTreeSet::new(),
+        false,
+    )
+    .into_iter()
+    .map(|(line, style)| (line, style(&theme).color == text::warning(&theme).color))
+    .collect()
+}
+
+#[test]
+fn a_collapsed_group_counts_the_cues_it_hides_that_run_and_the_paused_ones_first() {
+    let start = |id| Command::Start(CueId(id));
+    assert!(counted_lines(&[]).is_empty());
+    assert_eq!(
+        counted_lines(&[start(2), start(3)]),
+        [("2 running".to_owned(), false)]
+    );
+    assert_eq!(
+        counted_lines(&[start(2), start(3), Command::Hold(CueId(2))]),
+        [
+            ("1 paused".to_owned(), true),
+            ("1 running".to_owned(), false)
+        ]
+    );
+}
+
+#[test]
+fn a_collapsed_group_tells_each_warning_of_the_cues_it_hides_once() {
+    let light = |id: u32| Cue::new(CueId(id), id.to_string(), Kind::Light, "Look").depth(1);
+    let group = |collapsed| {
+        Cue::new(CueId(1), "1", Kind::Group, "Group")
+            .collapsed(collapsed)
+            .build()
+    };
+    let told = |collapsed| {
+        let workspace = Workspace::new(vec![CueList::new(
+            "Main",
+            vec![group(collapsed), light(2).build(), light(3).build()],
+        )]);
+        let list = &workspace.lists()[0];
+        shown_lines(
+            &workspace,
+            &list.groups(),
+            &list.cues[0],
+            false,
+            &[],
+            &BTreeSet::new(),
+            false,
+        )
+        .into_iter()
+        .map(|(line, _)| line)
+        .collect::<Vec<_>>()
+    };
+    assert_eq!(told(true), ["NO LEVELS"]);
+    assert!(told(false).is_empty());
 }

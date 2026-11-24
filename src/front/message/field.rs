@@ -9,10 +9,12 @@
 use crate::back::{CueId, InstrumentId, OutputId};
 
 /// Setting whose field shows the text typed into it, which applies once it
-/// reads as a value, or for a level or the channels of an output, once the
-/// operator has left the field
+/// reads as a value, or for a level, the file of a cue, or the channels of an
+/// output, once the operator has left the field
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Setting {
+    /// File that an audio, video, or picture cue plays or shows
+    File(CueId),
     /// Level of an audio or video cue, or the level that a fade cue fades
     /// its target to
     Level(CueId),
@@ -33,10 +35,13 @@ pub enum Setting {
 impl Setting {
     /// Returns whether the text typed into the field waits until the
     /// operator has left it, since a level typed so far, such as the `2` of
-    /// `-25`, reads as another level that a playing cue would follow, and
-    /// the channels of an output would open a device
+    /// `-25`, reads as another level that a playing cue would follow, a path
+    /// typed so far reads as a file that does not exist and would stop the
+    /// cue, the channels of an output would open a device, and an address
+    /// typed so far, such as the `2/5` of `2/500`, would move the instrument
+    /// that sends to a rig
     pub(in crate::front) fn waits(self) -> bool {
-        !matches!(self, Self::OutputName(_) | Self::Address(_))
+        !matches!(self, Self::OutputName(_))
     }
 }
 

@@ -107,6 +107,10 @@ fn level_that_reads_as_no_level_leaves_the_cue_and_tells_why() {
     );
     let emptied = after(typed(playing(), level, ""), [Message::Focus(Focus::Next)]);
     assert_eq!(run_level(&emptied), Some(-30.0), "a cue always has a level");
+    assert_eq!(
+        emptied.unapplied.as_deref(),
+        Some("Not applied: type a level, -60 to +12 dB")
+    );
 }
 
 #[test]
@@ -129,6 +133,15 @@ fn send_typed_applies_on_leaving_and_text_that_is_no_level_leaves_it_as_it_was()
     assert_eq!(sends(&after(typed_in, [Message::Step(1)])), Some(-6.0));
     let wrong = after(typed(playing(), send, "loud"), [Message::Step(1)]);
     assert_eq!(sends(&wrong), before);
+}
+
+#[test]
+fn off_typed_in_a_send_takes_it_away_and_minus_infinity_sends_silently() {
+    let send = Setting::Send(CUE, OutputId(1));
+    let off = after(typed(playing(), send, "off"), [Message::Step(1)]);
+    assert_eq!(sends(&off), None);
+    let silent = after(typed(playing(), send, "-inf"), [Message::Step(1)]);
+    assert_eq!(sends(&silent), Some(-60.0));
 }
 
 #[test]
@@ -155,4 +168,57 @@ fn light_level_applies_once_its_field_is_left() {
     assert_eq!(lights(&app), None);
     let left = after(app, [Message::Focus(Focus::Cues)]);
     assert_eq!(lights(&left), Some(80.0));
+}
+
+#[test]
+fn address_applies_once_its_field_is_left_and_a_refused_text_keeps_the_old_one() {
+    let id = InstrumentId(1);
+    let app = App {
+        workspace: show(None).workspace.apply(Command::Patch(PatchEdit::Add)),
+        ..show(None)
+    };
+    let address = |app: &App| {
+        app.workspace
+            .patch()
+            .iter()
+            .find(|instrument| instrument.id == id)
+            .map(|instrument| instrument.address_text())
+    };
+    let before = address(&app);
+    assert_eq!(before.as_deref(), Some("1"));
+    let typing = ["2", "2/", "2/5", "2/50", "2/500"]
+        .into_iter()
+        .fold(app, |app, text| typed(app, Setting::Address(id), text));
+    assert_eq!(address(&typing), before, "no prefix moves the dimmer");
+    let left = after(typing, [Message::Focus(Focus::Cues)]);
+    assert_eq!(address(&left).as_deref(), Some("2/500"));
+    let refused = after(
+        typed(left, Setting::Address(id), "2/5000"),
+        [Message::Focus(Focus::Cues)],
+    );
+    assert_eq!(address(&refused).as_deref(), Some("2/500"), "the old stays");
+}
+
+#[test]
+fn adding_an_instrument_past_the_last_address_tells_why() {
+    let id = InstrumentId(1);
+    let one = || App {
+        workspace: show(None).workspace.apply(Command::Patch(PatchEdit::Add)),
+        ..show(None)
+    };
+    let added = after(one(), [Message::Patch(PatchEdit::Add)]);
+    assert_eq!(added.workspace.patch().len(), 2);
+    assert_eq!(added.remark, None);
+    let full = App {
+        workspace: one()
+            .workspace
+            .apply(Command::Patch(PatchEdit::Address(id, 32_768, 512))),
+        ..one()
+    };
+    let refused = after(full, [Message::Patch(PatchEdit::Add)]);
+    assert_eq!(refused.workspace.patch().len(), 1);
+    assert_eq!(
+        refused.remark,
+        Some("The light patch has no address left for another instrument")
+    );
 }

@@ -176,6 +176,18 @@ fn audio_cue_that_starts_at_or_after_its_end_cannot_play() {
 }
 
 #[test]
+fn audio_cue_that_starts_past_the_end_of_its_file_cannot_play() {
+    let beyond = Cue {
+        start: 9999.0.into(),
+        ..audio(1)
+    };
+    let workspace = workspace(vec![beyond]);
+    let problems: Vec<Problem> = workspace.problems().map(|(_, problem)| problem).collect();
+    assert_eq!(problems, [Problem::PastFile]);
+    assert!(workspace.apply(GO).active().is_empty());
+}
+
+#[test]
 fn audio_cue_that_loops_plays_until_something_stops_it() {
     let workspace = workspace(vec![Cue {
         looping: true,

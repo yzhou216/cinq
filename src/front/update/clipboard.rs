@@ -16,7 +16,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use crate::{
-    back::{Command, Cue, CueId, Output, OutputId, Place, Sends},
+    back::{Command, Cue, CueId, Output, OutputId, Place, Sends, Unlit},
     front::{App, view::format},
 };
 
@@ -33,7 +33,8 @@ pub(super) const EMPTY: &str = "The clipboard is empty";
 #[derive(Debug, Clone, PartialEq)]
 pub struct Clipped {
     pub told: String,
-    /// Whether the cues left the show, so that undo brings them back
+    /// Whether the notice tells a change that undo takes back, a cut or a
+    /// paste, so that the status bar hints the key of undo
     pub cut: bool,
 }
 
@@ -116,8 +117,20 @@ impl App {
     /// either.
     pub(super) fn cut(self, count: usize) -> Self {
         if self.editable() {
-            self.clipped(count, "Cut", true)
-                .taking_away(count, Command::Cut)
+            let app = self
+                .clipped(count, "Cut", true)
+                .taking_away(count, Command::Cut);
+            Self {
+                clipped: app.clipped.map(|clipped| Clipped {
+                    told: format::stopping(
+                        clipped.told,
+                        app.clipboard.cues.len(),
+                        app.stopped.len(),
+                    ),
+                    ..clipped
+                }),
+                ..app
+            }
         } else {
             self
         }
@@ -131,40 +144,68 @@ impl App {
     /// copied with it, which the paste points at their new copies.  There,
     /// each cue sends to the outputs that bear the names of those it sent
     /// to, without a send whose output has no namesake, and a cue left with
-    /// no send plays on the first output, as a cue without sends does.
+    /// no send plays on the first output, as a cue without sends does.  The
+    /// notice also counts the light cues there that name instruments which
+    /// the patch lacks.
     pub(super) fn with_pasted(self, place: fn(CueId) -> Place, count: usize) -> Self {
         let copies = &self.clipboard.cues;
         let elsewhere = self.clipboard.show != self.show.id();
         let copied: HashSet<CueId> = copies.iter().map(|cue| cue.id).collect();
-        let cues: Vec<Cue> = (0..count.min(PASTE_LIMIT))
+        let (cues, lost): (Vec<Cue>, Vec<(usize, usize)>) = (0..count.min(PASTE_LIMIT))
             .flat_map(|_| copies.iter().cloned())
             .take(PASTE_LIMIT)
-            .map(|cue| Cue {
-                target: cue
+            .map(|cue| {
+                let target = cue
                     .target
-                    .filter(|target| !elsewhere || copied.contains(target)),
-                sends: match cue.sends {
+                    .filter(|target| !elsewhere || copied.contains(target));
+                let had = cue.sends.as_ref().map_or(0, Sends::len);
+                let sends = match cue.sends {
                     Some(sends) if elsewhere && !sends.is_empty() => {
                         Some(self.sends_by_name(sends)).filter(|named| !named.is_empty())
                     }
                     sends => sends,
-                },
-                ..cue
+                };
+                let lost = (
+                    had.saturating_sub(sends.as_ref().map_or(0, Sends::len)),
+                    usize::from(cue.target.is_some() && target.is_none()),
+                );
+                (
+                    Cue {
+                        target,
+                        sends,
+                        ..cue
+                    },
+                    lost,
+                )
             })
-            .collect();
+            .unzip();
         if cues.is_empty() {
             return Self {
                 remark: Some(EMPTY),
                 ..self
             };
         }
+        let told = format::pasted_losses(
+            cues.len(),
+            lost.iter().map(|lost| lost.0).sum(),
+            lost.iter().map(|lost| lost.1).sum(),
+            cues.iter()
+                .filter(|cue| {
+                    elsewhere && matches!(self.workspace.unlit(cue), Some(Unlit::Unpatched(_)))
+                })
+                .count(),
+        );
         let first = self.workspace.next_cue_id();
         let paste = Command::Paste {
             list: self.list,
             cues,
             at: self.selected_here().map_or(Place::End, place),
         };
-        self.send(paste).showing(first, None)
+        let app = self.send(paste).showing(first, None);
+        Self {
+            clipped: told.map(|told| Clipped { told, cut: true }),
+            ..app
+        }
     }
 
     /// Returns `sends` of a cue of the show of the clipboard as they go to

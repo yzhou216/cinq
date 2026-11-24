@@ -121,7 +121,10 @@ moves the cue on standby.
 A GoTo cue does move it.  Its target can be any cue, and when GO fires the
 GoTo cue, the target goes on standby, so that the next GO fires it, and
 nothing else happens.  Use one at the end of a list to put its first cue on
-standby again.
+standby again.  Before GO, the chain line of the transport names what such a cue
+does, as in \texttt{13 (GoTo 2)}.  While a GoTo cue that has fired waits out its
+pre-wait, the line leads with the time in which standby moves, as in
+\texttt{Standby moves to 5 in 2.9s}.
 
 \section{Loop sections and devamp cues}
 
@@ -226,7 +229,10 @@ cancelled closes them again.  When standby lies in a collapsed group, the
 \texttt{State} column of the group reads \texttt{NEXT}\@, and switching to the
 list selects the group.  When a cue that a collapsed group hides has a problem,
 such as \texttt{NO FILE}, the \texttt{State} column of the group reads it, so
-that no broken cue lies out of sight.  Collapsing is a way to look at
+that no broken cue lies out of sight.  While the group itself does not run,
+the column also counts the cues that the group hides and that run, as
+\texttt{3 running}, and those that are paused, as \texttt{1 paused}, so that no
+cue that plays lies out of sight.  Collapsing is a way to look at
 the list, so undo leaves it alone, show mode allows it, and the show file keeps
 it.
 

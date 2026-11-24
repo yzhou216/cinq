@@ -34,6 +34,7 @@ mod select_focused;
 mod settled;
 mod show;
 mod stage;
+mod stopping;
 mod subscription;
 #[cfg(test)]
 mod tests;
@@ -124,12 +125,13 @@ impl App {
                 self.across(operator, motion, count).revealed()
             }
             Message::Search { backward } => self.searching(backward),
+            Message::NewKind(new_kind) => self.with_new_kind(new_kind),
             Message::Searching(text) => self.search_typed(text),
             Message::SearchKey(key) => self.search_edited(key),
             Message::SearchAccepted => self.search_accepted(),
             Message::SearchStep(offset) => self.search_stepped(offset),
-            Message::Undo(count) => self.undone(count).revealed(),
-            Message::Redo(count) => self.redone(count).revealed(),
+            Message::Undo(count) => self.counting(|app| app.undone(count)).revealed(),
+            Message::Redo(count) => self.counting(|app| app.redone(count)).revealed(),
             Message::Resized(window, size) => self.resized(window, size),
             Message::Recheck => self.recheck(),
             Message::Open => self.with_task(Self::choose_show),
@@ -141,7 +143,7 @@ impl App {
             Message::OpenLink(target) => self.opening(move || open_link(&target)),
             Message::EditConfig(file) => self.opening(move || edit_config(&file)),
             Message::OpenTutorial => self.opening(open_tutorial),
-            Message::ToggleFullscreen => self.with_task(Self::toggle_fullscreen),
+            Message::ToggleFullscreen => self.toggled_fullscreen(),
             Message::Closed(window) => self.closed(window),
             Message::ListAudioDevices => self.with_task(|_| device::listing()),
             Message::ChooseAudioDevice(device) => self.chose_audio_device(device),
@@ -246,8 +248,7 @@ impl App {
             | Message::CloseHelp
             | Message::Tab(_)
             | Message::ShowTab(_)
-            | Message::StepTab(_)
-            | Message::NewKind(_)) => (self.settled_by(message), Task::none()),
+            | Message::StepTab(_)) => (self.settled_by(message), Task::none()),
         }
     }
 }

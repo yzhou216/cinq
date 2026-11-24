@@ -102,3 +102,27 @@ fn show_file_keeps_the_kind_and_the_target_of_each_control_cue() {
     assert_eq!(kinds(&read), kinds(&show));
     assert_eq!(read.cue(CueId(4)).unwrap().target, Some(CueId(1)));
 }
+
+#[test]
+fn goto_cue_that_has_yet_to_act_tells_where_it_moves_standby_and_when() {
+    let jump = Cue {
+        pre_wait: 4.0.into(),
+        ..goto_cue(1, 3)
+    };
+    let waiting = lists_of(vec![vec![jump, audio(2)], vec![audio(3), audio(4)]]).apply(GO);
+    let moving = |workspace: &Workspace, list| {
+        workspace
+            .moving(list)
+            .map(|(target, seconds)| (target.id.0, seconds))
+    };
+    assert_eq!(moving(&waiting, 1), Some((3, 4.0)));
+    assert_eq!(moving(&waiting, 0), None);
+    let later = waiting.apply(Command::Tick(1.5));
+    assert_eq!(moving(&later, 1), Some((3, 2.5)));
+    assert_eq!(moving(&later.clone().apply(Command::Pause(true)), 1), None);
+    assert_eq!(
+        moving(&later.clone().apply(Command::Stop(CueId(1))), 1),
+        None
+    );
+    assert_eq!(moving(&later.apply(Command::Tick(3.0)), 1), None);
+}

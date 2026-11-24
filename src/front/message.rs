@@ -108,7 +108,7 @@ pub enum Message {
     },
     /// Text of the search line, as typed so far
     Searching(String),
-    /// Edits the text of the search line with a key of Vim's command line
+    /// Recalls a search into the search line with a key of Vim's command line
     SearchKey(LineKey),
     /// Accepts the text of the search line
     SearchAccepted,

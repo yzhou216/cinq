@@ -15,13 +15,14 @@ use crate::{
     back::{
         Change, Command, CueId, Kind, PICTURE_FILES, Place, SOUND_FILES, VIDEO_FILES, Workspace,
     },
-    front::{App, Message, update::clipboard::PASTE_LIMIT},
+    front::{App, Message, Tab, update::clipboard::PASTE_LIMIT},
 };
 
 impl App {
     /// Adds `count` cues in a row next to the selection, at most as many as
     /// one paste adds, and selects the last of them, as Vim leaves its
-    /// cursor on the last line that `3o` inserts
+    /// cursor on the last line that `3o` inserts.  The inspector shows its
+    /// Basics tab, which holds the File field that a new cue needs first.
     pub(super) fn with_new_cue(self, place: fn(CueId) -> Place, count: usize) -> Self {
         let first = self.workspace.next_cue_id();
         let add = Command::Add {
@@ -37,11 +38,12 @@ impl App {
             .and_then(|next| next.0.checked_sub(1))
             .map(CueId)
             .filter(|last| first.is_some_and(|first| last.0 >= first.0));
-        app.showing(last, None)
+        let tab = last.map_or(app.tab, |_| Tab::Basics);
+        Self { tab, ..app }.showing(last, None)
     }
 
-    /// Makes cue `id` play or show `file`, whether chosen or typed, which
-    /// names the cue after the file as [`crate::back::Cue::playing`] says
+    /// Makes cue `id` play or show the `file` that was chosen, which names
+    /// the cue after the file as [`crate::back::Cue::playing`] says
     pub(super) fn with_file(self, id: CueId, file: String) -> Self {
         let playing = self.workspace.cue(id).map(|cue| cue.playing(file));
         self.send_all(playing.map(|edit| Command::Edit(id, edit)))
@@ -115,33 +117,80 @@ impl App {
             .collect()
     }
 
+    /// Applies `turn`, an undo or a redo, which sends one command for each
+    /// change that it takes back or makes again, and counts those changes
+    /// for the notice.  A turn that finds none leaves the count of the turn
+    /// before, as it leaves that turn's notice.
+    pub(super) fn counting(self, turn: impl FnOnce(Self) -> Self) -> Self {
+        let earlier = self.turns;
+        let app = turn(Self { turns: 0, ..self });
+        Self {
+            turns: if app.turns == 0 { earlier } else { app.turns },
+            ..app
+        }
+    }
+
     /// Undoes up to `count` changes, and stops quietly at the oldest.  An
     /// addition or a paste below a cue gives the selection back to that cue,
     /// as the cursor of Vim goes back to where the change was made.
     pub(super) fn undone(self, count: usize) -> Self {
-        let lands = |change: &Change| change.anchor().or_else(|| change.cue());
-        self.turned(count, Command::Undo, Workspace::undoable, lands)
+        let lands = |change: &Change| {
+            change
+                .anchor()
+                .or_else(|| change.cue())
+                .or_else(|| change.standing(false))
+        };
+        self.turned(
+            count,
+            Command::Undo,
+            Workspace::undoable,
+            lands,
+            Self::undone_outputs,
+        )
     }
 
     /// Redoes up to `count` changes, and stops quietly at the newest
     pub(super) fn redone(self, count: usize) -> Self {
-        self.turned(count, Command::Redo, Workspace::redoable, Change::cue)
+        let lands = |change: &Change| change.cue().or_else(|| change.standing(true));
+        self.turned(
+            count,
+            Command::Redo,
+            Workspace::redoable,
+            lands,
+            Self::redone_outputs,
+        )
     }
 
     /// Sends `command` once for each of `count` changes that `next` finds,
-    /// one at a time so that the selection and the notice follow the last
-    /// of them, which `lands` tells the cue to select for
+    /// one at a time so that the selection follows the last of them, which
+    /// `lands` tells the cue to select for, and the notice tells the last and
+    /// how many there were.  A change to the outputs that the cue list shows
+    /// no sign of is one that `in_outputs` takes over with the changes that
+    /// remain, which shows the outputs, since the change would happen out of
+    /// sight.
     fn turned(
         self,
         count: usize,
         command: Command,
         next: fn(&Workspace) -> Option<&Change>,
         lands: fn(&Change) -> Option<CueId>,
+        in_outputs: fn(Self, usize) -> Self,
     ) -> Self {
-        let flow = (0..count).try_fold(self, |app, _| match next(&app.workspace) {
+        let flow = (0..count).try_fold(self, |app, done| match next(&app.workspace) {
+            Some(Change::Outputs { .. }) if app.editable() && !app.outputs_shown => {
+                let app = app.jumping(Self::showing_outputs);
+                ControlFlow::Break(in_outputs(app, count - done))
+            }
             Some(change) => {
                 let cue = lands(change);
                 let row = app.selected_row();
+                // The light patch has no row to select, so its tab shows
+                let tab = if matches!(change, Change::Patched { .. }) {
+                    Tab::Patch
+                } else {
+                    app.tab
+                };
+                let app = Self { tab, ..app };
                 ControlFlow::Continue(app.send(command.clone()).showing(cue, row))
             }
             None => ControlFlow::Break(app),

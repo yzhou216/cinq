@@ -55,7 +55,9 @@ impl Action {
             Action::NextList => "Show the next cue list, then the outputs",
             Action::PreviousList => "Show the previous cue list, or the last from the outputs",
             Action::NextTab => "Show the next inspector tab, or the tab counted",
-            Action::PreviousTab => "Show the previous inspector tab, or go back as many as counted",
+            Action::PreviousTab => {
+                "Show the previous inspector tab, or go back as many tabs as counted"
+            }
             Action::Back => "Go back to the place that the last jump left, or leave the outputs",
             Action::Forward => "Go forward again after going back",
             Action::Search => "Search the cues, or the outputs, by the text of their columns",
@@ -145,6 +147,19 @@ impl Rows {
 }
 
 impl Action {
+    /// Returns the sentence of [`Action::description_in`], except that an
+    /// operator with a `count` typed reads as what its doubled key takes, the
+    /// selected row and the next ones that make up the count
+    pub fn description_counted(self, rows: Rows, count: Option<usize>) -> String {
+        match count {
+            // Doubled operator takes the rows counted, the selected one included
+            Some(count) if count > 1 && Self::OPERATORS.contains(&self) => {
+                self.over(Action::Next, rows, Some(count - 1))
+            }
+            _ => self.description_in(rows),
+        }
+    }
+
     /// Returns the sentence of the help page for the rows that show, so that
     /// the box of the keys that can follow names outputs where the outputs
     /// show and cues where a cue list does, instead of both

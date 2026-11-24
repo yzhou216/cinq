@@ -174,19 +174,21 @@ fn a_clash_in_the_cue_list_or_in_a_menu_is_still_reported() {
     assert_eq!(
         in_list.conflicts(),
         [
-            "`Control+e` is bound to both next and scroll_down, so scroll_down goes without",
-            "`Control+e` is bound to both next and close_menu, so close_menu goes without",
+            "`Control+e` is bound to both next and scroll_down, so next keeps it and scroll_down loses it",
+            "`Control+e` is bound to both next and close_menu, so next keeps it and close_menu loses it",
         ]
     );
     let in_menu = Keymap::default().with(Action::Pick, vec![keys("Control+e")]);
     assert_eq!(
         in_menu.conflicts(),
-        ["`Control+e` is bound to both pick and close_menu, so close_menu goes without"]
+        [
+            "`Control+e` is bound to both pick and close_menu, so pick keeps it and close_menu loses it"
+        ]
     );
     let across = Keymap::default().with(Action::Pick, vec![keys("j")]);
     assert_eq!(
         across.conflicts(),
-        ["`j` is bound to both next and pick, so pick goes without"]
+        ["`j` is bound to both next and pick, so next keeps it and pick loses it"]
     );
 }
 
@@ -195,15 +197,15 @@ fn a_clash_over_g_j_g_k_and_the_search_keys_is_found_in_the_place_they_act_in() 
     let with = |action, text: &str| Keymap::default().with(action, vec![keys(text)]);
     assert_eq!(
         with(Action::ScrollDown, "g j").conflicts(),
-        ["`g j` is bound to both next and scroll_down, so scroll_down goes without"]
+        ["`g j` is bound to both next and scroll_down, so next keeps it and scroll_down loses it"]
     );
     assert_eq!(
         with(Action::ScrollUp, "/").conflicts(),
-        ["`/` is bound to both scroll_up and search, so search goes without"]
+        ["`/` is bound to both scroll_up and search, so scroll_up keeps it and search loses it"]
     );
     assert_eq!(
         with(Action::Pick, "g k").conflicts(),
-        ["`g k` is bound to both previous and pick, so pick goes without"]
+        ["`g k` is bound to both previous and pick, so previous keeps it and pick loses it"]
     );
     // Search keys act in the cue list only, so a menu may use them
     assert_eq!(with(Action::Pick, "/").conflicts(), Vec::<String>::new());

@@ -21,7 +21,8 @@ The actions that this tutorial performed with buttons and clicks also have
 keys, which differ between the keymaps:
 
 \begin{center}
-\begin{tabular}{lll}
+\small
+\begin{tabular}{@{}p{0.46\textwidth}p{0.22\textwidth}p{0.28\textwidth}@{}}
 \hline
 Action & vi & cua \\
 \hline
@@ -33,7 +34,7 @@ Paste above the selection & \key{P} & \key{Control+V} \\
 Move the selected cue into the group above it & \key{>>} & \key{Control+]} \\
 Move the selected cue out of its group & \key{<<} & \key{Control+[} \\
 Delete the selected cue, no copy & none & \key{Delete} \\
-Cancel what is typed halfway & \key{Control+c} & none \\
+Cancel what is typed halfway & \key{Control+c}, \key{Control+[} & none \\
 Edit the name of the selected cue & \key{i}, \key{a}, \key{A} & none \\
 Edit the name from its start & \key{I} & none \\
 Change the name, selecting all of it & \key{cc}, \key{S} & \key{F2} \\
@@ -72,8 +73,9 @@ bar names the keys that pick and close it, and \key{PageDown}, \key{PageUp},
   configuration file, as Figure~\ref{fig:help} shows.
 \item Press \key{Enter} on the page to open the tutorial, which the first
   paragraph names.
-\item Press the same key again to close the page.  GO and Panic also close
-  it, so that the show stays in view while it runs.
+\item Press the same key again to close the page, or \key{q} in the vi
+  keymap and \key{Control+w} in the cua keymap, which only close it.  GO and
+  Panic also close it, so that the show stays in view while it runs.
 \end{enumerate}
 
 \begin{figure}[H]
@@ -132,9 +134,10 @@ A long cue list is easier to search than to scroll.
   so that the selection is the match only when no other cue holds the text.
   When no cue holds the text, the line says so and the selection goes back to
   where the search began.
-\item While typing, \key{Control+w} deletes the last word and \key{Control+u}
-  the whole line, as in Vim, and \key{ArrowUp} and \key{ArrowDown} recall
-  earlier searches that start with the text.
+\item While typing, \key{Control+w} deletes the word before the caret and
+  \key{Control+u} everything before it, as in any text field, and
+  \key{ArrowUp} and \key{ArrowDown} recall earlier searches that start with
+  the text.
 \item Press \key{Enter} to accept the search.  \key{Control+c} in the vi
   keymap, and \key{Escape}, which is also Panic, close the line and put the
   selection back, and any click closes it and leaves the selection where it

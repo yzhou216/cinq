@@ -13,11 +13,22 @@
 use itertools::Itertools;
 use unicode_width::UnicodeWidthStr;
 
-use super::{LINE, giving_way};
+use super::{LINE, format::silences, giving_way};
 use crate::front::{keymap::Action, view::widget::shortened as cut_short};
 
 /// Ends a notice that was shortened
 const ELLIPSIS: &str = "…";
+
+/// Fewest words of a notice that stay once it is cut at its end, since
+/// `Added cue…` has lost the number that told which cue
+const LEAST_WORDS: usize = 3;
+
+/// Fewest words that stay before the ellipsis of a cut that keeps the words
+/// from the last `cue` on, as in `Undid… cue 6.5`
+const LEAST_BEFORE: usize = 1;
+
+/// Marks where the words that tell which cue a notice names begin
+const WHICH: &str = " cue ";
 
 /// Returns the hints joined, each one whole, without as many of those
 /// that give way as it takes for the rest to fit in `room` columns
@@ -46,6 +57,11 @@ pub(super) fn fitted(
 /// a separator give way first, but for the last.  The keys of `outlasting`
 /// give way only after the notice has been cut to its shortest, so that
 /// the key that leaves a field stays where a long notice would take its room.
+/// A notice that names a cue keeps the words from the last `cue` on, which
+/// tell which cue it was, and gives up the words before them first, down to
+/// [`LEAST_BEFORE`], and only then is cut at its end.  A cut at its end that
+/// would keep fewer than [`LEAST_WORDS`] words is not made, and a
+/// notice that cannot be cut otherwise is left out for the keys that fit.
 /// Where not even that fits, the hints are cut at the edge of the room with an
 /// ellipsis, so that no text runs past it.
 pub(super) fn shown(
@@ -72,8 +88,15 @@ pub(super) fn shown(
             .map(|short| joined(Some(short)))
             .find(fits)
     };
+    // A notice cut to a stub says nothing, so the keys keep the room instead
+    let dropped = |yielding: &[Action]| {
+        Some(fitted(&hints(None), room, yielding))
+            .filter(|joined| !joined.is_empty() && fits(joined))
+    };
     cut(&giving)
+        .or_else(|| dropped(&giving))
         .or_else(|| cut(yielding))
+        .or_else(|| dropped(yielding))
         .unwrap_or_else(|| match room {
             // An ellipsis alone would take a column that is not there
             0 => String::new(),
@@ -82,9 +105,12 @@ pub(super) fn shown(
 }
 
 /// Returns `told` with the keys after its first part that only teach given up,
-/// all but the last, which takes the change back, then cut after each word of
-/// its first part in turn, the longest first, with an ellipsis in place of the
-/// rest of the part, which a comma needs not, since the clause before it is whole
+/// all but the last, which takes the change back, then with that key given up
+/// too where the words tell that a cue went silent, then with the words before
+/// the last `cue` of its first part given up for an ellipsis, a word fewer
+/// each time, then cut after each word of the part in turn, the longest
+/// first, with an ellipsis in place of the rest of the part, which a comma
+/// needs not, since the clause before it is whole
 fn shortened(told: &str) -> impl Iterator<Item = String> + '_ {
     let head = told.split(LINE).next().unwrap_or(told);
     let rest = &told[head.len()..];
@@ -93,11 +119,32 @@ fn shortened(told: &str) -> impl Iterator<Item = String> + '_ {
         .filter(|(before, _)| before.len() > head.len());
     let rest = last.map_or(rest.to_owned(), |(_, last)| format!("{LINE}{last}"));
     let lighter = last.map(|_| format!("{head}{rest}"));
-    let cuts = head
-        .match_indices(' ')
-        .map(|(end, _)| end)
+    // A cue gone silent is what the operator cannot hear, so that its words
+    // outlast the key that takes the change back, which the keys teach
+    let bare = silences(head).then(|| head.to_owned());
+    let spaces = head.match_indices(' ').map(|(end, _)| end).collect_vec();
+    let words = |end: usize| head[..end].split_whitespace().count();
+    // Words from the last `cue` on tell which cue the change was to, so that
+    // the cuts that drop the words before them come before any that drops them
+    let middles = head
+        .rfind(WHICH)
+        .map(|which| {
+            spaces
+                .iter()
+                .rev()
+                .filter(|&&end| end < which && words(end) >= LEAST_BEFORE)
+                .map(|&end| {
+                    let kept = head[..end].trim_end_matches([',', ':', ';']);
+                    format!("{kept}{ELLIPSIS}{}{rest}", &head[which..])
+                })
+                .collect_vec()
+        })
+        .unwrap_or_default();
+    let cuts = spaces
+        .iter()
         .rev()
-        .map(move |end| {
+        .filter(|&&end| words(end) >= LEAST_WORDS)
+        .map(|&end| {
             let clause = head[..end].ends_with(',');
             let kept = head[..end].trim_end_matches([',', ':', ';']);
             let stop = if clause || kept.ends_with(ELLIPSIS) {
@@ -106,6 +153,7 @@ fn shortened(told: &str) -> impl Iterator<Item = String> + '_ {
                 ELLIPSIS
             };
             format!("{kept}{stop}{rest}")
-        });
-    lighter.into_iter().chain(cuts)
+        })
+        .collect_vec();
+    lighter.into_iter().chain(bare).chain(middles).chain(cuts)
 }

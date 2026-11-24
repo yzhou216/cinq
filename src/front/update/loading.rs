@@ -2,13 +2,16 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Loading the files of audio, video, and picture cues, and trying again
-//! those that could not be played
+//! Loading the files of audio, video, and picture cues, and looking again
+//! at those that have been read, for a file that has changed or gone, or
+//! that has come back
 //!
 //! Reading a file can block for a long time when its drive is slow or has
 //! gone, so the files are read on a thread of their own.  One load and one
 //! recheck run at a time, so that a read that hangs piles up no reads
 //! behind it, and a recheck that hangs never holds back a file just named.
+//! A recheck reads only the files whose stamps have changed, as
+//! [`load_files`] tells.
 
 use iced::Task;
 
@@ -39,7 +42,7 @@ impl App {
     }
 
     pub(super) fn recheck(self) -> (Self, Task<Message>) {
-        let loads = Load::all(&self.workspace, self.workspace.failed());
+        let loads = Load::all(&self.workspace, self.workspace.to_recheck());
         if self.rechecking || loads.is_empty() {
             return (self, Task::none());
         }

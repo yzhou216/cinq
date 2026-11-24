@@ -43,15 +43,29 @@ fn file_reports_what_it_cannot_use_and_keeps_the_rest() {
         [
             "no setting is named `colour`",
             "no action is named `fly`",
+            "next: `Foo` names no key",
             "last: `1 G` starts with a digit, which counts",
             "last keeps G, Control+End",
-            "next: `Foo` names no key",
         ]
     );
     assert_eq!(keymap.keys(Action::Next), [keys("m")]);
     assert_eq!(
         keymap.keys(Action::Last),
         Keymap::default().keys(Action::Last)
+    );
+}
+
+#[test]
+fn setting_below_a_table_is_told_to_belong_above_it() {
+    let (_, _, address, problems) =
+        config::parse("[keys]\ngo = \"F5\"\nosc_listen = \"127.0.0.1:53000\"\n");
+    assert_eq!(
+        messages(&problems),
+        ["`osc_listen` is a setting, which belongs above the first table"]
+    );
+    assert_eq!(
+        address, None,
+        "the setting is not read from inside the table"
     );
 }
 
@@ -227,12 +241,13 @@ fn file_gives_the_address_to_take_osc_commands_on() {
     let (_, _, listen, problems) = config::parse("");
     assert!(problems.is_empty(), "{problems:?}");
     assert_eq!(listen, None);
-    let message = "osc_listen should be an IP address and a port, such as \"127.0.0.1:53000\"";
+    let message = "osc_listen must be IP:port, as 127.0.0.1:53000";
+    let host = "osc_listen must be IP:port, not a host name";
     let cases = [
         ("\"0.0.0.0:53000\"", Some("0.0.0.0:53000"), None),
         ("\"127.0.0.1:53000\"", Some("127.0.0.1:53000"), None),
         ("\"[::]:53000\"", Some("[::]:53000"), None),
-        ("\"localhost:53000\"", None, Some(message)),
+        ("\"localhost:53000\"", None, Some(host)),
         ("\"0.0.0.0\"", None, Some(message)),
         ("\"0.0.0.0:0\"", None, Some(message)),
         ("\"0.0.0.0:99999\"", None, Some(message)),

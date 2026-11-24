@@ -9,7 +9,10 @@
 use iced::{Point, Rectangle, Size, window};
 
 use super::*;
-use crate::front::view::{Act, Site, hint};
+use crate::{
+    back::{loaded, sound},
+    front::view::{Act, Site, hint},
+};
 
 fn place(act: Act, x: f32) -> Site {
     let bounds = Rectangle::new(Point::new(x, 10.0), Size::new(20.0, 20.0));
@@ -261,7 +264,30 @@ fn letters_match_the_labels_whatever_their_case() {
 
 #[test]
 fn a_change_of_the_active_list_leaves_the_mode_and_the_same_list_keeps_it() {
-    let before = labelled().active_cues();
-    assert!(labelled().hints_after(&before).hints.is_some());
-    assert!(labelled().hints_after(&[CueId(1)]).hints.is_none());
+    let before = labelled().above_places();
+    assert!(labelled().hints_after(Some(&before)).hints.is_some());
+    let loaded = labelled()
+        .workspace
+        .apply(loaded(1, "sound.ogg", sound(10.0)));
+    let running = after(
+        App {
+            workspace: loaded,
+            ..labelled()
+        },
+        [Message::Go],
+    );
+    assert!(running.hints_after(Some(&before)).hints.is_none());
+}
+
+#[test]
+fn a_warning_that_comes_or_goes_leaves_the_mode_and_a_mode_that_began_now_stays() {
+    let warned = || App {
+        osc_problem: Some("osc_listen: cannot listen".to_owned()),
+        ..labelled()
+    };
+    let before = labelled().above_places();
+    assert!(warned().hints_after(Some(&before)).hints.is_none());
+    let cleared = warned().above_places();
+    assert!(labelled().hints_after(Some(&cleared)).hints.is_none());
+    assert!(warned().hints_after(None).hints.is_some());
 }

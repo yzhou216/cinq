@@ -14,7 +14,7 @@ mod tests;
 
 use iced::{
     Element, Fill,
-    widget::{column, container, rule, scrollable, text},
+    widget::{column, container, rule, scrollable, text, text::Wrapping},
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -22,7 +22,7 @@ use super::{
     CURRENT_LIST, SIDEBAR, SIDEBAR_SCROLL, SPACING, button, char_width,
     cue_table::{RADIO, SCROLL_BAR},
     faults::{self, Warning},
-    format, outputs, radio, warnings,
+    format, radio, warnings,
     widget::shortened,
 };
 use crate::front::{App, Message};
@@ -58,13 +58,15 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         );
         current(entry, !app.outputs_shown && index == app.list)
     });
+    let failing = faults::failing(app);
     let active = workspace
         .active()
         .iter()
         .filter_map(|active| {
-            workspace
-                .cue(active.id)
-                .map(|cue| running::active_cue(active, cue, columns as usize))
+            workspace.cue(active.id).map(|cue| {
+                let silent = workspace.sends_to_failing(cue, &failing);
+                running::active_cue(active, cue, workspace.target(cue), columns as usize, silent)
+            })
         })
         .collect::<Vec<_>>();
     let outputs_failing = faults::warnings(app).into_iter().map(|warning| {
@@ -80,7 +82,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
                     .map(|reason| format!(": {reason}"))
                     .unwrap_or_default();
                 let count = format::count(affected.len(), "output");
-                format!("{}: {state} ({count}){reason}", outputs::device(device))
+                format!("{}: {state} ({count}){reason}", devices::named(app, device))
             }
             Warning::Channels { output, fault } => {
                 format!("{}: {}", output.name, fault.state().to_lowercase())
@@ -91,8 +93,21 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
     let network = app
         .network_problems
         .iter()
-        .chain(&app.osc_problem)
-        .map(|problem| text(problem).style(text::danger).into());
+        .filter_map(|(id, problem)| {
+            workspace
+                .cue(*id)
+                .map(|cue| pressing(format!("{cue}: {problem}"), Message::Select(cue.id)))
+        })
+        .chain(app.light_problem.iter().map(|problem| {
+            text(format!("Light output: {problem}"))
+                .style(text::danger)
+                .into()
+        }))
+        .chain(
+            app.osc_problem
+                .iter()
+                .map(|problem| text(problem).style(text::danger).into()),
+        );
     let files = [&app.file_problem, &app.keep_problem, &app.device_problem]
         .into_iter()
         .flatten()
@@ -106,6 +121,11 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         .config
         .warnings()
         .map(|warning| text(warning).style(text::warning).into());
+    // Window that the audience needs, closed while a cue shows on it
+    let stage = app
+        .stage
+        .missing(workspace)
+        .then(|| text("Stage window closed").style(text::warning).into());
     let count = warnings(app);
     let warned = text(format!("Warnings ({count})")).style(if count > 0 {
         text::warning
@@ -126,6 +146,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
         .map(|(cue, unlit)| pressing(format!("{cue}: {unlit}"), Message::Select(cue.id)));
     let everything: Vec<Element<'_, Message>> = outputs_failing
         .chain(network)
+        .chain(stage)
         .chain(files)
         .chain(ignored)
         .chain(settings)
@@ -180,16 +201,27 @@ fn current<'a>(entry: Element<'a, Message>, shows: bool) -> Element<'a, Message>
     }
 }
 
-/// Returns a warning that `message` answers when it is pressed
+/// Returns a warning that `message` answers when it is pressed.  A word that
+/// no space breaks, as the ID of a device is, breaks within itself rather than
+/// being cut.
 fn pressing(told: String, message: Message) -> Element<'static, Message> {
-    button(text(told)).on_press(message).width(Fill).into()
+    button(text(told).wrapping(Wrapping::WordOrGlyph))
+        .on_press(message)
+        .width(Fill)
+        .into()
 }
 
 /// Splits `warnings` into the first that the sidebar lists and how many it
-/// leaves out
+/// leaves out, which is never exactly one, since the line that counts it
+/// takes as much room as the warning does
 fn limited<T>(warnings: Vec<T>) -> (Vec<T>, usize) {
-    let left = warnings.len().saturating_sub(WARNINGS);
-    (warnings.into_iter().take(WARNINGS).collect(), left)
+    let shown = if warnings.len() == WARNINGS + 1 {
+        warnings.len()
+    } else {
+        WARNINGS
+    };
+    let left = warnings.len().saturating_sub(shown);
+    (warnings.into_iter().take(shown).collect(), left)
 }
 
 /// Returns the name of a list with the number of its cues, in `columns`

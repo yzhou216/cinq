@@ -36,6 +36,19 @@ pub trait Intercept {
         true
     }
 
+    /// Returns the events that the content sees in place of the event, or
+    /// nothing when it sees the event itself
+    fn rewrite(
+        &self,
+        _content: &mut Element<'_, Message>,
+        _tree: &mut Tree,
+        _event: &Event,
+        _layout: Layout<'_>,
+        _renderer: &Renderer,
+    ) -> Option<Vec<Event>> {
+        None
+    }
+
     fn after(
         &self,
         _content: &mut Element<'_, Message>,
@@ -165,9 +178,18 @@ impl<I: Intercept> Widget<Message, Theme, Renderer> for Wrap<'_, I> {
         viewport: &Rectangle,
     ) {
         if self.intercept.shown() && self.intercept.before(event, layout, cursor, shell) {
-            self.content.as_widget_mut().update(
-                tree, event, layout, cursor, renderer, clipboard, shell, viewport,
-            );
+            let rewritten =
+                self.intercept
+                    .rewrite(&mut self.content, tree, event, layout, renderer);
+            rewritten
+                .as_deref()
+                .unwrap_or(std::slice::from_ref(event))
+                .iter()
+                .for_each(|event| {
+                    self.content.as_widget_mut().update(
+                        tree, event, layout, cursor, renderer, clipboard, shell, viewport,
+                    );
+                });
             self.intercept
                 .after(&mut self.content, tree, event, layout, renderer, shell);
         }

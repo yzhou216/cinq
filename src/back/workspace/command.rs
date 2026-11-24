@@ -6,6 +6,7 @@
 
 use crate::back::{
     Cue, CueId, CueList, Edit, Instrument, Kind, Media, Output, OutputEdit, OutputId, PatchEdit,
+    Stamp,
 };
 
 /// Request to change the show
@@ -118,11 +119,14 @@ pub enum Command {
     /// Moves the clock of a run toward the seconds of its clip that its
     /// sound has played, as the audio device keeps time
     Heard { cue: CueId, run: u32, played: f64 },
-    /// Records what loading the file of a cue found
+    /// Records what loading the file of a cue found, along with the stamp
+    /// that the file had then, from which the next look at it tells whether
+    /// it has changed
     Loaded {
         cue: CueId,
         file: String,
         media: Media,
+        seen: Option<Stamp>,
     },
 }
 

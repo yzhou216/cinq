@@ -31,6 +31,7 @@ fn grouped(depth: u8) -> Workspace {
             duration: 10.0,
             sound: Some(10.0),
         },
+        seen: None,
     })
 }
 
@@ -61,7 +62,7 @@ fn a_cue_in_a_group_shows_no_post_wait_and_no_then_setting() {
 }
 
 #[test]
-fn a_start_cue_in_the_group_that_it_starts_reads_no_target() {
+fn a_start_cue_in_the_group_that_it_starts_reads_in_target() {
     let group = Cue::new(CueId(1), "1", Kind::Group, "Group").build();
     let start = Cue::new(CueId(2), "2", Kind::Start, "Start")
         .target(CueId(1))
@@ -70,7 +71,7 @@ fn a_start_cue_in_the_group_that_it_starts_reads_no_target() {
     let workspace = Workspace::new(vec![CueList::new("Main", vec![group, start])]);
     let list = &workspace.lists()[0];
     let (state, _) = state(&workspace, &list.cues[1], None, false);
-    assert_eq!(state, "NO TARGET");
+    assert_eq!(state, "IN TARGET");
 }
 
 #[test]
@@ -81,4 +82,20 @@ fn a_collapsed_group_tells_its_count_in_the_target_column_and_leaves_its_name_ba
     });
     assert_eq!(texts(&workspace, Column::Name)[0], "Group");
     assert_eq!(texts(&workspace, Column::Target)[0], "1 cue");
+}
+
+#[test]
+fn a_control_cue_that_names_itself_reads_bad_target_and_one_with_no_target_reads_none() {
+    let stop = |id, target| {
+        Cue::new(CueId(id), id.to_string(), Kind::Stop, "Stop")
+            .target(CueId(target))
+            .build()
+    };
+    let workspace = Workspace::new(vec![CueList::new("Main", vec![stop(1, 1), stop(2, 9)])]);
+    let list = &workspace.lists()[0];
+    let read = |at: usize| state(&workspace, &list.cues[at], None, false).0;
+    assert_eq!(
+        (read(0), read(1)),
+        ("BAD TARGET".to_owned(), "NO TARGET".to_owned())
+    );
 }

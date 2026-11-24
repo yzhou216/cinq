@@ -16,6 +16,13 @@ impl Workspace {
                 Media::Unloaded => Some(Problem::NotLoaded),
                 Media::Failed(reason) => Some(Problem::LoadFailed(reason)),
                 Media::Loaded { .. } if cue.loops_nothing() => Some(Problem::EmptyLoop),
+                Media::Loaded { duration, .. }
+                    if cue.kind.plays_file()
+                        && cue.clip().is_none()
+                        && cue.start.value() >= *duration =>
+                {
+                    Some(Problem::PastFile)
+                }
                 Media::Loaded { .. } if cue.kind.plays_file() && cue.clip().is_none() => {
                     Some(Problem::EmptyClip)
                 }
@@ -23,7 +30,7 @@ impl Workspace {
             },
             Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo => {
                 match self.target(cue) {
-                    Some(target) if !cue.can_target(target) => Some(Problem::NoTarget),
+                    Some(target) if !cue.can_target(target) => Some(Problem::WrongTarget),
                     Some(target) if cue.kind == Kind::Start && self.within(cue, target) => {
                         Some(Problem::InTarget)
                     }
@@ -35,9 +42,19 @@ impl Workspace {
                 }
             }
             Kind::Network if Destination::parse(&cue.destination).is_none() => {
-                Some(Problem::NoDestination)
+                Some(if Destination::port_is_bad(&cue.destination) {
+                    Problem::BadPort
+                } else {
+                    Problem::NoDestination
+                })
             }
-            Kind::Network if osc::packet(&cue.message).is_none() => Some(Problem::NoMessage),
+            Kind::Network if osc::packet(&cue.message).is_none() => {
+                Some(if cue.message.matches('"').count() % 2 == 1 {
+                    Problem::OpenQuote
+                } else {
+                    Problem::NoMessage
+                })
+            }
             Kind::Light | Kind::Network | Kind::Group | Kind::Wait | Kind::Memo => None,
         }
     }
@@ -61,10 +78,14 @@ impl Workspace {
         self.files_where(|media| *media == Media::Unloaded)
     }
 
-    /// Returns the audio, video, and picture cues whose file could not be
-    /// played, to try again
-    pub fn failed(&self) -> impl Iterator<Item = &Cue> {
-        self.files_where(|media| matches!(media, Media::Failed(_)))
+    /// Returns the audio, video, and picture cues whose file has been read
+    /// and whose cue is not running, to look at again, since the file may
+    /// have changed, or gone, or come back.  A running cue keeps playing
+    /// from the file that it opened, and the next look finds what became of
+    /// it.
+    pub fn to_recheck(&self) -> impl Iterator<Item = &Cue> {
+        self.files_where(|media| *media != Media::Unloaded)
+            .filter(|cue| self.active_of(cue.id).is_none())
     }
 
     fn files_where(&self, test: fn(&Media) -> bool) -> impl Iterator<Item = &Cue> {

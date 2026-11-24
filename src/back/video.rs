@@ -107,7 +107,7 @@ impl Video {
                     (cue.id, (run, player)),
                     picture.map(|picture| (cue.id, picture)),
                 )),
-                Err(reason) => Either::Right(unplayable(cue, reason)),
+                Err(reason) => Either::Right(unplayable(&workspace, cue, reason)),
             });
         self.runs = runs;
         self.ready = workspace

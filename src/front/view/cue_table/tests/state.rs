@@ -4,10 +4,12 @@
 
 //! Tests of the State column for a cue that plays, waits, or fails to load
 
+use std::collections::BTreeSet;
+
 use iced::widget::text;
 
 use super::{
-    super::{columns::state, lines},
+    super::columns::{lines, state},
     show,
 };
 use crate::{
@@ -40,7 +42,7 @@ fn a_cue_that_sends_somewhere_or_names_no_sends_reads_as_any_other() {
 /// Returns the lines of the State column of the only cue, which is standby
 fn standby_lines(workspace: &Workspace) -> Vec<String> {
     let cue = &workspace.lists()[0].cues[0];
-    lines(workspace, cue, true, None, &[], false)
+    lines(workspace, cue, true, None, &[], &BTreeSet::new(), false)
         .into_iter()
         .map(|(line, _)| line)
         .collect()
@@ -62,7 +64,7 @@ fn the_state_of_a_row_that_stands_for_the_standby_cue_reads_next() {
     let workspace = show(None);
     let cue = &workspace.lists()[0].cues[0];
     assert_eq!(standby_lines(&workspace), ["NEXT"]);
-    assert!(lines(&workspace, cue, false, None, &[], false).is_empty());
+    assert!(lines(&workspace, cue, false, None, &[], &BTreeSet::new(), false).is_empty());
 }
 
 #[test]
@@ -93,4 +95,14 @@ fn a_light_cue_that_sets_no_instrument_or_names_one_the_patch_lacks_reads_it_in_
     };
     assert_eq!(shown(&light(&[])), ("NO LEVELS".to_owned(), true));
     assert_eq!(shown(&light(&[(99, 50.0)])), ("UNPATCHED".to_owned(), true));
+}
+
+#[test]
+fn a_standby_cue_that_runs_keeps_next_above_its_state() {
+    let running = show(None)
+        .apply(Command::Go { list: 0 })
+        .apply(Command::Tick(1.0));
+    let lines = standby_lines(&running);
+    assert_eq!((lines.len(), lines[0].as_str()), (2, "NEXT"));
+    assert!(lines[1].ends_with("left"), "{lines:?}");
 }

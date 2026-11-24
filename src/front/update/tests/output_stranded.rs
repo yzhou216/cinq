@@ -72,6 +72,6 @@ fn cues_that_were_stranded_already_are_not_told_again() {
             "Sub 2".to_owned(),
         )],
     );
-    assert_eq!(noticed(&renamed), "Renamed the output Sub to Sub 2");
+    assert_eq!(noticed(&renamed), "Renamed Sub to Sub 2");
     assert!(!noticed(&renamed).contains("nowhere"));
 }

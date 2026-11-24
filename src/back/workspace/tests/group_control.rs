@@ -219,7 +219,10 @@ fn fade_and_devamp_cues_cannot_target_a_group() {
         .problems()
         .map(|(cue, problem)| (cue.id.0, problem))
         .collect();
-    assert_eq!(problems, [(3, Problem::NoTarget), (4, Problem::NoTarget)]);
+    assert_eq!(
+        problems,
+        [(3, Problem::WrongTarget), (4, Problem::WrongTarget)]
+    );
 }
 
 #[test]

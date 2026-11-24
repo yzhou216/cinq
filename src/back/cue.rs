@@ -25,7 +25,7 @@ pub(in crate::back) use clip::{Clip, Pass, Shown};
 pub use edit::Edit;
 pub use kind::{Advance, Kind};
 pub use list::{CueList, Groups};
-pub use media::{Media, Problem};
+pub use media::{Media, Problem, Stamp};
 pub use seconds::Seconds;
 
 /// Level in dB that counts as silence, which is the bottom of every level
@@ -38,14 +38,28 @@ pub const LEVELS: RangeInclusive<f32> = SILENCE..=LOUDEST;
 
 /// Returns the level in dB that `text` reads as, with its unit or without
 /// it, as in `-6` or `-6 dB`, if it lies between [`SILENCE`] and
-/// [`LOUDEST`]
+/// [`LOUDEST`].  `-inf`, which other show controllers take for no level at
+/// all, reads as [`SILENCE`], the bottom of every level.
 pub fn parse_level(text: &str) -> Option<f32> {
-    text.trim()
-        .trim_end_matches(['d', 'D', 'b', 'B'])
-        .trim()
+    let number = text.trim().trim_end_matches(['d', 'D', 'b', 'B']).trim();
+    if number.eq_ignore_ascii_case("-inf") {
+        return Some(SILENCE);
+    }
+    number
         .parse::<f32>()
         .ok()
         .filter(|level| LEVELS.contains(level))
+}
+
+/// Returns the level that `text` gives a send, as in [`parse_level`]: the
+/// inner `None` for empty text or `off`, which takes the send away, or the
+/// outer `None` for text that reads as no level
+pub fn parse_send(text: &str) -> Option<Option<f32>> {
+    match text.trim() {
+        "" => Some(None),
+        off if off.eq_ignore_ascii_case("off") => Some(None),
+        typed => parse_level(typed).map(Some),
+    }
 }
 
 /// Levels of a light, in percent
@@ -95,6 +109,12 @@ pub struct Cue {
     pub file: String,
     #[builder(skip)]
     pub media: Media,
+    /// Stamp that the file had when `media` was found, which tells the next
+    /// look at the file whether to read it again.  A file that was not
+    /// there, or could not be opened, has none, and is read again at every
+    /// look.
+    #[builder(skip)]
+    pub seen: Option<Stamp>,
     /// Time in the file at which an audio or video cue starts
     #[builder(default, into)]
     pub start: Seconds,
@@ -163,15 +183,23 @@ pub struct Cue {
 
 impl fmt::Display for Cue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = Self::one_line(&self.name);
         if self.number.trim().is_empty() {
-            f.write_str(&self.name)
+            f.write_str(&name)
         } else {
-            write!(f, "{} {}", self.number, self.name)
+            write!(f, "{} {name}", self.number)
         }
     }
 }
 
 impl Cue {
+    /// Returns `text` on one line, with every run of white space, line breaks
+    /// and tabs included, as one space, so that a name or a note from a show
+    /// file never takes a second line of a display that has room for one
+    pub fn one_line(text: &str) -> String {
+        text.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
+
     fn new_name(kind: Kind) -> String {
         format!("New {kind} cue")
     }
@@ -179,10 +207,9 @@ impl Cue {
     /// Returns the edit that makes the cue play or show `file`, which names
     /// the cue after the file as well while the cue goes by the name it was
     /// added with, or by the name of the file it had before, as QLab names
-    /// the cues of files.  A path typed key by key goes through here at each
-    /// key, so a path without a name for the cue, such as an emptied field,
-    /// gives back the name the cue was added with and the name follows the
-    /// path again once it is typed anew.
+    /// the cues of files.  A path without a name for the cue, such as an
+    /// emptied field, gives back the name the cue was added with, and the
+    /// name follows the path again once a path is typed anew.
     pub fn playing(&self, file: String) -> Edit {
         let added = Self::new_name(self.kind);
         let unnamed = self.name == added || Some(self.name.as_str()) == stem(&self.file);

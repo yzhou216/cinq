@@ -129,7 +129,7 @@ fn page(app: &App, window: f32) -> Element<'_, Message> {
     let bottom = column![text(counts(keymap))]
         .extend(operators.map(Element::from))
         .push(text("Actions that this keymap binds to no key are left out of the table, and cinq(5) lists them all."))
-        .push(text("The keys of a sequence are typed one after another with no Space between them, since Space is GO."))
+        .extend(keymap.has_sequences().then(|| text("The keys of a sequence are typed one after another with no Space between them, since Space is GO.").into()))
         .push(text("The keys of GO and Panic act at once, even halfway through another command."))
         .push(source(&app.config.source))
         .push(key_values)

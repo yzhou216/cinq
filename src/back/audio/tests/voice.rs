@@ -26,18 +26,18 @@ use crate::back::{
 
 /// Longest that a test lets the thread of a sound decode it, which takes
 /// far less
-const DECODING: Duration = Duration::from_millis(300);
+pub(super) const DECODING: Duration = Duration::from_millis(300);
 
 /// Time that the sound moves on each time a test lets the backend play
 const BUFFER: f64 = 0.01;
 
-fn video() -> Cue {
+pub(super) fn video() -> Cue {
     Cue::new(CueId(1), "1", Kind::Video, "Movie")
         .file("silence.wav")
         .build()
 }
 
-fn audio() -> Cue {
+pub(super) fn audio() -> Cue {
     Cue::new(CueId(1), "1", Kind::Audio, "Music")
         .file("silence.wav")
         .build()
@@ -46,18 +46,55 @@ fn audio() -> Cue {
 /// Returns a directory with a file of `seconds` of silence, and the
 /// workspace in which GO has fired `cue`, which plays that file
 fn fired(cue: Cue, seconds: f32) -> (TempDir, Workspace) {
+    fired_promising(cue, seconds, seconds)
+}
+
+/// Returns what [`fired`] does, for a file whose header promises `promised`
+/// seconds of sound where it holds `seconds`, as a file cut short does
+pub(super) fn fired_promising(cue: Cue, seconds: f32, promised: f32) -> (TempDir, Workspace) {
     let directory = TempDir::new().expect("a temporary directory can be made");
-    fs::write(directory.path().join("silence.wav"), silence(seconds))
-        .expect("the file can be written");
+    // A header and 16 bits of sound a frame, as silence makes them
+    let kept = 44 + (seconds * 8000.0) as usize * 2;
+    let whole = silence(promised);
+    fs::write(
+        directory.path().join("silence.wav"),
+        &whole[..kept.min(whole.len())],
+    )
+    .expect("the file can be written");
     let media = Media::Loaded {
         duration: 10.0,
-        sound: Some(seconds),
+        sound: Some(promised),
     };
     let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])])
         .directory(directory.path())
         .apply(loaded(1, "silence.wav", media))
         .apply(GO);
     (directory, workspace)
+}
+
+/// Plays the sound of the cue that GO fired in `workspace`, from the file in
+/// `directory`, on the mock backend of kira, and returns the manager that
+/// plays it, with the voice, once the thread of the sound has decoded it
+pub(super) fn sounding(
+    directory: &TempDir,
+    workspace: &Workspace,
+) -> (AudioManager<MockBackend>, Voice) {
+    let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
+        backend_settings: MockBackendSettings { sample_rate: 8000 },
+        internal_buffer_size: 80,
+        ..AudioManagerSettings::default()
+    })
+    .expect("the mock backend starts");
+    let active = workspace.active_of(CueId(1)).expect("the cue runs");
+    let clip = active.sound().expect("the cue has sound");
+    let data = StreamingSoundData::from_file(directory.path().join("silence.wav"))
+        .expect("the sound opens");
+    let sound = manager
+        .play(clipped(data, clip, 0.0, 0.0))
+        .expect("the sound plays");
+    let voice = Voice::of(sound, active);
+    thread::sleep(DECODING);
+    (manager, voice)
 }
 
 /// Plays the sound of the cue made by `cue` from a file of `seconds` of
@@ -77,21 +114,7 @@ fn played_while(
     plays: impl Fn(usize) -> bool,
 ) -> Vec<(f64, bool)> {
     let (directory, workspace) = fired(cue, seconds);
-    let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
-        backend_settings: MockBackendSettings { sample_rate: 8000 },
-        internal_buffer_size: 80,
-        ..AudioManagerSettings::default()
-    })
-    .expect("the mock backend starts");
-    let active = workspace.active_of(CueId(1)).expect("the cue runs");
-    let clip = active.sound().expect("the cue has sound");
-    let data = StreamingSoundData::from_file(directory.path().join("silence.wav"))
-        .expect("the sound opens");
-    let sound = manager
-        .play(clipped(data, clip, 0.0, 0.0))
-        .expect("the sound plays");
-    let voice = Voice::of(sound, active);
-    thread::sleep(DECODING);
+    let (mut manager, voice) = sounding(&directory, &workspace);
     ticks
         .iter()
         .enumerate()

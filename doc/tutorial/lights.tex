@@ -45,7 +45,9 @@ the address after the last one.  \ui{Remove} removes an instrument from the
 patch, and no cue sets it afterward.  A light cue that still names it, or that
 names no instrument, reads \texttt{UNPATCHED} or \texttt{NO LEVELS} in yellow
 in its state, its inspector says why in yellow, and the sidebar lists it among the
-warnings.  With the keys, \key{Tab} reaches each of
+warnings.  The \ui{Levels} tab of such a cue lists the missing instrument as
+\texttt{99 (unpatched)}, and clearing its field puts the cue right.  With the
+keys, \key{Tab} reaches each of
 these buttons, in the order of the window, and \key{Enter} presses it.
 
 \section{Light cues}
@@ -56,8 +58,9 @@ later light cue names them, as in QLab.
 
 \begin{enumerate}
 \item Select cue~2, Stage up, and click the \ui{Levels} tab.  It lists every
-  instrument with its level in the cue, as in Figure~\ref{fig:light}.  An
-  empty field, as for the lightning, leaves the instrument unchanged.
+  instrument with its level in the cue and the level that it has on stage
+  now, as in Figure~\ref{fig:light}.  An empty field, as for the lightning,
+  leaves the instrument unchanged.
 \item Press \ui{GO}\@.  Cue~3 flashes the lightning.  It auto-continues to
   cue~4, which fades the lightning out in half a second, and cue~4
   auto-continues at once to cue~5, which plays the thunder.
@@ -121,9 +124,13 @@ with SLIP framing on port~3037, and \texttt{/eos/cue/1/5/fire} fires cue~5
 of cue list~1.
 
 A message that cannot be sent, as when no program accepts its TCP
-connection, appears among the warnings in the sidebar.  cinq drops a message
+connection, appears among the warnings in the sidebar, for the cue that
+sends it, and the \texttt{State} of every cue that names the same destination
+reads \texttt{SEND FAILED}.  Pressing the warning selects the cue, whose
+inspector shows the destination.  cinq drops a message
 that it cannot send within a second of its cue, since a console cue that
-fires late can do more harm than one that does not fire.
+fires late can do more harm than one that does not fire.  A UDP message
+reports no failure, since nothing answers it.
 
 \section{Commands from the network}
 
@@ -177,6 +184,7 @@ show.  The manual page \texttt{cinq(5)} describes the setting in full.
 
 Add an instrument with \ui{Add instrument}.  Then choose \ui{Light} in the
 \ui{New cue} drop-down list and press \ui{Add cue}.  Set the \ui{Duration} of
-the new cue to 2 seconds, and on the \ui{Levels} tab of the cue, set the
+the new cue to 2 seconds on the \ui{Basics} tab, which holds the fade time of
+a light cue, and on the \ui{Levels} tab of the cue, set the
 level of the new instrument to 50.  Press \ui{Standby selected}, then
 \ui{GO}\@.  Watch the level in the \ui{Now} column or in your sACN monitor.

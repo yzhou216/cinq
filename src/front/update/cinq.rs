@@ -67,7 +67,7 @@ impl Cinq {
         // Whatever the operator does can move the keyboard between fields,
         // which only the widgets know
         let asking = !passive(&message);
-        let active = self.app.active_cues();
+        let above = self.app.hints.is_some().then(|| self.app.above_places());
         let (app, task) = std::mem::take(&mut self.app).next(message);
         if routed {
             self.audio.route(app.config.sound.device.as_deref());
@@ -84,13 +84,20 @@ impl Cinq {
             audio_problems: self.audio.problems(),
             // Checks first: once they stop, the problems read after them are
             // final
-            network_checks: self.network.checks(),
+            network_checks: self
+                .network
+                .checks()
+                .into_iter()
+                .chain(self.lights.checks())
+                .min(),
+            light_problem: self.lights.problem().map(str::to_owned),
             network_problems: self.network.problems(&workspace.destinations()),
+            network_failed: self.network.failed(&workspace.destinations()),
             workspace,
             ..app
         }
         .with_keep_problem(kept)
-        .hints_after(&active)
+        .hints_after(above.as_ref())
         .clocked();
         let (app, load) = app.load();
         let (app, stage) = app.staged();

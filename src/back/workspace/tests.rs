@@ -98,6 +98,7 @@ pub(crate) fn loaded(id: u32, file: &str, media: Media) -> Command {
         cue: CueId(id),
         file: file.to_owned(),
         media,
+        seen: None,
     }
 }
 

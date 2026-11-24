@@ -5,7 +5,7 @@
 //! Tests of which outputs that cannot play the Levels tab counts, and of how
 //! it names them
 
-use super::{cut, named, silent, widest};
+use super::{cut, labels, named, silent, widest};
 use crate::{
     back::{Command, Cue, CueId, CueList, Fault, Kind, OutputId, Sends, Workspace},
     front::App,
@@ -83,4 +83,25 @@ fn the_room_of_the_names_counts_the_columns_that_a_wide_character_takes() {
     assert_eq!(names(&["House L", "Sub"]), 7);
     assert_eq!(names(&["\u{4e3b}\u{97f3}\u{54cd}"]), 6);
     assert_eq!(names(&[]), 0);
+}
+
+#[test]
+fn a_fault_on_one_output_leaves_the_room_of_the_other_names_as_it_was() {
+    let workspace =
+        Workspace::new(vec![CueList::new("Main", Vec::new())]).apply(Command::add_output(1, 2));
+    let plain = App {
+        workspace: workspace.clone(),
+        ..App::default()
+    };
+    let faulty = App {
+        workspace,
+        audio_problems: vec![(OutputId(2), Fault::Missing("gone".to_owned()))],
+        ..App::default()
+    };
+    let (room, names) = labels(&plain);
+    assert_eq!(labels(&faulty).0, room);
+    assert!(names.iter().all(|(_, fault)| fault.is_none()));
+    let (_, told) = labels(&faulty);
+    assert_eq!(told[1].0, "Output 1 (not found)");
+    assert!(told[1].1.is_some() && told[0].1.is_none() && told[2].1.is_none());
 }

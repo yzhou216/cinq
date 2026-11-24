@@ -246,3 +246,31 @@ fn a_cue_that_sends_only_to_failing_outputs_is_silent_unless_its_file_holds_no_s
     let picture = show.apply(loaded(2, "movie.mp4", silent(10.0)));
     assert_eq!((lost(&picture, 1), lost(&picture, 2)), (true, false));
 }
+
+#[test]
+fn an_output_that_lacks_a_field_is_named_by_its_place_and_its_line() {
+    let output = |channels: &str| format!("[[output]]\nname = \"Out\"\n{channels}\n");
+    let text = output("channels = \"1-2\"")
+        + "\n"
+        + &output("channels = \"3\"")
+        + "\n[[output]]\nname = \"Sub\"\n";
+    assert_eq!(
+        Workspace::from_show(&text, "/").err().as_deref(),
+        Some("line 9, column 1: output 3: missing field `channels`")
+    );
+    let first = "[[output]]\nname = \"Main\"\n";
+    assert_eq!(
+        Workspace::from_show(first, "/").err().as_deref(),
+        Some("line 1, column 1: output 1: missing field `channels`")
+    );
+}
+
+#[test]
+fn an_output_after_one_whose_head_has_a_comment_is_named_by_its_place() {
+    let text =
+        "[[output]] # main\nname = \"Main\"\nchannels = \"1-2\"\n\n[[output]]\nname = \"Sub\"\n";
+    assert_eq!(
+        Workspace::from_show(text, "/").err().as_deref(),
+        Some("line 5, column 1: output 2: missing field `channels`")
+    );
+}

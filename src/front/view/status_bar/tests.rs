@@ -14,8 +14,10 @@ mod lists;
 mod menu;
 mod name;
 mod next_list;
+mod open;
 mod outputs;
 mod places;
+mod stage;
 mod standby;
 
 use super::{

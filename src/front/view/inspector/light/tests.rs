@@ -6,9 +6,9 @@
 
 use iced::advanced::widget::{Tree, tree};
 
-use super::{NAME_ROOM, now_fits, page, shows_help};
+use super::{NAME_ROOM, levels_now_fits, now_fits, page, shows_help};
 use crate::{
-    back::{Command, PatchEdit, Workspace},
+    back::{Command, Cue, CueId, InstrumentId, Kind, PatchEdit, Workspace},
     front::{
         App,
         view::{char_width, widget::focus::State},
@@ -21,7 +21,7 @@ fn the_help_on_addresses_shows_only_while_an_address_has_the_keyboard_or_is_refu
         address_held,
         ..App::default()
     };
-    let refused = Some("addresses are 1 to 512".to_owned());
+    let refused = Some("1 to 512".to_owned());
     assert!(!shows_help(&app(false), &None));
     assert!(shows_help(&app(true), &None));
     assert!(shows_help(&app(false), &refused));
@@ -84,4 +84,44 @@ fn the_now_column_gives_way_to_a_name_that_would_keep_too_little_room() {
     assert!(kept.windows(2).all(|pair| pair[1] == pair[0] + 1.0));
     // The name keeps its room beside the column, with nothing else to give
     assert!(kept[0] > NAME_ROOM * char_width());
+}
+
+#[test]
+fn the_now_column_of_the_levels_gives_way_where_the_patch_keeps_it_and_no_sooner() {
+    let kept: Vec<f32> = (0..2000)
+        .map(|room| room as f32)
+        .filter(|&room| levels_now_fits(room))
+        .collect();
+    assert!(!levels_now_fits(0.0) && levels_now_fits(WIDE));
+    assert!(kept.windows(2).all(|pair| pair[1] == pair[0] + 1.0));
+    // One column fewer than the patch, which has the Remove button too
+    assert!(
+        kept[0]
+            < (0..2000)
+                .map(|room| room as f32)
+                .find(|&room| now_fits(room))
+                .unwrap_or(0.0)
+    );
+}
+
+#[test]
+fn the_levels_list_an_instrument_that_the_patch_lacks_after_those_it_has() {
+    let patch = patched(2).workspace.patch().to_vec();
+    let cue = Cue::new(CueId(1), "1", Kind::Light, "Light")
+        .lights(
+            [(InstrumentId(99), 50.0), (InstrumentId(1), 10.0)]
+                .into_iter()
+                .collect(),
+        )
+        .build();
+    let names = super::rows(&patch, &cue)
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    assert_eq!(names, ["1", "2", "99 (unpatched)"]);
+}
+
+#[test]
+fn empty_levels_tell_which_tab_adds_an_instrument() {
+    assert!(super::no_instruments().ends_with("on the Light Patch tab"));
 }

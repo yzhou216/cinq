@@ -2,23 +2,18 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the keys of Vim's command line in the search line: deleting the
-//! word before the cursor and everything before it, and recalling the
+//! Tests of the keys of Vim's command line in the search line: recalling the
 //! searches accepted earlier
 
 use iced::keyboard::{Key, Modifiers, key::Named};
 
 use super::{
     chord,
-    search::{opened, searched, show, typed},
+    search::{searched, show, typed},
 };
 use crate::{
     back::CueId,
-    front::{
-        App, Message,
-        message::LineKey,
-        update::{Searched, search::line::without_last_word},
-    },
+    front::{App, Message, message::LineKey, update::Searched},
 };
 
 fn keyed(app: App, keys: &[LineKey]) -> App {
@@ -40,44 +35,15 @@ fn after_searching(words: &[&str]) -> App {
 }
 
 #[test]
-fn keys_of_the_command_line_are_control_w_control_u_and_the_arrows_up_and_down() {
+fn keys_of_the_command_line_are_the_arrows_up_and_down() {
     let of = |key: Key, modifiers| LineKey::of(chord(key, modifiers));
     let (control, none) = (Modifiers::CTRL, Modifiers::empty());
     let letter = |text: &str| Key::Character(text.into());
-    assert_eq!(of(letter("w"), control), Some(LineKey::DeleteWord));
-    assert_eq!(of(letter("u"), control), Some(LineKey::DeleteAll));
     assert_eq!(of(Key::Named(Named::ArrowUp), none), Some(LineKey::Older));
     assert_eq!(of(Key::Named(Named::ArrowDown), none), Some(LineKey::Newer));
-    assert_eq!(of(letter("w"), none), None);
     assert_eq!(of(Key::Named(Named::ArrowUp), control), None);
-    assert_eq!(of(letter("n"), control), None);
-}
-
-#[test]
-fn control_w_deletes_the_word_before_the_cursor_as_vim_does() {
-    assert_eq!(without_last_word("storm opening"), "storm ");
-    assert_eq!(without_last_word("storm "), "");
-    assert_eq!(without_last_word("storm  "), "");
-    assert_eq!(without_last_word("a/b"), "a/");
-    assert_eq!(without_last_word("a.."), "a");
-    assert_eq!(without_last_word("snake_case"), "");
-    assert_eq!(without_last_word(""), "");
-    assert_eq!(without_last_word("tonnerre éclair"), "tonnerre ");
-}
-
-#[test]
-fn control_w_and_control_u_edit_the_text_and_the_selection_follows() {
-    let line = typed(opened(1), "storm op");
-    assert_eq!(text(&line), Some("storm op"));
-    let word = keyed(line, &[LineKey::DeleteWord]);
-    assert_eq!(text(&word), Some("storm "));
-    let all = keyed(word, &[LineKey::DeleteAll]);
-    assert_eq!(text(&all), Some(""));
-    // Nothing matches no text, so the selection is back where it began
-    assert_eq!(all.selected, Some(CueId(1)));
-    // On an empty line they change nothing, and close nothing
-    let empty = keyed(all, &[LineKey::DeleteWord, LineKey::DeleteAll]);
-    assert_eq!(text(&empty), Some(""));
+    assert_eq!(of(letter("w"), control), None, "a text field takes it");
+    assert_eq!(of(letter("u"), control), None, "a text field takes it");
 }
 
 #[test]
@@ -143,9 +109,6 @@ fn keys_that_change_the_text_move_the_cursor_to_the_end_as_vim_does() {
     let plain = units(typed(line(), "st"), Message::Searching("sto".to_owned()));
     let recalled = units(typed(line(), "st"), Message::SearchKey(LineKey::Older));
     assert_eq!(recalled, plain + 1);
-    let word = units(typed(line(), "st"), Message::SearchKey(LineKey::DeleteWord));
-    let all = units(typed(line(), "st"), Message::SearchKey(LineKey::DeleteAll));
-    assert_eq!((word, all), (recalled, recalled));
 }
 
 #[test]

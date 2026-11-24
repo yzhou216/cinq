@@ -254,3 +254,21 @@ fn undo_and_redo_act_in_a_closed_list_and_not_in_a_text_field() {
     // Keys that act in every field act in a list too
     assert!(vi.acts_in_lists(press("Tab")) && vi.acts_in_lists(press("Control+c")));
 }
+
+#[test]
+fn hint_mode_and_adding_a_cue_act_in_a_closed_list_and_not_in_a_text_field() {
+    let cua = Keymap::from(Preset::Cua);
+    let vi = Keymap::from(Preset::Vi);
+    ["f", "o", "O"].into_iter().for_each(|key| {
+        assert!(
+            vi.acts_in_lists(press(key)) && !vi.acts_in_fields(press(key)),
+            "{key}"
+        );
+    });
+    ["Control+n", "Control+N"].into_iter().for_each(|key| {
+        assert!(
+            cua.acts_in_lists(press(key)) && !cua.acts_in_fields(press(key)),
+            "{key}"
+        );
+    });
+}

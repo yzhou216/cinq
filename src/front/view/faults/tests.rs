@@ -6,7 +6,7 @@
 
 use super::{Warning, failing, warnings};
 use crate::{
-    back::{Command, CueList, Device, Fault, OutputEdit, OutputId, Workspace},
+    back::{Channels, Command, CueList, Device, Fault, OutputEdit, OutputId, Workspace},
     front::App,
 };
 
@@ -108,6 +108,31 @@ fn outputs_of_a_device_that_cannot_play_share_a_warning_that_cinq_does_not_retry
 }
 
 #[test]
+fn output_wholly_past_the_channels_of_its_device_counts_as_failing() {
+    let app = app(
+        &[dante(), dante(), dante()],
+        vec![
+            (OutputId(1), Fault::Channels(2)),
+            (OutputId(2), Fault::Channels(2)),
+            (OutputId(3), Fault::Channels(2)),
+        ],
+    );
+    let app = [
+        (OutputId(1), Channels::Mono(6)),
+        (OutputId(2), Channels::Stereo(1, 2)),
+        (OutputId(3), Channels::Stereo(2, 3)),
+    ]
+    .into_iter()
+    .fold(app, |app, (id, channels)| App {
+        workspace: app
+            .workspace
+            .apply(Command::EditOutput(id, OutputEdit::Channels(channels))),
+        ..app
+    });
+    assert_eq!(failing(&app), [OutputId(1), OutputId(3)]);
+}
+
+#[test]
 fn only_outputs_that_make_no_sound_count_as_failing() {
     let app = app(
         &[dante(), dante(), dante()],
@@ -118,4 +143,10 @@ fn only_outputs_that_make_no_sound_count_as_failing() {
         ],
     );
     assert_eq!(failing(&app), [OutputId(1), OutputId(3)]);
+}
+
+#[test]
+fn one_channel_is_singular() {
+    assert_eq!(Fault::Channels(1).state(), "Past its 1 channel");
+    assert_eq!(Fault::Channels(2).state(), "Past its 2 channels");
 }

@@ -6,7 +6,11 @@
 //! settings of the sound output, along with the problems that leave parts
 //! of it unused, each in the part of the text that it lies in
 
-use std::{net::SocketAddr, ops::Range, slice};
+use std::{
+    net::{IpAddr, SocketAddr},
+    ops::Range,
+    slice,
+};
 
 use itertools::Itertools;
 use toml::{
@@ -67,6 +71,10 @@ pub(in crate::front::keymap) fn parse(
     };
     let (chosen, built) = build(name, named_at, keymaps, &[])
         .unwrap_or_else(|problem| (Keymap::default(), vec![problem]));
+    let keys_table = match table.get("keys").map(spanned) {
+        Some((DeValue::Table(keys), _)) => Some(keys),
+        _ => None,
+    };
     let (keymap, unbound) = match table.get("keys").map(spanned) {
         Some((DeValue::Table(keys), _)) => bind(chosen, keys, ""),
         Some((_, span)) => (chosen, vec![Problem::at(span, "keys should be a table")]),
@@ -84,7 +92,23 @@ pub(in crate::front::keymap) fn parse(
         .chain(unrouted)
         .chain(unready)
         .chain(unlistened)
-        .chain(keymap.conflicts().into_iter().map(Problem::new))
+        .chain(keymap.clashes().into_iter().map(|(action, said)| {
+            // Entry of `[keys]` that the operator wrote, if the action has one
+            let entry = keys_table
+                .and_then(|keys| keys.keys().find(|name| name.get_ref() == action.name()));
+            Problem::at(entry.map(|name| name.span()), said)
+        }))
+        .collect::<Vec<_>>();
+    // Order of the file, so that a terminal and the sidebar read top down, by the
+    // end of a place so that an array follows the elements that it holds, and those in no place last
+    let problems = problems
+        .into_iter()
+        .sorted_by_key(|problem| {
+            problem
+                .span
+                .as_ref()
+                .map_or((true, 0), |span| (false, span.end))
+        })
         .collect();
     (
         keymap,
@@ -115,10 +139,25 @@ fn osc_listen(table: &DeTable) -> (Option<SocketAddr>, Option<Problem>) {
     match address {
         Some(address) => (Some(address), None),
         None => {
-            let bad = "osc_listen should be an IP address and a port, such as \"127.0.0.1:53000\"";
+            let bad = match value {
+                DeValue::String(text) if is_host_name(text) => {
+                    "osc_listen must be IP:port, not a host name"
+                }
+                _ => "osc_listen must be IP:port, as 127.0.0.1:53000",
+            };
             (None, Some(Problem::at(span, bad)))
         }
     }
+}
+
+/// Returns whether `text` is a host name and a port, which `osc_listen` does
+/// not take, as against an IP address with a bad port or none
+fn is_host_name(text: &str) -> bool {
+    text.rsplit_once(':').is_some_and(|(host, port)| {
+        port.parse::<u16>().is_ok_and(|port| port > 0)
+            && host.parse::<IpAddr>().is_err()
+            && !host.starts_with('[')
+    })
 }
 
 /// Returns the ID that `audio_device` gives, or none for the default
@@ -223,7 +262,12 @@ fn entry(
     value: &Spanned<DeValue>,
 ) -> (Keymap, Vec<Problem>) {
     let Ok(action) = name.get_ref().parse::<Action>() else {
-        let unknown = format!("no action is named `{name}`");
+        // A setting added below a table lands in it, where only the cause helps
+        let unknown = if SETTINGS.contains(&name.get_ref().as_ref()) {
+            format!("`{name}` is a setting, which belongs above the first table")
+        } else {
+            format!("no action is named `{name}`")
+        };
         return (keymap, vec![Problem::at(name.span(), unknown)]);
     };
     let values = match value.get_ref() {

@@ -30,6 +30,7 @@ fn times_read_as_the_cue_list_shows_them() {
     assert_eq!(seconds("1:30").value(), 90.0);
     assert_eq!(seconds("0:02.5").value(), 2.5);
     assert_eq!(seconds("1:00:05").value(), 3605.0);
+    assert!(!seconds("1:0:0:5").is_valid());
 }
 
 #[test]

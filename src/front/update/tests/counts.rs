@@ -97,3 +97,17 @@ fn tab_back_by_a_count_wraps_as_a_single_step_does() {
     // is 3 modulo the four tabs, so that Time steps back 3 times, to Levels.
     assert_eq!(previous(Some(usize::MAX), Tab::Time), Tab::Levels);
 }
+
+#[test]
+fn a_counted_undo_or_redo_counts_the_changes_it_turned_for_the_notice() {
+    let turns = |app: App, message| app.handled(message).0.turns;
+    let undone = || deleted_thrice().handled(Message::Undo(3)).0;
+    assert_eq!(turns(deleted_thrice(), Message::Undo(2)), 2);
+    assert_eq!(turns(deleted_thrice(), Message::Undo(usize::MAX)), 3);
+    assert_eq!(turns(deleted_thrice(), Message::Undo(1)), 1);
+    assert_eq!(turns(undone(), Message::Redo(2)), 2);
+    // A turn that finds nothing leaves the count that goes with the notice
+    let all = || undone().handled(Message::Redo(3)).0;
+    assert_eq!(turns(all(), Message::Redo(2)), 3);
+    assert_eq!(turns(all(), Message::Undo(1)), 1);
+}

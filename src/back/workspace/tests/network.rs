@@ -51,8 +51,16 @@ fn network_cue_without_destination_or_message_cannot_play() {
         Some("no destination as host:port")
     );
     assert_eq!(
+        problem(cue("ion:99999", "/eos/ping")).as_deref(),
+        Some("port is not a number from 1 to 65535")
+    );
+    assert_eq!(
         problem(cue("ion:3037", "eos/ping")).as_deref(),
         Some("no OSC message as /address arguments")
+    );
+    assert_eq!(
+        problem(cue("ion:3037", "/scene \"Act 1")).as_deref(),
+        Some("OSC message leaves a double quote open")
     );
     assert_eq!(problem(cue("udp://ion:8000", "/eos/ping")), None);
     let (_, messages) = workspace(vec![cue("ion", "/eos/ping")]).apply(GO).drained();
@@ -83,9 +91,20 @@ fn destinations_are_those_that_network_cues_name_as_they_read() {
     let unreadable = Cue::new(CueId(4), "4", Kind::Network, "Send")
         .destination("nowhere")
         .build();
-    let named = workspace(vec![fire(1, 0.0), udp, memo, unreadable]).destinations();
+    let again = Cue::new(CueId(5), "5", Kind::Network, "Again")
+        .destination("tcp://10.101.100.20:3037")
+        .message("/y")
+        .build();
+    let named = workspace(vec![fire(1, 0.0), udp, memo, unreadable, again]).destinations();
     assert_eq!(
-        named.iter().map(String::as_str).collect::<Vec<_>>(),
-        ["10.101.100.20:3037", "udp://10.101.100.21:8000"]
+        named
+            .iter()
+            .map(|(destination, id)| (destination.as_str(), id.0))
+            .collect::<Vec<_>>(),
+        [
+            ("tcp://10.101.100.20:3037", 1),
+            ("udp://10.101.100.21:8000", 2)
+        ],
+        "each destination reads with its scheme, for the first cue that names it"
     );
 }

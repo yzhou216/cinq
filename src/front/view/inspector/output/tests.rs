@@ -11,7 +11,7 @@ use crate::{
         Command, CueId, CueList, Device, Fault, InstrumentId, Output, OutputEdit, OutputId,
         Workspace,
     },
-    front::{App, Setting, keymap::config::Config},
+    front::{App, Setting, keymap::config::Config, view::inspector::rejection},
 };
 
 /// Returns the interface of a show of two outputs, Main and Output 1
@@ -53,7 +53,7 @@ fn channels_that_are_neither_one_nor_two_are_rejected_and_the_help_names_what_a_
         .for_each(|text| {
             assert_eq!(
                 reasons::channels(text).as_deref(),
-                Some("channels are 3 for one or 1-2 for two, up to 256"),
+                Some("channels are 3 for one, or 1-2 or 1,3 for two, up to 256"),
                 "{text:?}"
             );
         });
@@ -155,7 +155,7 @@ fn a_light_level_or_an_address_out_of_range_is_rejected_with_its_reason() {
     ["101", "-1", "bright"].into_iter().for_each(|text| {
         assert_eq!(
             reason(level, text).as_deref(),
-            Some("levels run from 0 to 100 percent, or empty for unchanged"),
+            Some("0 to 100, or empty for unchanged"),
             "{text:?}"
         );
     });
@@ -163,7 +163,26 @@ fn a_light_level_or_an_address_out_of_range_is_rejected_with_its_reason() {
     ["1", "512", "2/12", "32768/512"]
         .into_iter()
         .for_each(|text| assert_eq!(reason(address, text), None, "{text:?}"));
+    // The range comes first, so that the status bar keeps it where it cuts
     ["0", "513", "0/1", "32769/1", ""]
         .into_iter()
-        .for_each(|text| assert!(reason(address, text).is_some(), "{text:?}"));
+        .for_each(|text| {
+            assert!(
+                reason(address, text).is_some_and(|reason| reason.starts_with("1 to 512")),
+                "{text:?}"
+            );
+        });
+}
+
+#[test]
+fn a_send_level_out_of_range_says_that_empty_takes_the_send_away() {
+    let app = app();
+    assert_eq!(
+        rejection(&app, Setting::Send(CueId(1), OutputId(1)), ""),
+        None
+    );
+    assert_eq!(
+        rejection(&app, Setting::Send(CueId(1), OutputId(1)), "loud").as_deref(),
+        Some("levels run from -60 to +12 dB, or empty for no send")
+    );
 }

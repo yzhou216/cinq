@@ -12,11 +12,12 @@
 //! display that it is on, and brings it before the other windows, so that
 //! what the cue shows fills the screen.  The key of the fullscreen action
 //! toggles the window between fullscreen and a window, until the next such
-//! GO.  Closing it closes it until a picture or video cue fires again,
-//! which opens it anew, fullscreen wherever the platform puts it, while
-//! closing the main window quits cinq.  Each picture that the video output
-//! hands on becomes an image for iced once, as it comes due, and stays
-//! until a newer picture of its cue takes its place or the cue stops.
+//! GO.  Closing it closes it until a picture or video cue fires again, or
+//! the key of fullscreen is typed, which opens it anew, fullscreen wherever
+//! the platform puts it, while closing the main window quits cinq.  Each
+//! picture that the video output hands on becomes an image for iced once, as
+//! it comes due, and stays until a newer picture of its cue takes its place
+//! or the cue stops.
 //!
 //! The interface wakes for each picture as it comes due, and each picture
 //! costs a whole update, as each tick of the clock does, which builds the
@@ -79,7 +80,7 @@ impl Stage {
         self.window == Some(window)
     }
 
-    pub(super) fn has_keyboard(&self) -> bool {
+    pub fn has_keyboard(&self) -> bool {
         self.keyboard
     }
 
@@ -89,6 +90,16 @@ impl Stage {
             keyboard: self.is_window(window),
             ..self
         }
+    }
+
+    /// Returns whether the window is closed while a cue shows on it, which
+    /// leaves the audience without the picture that the cue says it shows
+    pub fn missing(&self, workspace: &Workspace) -> bool {
+        self.closed
+            && workspace
+                .active()
+                .iter()
+                .any(|active| active.shows_picture())
     }
 
     pub fn picture(&self, cue: CueId) -> Option<&image::Handle> {
@@ -129,6 +140,25 @@ impl Stage {
     }
 }
 
+#[cfg(test)]
+impl Stage {
+    /// Returns a stage whose window the operator closed
+    pub fn closed() -> Self {
+        Self {
+            closed: true,
+            ..Self::default()
+        }
+    }
+
+    /// Returns a stage whose window has the keyboard
+    pub fn holding_keyboard() -> Self {
+        Self {
+            keyboard: true,
+            ..Self::default()
+        }
+    }
+}
+
 impl App {
     /// A window that opens fullscreen keeps the keyboard, while the main
     /// window asks for it back from one that opens as a window, which the
@@ -146,7 +176,7 @@ impl App {
             };
             return (Self { stage, ..self }, raising);
         }
-        let wanted = !self.stage.closed && self.workspace.cues().any(|cue| cue.kind.on_stage());
+        let wanted = !self.stage.closed && self.holds_stage_cue();
         if !wanted {
             return (self, Task::none());
         }
@@ -178,11 +208,27 @@ impl App {
         }
     }
 
-    pub(super) fn toggle_fullscreen(&self) -> Task<Message> {
-        let main = self.main;
-        self.stage.window.map_or_else(Task::none, |window| {
-            window::mode(window).then(move |mode| toggled(window, main, mode))
-        })
+    /// Toggles the stage window between fullscreen and a window, or opens it
+    /// fullscreen, as a cue that shows on it does, where the operator closed
+    /// it, so that the film that runs shows again
+    pub(super) fn toggled_fullscreen(self) -> (Self, Task<Message>) {
+        match self.stage.window {
+            Some(window) => {
+                let main = self.main;
+                let toggling = window::mode(window).then(move |mode| toggled(window, main, mode));
+                (self, toggling)
+            }
+            None if self.stage.closed && self.holds_stage_cue() => Self {
+                stage: self.stage.cued(),
+                ..self
+            }
+            .staged(),
+            None => (self, Task::none()),
+        }
+    }
+
+    fn holds_stage_cue(&self) -> bool {
+        self.workspace.cues().any(|cue| cue.kind.on_stage())
     }
 }
 

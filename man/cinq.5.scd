@@ -130,6 +130,9 @@ _tutorial.pdf_
 	While the device is not there, or cannot be opened, those outputs are
 	silent, the warnings in the sidebar tell why, and *cinq* tries the device
 	again every two seconds, as *cinq-show*(5) describes.
+	The warning about the default device names its ID, as in *Default device
+	(alsa:front:CARD=PCH,DEV=0)*, and the *Default device* list shows that ID in
+	yellow while the device is not found.
 ; if xdg
 	On ALSA, *cinq* plays samples in 32-bit floating point, or in integers of
 	32, 24, or 16 bits, as the _alsa:hw:_, _alsa:front:_, and _alsa:hdmi:_
@@ -203,13 +206,14 @@ _tutorial.pdf_
 	program can fire cues from a distance, and a main and a backup machine can
 	run together when the same commands go to both.
 	A host name is not taken.
+	The problem then says so.
 	*cinq* listens to nothing unless the file sets it, and follows a change
 	of it as soon as the file is saved.
 	A packet is a message or a bundle of them.
 	A message is carried out at once, and the time tag of a bundle is
 	ignored.
 	Of the messages of one packet the first 32 are carried out, and a warning
-	says that the rest were dropped.
+	in the sidebar and on standard error says that the rest were dropped.
 	The addresses are those that QLab names, so that remote controls made for
 	QLab work as they are:
 
@@ -235,20 +239,24 @@ _tutorial.pdf_
 	Any other arguments are ignored.
 	The commands act in show mode, while a field has the keyboard, and over the
 	help page, as GO and Panic do, and each leaves hint mode as a click does,
-	apart from one for a number that no cue has, which leaves it only when the
+	apart from one that does nothing, as below, which leaves it only when the
 	sidebar gains the line for it, and changes nothing else.
 	A command that moves the selection or the cue list in view also takes the
 	keyboard out of the field, so that what is typed next cannot edit another
 	cue.
 	None of them changes the show, and none can be undone.
-	A packet that is not OSC, an address that is not listed, and a number that no
-	cue has do nothing and go to standard error, once for each sender and
+	A packet that is not OSC, an address that is not listed, a number that no
+	cue has, and a start of a cue that cannot play, as one with no file or no
+	destination, do nothing and go to standard error, once for each sender and
 	address, until a thousand different lines have gone out, after which one
 	last line says that further warnings go unreported and nothing more is
 	written.
 	The sidebar lists the latest of them, with the address that it came from, as
 	one entry among the warnings, as in _OSC from 192.168.1.5: no cue is numbered
 	"99"_, until a command acts or the setting changes.
+	A start of a cue that cannot play reads as _OSC from 192.168.1.5: cue 4
+	cannot play: no destination as host:port_.
+	A cue that only waits for its file to load is no problem and is not reported.
 	When the address cannot be listened on, as when another program holds the
 	port, the warnings in the sidebar say so, naming *osc_listen*, and *cinq*
 	tries again every two seconds, so that the port comes into use, and the
@@ -306,7 +314,7 @@ of the help page.
 :  Enter
 :  Enter
 |  cancel
-:  Control+c
+:  Control+c, Control+[
 :  none
 |  next
 :  j, g j, ArrowDown, Control+n, +
@@ -522,7 +530,9 @@ keys that type characters joined, as Vim does, such as *gg*.
 The keys of a sequence wait until the sequence is complete, and the status bar
 shows the keys typed so far, while a box above it lists the keys that can come
 next and what each of them does, naming outputs instead of cues while the
-outputs show.  The help page, which lists each action once, names both.
+outputs show.  A count typed before or after an operator shows in what a
+motion does, as *the selected cue and the next 6* for *2 d 3 j*.
+The help page, which lists each action once, names both.
 A key that completes or continues no sequence is dropped together with the
 keys typed so far, as Vim beeps and drops them, so that a key mistyped halfway,
 such as the *x* of *d x*, never starts a sequence of its own.
@@ -557,6 +567,12 @@ A count larger than what there is, such as *9 Control+o* with fewer places
 behind, *9 g t* with fewer tabs, or *3 d d* on the last cue, makes *cinq* go as
 far as it can, where Vim would refuse it.
 Since digits count, no sequence can start with one.
+A zero that starts a sequence counts nothing, as it is a motion in Vim: it is
+dropped like any key that begins nothing, so that the status bar shows no
+pending key.
+A zero after another digit counts, as in *1 0 j*.
+The same holds for a zero that would start the count after an operator, so that
+*d 0* drops the operator.
 
 The actions *copy*, *cut*, *delete*, *indent*, and *outdent* also act as
 operators, as *y*, *d*, *>*, and *<* do in Vim.
@@ -583,6 +599,17 @@ The cues of a cut leave the selection on the cue that takes their place, a
 copy leaves it on the first cue copied, and *> >* and *< <* with a motion leave
 it on the first cue moved.
 Cutting is one change for undo, and the clipboard holds the cues in order.
+A cue that plays stops when it is cut or deleted, or when it is given another
+file, and the status bar says so, as in *Cut cue 2, which stopped*.
+Undo brings the cue back and does not start it again.
+After a copy or a cut the status bar hints the key to paste until a key does
+more than move the selection or switch lists, so that a paste into the other
+list keeps its hint.
+A paste into another show drops the sends to outputs that have no namesake
+there and the targets outside the cues pasted, and the status bar says how
+many, as in *Pasted 3 cues, dropped 2 sends*, with the key of undo.
+It also counts the light cues that name instruments which the patch of that
+show lacks, as in *Pasted 3 cues, 2 unpatched*.
 Show mode locks *d*, *>*, and *<* with a motion as it locks *cut*, *delete*,
 *indent*, and *outdent*, and leaves *y* with a motion alone, as it leaves
 *copy*.
@@ -636,12 +663,15 @@ search accepted last, and *previous_match* in the other direction, as *n* and
 *N* do in Vim, wrapping around at either end.
 When a search or a step wraps around, the status bar says that it continued at
 the top or at the bottom, as Vim says that the search hit the bottom, and says
-that no cue matches when a step finds none, until the next action.
+that no cue matches when a step finds none, and that there is no previous
+search when no search was accepted yet, until the next action.
 Enter on an empty line repeats the search accepted last in the direction of
 the line.
 Backspace on an empty line closes it, and so does Escape, which is also
 *panic*, and so does the key of *cancel*, which stops no playback.
 Each puts the selection back where it was when the line opened.
+Where the keymap binds no key to *cancel*, as the cua keymap does, the status
+bar names Backspace while the line is empty, and Enter once text is typed.
 Any press of a mouse button closes the line and keeps the selection where it
 is, and a press on a cue selects that cue.
 Going *back* or *forward*, with the keys or the buttons of the mouse, moving
@@ -658,12 +688,12 @@ The moves made while typing, and cancelling, remember nothing.
 A count for *next_match* or *previous_match* goes round the matches at most
 once, so that a count equal to the number of matches comes back to the same
 cue.
-The line takes the keys of Vim's command line as well: Control+w deletes the
-word before the cursor and Control+u everything before it, and ArrowUp and
-ArrowDown recall the older and the newer of the last fifty searches accepted,
-which start with the text typed, as the arrows of the command line do.
-The keys act on the end of the text, since the text field does not tell where
-its cursor is, and leave the cursor there, as Vim does after a recall.
+The line takes the keys of Vim's command line that recall a search as well:
+ArrowUp and ArrowDown recall the older and the newer of the last fifty
+searches accepted, which start with the text typed, as the arrows of the
+command line do, and leave the cursor at the end of the text, as Vim does
+after a recall.
+Control+w and Control+u delete before the caret, as in any text field.
 The history is kept until *cinq* quits.
 The line keeps the keys typed into it, like a text field, and the hints at
 the right of the status bar give way to its text.
@@ -715,9 +745,18 @@ A text field of the inspector, a drop-down list, or a checkbox
 	It keeps the keys typed, apart from the keys bound by themselves to *go*,
 	*panic*, *cancel*, *next_field*, *previous_field*, *back*, *forward*, *open*,
 	*save*, and *save_as*, which act unless a text field takes them for typing.
+	A text field also takes Control+w, which deletes the word before the caret,
+	and Control+u, which deletes everything before it, in both keymaps, as Vim does
+	in Insert mode, unless a key is bound to an action that acts in fields.
+	The edit is part of the typing around it, so that *undo* takes it back with
+	the rest.
 	A drop-down list that is closed lets the keys of *undo* and *redo* act as
 	well, since it has no text to undo, so that a change made from the list
 	can be taken back with the keyboard still there.
+	It lets the keys of *hint*, *add_below*, and *add_above* act too, and each
+	of them gives the keyboard back to the cue list, so that the labels of hint
+	mode take letters and the cue that was added has the keys.
+	A checkbox and a button do the same.
 	The checkboxes of the inspector, *Loop until stopped or devamped* and
 	*Stop target when done*, are stops of these keys as well, and show the same
 	border around their label.
@@ -755,9 +794,18 @@ A text field of the inspector, a drop-down list, or a checkbox
 	the field is left, by Enter, Tab, a click, GO, or anything else the
 	operator does, so that a cue that plays does not follow each key, as the
 	*2* of *-25* would make it.
+	A level field takes *-inf* as -60, silence, and a send field or the field of
+	new cues takes *off* as it takes an empty field.
 	GO then fires the cue at the level typed.
+	A path typed into the File field of a cue applies the same way, as one
+	change, so that a cue that plays does not stop at the first key and no
+	half-typed path reads as a file that does not exist.
+	A file chosen with the dialog applies at once.
 	The slider next to the level of a cue applies as it moves.
-	Names and addresses apply as they are typed.
+	The address of an instrument applies the same way, so that the
+	instrument does not move through the prefixes of the address on its way
+	to the rig, and text that is no address leaves the old address as it was.
+	Names apply as they are typed.
 
 The help page
 	The page fills the main window, while the stage window keeps showing the
@@ -792,7 +840,9 @@ The menu of a drop-down list
 	whether or not the keymap binds them.
 	Enter and the key of *pick* pick the highlighted option, and the key of
 	*close_menu* closes the menu without picking one, and either leaves the
-	keyboard on the list, so that *next_field* goes on to the field after it.
+	keyboard on the list, so that *next_field* goes on to the field after it,
+	except that a pick in the *New cue* list of the toolbar gives the keyboard
+	back to the cue list, so that the key of *add_below* acts at once.
 	The keys of *go* and *panic* act as they do everywhere and close the menu
 	as well.
 	The key of *help* opens the help page and leaves the menu open, hidden
@@ -825,10 +875,11 @@ move standby back and forth.
 Copying changes no show, so that *copy* acts in show mode, as Vim yanks in a
 read-only buffer.
 A key that show mode locks, other than *undo* and *redo*, has the status bar
-say so, until the next key that acts.
+say *Leave show mode to edit*, until the next key that acts.
 The stage window says so in the same way for the keys that it leaves to the
 main window, and for those of *search*, *search_backward*, *help*, and *hint*,
-which it tells belong there.
+and adds how to get the keyboard there: *Click the main window to edit* or
+*Click the main window for search, help, or hint mode*.
 
 The outputs of the show, which *Outputs* below the cue lists in the sidebar
 shows in place of the cue list, take the actions that move through rows as
@@ -889,11 +940,15 @@ A cue that sends only to outputs whose devices failed plays on in silence, so
 that its *State* reads *OUTPUT FAILED* in yellow, on a line of its own under the
 state of a cue that runs, as under *paused* or the time left, and alone for a
 cue that does not, until the device answers.
-An output past the channels of its device, whose pair that overlaps the last
-channel half sounds, does not count, and neither does a video cue whose file
-holds no sound, whose picture still shows.
+The entry of such a cue that runs, in the Active list of the sidebar, reads
+*silent: output failed* in yellow in place of its state.
+An output wholly past the channels of its device counts as one that failed.
+A pair that overlaps the last channel half sounds, so that it does not count,
+and neither does a video cue whose file holds no sound, whose picture still
+shows.
 A cue whose sends were all cleared plays nowhere by choice, and gets no
-warning.
+warning, but the status bar says *Changed cue 6 to play nowhere* where the last
+send was cleared, so that the edit tells what it did.
 *undo* and *redo* select the output that the change touched, or the neighbor
 of one that it took away, except that undoing an addition or a paste selects
 the output that was selected when it was made, as the cursor of Vim returns to
@@ -901,19 +956,25 @@ where a change was made.
 A change to a cue or to the cue lists leaves the outputs for the cue list in
 the same way as a jump, so that *back* returns to the outputs, and the change
 is undone or made again there, as are the changes that follow in the count.
+Undoing or redoing a change to the outputs while the cue list shows shows the
+outputs, and one to the light patch shows the *Light Patch* tab, so that the
+place that changed is in sight.
 Show mode locks all of these but *copy*, and *undo* and *redo* do nothing
 there.
 Every other action that acts on cues, such as *standby*, does nothing, since
 the cue list is out of sight.
 While the outputs show, the status bar names the keys of *add_below*, *edit*,
-and *back*, and gives way, from the first to the last, to the key of
-*change_name*, *forward*, *add_below*, *edit*, GO, Panic, *save*, *back*, and
-the help page, so that
+and *back*, and the key of *change_name* in place of that of *edit* where the
+keymap binds none to it, as the cua keymap does with *F2*.  The bar gives way,
+from the first to the last, to the key of *change_name*, *forward*,
+*add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that
 the key that leaves the outputs outlasts all but the help page.
 There the status bar tells a change to the outputs and none to the cues, so
 that the notice of a cue never takes the room of these keys.
 In every view, the name of the show in the status bar gives way before any of
 these keys do, cut short at its end with an ellipsis, down to 16 columns.
+A notice of a change that does not fit gives up its middle words first, so that
+it keeps the words that tell which cue it names, as in *Undid… cue 6.5*.
 
 # ACTIONS
 
@@ -931,6 +992,12 @@ page.
 	silence, so that the line tells *silent: output failed* for it, as it tells
 	*silent: no output* for a cue that sends to no output the show has, and
 	agrees with the *State* column of the cue list in which cues it tells.
+	For a start, stop, pause, devamp, or GoTo cue the line tells what it does, as
+	in *13 (GoTo 2)* or *25 (start E3 in Effects)*, with the list named only
+	where the target lies in another.
+	While a GoTo cue that has fired waits to put another cue on standby of the
+	list, the line leads with *Standby moves to 5 in 2.9s*, until the GoTo cue
+	acts or stops.
 
 *panic*
 	Panic: fade every playing cue out over one second, and stop the rest.
@@ -949,7 +1016,7 @@ page.
 	Drop the keys typed so far, close the search line, with the selection going
 	back to where the search began, as Escape does there, close an open menu
 	without picking, and take the keyboard out of a text field or drop-down list,
-	as Control+c does in Vim.
+	as Control+c and Control+[ do in Vim.
 	It never touches playback, which is how it differs from Escape, so that it is
 	the key to reach for when no show should stop.
 	It acts in text fields, where a text field that has a selection still copies
@@ -965,19 +1032,24 @@ page.
 	while a closed drop-down list has it, as the key that opens it, unless Enter
 	is bound to *go*, *panic*, or another action that acts in fields, so that a
 	newcomer does not press Space, which is GO.
-	There the hints give way, from the first to the last, to *next_field*, the
-	keys of other places, what Enter does, GO, Panic, *save*, and this key, so
-	that the key that leaves outlasts them all, and GO and Panic outlast
-	what only teaches.
+	There the hints give way, from the first to the last, to *next_field*,
+	*hint*, the keys of other places, what Enter does, GO, Panic, *save*, and
+	this key, so that the key that leaves outlasts them all, and GO and Panic
+	outlast what only teaches.
 	The key that leaves also outlasts the words of the latest change, which
-	are cut at a word instead.
+	are cut at a word instead, and so does what Enter does on a checkbox, a
+	button, or a closed drop-down list.
 	Where no key is bound to it, a text field has Enter hinted as the key that
 	leaves, unless Enter is bound to *go*, *panic*, or another action that acts
 	in fields, which it then does instead.
 	The status bar hints only keys that act where the keyboard is, so that
 	while a text field or a drop-down list has it, it hints no key of
-	*paste_below*, *add_below*, *edit*, or *change_name*, and while a text field
-	has it, none of *undo* or *redo* either, which act in a closed drop-down list.
+	*paste_below*, *edit*, or *change_name*, and while a text field has it,
+	none of *undo*, *redo*, *hint*, or *add_below* either, which act in a closed
+	drop-down list.
+	While the stage window has the keyboard, it hints none of the keys that it
+	leaves to the main window, as listed under the stage window above, and
+	neither does the notice of a change name *undo*.
 
 *next*
 	Select the next cue, move the highlight of an open menu down, or scroll
@@ -1111,6 +1183,11 @@ page.
 	the cues that it hides, and the problem of the first of them that has one,
 	such as *NO FILE*, as that cue does, unless the group runs, so that no broken
 	cue lies out of sight.
+	Unless the group runs, its *State* column also tells how many of the cues
+	that it hides run, as *3 running*, and how many of them are paused, as
+	*1 paused* in yellow above it, so that no cue that plays lies out of sight.
+	Its *State* column also tells the yellow warnings of the cues that it hides,
+	as *OUTPUT FAILED* and *NO LEVELS*, each once.
 	Collapsing is a way to look at the list, as a fold is in Vim: undo leaves it
 	alone, show mode allows it, and the show file keeps it, as *collapsed* in
 	*cinq-show*(5) tells.
@@ -1191,8 +1268,8 @@ page.
 	opens another show or quits.
 	The status bar names the key and where it goes, as in *Control+o: back to
 	Main*, *back to cue 3*, or *back to the outputs*, with the name of a cue
-	list cut short where it is long, while there is a place to go back to, and
-	always while the outputs show.
+	list or cue cut short where it is long, while there is a place to go back to,
+	and always while the outputs show.
 	The back button of the mouse does the same from the main window, unless the
 	help page is open.
 
@@ -1296,8 +1373,10 @@ page.
 	or the letters typed so far, the key of *cancel* as the key that leaves, or
 	Backspace where no key is bound to *cancel*, and the keys of *go* and
 	*panic*.
-	It does nothing while a text field or a drop-down list has the keyboard, which
-	takes the key for typing, or while the stage window has it.
+	It does nothing while a text field has the keyboard, which takes the key for
+	typing, or while the stage window has it.
+	A closed drop-down list, a checkbox, or a button that has the keyboard gives
+	it up when the mode begins.
 
 *pick*
 	Pick the highlighted option of an open menu, as Enter does and as Control+y
@@ -1319,6 +1398,12 @@ page.
 	A count adds that many cues in a row, at most a thousand, as one change
 	that undo takes back, and selects the last of them, as the cursor of Vim
 	goes to the last line that *3o* inserts.
+	The inspector shows its *Basics* tab, so that the new cue has its name and
+	its file in reach.
+	Below a group, or below a cue that a group holds, the cue joins the group,
+	the notice says *in a group*, and the key of *outdent* takes the cue out.
+	The key acts while a closed drop-down list, a checkbox, or a button has
+	the keyboard, and gives the keyboard back to the cue list.
 	The status bar then hints the key of *change_name*, which renames the cue,
 	after the key of *undo*, and gives way to it only after the keys of GO,
 	Panic, *save*, and the help page, when the bar is short.
@@ -1415,6 +1500,9 @@ page.
 *undo*
 	Undo the latest change to the show, or as many of the latest changes as the
 	count, stopping at the oldest.
+	The status bar names the last change that it took back, and says how many
+	changes there were where it took back more than one, as in
+	*Undid 5 changes, the last: added cue 43*.
 	Undoing an addition or a paste, of all the cues that a count made, selects
 	the cue that it went below or above, as the cursor of Vim goes back to
 	where the change was made.
@@ -1426,11 +1514,15 @@ page.
 *redo*
 	Redo the change undone last, or as many changes as the count, stopping at
 	the newest.
+	The status bar tells it as *undo* does.
 
 *open*
 	Open a show that the file chooser of the desktop picks.
 	The show on screen keeps its unsaved changes, as *cinq-show*(5)
 	describes.
+	While the show has no file and no cues, and no field has the keyboard, the
+	status bar hints this key, and the hint gives way right after those of
+	*next_list*, *next_tab*, and *hint*, before any key that acts.
 
 *save*
 	Save the show in its file, or in a file that the file chooser of the
@@ -1444,7 +1536,16 @@ page.
 	Toggle the stage window, which shows the pictures of picture and video
 	cues, between fullscreen and a window, until the next GO that fires such
 	a cue makes it fullscreen again, as *cinq-show*(5) describes.
-	It does nothing while the stage window is closed.
+	While the stage window is closed, it opens the window fullscreen, as a
+	cue that shows on it does, so that the film that runs shows again.
+	While the stage window is closed and a picture or video cue shows on it,
+	the sidebar warns *Stage window closed*, the status bar counts it, and
+	hints this key, which gives way right after those of *go* and *panic*.
+	Both go once the window is back or no such cue runs.
+	While the stage window has the keyboard, the status bar hints this key, as
+	in *F11: fullscreen*, which is the way back to the main window where the
+	fullscreen stage window covers it on a single display, and the hint gives
+	way at the same place.
 ; if darwin
 	Darwin keeps F11 for Show Desktop, a shortcut of Mission Control, so that
 	the key reaches *cinq* only once that shortcut is turned off in the
@@ -1469,9 +1570,13 @@ page.
 Problems with the file show among the warnings in the sidebar, each after
 *config.toml:*, or after *config.toml:3:* for a problem that lies on line 3 of
 the file, and the status bar counts them.
+They come in the order of the file, by line, in the sidebar and on standard
+error, and those that lie on no line come last.
 The sidebar lists at most three warnings, of every kind, and a line below them
 says how many more there are, as in *and 5 more*, while the status bar keeps
 the whole count.
+Where exactly one warning would be left out, the sidebar lists it instead of
+the line *and 1 more*.
 Each time *cinq* reads the file, as it starts and after each change, it writes
 the problems to standard error as well, quoting the lines of the file around
 each problem that lies in a part of it, with that part marked.
@@ -1506,6 +1611,9 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
 - A setting other than *audio_device*, *keymap*, *keymaps*, *keys*,
   *osc_listen*, and *ready_ahead*, and an entry of a table that names no
   action, are ignored, and the rest of the file applies.
+  A setting written below a table, such as *osc_listen* below *keys*, is
+  an entry of that table, and the problem says that it belongs above the
+  first table.
 - An empty string, a key that names no key or that *KEYS* rules out, a
   sequence that starts with a digit, and a value that is not a string are left
   out, and the action takes the other keys listed for it.
@@ -1513,10 +1621,10 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   keymap gave it, and a problem says so, as *go keeps Space* does; an empty
   list, written on purpose, leaves it none.
 - A sequence bound to two actions goes to the one listed first under
-  *ACTIONS*, and the other goes without it, unless the two act in different
-  places: *pick* and *close_menu* act only in an open menu, so a sequence may
-  be bound to one of them and to an action that acts on the cue list, as
-  *Control+y* is to *pick* and to *scroll_up* in the vi keymap.
+  *ACTIONS*, and the other loses it, as the problem tells, unless the two act
+  in different places: *pick* and *close_menu* act only in an open menu, so a
+  sequence may be bound to one of them and to an action that acts on the cue
+  list, as *Control+y* is to *pick* and to *scroll_up* in the vi keymap.
   A sequence that begins a longer one, as *g* begins *g g*, leaves the longer
   one impossible to type.
   A key bound by itself to *go* or *panic* makes every other sequence that

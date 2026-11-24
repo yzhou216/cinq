@@ -15,7 +15,10 @@ mod place;
 
 use std::{collections::HashMap, path::Path, time::Duration};
 
-use kira::{Tween, sound::PlaybackState};
+use kira::{
+    Tween,
+    sound::{FromFileError, PlaybackState, streaming::StreamingSoundHandle},
+};
 
 use super::{
     Fault,
@@ -30,6 +33,11 @@ pub(super) use place::{Target, clipped};
 /// Time a sound takes to reach a level the workspace asks for, which
 /// outlasts a tick so that fades move smoothly from one tick to the next
 const GLIDE: Duration = TICK.saturating_mul(2);
+
+/// Seconds of its file that a sound may leave unplayed and still have ended
+/// as it should, since the position of a sound is where its device took it
+/// as its last buffer began, which lies a buffer short of its end
+const ENDED: f64 = 1.0;
 
 /// Mixers of the devices, by their keys, or why each could not open
 pub(super) type Mixers = HashMap<Key, Result<Mixer, Fault>>;
@@ -232,16 +240,40 @@ impl Voice {
     /// would hold it still.
     pub(super) fn heard(&self, active: &Active, plays: impl Fn(&Key) -> bool) -> Option<Command> {
         let clip = active.sound()?;
-        let sound = &self
-            .plays
-            .iter()
-            .find(|play| play.place.as_ref().is_none_or(|place| plays(&place.key)))?
-            .sound;
+        let sound = self.leading(plays)?;
         (sound.state() != PlaybackState::Stopped).then(|| Command::Heard {
             cue: active.id,
             run: active.run,
             played: clip.played_at(sound.position(), active.played()),
         })
+    }
+
+    /// Returns whether the sound of the run has stopped before its end,
+    /// which it does when its file ends sooner than the header said, or
+    /// cannot be read on, while its device plays on.  A sound whose clip
+    /// loops has no end to reach, so that any stop is early, and others stop
+    /// early when more than [`ENDED`] seconds of the file lie ahead of them,
+    /// `ends` being where in the file the sound should end.  A device that
+    /// stalls or fails keeps its sounds as they were, and a sound that the
+    /// operator, a panic, or a fade ends leaves its voice before this looks,
+    /// so that none of them count.
+    pub(super) fn cut_short(&self, clip: Clip, ends: f64, plays: impl Fn(&Key) -> bool) -> bool {
+        self.leading(plays).is_some_and(|sound| {
+            sound.state() == PlaybackState::Stopped
+                && (clip.lasts().is_none() || ends - sound.position() > ENDED)
+        })
+    }
+
+    /// Returns the first sound of the run whose device `plays` says still
+    /// plays, which the clock of the run follows
+    fn leading(
+        &self,
+        plays: impl Fn(&Key) -> bool,
+    ) -> Option<&StreamingSoundHandle<FromFileError>> {
+        self.plays
+            .iter()
+            .find(|play| play.place.as_ref().is_none_or(|place| plays(&place.key)))
+            .map(|play| &play.sound)
     }
 
     /// Stops the sounds, which their mixers fade out as quickly as kira's

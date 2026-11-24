@@ -167,9 +167,11 @@ keys rain
 keys -k Tab
 keys sounds/rain.flac
 keys -k Return
+sleep 1
 keys l
 # Adds an output below the selected one, named $1, on the channels $2
 output() {
+  sleep 1
   keys o
   keys S
   keys "$1"

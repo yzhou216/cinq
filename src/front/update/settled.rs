@@ -6,9 +6,13 @@
 
 use super::{App, Measured, Message};
 use crate::{
-    back::{Command, Edit, OutputEdit},
+    back::{Command, OutputEdit, PatchEdit},
     front::Tab,
 };
+
+/// What the status bar tells when an instrument added would share an address
+/// because the last one holds the last address of the last universe
+const NO_ADDRESS_LEFT: &str = "The light patch has no address left for another instrument";
 
 impl App {
     /// Applies a message that only changes state
@@ -122,10 +126,13 @@ impl App {
                 stage: self.stage.with_keyboard_in(window),
                 ..self
             },
-            // The File field applies each key, so the name follows the path
-            // as it is typed
-            Message::Edit(id, Edit::File(file)) => self.with_file(id, file),
             Message::Edit(id, edit) => self.send(Command::Edit(id, edit)),
+            Message::Patch(PatchEdit::Add) => {
+                let held = self.workspace.patch().len();
+                let app = self.send(Command::Patch(PatchEdit::Add));
+                let remark = (app.workspace.patch().len() == held).then_some(NO_ADDRESS_LEFT);
+                Self { remark, ..app }
+            }
             Message::Patch(edit) => self.send(Command::Patch(edit)),
             Message::FileChosen(id, path) => {
                 let file = self.workspace.file_name_of(&path);
@@ -148,7 +155,6 @@ impl App {
                 tab: self.tab.stepped(offset),
                 ..self
             },
-            Message::NewKind(new_kind) => Self { new_kind, ..self },
             // Guarded arms above that do not match, and messages that need
             // no state change, leave the state as it is
             _ => self,

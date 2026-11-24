@@ -19,11 +19,14 @@ mod tests;
 
 use std::{
     collections::BTreeSet,
-    mem,
+    io, mem,
     sync::{Mutex, MutexGuard, PoisonError},
 };
 
 use crate::held;
+
+/// Text of the kind that a system error without a kind of its own has
+const UNCATEGORIZED: &str = "uncategorized error";
 
 /// Most distinct lines that go out
 const LIMIT: usize = 1000;
@@ -81,4 +84,31 @@ pub fn once(warning: &str) {
 /// leaves as it was
 fn locked() -> MutexGuard<'static, Warnings> {
     WARNINGS.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Returns the words of `error` for the screen: the text of its kind, as
+/// `permission denied`, where the operating system gave it, since its own
+/// message adds the error number, and otherwise its own message, since an
+/// error of cinq's makes the kind `uncategorized error` or too general.  An
+/// error of the system that has no kind of its own, as a missing device or
+/// an unsupported address family has not, gives the message of the system
+/// without its number, in lower case.
+pub fn words(error: &io::Error) -> String {
+    let kind = error.kind().to_string();
+    match error.raw_os_error() {
+        None => error.to_string(),
+        Some(_) if kind != UNCATEGORIZED => kind,
+        Some(_) => {
+            let message = error.to_string();
+            let message = message
+                .rsplit_once(" (os error ")
+                .map_or(message.as_str(), |(message, _)| message)
+                .trim_end_matches('.');
+            let mut letters = message.chars();
+            letters
+                .next()
+                .map(|first| first.to_lowercase().chain(letters).collect())
+                .unwrap_or_default()
+        }
+    }
 }

@@ -21,39 +21,47 @@ use iced::{
 use super::{
     focus_order::move_focus, reveal_focused::reveal_focused, select_focused::select_focused,
 };
-use crate::front::{
-    App, Caret, Focus, Message, Tab,
-    keymap::{Action, KeyPress, Press},
-    view,
+use crate::{
+    back::Kind,
+    front::{
+        App, Caret, Focus, Message, Tab,
+        keymap::{Action, KeyPress, Press},
+        view,
+    },
 };
 
 /// What the status bar tells when show mode drops a key that changes the show
-const LOCKED: &str = "Show mode does not allow edits";
+const LOCKED: &str = "Leave show mode to edit";
 
 /// What the status bar tells when the stage window has the keyboard, which
-/// leaves the keys that change the show to the main window
-const STAGE: &str = "Edits act in the main window";
+/// leaves the keys that change the show to the main window, and how to give
+/// it the keyboard
+const STAGE: &str = "Click the main window to edit";
 
 /// What the status bar tells when the stage window has the keyboard and a key
-/// of search, help, or hint mode reaches it, which belong to the main window
-pub(super) const MAIN_WINDOW: &str = "Search, help, and hint mode act in the main window";
+/// of search, help, or hint mode reaches it, which belong to the main window,
+/// and how to give it the keyboard
+pub(super) const MAIN_WINDOW: &str = "Click the main window for search, help, or hint mode";
 
 impl App {
     /// Returns why a key of `action` does nothing now, when it is one that
-    /// changes the show or names a cue.  Copying and undoing carry on in show
-    /// mode, so that they stay unremarked there, and the help page covers the
-    /// cues, so that no key is refused for them.
-    fn refusal(&self, action: Action) -> Option<&'static str> {
-        let changes = action.edits_the_show()
-            || matches!(
-                action,
-                Action::Edit | Action::EditStart | Action::ChangeName
-            );
-        let locked = changes && !matches!(action, Action::Copy | Action::Undo | Action::Redo);
+    /// changes the show or names a cue, or one that the stage window leaves
+    /// to the main window.  Copying and undoing carry on in show mode, so
+    /// that they stay unremarked there, and the help page covers the cues,
+    /// so that no key is refused for them.  The hints of the status bar ask
+    /// [`Action::stays_in_main_window`] too, so that they never teach a key
+    /// that this refuses.
+    pub(in crate::front) fn refusal(&self, action: Action) -> Option<&'static str> {
+        let locked = action.changes_the_show()
+            && !matches!(action, Action::Copy | Action::Undo | Action::Redo);
         match (self.help, self.stage.has_keyboard()) {
+            (_, true) if action.stays_in_main_window() => Some(if action.changes_the_show() {
+                STAGE
+            } else {
+                MAIN_WINDOW
+            }),
             (true, _) => None,
-            (false, true) => changes.then_some(STAGE),
-            (false, false) => (!self.editable() && locked).then_some(LOCKED),
+            (false, _) => (!self.editable() && locked).then_some(LOCKED),
         }
     }
 
@@ -65,7 +73,9 @@ impl App {
         let across = outcome.across();
         let app = Self {
             keys: outcome.pending,
-            clipped: self.clipped.filter(|_| outcome.action.is_none()),
+            clipped: self
+                .clipped
+                .filter(|_| outcome.action.is_none_or(|(action, _)| action.only_moves())),
             remark: self.remark.filter(|_| outcome.action.is_none()),
             unapplied: self.unapplied.filter(|_| outcome.action.is_none()),
             ..self
@@ -91,19 +101,12 @@ impl App {
             Some((action, _)) if repeat && action.acts_once_a_press() => (app, Task::none()),
             // Cue list is out of sight from the stage window, so that the keys
             // that change the show or the clipboard are left to the main window,
-            // and show mode locks the show, so that the status bar says why
+            // as are the page, the search line, and hint mode, which would open
+            // out of sight under a fullscreen stage window, and show mode locks
+            // the show, so that the status bar says why
             Some((action, _)) if app.refusal(action).is_some() => (
                 Self {
                     remark: app.refusal(action),
-                    ..app
-                },
-                Task::none(),
-            ),
-            // Page opens in the main window, which the fullscreen stage
-            // window may cover, so that the page would open out of sight
-            Some((Action::Help | Action::Hint, _)) if app.stage.has_keyboard() => (
-                Self {
-                    remark: Some(MAIN_WINDOW),
                     ..app
                 },
                 Task::none(),
@@ -139,7 +142,15 @@ impl App {
                 None => (app, Task::none()),
             },
             Some((action, count)) if !app.help || action.acts_over_help() => {
-                app.handled(action.message(count))
+                // The list that held the keyboard would swallow the letters
+                // of a label, and the key of a new cue would find it there again
+                let leaves = app.held && action.leaves_lists();
+                let (app, task) = app.handled(action.message(count));
+                if leaves {
+                    (app, operate(focusable::unfocus()).chain(task))
+                } else {
+                    (app, task)
+                }
             }
             _ => (app, Task::none()),
         }
@@ -155,6 +166,17 @@ impl App {
             (self, Task::none())
         };
         (app, Task::batch([reveal, operate(focusable::unfocus())]))
+    }
+
+    /// Takes the kind that a pick chose for the cues that the key of adding
+    /// makes.  A pick by key leaves the keyboard on the list, from which that
+    /// key would do nothing, so that the keyboard goes back to the cue list,
+    /// as it does when Enter leaves a text field.  A pick by the pointer gives
+    /// the list no keyboard, so that the same step changes nothing.  The state
+    /// of the interface does not hold the keyboard yet while the menu hands it
+    /// back, so that this does not ask for it.
+    pub(super) fn with_new_kind(self, new_kind: Kind) -> (Self, Task<Message>) {
+        (Self { new_kind, ..self }, operate(focusable::unfocus()))
     }
 
     /// Editing the name shows the Basics tab, which holds the Name field, or

@@ -51,13 +51,16 @@ pub(super) fn view(app: &App) -> Option<Element<'_, Message>> {
 }
 
 /// Returns what can follow the keys typed so far, each action once with all
-/// its keys, as the help page lists them, and its description
+/// its keys, as the help page lists them, and its description.  The line of
+/// the key typed again, such as `g` after `g`, comes first, since it is the
+/// one that the doubled binding most often means.
 fn listed(app: &App) -> Vec<(String, String)> {
     let rows = if app.outputs_shown {
         Rows::Outputs
     } else {
         Rows::Cues
     };
+    let count = app.config.keymap.pending_count(&app.keys);
     app.config
         .keymap
         .continuations(&app.keys)
@@ -65,10 +68,18 @@ fn listed(app: &App) -> Vec<(String, String)> {
         .into_iter()
         .map(|((action, operator), group)| {
             let description = operator.map_or_else(
-                || action.description_in(rows),
-                |operator| operator.over(action, rows),
+                || action.description_counted(rows, count),
+                |operator| operator.over(action, rows, count),
             );
-            (group.map(|(keys, ..)| shown(keys)).join(", "), description)
+            let group: Vec<_> = group.collect();
+            let repeats = operator.is_none()
+                && group
+                    .iter()
+                    .any(|&(keys, ..)| matches!(keys, [key] if app.keys.last() == Some(key)));
+            let keys = group.into_iter().map(|(keys, ..)| shown(keys)).join(", ");
+            (!repeats, (keys, description))
         })
+        .sorted_by_key(|&(later, _)| later)
+        .map(|(_, line)| line)
         .collect()
 }

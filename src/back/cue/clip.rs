@@ -224,6 +224,21 @@ impl Cue {
                 .is_some_and(|(start, end)| self.section(start, end).length() <= 0.0)
     }
 
+    /// Returns the loop that the cue plays, as seconds from its start to its
+    /// end in the file, where that differs from the times typed, because a
+    /// typed time lies outside the clip, so that the operator can be told
+    /// what plays instead
+    pub fn loop_played(&self) -> Option<(f64, f64)> {
+        let (start, end) = self.span().filter(|_| self.loops())?;
+        let section = self.section(start, end);
+        let cut =
+            |typed: Option<f32>, played: f64| typed.is_some_and(|typed| f64::from(typed) != played);
+        (section.length() > 0.0
+            && (cut(self.loop_start.time(), section.start)
+                || cut(self.loop_end.time(), section.end)))
+        .then_some((section.start, section.end))
+    }
+
     /// Returns where the clip of the cue starts and ends in its file, once
     /// the file has loaded, when the clip starts before it ends
     fn span(&self) -> Option<(f64, f64)> {
@@ -269,6 +284,13 @@ impl Cue {
             Media::Loaded { sound, .. } => sound.filter(|&sound| self.start.value() < sound),
             _ => None,
         }
+    }
+
+    /// Returns where in its file the sound of the cue should end for `clip`,
+    /// its clip: at the end of the clip, or at the end of the sound where
+    /// that comes first, as that of a video file can before its picture
+    pub(in crate::back) fn sound_ends(&self, clip: Clip) -> Option<f64> {
+        self.sound().map(|sound| clip.end.min(f64::from(sound)))
     }
 
     /// Returns whether the clip of the cue has sound to play: that of an

@@ -59,6 +59,294 @@ Major changes and improvements in each release of cinq, newest first.
   bound, and cinq tries again every two seconds.  It also shows the latest
   command that did nothing, such as one for a cue number that no cue has, with
   the address that it came from, until a command acts.
+- Where exactly one warning would be left out of the sidebar, it lists that
+  warning in place of `and 1 more`.
+- The header of the inspector keeps to one line, so that a long cue name, or a
+  sentence of trouble beside the title such as `GO skips this cue: file not
+  found`, no longer pushes the Notes and Then rows out of view at 1024 by 768
+  pixels: the title ends in an ellipsis where the room runs out, and where even
+  a title of 16 columns leaves too little room, the sentence does.
+- A message of the status bar is no longer cut to a stub such as `Added cue…` in
+  a narrow window: it keeps at least three words or gives its room to the keys.
+  A notice of a change that does not fit gives up its middle words and keeps the
+  cue that it names, as `Undid: changed… cue 6.5`.
+- A setting written below a table of `config.toml`, as under `[keys]`, is
+  reported as one that belongs above the first table, in place of `no action is
+  named`.
+- In the cua keymap, where no key cancels, `Tab: next field` stays on the status
+  bar beside the latest notice while a check box, a closed list, or the empty
+  File field has the keyboard, and the empty File field no longer says `Enter:
+  leave` beside `Enter: choose a file`.  The bar also names the keys of the
+  search line, `Backspace: leave` while it is empty and `Enter: find` once text
+  is typed, and `F2: rename` while the outputs show.
+- While the show has no file and no cues, the status bar names the key that
+  opens a show, `Control+l: open` in the vi keymap and `Control+o: open` in the
+  cua keymap.
+- Picking a kind in the New cue list with the keys gives the keyboard back to
+  the cue list, so that the key that adds a cue acts at once in both keymaps,
+  where it did nothing and the cua keymap had no key to leave the list.
+- A save that fails is answered on the status bar, in place of the stale notice,
+  as `Cannot save: permission denied`, and in the sidebar, as `Cannot save
+  storm.cinq.toml: permission denied`, without the path of the temporary file or
+  the system error number, which go to standard error.
+- A show whose output lacks a field fails to open with a warning that names the
+  output by its place, as `` line 5, column 1: output 2: missing field
+  `channels` ``, and cinq-show(5) says that every output needs `channels`.
+- A network message that failed is told for a cue, as the other cue warnings
+  are, such as `3 Send: message not sent: connection refused`, and selects the
+  cue when pressed, in place of a red line that named only the destination.  The
+  cue is the first that names the destination, and its inspector shows it.
+  Standard error keeps the destination, with its scheme, and the system error.
+- In the vi keymap, `Control+[`, which Vim treats as Escape, cancels beside
+  `Control+c`: it leaves a text field, closes the search line and a menu, drops
+  the keys typed so far, and leaves hint mode.  A `0` that starts a sequence is
+  dropped, as in Vim, where it is a motion, and no longer waits as a count of
+  zero; a `0` after another digit still counts, as in `10j`.
+- A text field, the search line included, takes `Control+w` and `Control+u` in
+  both keymaps, deleting the word before the caret and everything before it, as
+  in the Insert mode of Vim, where the search line took them at the end of its
+  text only.
+- Every two seconds cinq looks at the size and the modification time of each
+  file that a cue plays, not only of files that failed, and reads again one that
+  has changed or gone, so that a file that disappears while the show is open
+  warns before its cue fires, with `file not found`, and a replaced file plays
+  for its new length.  A failure that only playing finds, such as a PNG cut
+  short, no longer clears within two seconds: it stays until the file changes.
+  A cue that runs is left alone.
+- A sound that stops while its cue still runs, as one does whose file is cut
+  short, goes away, or holds more than two channels, no longer leaves the cue
+  green and silent: the cue turns `BROKEN` with `its sound stopped early`, the
+  sidebar warns, and standard error says so once.  Only a sound that stops with
+  more than a second left, or a loop that stops at all, while its device plays
+  on counts, so a stalled device, a fade, a stop, Panic, and a devamp never do.
+- The reason that a file cannot play is told in plain words: `not a sound file
+  that cinq can play` in place of `unsupported feature: core (probe): no
+  suitable format reader found`, `is cut short, or is not an MP4 file` in place
+  of `holds no H.264 video` for an MP4 file whose index is missing, `holds H.264
+  video of a profile other than Baseline, Main, or High` in place of `holds
+  H.264 video in a profile that cannot be decoded`, and `permission denied` for
+  a file that cannot be read, without the system error number.
+- A cue that the keys for moving up and down take into or out of a group is told
+  so, as `Moved cue 8 into a group`, and so is the undo of that move.  A cut or
+  a delete of a cue that plays, or a new file for it, says that the cue stopped,
+  as `Cut cue 2, which stopped`, so that a silent house has a named cause;
+  nothing asks first, and undo still brings back the cue and not its sound.
+- The hint of the key to paste stays in the status bar after a cut or a copy
+  while only the selection moves or the list switches, so that a cut in one list
+  and a paste in the other keeps it, and goes at the first key that does
+  anything else.
+- An undo or a redo with a count that turns more than one change tells how many,
+  as `Undid 5 changes, the last: added cue 43`, where it looked like a single
+  undo.
+- The key of `fullscreen`, `F11` by default, opens the stage window, fullscreen,
+  when it is closed and the show holds a picture or video cue, so that a film
+  that runs shows again, where it did nothing.  While the window is closed and
+  such a cue shows on it, the sidebar warns `Stage window closed`, and the
+  status bar counts the warning and hints `F11: open stage`; both go once the
+  window is back or no such cue runs.
+- While the stage window has the keyboard, which each GO that fires a picture or
+  video cue gives it on a desktop that grants it, the status bar hints only keys
+  that act there, and `F11: fullscreen`, which leaves a fullscreen stage window
+  that covers the main window on a single display, and no longer names `u:
+  undo`.  A key that belongs to the main window is answered with `Click the main
+  window to edit` or `Click the main window for search, help, or hint mode`.
+- A path typed into the File field of a cue applies once the field is left, as a
+  typed level does, where the first key stopped a cue that plays and every
+  half-typed path read as a file that does not exist.  It is one change to undo,
+  and the notice `Changed the file of cue 2, which stopped` follows it.  The
+  address of an instrument applies once its field is left too, so that a text
+  that is no address keeps the old one.
+- The Message field of a network cue sits in the wide column of the Basics tab,
+  below the destination, and Notes takes the narrow column, so that a message of
+  about 36 columns shows whole at 1024 by 768 pixels; Tab follows.  The empty
+  Destination field reads `host:port or udp://host:port`, and cinq-show(5) and
+  the tutorial say that a UDP message reports no failure, since nothing answers
+  it.
+- Every network cue whose destination has a send problem reads `SEND FAILED` in
+  yellow in its State column, as for `OUTPUT FAILED`, also while it is only
+  next, until a message gets there.  The sidebar keeps one line for each
+  destination.
+- A destination whose host holds a colon, a bracket, or a slash, such as an IPv6
+  address, a URL, or a second port, is refused as it is typed, as `eos.local`
+  without a port is: the field turns red and the cue reads `NO DESTINATION`,
+  where it was found only at GO.  A message with a double quote left open, as in
+  `/scene "Act 1`, is refused likewise, and the cue reads `NO MESSAGE`.
+- A cue that sends only to an output whose channels all lie past those of its
+  device, as channel 7 of a card with two, reads `OUTPUT FAILED`, and the header
+  says `(silent: output failed)`, as for a missing device; a pair with one
+  channel left still half sounds and stays out.  The Active entry of a running
+  cue whose every send goes to a failing output reads `silent: output failed` in
+  yellow in place of its state.
+- A fault on one output no longer widens every send on the Levels tab: only the
+  entry whose name carries the fault words, such as `(not found)`, is wider, so
+  that a Dante rig with one failed output still shows as many sends as before.
+  An output past the single channel of a mono device reads `Past its 1 channel`,
+  not `Past its 1 channels`.
+- Clearing the last send of a cue says `Changed cue 6 to play nowhere`, where it
+  said `Changed where cue 6 plays`, so that the operator learns what the edit
+  did.
+- A warning in the sidebar whose words hold a long device ID, such as
+  `alsa:surround71:CARD=PCH,DEV=0`, wraps within the ID where it does not fit,
+  so that `DEV=0` and `DEV=1` can be told apart at 1024 pixels.  The warning
+  about a default device that is not found names its ID, as `Default device
+  (alsa:nonexistent-main): not found`, and the Default device list shows it in
+  yellow, not in the gray of a disabled list.
+- A remote `/cue/{number}/start` for a cue that cannot play, such as one with no
+  file or no destination, is reported as an ignored command, `OSC from
+  192.168.1.5: cue 4 cannot play: no destination as host:port`, in the sidebar
+  and on standard error, as one for a number that no cue has is.  The problem of
+  an unreadable `osc_listen` is `osc_listen must be IP:port, as
+  127.0.0.1:53000`, short enough to show its example at 1024x768.
+- The `State` column keeps the `NEXT` mark of the standby cue while that cue
+  runs, with `looping` or the time left below it.
+- The `State` column of a collapsed group counts the cues that it hides and that
+  run, as `3 running`, and those that are paused, as `1 paused`, and tells their
+  yellow warnings, as `OUTPUT FAILED`, `SEND FAILED`, `NO OUTPUT`, `NO LEVELS`,
+  and `UNPATCHED`, each once, so that folding a group hides no cue that plays,
+  plays in silence, or sets nothing.
+- The `GO fires` line of the transport tells what each start, stop, pause,
+  devamp, or GoTo cue of the chain does to its target, as `13 (GoTo 2)` or `25
+  (start E3 in Effects)`, naming a list only for a target in another, and leads
+  with `Standby moves to 5 in 2.9s` while a GoTo cue that has fired waits out
+  its pre-wait.
+- The target menu of a fade, start, stop, pause, devamp, or GoTo cue says "no
+  cue to choose" in place of "choose a cue" while the list holds no cue that it
+  can name.
+- Adding a cue, by key or by button, shows the Basics tab of the inspector,
+  where the tab of an earlier cue stayed, so that the Tab keys that the help
+  page teaches reach the File field of the new cue from any tab, where a path
+  typed after an edit on Time & Loops or Levels ran as keys.
+- The notice of a cue added below a group, or below a cue that a group holds,
+  says `Added cue 6 in a group`, as for a move into a group, and cinq(5) tells
+  that the key of outdent takes it out.
+- The hint of what Enter does on a checkbox, a button, or a closed drop-down
+  list (`Enter: open`) outlasts the words of a change, as the key that leaves
+  does, so that the drop-downs reached right after an edit still hint it.  The
+  hint of going back or forward cuts a long cue number, or the name that stands
+  for a blank one, as it cuts a long cue list name, so that it does not push the
+  other hints out of the bar.
+- While a closed drop-down list, a checkbox, or a button has the keyboard, the
+  keys of hint mode and of adding a cue act, as those of undo and redo do, and
+  each gives the keyboard back to the cue list, so that labels take letters and
+  the new cue has the keys; the cua keymap, which has no key to leave a list,
+  needs no run of Tabs.  The status bar hints them there too.
+- Light output that cannot go out is told: while the patch has an instrument and
+  the computer has no IPv4 network, the socket cannot be opened, or every send
+  of a round fails, the sidebar lists `Light output: no network interface` or
+  `Light output: not sent: <reason>` and counts it, and standard error says it
+  once; it goes once a round gets a packet out.
+- The Levels tab of a light cue has a `Now` column with the level that each
+  instrument has on stage, as the Light Patch tab has, which goes first where
+  the width is short.  In both tables the text of a name and of a level sits on
+  the middle of its row, as the fields do, and a level field stays beside its
+  name.
+- The Time & Loops tab of a light cue says that the Duration on the Basics tab
+  is the fade time.  The notice of a refused light level or address leads with
+  its range, as `Not applied: 0 to 100, or empty for unchanged`, so that the
+  status bar keeps it where the window is narrow.  Adding an instrument to the
+  light patch after the last address of the last universe tells in the status
+  bar that the patch has no address left.
+- A time of more than three parts, such as `1:0:0:5`, is refused instead of
+  counting as 60 hours and 5 seconds, and the notice says `Changed the pre-wait
+  of cue 4 to zero`, where it only said that the field changed.  A wait ahead of
+  a cue, or of a GoTo that moves standby, reads as a clock from a minute on, as
+  `in 1:15.0`, like the time left of a running cue.  An audio or video cue that
+  starts at or past the end of its file reads `starts past the end of its file`,
+  where it read "starts at or after its end".
+- A level field takes `-inf` as -60 dB, silence, and a send field, or the field
+  of the new cues of an output, takes `off` as it takes an empty field, which
+  shows `off`.  An empty level field of an audio, video, or fade cue says `Not
+  applied: type a level, -60 to +12 dB`.  The notice of a refused channel map
+  names the form `1,3` along with `1-2`, and that of a refused send level says
+  that an empty field means no send.
+- Undo and redo of a move of standby select the cue that standby is on, in its
+  cue list.  Undo and redo of a change to the outputs or the light patch show
+  the place that changed: the outputs, with the touched output selected, or the
+  Light Patch tab, where the cue list showed.
+- The box that lists the keys that can follow, such as after `g` in the vi
+  keymap, puts the line of the key typed again first, so that `gg` heads `gj`
+  and `gk`.  After a count and an operator such as `2d`, it says how far the
+  motion reaches (`Cut the selected cue and the next 6`, or `to row 3` for `gg`
+  and `G`).
+- In the vi keymap, a zero typed where the count after an operator would start,
+  as in `d 0 j`, drops the operator, as a zero at the start of a sequence does,
+  where it kept the operator waiting and then cut two rows.
+- The help page of a keymap that binds no sequence of keys, such as CUA, does
+  not tell how to type one, and the row of the previous inspector tab says that
+  the key goes back as many tabs as counted.
+- A key bound to two actions in `config.toml` is a problem with a line, as every
+  other problem is: the sidebar reads `config.toml:4:` and the terminal marks
+  the entry of the action that goes without.  The problem says which action
+  keeps the key: `F9` is bound to both go and next, so go keeps it and next
+  loses it.  Problems come out in the order of the file, by line, in the sidebar
+  and on standard error, those that lie in no line last.
+- The key of the next or previous match, pressed before any search, says that
+  there is no previous search, where it said that no cue matches.
+- A paste into another show tells what that show could not take, as `Pasted 3
+  cues, dropped 2 sends and 1 target`, with the key of undo, only when it
+  dropped something: a send whose output has no namesake there, or a target
+  outside the cues pasted.
+- The Target column of a start, stop, pause, devamp, GoTo, or fade cue names the
+  cue list of a target that lies in another list, as `9 in Effects`, where it
+  gave the bare number, which could be taken for a cue of the same list.  The
+  entry of a running fade or devamp cue in the Active list names its target
+  after the time, as `0:04.0 left, fades 1`, so that two running fades tell
+  apart, and leaves the words out where the name would not fit whole.
+- The warning of a network cue whose message leaves a double quote open, and
+  the line above its inspector, say so: `OSC message leaves a double quote
+  open`.
+- The Levels tab of a light cue lists an instrument that the cue names and the
+  patch lacks, as `99 (unpatched)`, after those of the patch, so that its level
+  can be read and cleared, which puts an `UNPATCHED` cue right.
+- A show file that cannot be read, as one without permission or a directory, is
+  told in the sidebar as `Cannot open x.cinq.toml: permission denied`, without
+  the error number, and standard error holds the whole error with the path, as
+  for a failed save.
+- The box of the keys that can come next counts on the doubled line too: after
+  `3d` it reads `Cut the selected cue and the next 2` for `d`, as `3dd` cuts
+  three cues, where it ignored the count.
+- An `osc_listen` that names a host, as `localhost:53000`, reads `osc_listen
+  must be IP:port, not a host name`.  A packet of more than 32 messages shows
+  the dropped rest in the sidebar as well as on standard error, and a rare
+  failure to listen reads as the text of the system.
+- A paste into another show also counts the light cues that name instruments
+  which its patch lacks, as `Pasted 3 cues, 2 unpatched`.
+- A key that show mode locks has the status bar say `Leave show mode to edit`,
+  which names the way out, where it said `Show mode does not allow edits`.  The
+  notice of an edit to an output leaves out `the output`, as `Changed the
+  channels of Right`, so that the name survives where the bar cuts the notice at
+  1024 pixels.
+- The notice that a cue plays nowhere, as `Changed cue 2 to play nowhere`, stays
+  whole on a tight bar, ahead of the keys that teach, such as what Enter does in
+  a checkbox and the key that takes the change back.
+- The Levels tab of a light cue, while the light patch holds no instrument, says
+  to add one on the Light Patch tab, where it only said that the patch is empty.
+- The Target column of a light cue counts every instrument that the cue sets, as
+  the Levels tab lists them, so that a cue that names only an instrument that
+  the patch lacks reads `1 instrument` beside `UNPATCHED`.
+- The State column of a control cue that names itself, or a group for a fade or
+  devamp cue, reads BAD TARGET, and a start cue inside the group that it starts
+  reads IN TARGET, where both read NO TARGET beside a Target column that held a
+  number.  NO TARGET stays for a cue that names none.
+- A network cue whose destination has a port that is not a number from 1 to
+  65535, as `127.0.0.1:99999`, reads `BAD PORT` and says so in the sidebar,
+  where it read `NO DESTINATION`.
+- The header of the Time & Loops tab says where the loop that plays differs from
+  the one typed, in the warning color, as `Loop plays from 0:01.0 to 0:08.0`
+  where a loop time lies outside the clip, which was silent.  The tab of a wait
+  cue says that the Duration on the Basics tab is how long it waits, and that of
+  a fade cue that it is the fade time.
+- A cue name or notes with a line break or a tab in a show file read on one line
+  in the title of the transport, its notes line, and the inspector, where the
+  second line of a name was lost without an ellipsis and the notes showed gaps
+  and a missing-glyph box.
+- Hint mode also leaves when a warning comes or goes, since the sidebar then
+  moves the places that its labels stand beside.
+- The delays of the `GO fires` line read as a clock from a minute on, as
+  `+1:10.0`, where they read `+70.0s`, as a wait ahead of a cue does.
+- A system error that has no kind of its own, as `no such device or address`,
+  reads in the words of the system, without its error number, in the sidebar
+  and in the problems of cues, where it read `uncategorized error`.
 
 ## v0.1.6
 

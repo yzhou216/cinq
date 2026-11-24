@@ -5,7 +5,7 @@
 //! Tests of messages going out over loopback
 
 use std::{
-    collections::BTreeSet,
+    collections::BTreeMap,
     io::{ErrorKind, Read},
     iter,
     net::{TcpListener, TcpStream, UdpSocket},
@@ -14,7 +14,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use super::{Network, udp_socket};
+use super::{Network, ipv4_address, udp_socket};
 use crate::back::osc::{Destination, Outgoing, framed};
 
 /// Longest that a test waits, which only a broken test reaches
@@ -111,6 +111,14 @@ fn messages_to_a_host_name_go_to_its_ipv4_address() {
 }
 
 #[test]
+fn a_host_that_cannot_be_found_is_told_in_few_words() {
+    let error = ipv4_address("no-such-host.invalid:9000").unwrap_err();
+    assert_eq!(error.to_string(), "cannot find the host");
+    let error = ipv4_address("no port").unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::InvalidInput);
+}
+
+#[test]
 fn udp_messages_go_out_as_one_datagram_each() {
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     socket.set_read_timeout(Some(PATIENCE)).unwrap();
@@ -140,7 +148,10 @@ fn failure_to_reach_a_destination_shows_until_a_message_gets_there() {
     settled(&network);
     let problems = network.problems(&named);
     assert_eq!(problems.len(), 1);
-    assert!(problems[0].starts_with(&format!("Network cue to {address}: ")));
+    assert_eq!(
+        problems[0].1, "message not sent: connection refused",
+        "the words without the destination or the error number"
+    );
     let listener = TcpListener::bind(address).unwrap();
     network.send(message(destination, 6));
     assert_eq!(frame(&listener), framed(&[6; 4]));
@@ -172,11 +183,9 @@ fn message_that_waited_past_its_second_is_dropped_rather_than_sent_late() {
     settled(&network);
     let problems = network.problems(&named(&destinations));
     assert_eq!(problems.len(), 2);
-    assert!(
-        problems
-            .iter()
-            .all(|problem| problem.ends_with(": dropped rather than sent more than a second late"))
-    );
+    assert!(problems.iter().all(|(_, problem)| {
+        problem.ends_with(": dropped rather than sent more than a second late")
+    }));
     assert!(socket.recv(&mut [0; 16]).is_err());
     listener.set_nonblocking(true).unwrap();
     assert!(
@@ -191,8 +200,8 @@ fn udp_messages_may_go_to_a_broadcast_address() {
     assert!(udp_socket().unwrap().broadcast().unwrap());
 }
 
-fn named(destinations: &[Destination]) -> BTreeSet<String> {
-    destinations.iter().map(ToString::to_string).collect()
+fn named(destinations: &[Destination]) -> BTreeMap<String, ()> {
+    destinations.iter().map(|to| (to.to_string(), ())).collect()
 }
 
 #[test]
@@ -210,7 +219,7 @@ fn warning_of_a_destination_that_no_cue_names_any_more_goes_away() {
             .len(),
         1
     );
-    assert!(network.problems(&BTreeSet::new()).is_empty());
+    assert!(network.problems(&BTreeMap::<String, ()>::new()).is_empty());
     assert!(
         network
             .problems(&named(std::slice::from_ref(&destination)))
@@ -282,4 +291,18 @@ fn tcp_destination_that_does_not_answer_does_not_delay_messages_to_others() {
         socket.recv(&mut [0; 16]).is_ok(),
         "the datagram was dropped as late"
     );
+}
+
+#[test]
+fn problem_comes_with_the_value_that_names_its_destination() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let destination = Destination::Tcp(listener.local_addr().unwrap().to_string());
+    drop(listener);
+    let network = Network::open();
+    network.send(message(destination.clone(), 9));
+    settled(&network);
+    let named = BTreeMap::from([(destination.to_string(), 4_u8)]);
+    let problems = network.problems(&named);
+    assert_eq!(problems.len(), 1);
+    assert_eq!(problems[0].0, 4);
 }

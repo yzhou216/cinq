@@ -8,6 +8,7 @@ mod collapsed;
 mod fitting;
 mod groups;
 mod output_failed;
+mod send_failed;
 mod state;
 
 use super::Column;
@@ -25,6 +26,7 @@ fn show(sends: Option<Sends>) -> Workspace {
                 duration: 10.0,
                 sound: Some(10.0),
             },
+            seen: None,
         })
         .apply(Command::add_output(1, 1))
         .apply(Command::Edit(CueId(1), Edit::Sends(sends)))

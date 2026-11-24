@@ -152,7 +152,20 @@ fn file_that_is_missing_or_holds_no_h264_video_cannot_play() {
     let failed = |path: &Path| probe(path).expect_err("the file cannot play");
     assert_eq!(failed(Path::new("/nowhere/movie.mp4")), "file not found");
     let (_directory, notes) = saved(b"not a video");
-    assert_eq!(failed(&notes), "holds no H.264 video");
+    assert_eq!(failed(&notes), "is cut short, or is not an MP4 file");
+}
+
+#[test]
+fn file_cut_short_before_its_index_says_so_and_not_that_it_holds_no_video() {
+    // The index lies at the end of the file, after the media data
+    let bytes = movie_bytes(15, 5, &[]);
+    let failed = |kept: usize| {
+        let (_directory, path) = saved(&bytes[..kept]);
+        probe(&path).expect_err("the file cannot play")
+    };
+    let words = "is cut short, or is not an MP4 file";
+    assert_eq!(failed(bytes.len() / 2), words);
+    assert_eq!(failed(bytes.len() - 10), words);
 }
 
 /// Returns `bytes` with the body of the box `kind` among the tables of the

@@ -32,8 +32,8 @@ fn devamp_cue_needs_a_target_that_loops() {
         broken(&show),
         [
             (3, Problem::NotLooping),
-            (6, Problem::NoTarget),
-            (7, Problem::NoTarget),
+            (6, Problem::WrongTarget),
+            (7, Problem::WrongTarget),
             (8, Problem::NoTarget),
         ]
     );

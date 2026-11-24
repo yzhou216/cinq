@@ -120,16 +120,21 @@ fn the_hints_of_a_field_give_way_in_turn_with_go_and_panic_before_the_key_that_l
     let all = shown(COLUMNS);
     assert_eq!(
         all,
-        "Enter: open | Tab: next field | Control+c: leave | Space: GO | Escape: Panic"
+        "Enter: open | Tab: next field | Control+c: leave | Space: GO | Escape: Panic | f: hint"
     );
-    // The key of the next field goes first, as the border shows the field, and
-    // what Enter does stays with the rest in a bar of 1024 pixels that has the
-    // name of a show and two statuses at its left
+    // The key of the next field goes first, as the border shows the field,
+    // then that of hint mode, and what Enter does stays with the rest in a bar
+    // of 1024 pixels that has the name of a show and two statuses at its left
+    let without_field = shown(all.len() - 1);
     assert_eq!(
-        shown(all.len() - 1),
+        without_field,
+        "Enter: open | Control+c: leave | Space: GO | Escape: Panic | f: hint"
+    );
+    assert_eq!(
+        shown(without_field.len() - 1),
         "Enter: open | Control+c: leave | Space: GO | Escape: Panic"
     );
-    assert_eq!(shown(58), shown(all.len() - 1));
+    assert_eq!(shown(58), shown(without_field.len() - 1));
     assert_eq!(shown(57), "Control+c: leave | Space: GO | Escape: Panic");
     // Then GO, whose button the transport shows, and Panic, while the key that
     // leaves the field outlasts both
@@ -144,4 +149,26 @@ fn the_bar_shows_keys_typed_so_far_joined_without_the_space_that_is_go() {
         ..opened(Preset::Vi, false, false)
     };
     assert_eq!(hinted(&app)[0].1, "2d");
+}
+
+#[test]
+fn the_search_line_of_a_keymap_with_no_key_to_cancel_names_the_key_that_leaves() {
+    let hints = |text: &str| {
+        let (mut app, _) = opened(Preset::Cua, false, false).searching(false);
+        if let Some(search) = app.search.as_mut() {
+            search.text = text.to_owned();
+        }
+        hinted(&app)
+            .into_iter()
+            .map(|(_, hint)| hint)
+            .collect::<Vec<_>>()
+    };
+    assert!(hints("").contains(&"Backspace: leave".to_owned()));
+    assert!(hints("kno").contains(&"Enter: find".to_owned()));
+    let (vi, _) = opened(Preset::Vi, false, false).searching(false);
+    assert!(
+        hinted(&vi)
+            .iter()
+            .any(|(_, hint)| hint == "Control+c: cancel")
+    );
 }

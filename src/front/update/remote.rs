@@ -14,7 +14,7 @@ use iced::{
 
 use super::App;
 use crate::{
-    back::{Command, CueId, Remote},
+    back::{Command, CueId, Problem, Remote},
     front::Message,
     warn,
 };
@@ -30,13 +30,13 @@ impl App {
     /// commands edits the show.  A command that moves the selection or the
     /// list in view takes the keyboard out of a text field, as going back does,
     /// so that what is typed next cannot edit another cue.  A cue number that
-    /// no cue has does nothing to the show, and to the keys typed halfway,
-    /// and tells where it came from and what it named, on standard error once
-    /// and in the sidebar until a later command acts.
+    /// no cue has, and a start of a cue that cannot play, do nothing to the
+    /// show, and to the keys typed halfway, and tell where they came from and
+    /// what they named, on standard error once and in the sidebar until a
+    /// later command acts.
     pub(super) fn remote(self, from: IpAddr, remote: Remote) -> (Self, Task<Message>) {
-        if let Some(number) = self.unnumbered(&remote) {
-            let shown: String = number.chars().take(SHOWN).collect();
-            let line = format!("OSC from {from}: no cue is numbered {shown:?}");
+        if let Some(reason) = self.ignored(&remote) {
+            let line = format!("OSC from {from}: {reason}");
             warn::once(&line);
             return (self.with_ignored(line), Task::none());
         }
@@ -67,12 +67,23 @@ impl App {
         }
     }
 
-    /// Returns the number of the cue that `remote` aims at, if no cue has it,
-    /// which makes the command change nothing at all, the interface included
-    pub(super) fn unnumbered<'a>(&self, remote: &'a Remote) -> Option<&'a str> {
-        remote
-            .number()
-            .filter(|number| self.workspace.numbered(number).is_none())
+    /// Returns why `remote` changes nothing at all, the interface included:
+    /// no cue has the number that it aims at, or it starts a cue that cannot
+    /// play.  A cue that only waits for its file to load is no problem, as
+    /// it plays once the file is there.
+    pub(super) fn ignored(&self, remote: &Remote) -> Option<String> {
+        let number = remote.number()?;
+        match self.workspace.numbered(number) {
+            None => {
+                let shown: String = number.chars().take(SHOWN).collect();
+                Some(format!("no cue is numbered {shown:?}"))
+            }
+            Some(cue) => matches!(remote, Remote::Start(_))
+                .then(|| self.workspace.problem(cue))
+                .flatten()
+                .filter(|problem| *problem != Problem::NotLoaded)
+                .map(|problem| format!("cue {number} cannot play: {problem}")),
+        }
     }
 
     fn carried_out(self, remote: Remote) -> (Self, Task<Message>) {

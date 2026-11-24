@@ -98,22 +98,30 @@ impl Keymap {
     /// finds, and a key of [`Action::AT_ONCE`], which keeps every other
     /// sequence that holds it from being typed, by acting halfway through it
     /// or when held with other modifiers than it is bound with
+    #[cfg(test)]
     fn conflicts(&self) -> Vec<String> {
+        self.clashes().into_iter().map(|(_, said)| said).collect()
+    }
+
+    /// Returns each of [`Self::conflicts`] with the action that cannot be
+    /// reached, whose entry in the file the operator should change
+    fn clashes(&self) -> Vec<(Action, String)> {
         let hidden = self
             .bound()
             .array_combinations()
             .filter_map(|[earlier, later]| conflict(earlier, later));
         // Sequence that begins with the very key bound is the binding of the
         // key itself, or one that `conflict` describes
-        let cut_short = self.bound().filter_map(|(_, keys)| {
+        let cut_short = self.bound().filter_map(|(owner, keys)| {
             let (action, key) = keys.iter().find_map(|&press| self.at_once_bound(press))?;
             (keys[0] != key).then(|| {
-                format!(
+                let said = format!(
                     "`{}` acts at once as {}, so `{}` can never be typed",
                     written(&[key]),
                     action.name(),
                     written(keys)
-                )
+                );
+                (owner, said)
             })
         });
         hidden.chain(cut_short).collect()
@@ -153,25 +161,31 @@ fn binding(text: &str) -> Result<Vec<Press>, String> {
 /// hides the other, if one does.  Bindings of actions that act in different
 /// places, such as picking in a menu and scrolling the cue list, hide
 /// nothing.
-fn conflict((earlier, keys): Binding, (later, other): Binding) -> Option<String> {
+fn conflict((earlier, keys): Binding, (later, other): Binding) -> Option<(Action, String)> {
     if !earlier.shares_place(later) {
         return None;
     }
     if keys == other {
-        let (earlier, later) = (earlier.name(), later.name());
-        return Some(format!(
-            "`{}` is bound to both {earlier} and {later}, so {later} goes without",
-            written(keys)
+        let (earlier, later_name) = (earlier.name(), later.name());
+        return Some((
+            later,
+            format!(
+                "`{}` is bound to both {earlier} and {later_name}, so {earlier} keeps it and {later_name} loses it",
+                written(keys)
+            ),
         ));
     }
-    [(keys, other), (other, keys)]
+    [(keys, other, later), (other, keys, earlier)]
         .into_iter()
-        .find(|(short, long)| long.starts_with(short))
-        .map(|(short, long)| {
-            format!(
-                "`{}` comes first, so `{}` can never be typed",
-                written(short),
-                written(long)
+        .find(|(short, long, _)| long.starts_with(short))
+        .map(|(short, long, owner)| {
+            (
+                owner,
+                format!(
+                    "`{}` comes first, so `{}` can never be typed",
+                    written(short),
+                    written(long)
+                ),
             )
         })
 }

@@ -22,12 +22,12 @@ use crate::{
 
 impl App {
     /// Undoes up to `count` changes
-    pub(super) fn undone_outputs(self, count: usize) -> Self {
+    pub(in crate::front::update) fn undone_outputs(self, count: usize) -> Self {
         self.turned_in_outputs(count, Command::Undo, Workspace::undoable, Self::undone)
     }
 
     /// Redoes up to `count` changes
-    pub(super) fn redone_outputs(self, count: usize) -> Self {
+    pub(in crate::front::update) fn redone_outputs(self, count: usize) -> Self {
         self.turned_in_outputs(count, Command::Redo, Workspace::redoable, Self::redone)
     }
 

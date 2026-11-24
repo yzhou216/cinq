@@ -46,8 +46,34 @@ fn failed_saving_leaves_the_changes_unsaved() {
     assert!(app.show.unsaved());
     assert_eq!(
         app.file_problem.as_deref(),
-        Some("Cannot save /shows/storm.cinq.toml: disk full")
+        Some("Cannot save storm.cinq.toml: disk full")
     );
+    assert_eq!(
+        app.told.as_deref(),
+        Some("Cannot save: disk full"),
+        "the bar answers the key too, without the name that stands at its left"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn refused_save_tells_its_kind_without_paths_or_error_numbers() {
+    use std::os::unix::fs::PermissionsExt;
+    let directory = temporary();
+    fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o500))
+        .expect("the directory can be made read only");
+    let file = directory.path().join("storm.cinq.toml");
+    let refused = write(&file, "text", false);
+    // Restored first, so that the directory can go
+    fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o700))
+        .expect("the directory can be restored");
+    // Root writes anywhere, so that nothing is refused
+    if let Err(error) = refused {
+        assert_eq!(
+            crate::front::update::show::saving::refused(&file, &error),
+            "permission denied"
+        );
+    }
 }
 
 #[test]

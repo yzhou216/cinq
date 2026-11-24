@@ -46,3 +46,13 @@ fn a_long_name_of_a_list_is_cut_to_keep_the_hint_short() {
     let app = on_show(false);
     assert!(place(&app, Spot::List(1)).width() <= 16);
 }
+
+#[test]
+fn a_long_number_or_name_of_a_cue_is_cut_as_that_of_a_list_is() {
+    let long = Cue::new(CueId(9), "", Kind::Memo, "A cue with a very long name").build();
+    let app = App {
+        workspace: Workspace::new(vec![CueList::new("Main", vec![long])]),
+        ..opened(Preset::Vi, false, false)
+    };
+    assert!(place(&app, Spot::Cue(CueId(9))).width() <= "cue ".len() + 16);
+}

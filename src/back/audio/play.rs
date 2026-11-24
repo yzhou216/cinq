@@ -20,7 +20,10 @@ use super::{
     preload::{Preloader, Wanted},
     voice::{Mixers, Target, Voice, channels_of},
 };
-use crate::back::{Active, Clip, Command, Cue, CueId, Problem, Workspace, load::unplayable};
+use crate::{
+    back::{Active, Clip, Command, Cue, CueId, Problem, Workspace, load::unplayable},
+    warn,
+};
 
 impl Audio {
     pub(super) fn play(&mut self, workspace: &Workspace) -> Vec<Command> {
@@ -72,7 +75,7 @@ impl Audio {
                 };
                 voice
                     .map(|voice| (id, voice.followed(active)))
-                    .map_err(|reason| unplayable(cue, reason))
+                    .map_err(|reason| unplayable(workspace, cue, reason))
             })
             .partition_result();
         *voices = playing;
@@ -81,8 +84,29 @@ impl Audio {
         let heard = voices
             .iter()
             .filter_map(|(&id, voice)| voice.heard(workspace.active_of(id)?, plays));
-        failures.into_iter().chain(heard).collect()
+        let cut = voices.iter().filter_map(|(&id, voice)| {
+            let cue = workspace.cue(id)?;
+            let clip = workspace.active_of(id)?.sound()?;
+            voice
+                .cut_short(clip, cue.sound_ends(clip)?, plays)
+                .then(|| ended_early(workspace, cue))
+        });
+        failures.into_iter().chain(heard).chain(cut).collect()
     }
+}
+
+/// Returns the command that records that the sound of `cue` stopped before
+/// its end, as it does where its file is cut short or holds more than two
+/// channels, which the decoder refuses, and tells so on standard error, once
+/// for the file.  Playing on by the clock of the show, the cue would stay
+/// green and silent.
+fn ended_early(workspace: &Workspace, cue: &Cue) -> Command {
+    let reason = "its sound stopped early".to_owned();
+    workspace
+        .path(cue)
+        .iter()
+        .for_each(|path| warn::once(&format!("{}: {reason}", path.display())));
+    unplayable(workspace, cue, reason)
 }
 
 /// Starts the sound of a run on each device that `gains` name, from the

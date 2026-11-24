@@ -26,11 +26,13 @@ mod artnet;
 mod leaving;
 mod listing;
 mod sacn;
+mod status;
 #[cfg(test)]
 mod tests;
 
 use std::{
     collections::BTreeMap,
+    io,
     net::{Ipv4Addr, SocketAddr, UdpSocket},
     sync::mpsc::{self, RecvTimeoutError},
     thread,
@@ -41,26 +43,37 @@ use if_addrs::IfAddr;
 use socket2::SockRef;
 use uuid::Uuid;
 
-use self::{leaving::Leaving, listing::Listing};
+use self::{leaving::Leaving, listing::Listing, status::Round};
 use super::{Workspace, workspace::Universe};
+use crate::warn;
 
 /// Time after which unchanged levels go out again
 const REFRESH: Duration = Duration::from_secs(1);
 
 type Universes = BTreeMap<u16, Universe>;
 
+/// Interval at which to look for what the thread tells, while the patch has
+/// an instrument
+const CHECK: Duration = Duration::from_secs(1);
+
 pub struct Lights {
     sent: Universes,
     sender: mpsc::Sender<Universes>,
+    told: mpsc::Receiver<Option<String>>,
+    /// Why no light gets out, in words, until a round gets some out
+    problem: Option<String>,
 }
 
 impl Lights {
     pub fn open() -> Self {
         let (sender, levels) = mpsc::channel();
-        thread::spawn(move || send(&levels));
+        let (reports, told) = mpsc::channel();
+        thread::spawn(move || send(&levels, &reports));
         Self {
             sent: Universes::new(),
             sender,
+            told,
+            problem: None,
         }
     }
 
@@ -71,6 +84,21 @@ impl Lights {
             let _ = self.sender.send(universes.clone());
             self.sent = universes;
         }
+        if let Some(latest) = self.told.try_iter().last() {
+            self.problem = latest;
+        }
+    }
+
+    /// Returns why no light gets out, while the patch has an instrument,
+    /// since a show without one sends nothing
+    pub fn problem(&self) -> Option<&str> {
+        self.problem.as_deref().filter(|_| !self.sent.is_empty())
+    }
+
+    /// Returns how often to look for news of the output, which only the
+    /// thread knows, while the patch has an instrument
+    pub fn checks(&self) -> Option<Duration> {
+        (!self.sent.is_empty()).then_some(CHECK)
     }
 }
 
@@ -84,7 +112,14 @@ struct Interface {
 }
 
 impl Interface {
-    fn send(&self, socket: &UdpSocket, universe: u16, artnet: Option<&[u8]>, sacn: &[u8]) {
+    /// Sends the packets of a universe and returns how each send went
+    fn send(
+        &self,
+        socket: &UdpSocket,
+        universe: u16,
+        artnet: Option<&[u8]>,
+        sacn: &[u8],
+    ) -> Vec<io::Result<usize>> {
         let (artnet_to, sacn_to) = if self.loopback {
             let to = SocketAddr::from((self.address, sacn::PORT));
             (Some(self.address), Some(to))
@@ -93,24 +128,28 @@ impl Interface {
         };
         // Interface gone since, which the next refresh leaves out
         let _ = SockRef::from(socket).set_multicast_if_v4(&self.address);
-        if let Some(to) = sacn_to {
-            let _ = socket.send_to(sacn, to);
-        }
-        if let (Some(packet), Some(to)) = (artnet, artnet_to) {
-            let _ = socket.send_to(packet, (to, artnet::PORT));
-        }
+        let sacn_sent = sacn_to.map(|to| socket.send_to(sacn, to));
+        let artnet_sent = artnet
+            .zip(artnet_to)
+            .map(|(packet, to)| socket.send_to(packet, (to, artnet::PORT)));
+        sacn_sent.into_iter().chain(artnet_sent).collect()
     }
 }
 
 /// Sends universes as they arrive and the latest again after each quiet
 /// second, until the sender is dropped.  A universe that has left the
 /// patch goes out as zeros, then as a terminated stream, at the pace of the
-/// workspace.
-fn send(levels: &mpsc::Receiver<Universes>) {
-    let Ok(socket) = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
-        .and_then(|socket| socket.set_broadcast(true).map(|()| socket))
-    else {
-        return;
+/// workspace.  Each change in whether any light gets out goes to `reports`,
+/// and once to standard error.
+fn send(levels: &mpsc::Receiver<Universes>, reports: &mpsc::Sender<Option<String>>) {
+    let opened = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))
+        .and_then(|socket| socket.set_broadcast(true).map(|()| socket));
+    let socket = match opened {
+        Ok(socket) => socket,
+        Err(error) => {
+            tell(reports, Some(format!("not sent: {}", warn::words(&error))));
+            return;
+        }
     };
     // Random for each run, so that receivers tell sources apart
     let cid = Uuid::new_v4();
@@ -118,6 +157,7 @@ fn send(levels: &mpsc::Receiver<Universes>) {
     let mut leaving = Leaving::default();
     let mut listing = Listing::new();
     let mut announced = None::<Instant>;
+    let mut problem = None::<String>;
     // One count for each round, since sACN numbers the packets of each
     // universe in order
     for sequence in (0..=u8::MAX).cycle() {
@@ -136,37 +176,64 @@ fn send(levels: &mpsc::Receiver<Universes>) {
         };
         listing = listing.at(Instant::now(), interfaces);
         let interfaces = listing.items();
+        let due = !latest.is_empty() || !leaving.is_empty();
         let everywhere = |universe, artnet: Option<&[u8]>, sacn: &[u8]| {
             interfaces
                 .iter()
-                .for_each(|interface| interface.send(&socket, universe, artnet, sacn));
+                .flat_map(|interface| interface.send(&socket, universe, artnet, sacn))
+                .collect::<Vec<_>>()
         };
-        latest.iter().for_each(|(&universe, channels)| {
-            let artnet = artnet::packet(universe, channels);
-            everywhere(
-                universe,
-                artnet.as_deref(),
-                &sacn::packet(cid, universe, sequence, channels, false),
-            );
-        });
-        leaving.frame().for_each(|(universe, terminated)| {
-            let zeros = [0; 512];
-            everywhere(
-                universe,
-                artnet::packet(universe, &zeros).as_deref(),
-                &sacn::packet(cid, universe, sequence, &zeros, terminated),
-            );
-        });
+        let steady = latest
+            .iter()
+            .flat_map(|(&universe, channels)| {
+                let artnet = artnet::packet(universe, channels);
+                everywhere(
+                    universe,
+                    artnet.as_deref(),
+                    &sacn::packet(cid, universe, sequence, channels, false),
+                )
+            })
+            .collect::<Vec<_>>();
+        let ending = leaving
+            .frame()
+            .flat_map(|(universe, terminated)| {
+                let zeros = [0; 512];
+                everywhere(
+                    universe,
+                    artnet::packet(universe, &zeros).as_deref(),
+                    &sacn::packet(cid, universe, sequence, &zeros, terminated),
+                )
+            })
+            .collect::<Vec<_>>();
         leaving = leaving.next();
-        if !latest.is_empty() && announced.is_none_or(|at| at.elapsed() >= sacn::DISCOVERY_INTERVAL)
+        let listed = if !latest.is_empty()
+            && announced.is_none_or(|at| at.elapsed() >= sacn::DISCOVERY_INTERVAL)
         {
             let universes: Vec<u16> = latest.keys().copied().collect();
+            announced = Some(Instant::now());
             sacn::discovery(cid, &universes)
                 .iter()
-                .for_each(|page| everywhere(sacn::DISCOVERY, None, page));
-            announced = Some(Instant::now());
+                .flat_map(|page| everywhere(sacn::DISCOVERY, None, page))
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let sends: Vec<_> = steady.into_iter().chain(ending).chain(listed).collect();
+        if let Some(now) = Round::of(interfaces.len(), due, &sends).told(&problem) {
+            tell(reports, now.clone());
+            problem = now;
         }
     }
+}
+
+/// Hands the sidebar what changed in whether light gets out, and standard
+/// error the problem, once
+fn tell(reports: &mpsc::Sender<Option<String>>, problem: Option<String>) {
+    if let Some(words) = &problem {
+        warn::once(&format!("light output: {words}"));
+    }
+    // Receiver has gone only as cinq ends
+    let _ = reports.send(problem);
 }
 
 fn interfaces() -> Vec<Interface> {

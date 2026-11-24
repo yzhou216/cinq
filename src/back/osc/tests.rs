@@ -69,3 +69,21 @@ fn destinations_read_as_host_and_port_over_tcp_or_udp() {
     assert_eq!(Destination::parse("ion:0"), None);
     assert_eq!(Destination::parse("ion:65536"), None);
 }
+
+#[test]
+fn hosts_hold_no_colon_bracket_or_slash_since_none_resolves() {
+    assert_eq!(Destination::parse("[::1]:9000"), None);
+    assert_eq!(Destination::parse("http://x:80"), None);
+    assert_eq!(Destination::parse("udp://a:b:80"), None);
+    assert_eq!(Destination::parse("tcp://tcp://ion:3037"), None);
+    assert_eq!(Destination::parse("ion/x:3037"), None);
+    assert!(Destination::parse("eos.local:3037").is_some());
+}
+
+#[test]
+fn message_closes_every_double_quote_that_it_opens() {
+    assert_eq!(packet("/scene \"Act 1"), None);
+    assert_eq!(packet("/eos/newcmd \"Chan 5 At 50 Enter"), None);
+    assert_eq!(packet("/scene Act\" 1"), None);
+    assert!(packet("/scene \"Act 1\" \"2\"").is_some());
+}

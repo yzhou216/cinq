@@ -35,7 +35,7 @@ use cue::{Clip, Pass, Shown};
 pub use audio::{Audio, Fault, READY_AHEAD, SOUND_FILES, devices as audio_devices};
 pub use cue::{
     Advance, Cue, CueId, CueList, Edit, Groups, Kind, LEVELS, LOUDEST, Media, PERCENT, Problem,
-    SILENCE, parse_level, parse_percent,
+    SILENCE, Stamp, parse_level, parse_percent, parse_send,
 };
 pub use light::Lights;
 pub use load::{Load, load_files};

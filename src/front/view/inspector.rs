@@ -8,6 +8,7 @@
 
 mod field;
 mod forms;
+mod header;
 mod light;
 mod locked;
 mod output;
@@ -16,18 +17,19 @@ use output::{refused, styled, typing};
 mod sends;
 
 use iced::{
-    Center, Element, Fill,
+    Center, Element, Size,
     widget::{column, container, progress_bar, row, rule, slider, text},
 };
 use strum::VariantArray;
 
-use super::{INSPECTOR, SPACING, check, format, keep_keys, radio};
+use super::{INSPECTOR, SPACING, char_width, check, cue_table::RADIO, format, keep_keys, radio};
 use crate::{
-    back::{Cue, Edit, Kind, LEVELS, Media, Problem},
+    back::{Cue, Edit, Kind, LEVELS, Media},
     front::{App, Message, Setting, Tab},
 };
-use field::{Field, unread};
+use field::Field;
 use forms::forms;
+use header::inspected;
 
 /// Characters that the level field holds, as many as `-60.0` takes, with
 /// one to spare
@@ -67,7 +69,20 @@ fn height(window: f32) -> f32 {
     LEAST_HEIGHT.max(window / 4.0)
 }
 
-pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
+/// Returns the columns of text that fit in a line of the page beside the tabs,
+/// in a window `width` wide
+fn columns(width: f32) -> usize {
+    let tabs = Tab::VARIANTS
+        .iter()
+        .map(|tab| tab.to_string().chars().count())
+        .max()
+        .unwrap_or_default();
+    let page = width - 4.0 * SPACING - 1.0 - RADIO - tabs as f32 * char_width();
+    (page / char_width()).max(0.0) as usize
+}
+
+pub(super) fn view(app: &App, window: Size) -> Element<'_, Message> {
+    let columns = columns(window.width);
     let tabs = column![text("Inspector")]
         .extend(
             Tab::VARIANTS
@@ -82,16 +97,18 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
         (Tab::Basics, Some(cue)) => inspected(
             app,
             cue,
+            columns,
             &BASICS,
             forms(app, cue, BASICS, BASICS_SHARES, || None),
         ),
         (Tab::Time, Some(cue)) => inspected(
             app,
             cue,
+            columns,
             if cue.kind.plays_file() { &TIME } else { &[] },
             time(app, cue),
         ),
-        (Tab::Levels, Some(cue)) => inspected(app, cue, &[], levels(app, cue)),
+        (Tab::Levels, Some(cue)) => inspected(app, cue, columns, &[], levels(app, cue)),
         (_, None) if app.current().cues.is_empty() => {
             text("This list has no cues to inspect").into()
         }
@@ -102,56 +119,11 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
             row![tabs, rule::vertical(1), body]
                 .spacing(SPACING)
                 .padding(SPACING)
-                .height(height(window)),
+                .height(height(window.height)),
         )
         .id(INSPECTOR),
         &app.config.keymap,
     )
-}
-
-/// Returns the header of a cue over `fields`, which tells what keeps GO from
-/// playing the cue or from lighting all that it names, and which of the `times` that it shows reads as no time
-fn inspected<'a>(
-    app: &'a App,
-    cue: &Cue,
-    times: &[&[Field]],
-    fields: Element<'a, Message>,
-) -> Element<'a, Message> {
-    let header = row![text(format!("{cue}, {} cue{}", cue.kind, lock(app)))]
-        .extend(trouble(app, cue))
-        .extend(unlit(app, cue))
-        .extend(unread(cue, times).map(|reason| text(reason).style(text::danger).into()))
-        .spacing(3.0 * SPACING)
-        .align_y(Center)
-        // Sentences of trouble go under the title where a narrow window has no room beside it
-        .wrap()
-        .vertical_spacing(SPACING / 2.0);
-    column![header, fields].spacing(SPACING).width(Fill).into()
-}
-
-/// Returns what keeps GO from playing the cue, in words, as the State column
-/// and the sidebar tell it, so that the place where the fix is made says it
-/// too.  A file that has yet to load is no fault.
-fn trouble<'a>(app: &App, cue: &Cue) -> Option<Element<'a, Message>> {
-    let problem = app
-        .workspace
-        .problem(cue)
-        .filter(|problem| *problem != Problem::NotLoaded)?;
-    Some(
-        text(format!("GO skips this cue: {problem}"))
-            .style(text::danger)
-            .into(),
-    )
-}
-
-/// Returns what keeps a light cue from setting all that it should, in words, in
-/// the warning color, since GO still fires the cue
-fn unlit<'a>(app: &App, cue: &Cue) -> Option<Element<'a, Message>> {
-    app.workspace.unlit(cue).map(|unlit| {
-        text(format!("This cue {unlit}"))
-            .style(text::warning)
-            .into()
-    })
 }
 
 fn lock(app: &App) -> &'static str {
@@ -162,12 +134,27 @@ fn lock(app: &App) -> &'static str {
     }
 }
 
+/// Returns what the Time & Loops tab says of a cue that plays no file, which
+/// for a light cue tells where its fade time is
+fn no_file(kind: Kind) -> String {
+    match kind {
+        kind @ (Kind::Light | Kind::Fade) => {
+            format!("{kind} cues play no file; the Duration on the Basics tab is the fade time")
+        }
+        Kind::Wait => {
+            "Wait cues play no file; the Duration on the Basics tab is how long they wait"
+                .to_owned()
+        }
+        kind => format!("{kind} cues play no file"),
+    }
+}
+
 fn time<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
     match cue.kind {
         Kind::Picture => {
             return text("Picture cues show their file until something stops them").into();
         }
-        kind if !kind.plays_file() => return text(format!("{kind} cues play no file")).into(),
+        kind if !kind.plays_file() => return text(no_file(kind)).into(),
         _ => {}
     }
     let id = cue.id;
@@ -246,7 +233,16 @@ fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
 
 #[cfg(test)]
 mod tests {
-    use super::{LEAST_HEIGHT, height};
+    use super::{LEAST_HEIGHT, height, no_file};
+    use crate::back::Kind;
+
+    #[test]
+    fn a_cue_with_a_duration_tells_on_the_time_tab_where_it_is() {
+        assert!(no_file(Kind::Light).contains("Duration on the Basics tab"));
+        assert!(no_file(Kind::Fade).contains("fade time"));
+        assert!(no_file(Kind::Wait).contains("how long they wait"));
+        assert_eq!(no_file(Kind::Memo), "Memo cues play no file");
+    }
 
     #[test]
     fn the_inspector_keeps_its_least_height_until_a_quarter_of_the_window_is_more() {

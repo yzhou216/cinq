@@ -76,7 +76,7 @@ fn show_mode_tells_why_a_key_that_edits_did_nothing_and_stays_quiet_for_the_rest
     assert!(
         ["o", "p", "x", "d d", "c c", "d j"]
             .into_iter()
-            .all(|keys| told(keys) == Some("Show mode does not allow edits"))
+            .all(|keys| told(keys) == Some("Leave show mode to edit"))
     );
     // Copying and moving about still work
     assert!(
@@ -92,4 +92,37 @@ fn the_show_mode_check_box_flips_both_ways_since_show_mode_never_locks_it() {
     assert!(locked.workspace.show_mode() && !locked.editable());
     let (unlocked, _) = locked.handled(Message::ShowMode(false));
     assert!(!unlocked.workspace.show_mode() && unlocked.editable());
+}
+
+#[test]
+fn an_added_cue_shows_the_basics_tab_but_a_refused_add_keeps_the_tab() {
+    let levels = || App {
+        tab: Tab::Levels,
+        ..show(Some(CueId(4)))
+    };
+    let (added, _) = levels().handled(Message::Add(Place::After, 1));
+    assert_eq!(added.tab, Tab::Basics);
+    let (locked, _) = levels().handled(Message::ShowMode(true));
+    let (refused, _) = locked.handled(Message::Add(Place::After, 1));
+    assert_eq!(refused.tab, Tab::Levels);
+}
+
+#[test]
+fn a_key_of_adding_or_hint_mode_takes_the_keyboard_from_a_list_that_has_it() {
+    let units = |held, keys| {
+        typing_task(
+            App {
+                held,
+                ..show(Some(CueId(4)))
+            },
+            keys,
+        )
+        .1
+        .units()
+    };
+    ["o", "O", "f"].into_iter().for_each(|keys| {
+        assert!(units(true, keys) > units(false, keys), "{keys}");
+    });
+    // A key that acts in a list and leaves it where it is
+    assert_eq!(units(true, "u"), units(false, "u"));
 }

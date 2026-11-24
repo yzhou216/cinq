@@ -2,15 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Editing the search line with the keys of Vim's command line: Control+w
-//! and Control+u delete the word before the cursor and everything before
-//! it, and ArrowUp and ArrowDown recall the older and newer searches that
+//! Editing the search line with the keys of Vim's command line that recall
+//! a search: ArrowUp and ArrowDown recall the older and newer searches that
 //! start with the text typed
 //!
-//! iced does not tell where the cursor of the text field is, so the keys act
-//! on the end of the text, where the cursor is while the operator types a
-//! search.  Each key that changes the text moves the cursor to the end, as
-//! Vim leaves it after a recall, so that the cursor and the keys agree.
+//! Each recall moves the cursor of the field to the end of the text, as Vim
+//! leaves it after a recall.  Control+w and Control+u act at the caret of
+//! the field, as in any text field, through the region that keeps the keys.
 
 use iced::{Task, widget::operation};
 
@@ -57,13 +55,7 @@ impl App {
         let Some(search) = &self.search else {
             return (self, Task::none());
         };
-        let edited = match key {
-            LineKey::DeleteWord => Some((without_last_word(&search.text), None)),
-            LineKey::DeleteAll => Some((String::new(), None)),
-            LineKey::Older => self.recalled(search, true),
-            LineKey::Newer => self.recalled(search, false),
-        };
-        let Some((text, recall)) = edited else {
+        let Some((text, recall)) = self.recalled(search, key == LineKey::Older) else {
             return (self, Task::none());
         };
         // Search recalled that reads as the text typed still takes its place
@@ -101,20 +93,4 @@ impl App {
             None => None,
         }
     }
-}
-
-/// Returns the text without the word at its end and the spaces after it, as
-/// Control+w deletes the word before the cursor: a run of letters, digits,
-/// and underscores, or else a run of other characters that are no spaces
-pub(in crate::front::update) fn without_last_word(text: &str) -> String {
-    let word = |c: char| c.is_alphanumeric() || c == '_';
-    let trimmed = text.trim_end();
-    let kind = trimmed.chars().next_back().map(word);
-    let keep = trimmed
-        .char_indices()
-        .rev()
-        .take_while(|&(_, c)| Some(word(c)) == kind && !c.is_whitespace())
-        .last()
-        .map_or(trimmed.len(), |(index, _)| index);
-    trimmed[..keep].to_owned()
 }

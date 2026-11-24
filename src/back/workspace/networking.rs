@@ -8,10 +8,10 @@
 //! workspace, which the network output empties after each change, so that
 //! the message goes out once for each run of the cue.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::Workspace;
-use crate::back::{CueId, Destination, Kind, Outgoing, osc};
+use crate::back::{Cue, CueId, Destination, Kind, Outgoing, osc};
 
 impl Workspace {
     /// Puts the message of network cue `id` in the outbox, unless the cue
@@ -30,13 +30,24 @@ impl Workspace {
     }
 
     /// Returns the destinations that the network cues name, as the network
-    /// output keeps its problems by them
-    pub fn destinations(&self) -> BTreeSet<String> {
+    /// output keeps its problems by them, each with the first cue that names
+    /// it, which a problem of the destination is told for
+    pub fn destinations(&self) -> BTreeMap<String, CueId> {
         self.cues()
             .filter(|cue| cue.kind == Kind::Network)
-            .filter_map(|cue| Destination::parse(&cue.destination))
-            .map(|destination| destination.to_string())
-            .collect()
+            .filter_map(|cue| Some((Destination::parse(&cue.destination)?.to_string(), cue.id)))
+            .fold(BTreeMap::new(), |mut named, (destination, id)| {
+                named.entry(destination).or_insert(id);
+                named
+            })
+    }
+
+    /// Returns whether `cue` is a network cue whose destination is among
+    /// `failed`, the destinations that messages last failed to reach
+    pub fn sends_to_failed(&self, cue: &Cue, failed: &BTreeSet<String>) -> bool {
+        cue.kind == Kind::Network
+            && Destination::parse(&cue.destination)
+                .is_some_and(|destination| failed.contains(&destination.to_string()))
     }
 
     /// Returns the workspace with an empty outbox, and the messages that the

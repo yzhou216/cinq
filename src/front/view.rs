@@ -181,7 +181,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
                 .into()
             }),
             rule::horizontal(1),
-            inspector::view(app, window.height),
+            inspector::view(app, window),
         ]
         .into()
     });
@@ -235,12 +235,14 @@ fn char_width() -> f32 {
 }
 
 /// Counts the warnings that the sidebar lists
-fn warnings(app: &App) -> usize {
+pub(in crate::front) fn warnings(app: &App) -> usize {
     app.workspace.problems().count()
         + app.workspace.stranded().count()
         + app.workspace.unlit_cues().count()
         + faults::warnings(app).len()
         + app.network_problems.len()
+        + usize::from(app.light_problem.is_some())
+        + usize::from(app.stage.missing(&app.workspace))
         + usize::from(app.osc_problem.is_some())
         + usize::from(app.osc_ignored.is_some())
         + usize::from(app.file_problem.is_some())

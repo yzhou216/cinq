@@ -57,7 +57,11 @@ impl From<String> for Seconds {
                     .ok()
                     .filter(|part| part.is_finite() && *part >= 0.0)
             })
-            .try_fold(0.0_f32, |total, part| part.map(|part| total * 60.0 + part))
+            .try_fold((0, 0.0_f32), |(count, total), part| {
+                part.map(|part| (count + 1, total * 60.0 + part))
+            })
+            .filter(|(count, _)| *count <= 3)
+            .map(|(_, total)| total)
             .filter(|value| value.is_finite());
         Self { text, value }
     }

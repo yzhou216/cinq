@@ -6,9 +6,9 @@
 
 use super::{ALL, clipped, locked, names, on, typed, without};
 use crate::{
-    back::Place,
+    back::{PatchEdit, Place},
     front::{
-        App, Caret, Focus, Message, Setting,
+        App, Caret, Focus, Message, Setting, Tab,
         keymap::Action,
         update::tests::{
             after,
@@ -218,4 +218,50 @@ fn undoing_an_addition_or_a_paste_selects_the_output_that_it_was_made_next_to() 
     assert_eq!(at(&typed(redone, "u")), 3);
     // Undo of a delete still selects what it brought back
     assert_eq!(at(&typed(typed(on(3), "dd"), "u")), 3);
+}
+
+#[test]
+fn undo_and_redo_show_the_place_that_a_patch_or_output_change_touched() {
+    // Light patch edit shows its tab, though the inspector was elsewhere
+    let patched = after(
+        show(cue(2)),
+        [Message::Patch(PatchEdit::Add), Message::Tab(Tab::Basics)],
+    );
+    let undone = after(patched, [Message::Undo(1)]);
+    assert_eq!(undone.tab, Tab::Patch);
+    let redone = after(
+        after(undone, [Message::Tab(Tab::Levels)]),
+        [Message::Redo(1)],
+    );
+    assert_eq!(redone.tab, Tab::Patch);
+    // Output edit made with the outputs in sight shows them again from the cue list
+    let moved = after(on(3), [Message::Move(2)]).showing_cues();
+    assert!(!moved.outputs_shown);
+    let undone = after(moved, [Message::Undo(1)]);
+    assert!(undone.outputs_shown);
+    assert_eq!((names(&undone), at(&undone)), (ALL.to_vec(), 3));
+}
+
+#[test]
+fn a_count_that_reaches_a_change_to_the_outputs_shows_them_as_one_change_does() {
+    let made = after(
+        show(cue(2)),
+        [Message::ShowOutputs, Message::Add(Place::After, 1)],
+    )
+    .showing_cues();
+    let made = after(made, [Message::Add(Place::After, 1)]);
+    let undone = after(made, [Message::Undo(2)]);
+    assert!(undone.outputs_shown);
+    assert_eq!(undone.workspace.cues().count(), 14);
+    assert_eq!(undone.workspace.outputs().len(), 1);
+    assert_eq!(undone.output, Some(undone.workspace.outputs()[0].id));
+    // Control+o leaves them for the cue list, where the count began
+    let back = after(undone, [Message::Back(1)]);
+    assert!(!back.outputs_shown);
+    // Redo does the same on its way, and ends where the last change lies
+    let redone = after(back, [Message::Redo(2)]);
+    assert!(!redone.outputs_shown);
+    assert_eq!(redone.workspace.cues().count(), 15);
+    assert_eq!(redone.workspace.outputs().len(), 2);
+    assert_eq!(redone.turns, 2);
 }

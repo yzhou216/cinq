@@ -5,6 +5,8 @@
 //! Tests of loading the files of audio and video cues, which read each file
 //! as the kind of its cue plays it
 
+mod recheck;
+
 use std::path::Path;
 
 use super::{Load, load_files};
@@ -60,4 +62,10 @@ fn video_file_loads_as_a_picture_for_a_video_cue_and_as_no_sound_for_an_audio_cu
         )
     );
     assert!(matches!(found[1], (2, Media::Failed(_))), "{found:?}");
+}
+
+#[test]
+fn unreadable_file_is_told_without_its_error_number() {
+    let denied = std::io::Error::from_raw_os_error(13);
+    assert_eq!(super::unreadable(denied), "permission denied");
 }

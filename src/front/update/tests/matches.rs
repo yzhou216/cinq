@@ -184,9 +184,9 @@ fn the_next_match_with_no_match_says_no_cue_matches_as_typing_does() {
         ..none
     };
     assert_eq!(stepped(lost, 1).remark, Some("No cue matches"));
-    // Before any search too
+    // Before any search it says that there is none
     assert_eq!(
         stepped(show(Some(CueId(2))), 1).remark,
-        Some("No cue matches")
+        Some("No previous search")
     );
 }

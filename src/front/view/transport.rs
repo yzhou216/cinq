@@ -11,13 +11,15 @@ use iced::{
         text::{LineHeight, Wrapping},
     },
 };
-use itertools::Itertools;
 
 use super::{
     SPACING, TEXT_SIZE, button, char_width, faults, format, theme,
     widget::{Button, shortened},
 };
-use crate::front::{App, Message};
+use crate::{
+    back::Cue,
+    front::{App, Message},
+};
 
 /// Size of the title, which names the standby cue
 const TITLE: f32 = 24.0;
@@ -43,11 +45,9 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
     // as standby moves
     let lines = match standby {
         Some(cue) => {
-            let notes = if cue.notes.trim().is_empty() {
-                "none".to_owned()
-            } else {
-                cue.notes.lines().join(" ")
-            };
+            let notes = Some(Cue::one_line(&cue.notes))
+                .filter(|notes| !notes.is_empty())
+                .unwrap_or_else(|| "none".to_owned());
             [
                 format!("Standby: {cue}"),
                 format!("Notes: {notes}"),
@@ -61,6 +61,10 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
         ],
     };
     let [title, notes, chain] = lines;
+    let chain = match app.workspace.moving(app.list) {
+        Some((target, seconds)) => format!("{}; {chain}", format::moving(target, seconds)),
+        None => chain,
+    };
     let paused = app.workspace.active().iter().any(|active| active.paused);
     let buttons = row![
         button("Pause all").on_press_maybe(app.running().then_some(Message::PauseAll)),

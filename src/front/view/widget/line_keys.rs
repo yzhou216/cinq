@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Region that gives the keys of Vim's command line to the search line
+//! Region that gives the keys of Vim's command line that recall a search to
+//! the search line
 //!
-//! iced's text field takes none of them: it lets Control+w and Control+u
-//! pass, and the arrows that move up and down.  The region takes them before
-//! the field sees them and sends them as messages, since the app holds the
-//! text of the line and its history, and the field shows what the app says.
+//! iced's text field recalls nothing: it lets the arrows pass.  The region
+//! takes them before the field sees them and sends them as messages, since
+//! the app holds the history, and the field shows what the app says.
 
 use iced::{
     Element, Event,

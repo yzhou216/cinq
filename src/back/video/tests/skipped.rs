@@ -122,3 +122,23 @@ fn video_track_that_cannot_be_read_is_refused_for_its_index() {
     let unnamed = with_only_track(&bytes(), &renamed(&lost, b"hdlr"));
     assert_eq!(probed(unnamed), Err(DAMAGED_INDEX.to_owned()));
 }
+
+#[test]
+fn video_in_a_profile_that_does_not_play_is_refused_with_the_ones_that_do() {
+    // The profile_idc of the avcC box, which follows its tag and version
+    let bytes = bytes();
+    let at = bytes
+        .windows(4)
+        .position(|window| window == b"avcC")
+        .expect("the box is there")
+        + 5;
+    let high_10 = bytes
+        .into_iter()
+        .enumerate()
+        .map(|(index, byte)| if index == at { 110 } else { byte })
+        .collect();
+    assert_eq!(
+        probed(high_10),
+        Err("holds H.264 video of a profile other than Baseline, Main, or High".to_owned())
+    );
+}

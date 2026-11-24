@@ -4,10 +4,10 @@
 
 //! Tests of the text that describes cues
 
-use super::{activity, chain, change, clipped, target};
+use super::{activity, chain, change, clipped, moving, target};
 use crate::back::{
-    Advance, Command, Cue, CueId, CueList, Edit, Kind, OutputId, Place, Sends, Workspace, loaded,
-    sound,
+    Advance, Command, Cue, CueId, CueList, Edit, InstrumentId, Kind, OutputId, Place, Sends,
+    Workspace, loaded, sound,
 };
 
 fn memo(id: u32) -> Cue {
@@ -213,4 +213,177 @@ fn a_file_typed_into_an_unnamed_cue_is_told_by_a_short_notice() {
         },
     ));
     assert_eq!(told(&workspace), "changed the file of cue 1");
+}
+
+#[test]
+fn a_move_is_told_to_enter_or_leave_a_group_only_where_the_depth_changes() {
+    let within = |cue: Cue| Cue { depth: 1, ..cue };
+    let group = Cue::new(CueId(2), "2", Kind::Group, "Group").build();
+    let shown = Workspace::new(vec![CueList::new(
+        "Main",
+        vec![memo(1), group, within(memo(3)), within(memo(4)), memo(5)],
+    )]);
+    let moved = |workspace: &Workspace, cue: u32, by: isize| {
+        workspace.clone().apply(Command::Move {
+            cue: CueId(cue),
+            by,
+        })
+    };
+    let into = moved(&shown, 1, 1);
+    assert_eq!(told(&into), "moved cue 1 into a group");
+    assert_eq!(told(&moved(&shown, 4, 1)), "moved cue 4 out of a group");
+    assert_eq!(told(&moved(&shown, 3, 1)), "moved cue 3");
+    let undone = into.apply(Command::Undo);
+    let latest = undone.redoable().expect("the move can be redone");
+    assert_eq!(change(&undone, latest), "moved cue 1 into a group");
+}
+
+#[test]
+fn clearing_the_last_send_of_a_cue_is_told_as_playing_nowhere() {
+    let rain = Cue::new(CueId(1), "1", Kind::Audio, "Rain").build();
+    let workspace = Workspace::new(vec![CueList::new("Main", vec![rain])]);
+    let after = |sends| {
+        told(
+            &workspace
+                .clone()
+                .apply(Command::Edit(CueId(1), Edit::Sends(sends))),
+        )
+    };
+    assert_eq!(after(Some(Sends::new())), "changed cue 1 to play nowhere");
+    assert_eq!(
+        after(Some([(OutputId(1), -3.0)].into())),
+        "changed where cue 1 plays"
+    );
+}
+
+#[test]
+fn a_chain_tells_what_each_control_cue_does_and_names_a_list_only_when_it_is_another() {
+    let control = |id: u32, kind, target: u32| {
+        Cue::new(CueId(id), id.to_string(), kind, "Control")
+            .advance(Advance::Continue)
+            .target(CueId(target))
+            .build()
+    };
+    let effect = Cue::new(CueId(30), "E1", Kind::Memo, "Rain").build();
+    let workspace = Workspace::new(vec![
+        CueList::new(
+            "Scene",
+            vec![
+                memo(1),
+                control(12, Kind::Pause, 1),
+                control(13, Kind::Stop, 1),
+                control(15, Kind::Start, 30),
+                control(16, Kind::GoTo, 1),
+            ],
+        ),
+        CueList::new("Effects", vec![effect]),
+    ])
+    .apply(Command::Standby {
+        list: 0,
+        cue: Some(CueId(12)),
+    });
+    let list = &workspace.lists()[0];
+    let standby = workspace.cue(CueId(12)).expect("it exists");
+    assert_eq!(
+        chain(&workspace, list, standby, &[]),
+        "GO fires 4 cues: 12 (pause 1), 13 (+0.0s, stop 1), \
+         15 (+0.0s, start E1 in Effects), 16 (+0.0s, GoTo 1)"
+    );
+}
+
+#[test]
+fn standby_about_to_move_is_told_by_the_number_of_its_target_and_the_seconds() {
+    assert_eq!(moving(&memo(5), 2.94), "Standby moves to 5 in 2.9s");
+}
+
+#[test]
+fn a_chain_tells_a_delay_of_a_minute_or_more_as_a_clock_as_the_moving_standby_does() {
+    let held = Cue {
+        post_wait: 70.0.into(),
+        ..Cue::new(CueId(1), "1", Kind::Memo, "Note")
+            .advance(Advance::Continue)
+            .build()
+    };
+    let workspace = Workspace::new(vec![CueList::new("Main", vec![held, memo(2)])]);
+    let list = &workspace.lists()[0];
+    let standby = workspace.cue(CueId(1)).expect("it exists");
+    assert_eq!(
+        chain(&workspace, list, standby, &[]),
+        "GO fires 2 cues: 1, 2 (+1:10.0)"
+    );
+}
+
+#[test]
+fn a_cue_added_below_a_group_or_one_of_its_cues_is_told_to_be_in_a_group() {
+    let group = Cue::new(CueId(1), "1", Kind::Group, "Group").build();
+    let held = Cue::new(CueId(2), "2", Kind::Memo, "Note").depth(1).build();
+    let after = |cues: Vec<Cue>, at: CueId, count| {
+        told(
+            &Workspace::new(vec![CueList::new("Main", cues)]).apply(Command::Add {
+                list: 0,
+                kind: Kind::Memo,
+                at: Place::After(at),
+                count,
+            }),
+        )
+    };
+    assert_eq!(
+        after(vec![group.clone()], CueId(1), 1),
+        "added cue 2 in a group"
+    );
+    assert_eq!(
+        after(vec![group.clone(), held.clone()], CueId(2), 2),
+        "added 2 cues in a group"
+    );
+    assert_eq!(
+        after(vec![group, held, memo(3)], CueId(3), 1),
+        "added cue 4"
+    );
+}
+
+#[test]
+fn a_time_ahead_turns_to_a_clock_from_a_minute_on() {
+    assert_eq!(moving(&memo(5), 75.0), "Standby moves to 5 in 1:15.0");
+    assert_eq!(moving(&memo(5), 59.97), "Standby moves to 5 in 1:00.0");
+}
+
+#[test]
+fn target_in_another_list_is_told_by_the_name_of_that_list() {
+    let start = |number: &str, target: u32| {
+        Cue::new(CueId(40 + target), number, Kind::Start, "Start")
+            .target(CueId(target))
+            .build()
+    };
+    let workspace = Workspace::new(vec![
+        CueList::new(
+            "Main",
+            vec![memo(1), start("2", 1), start("3", 9), start("4", 99)],
+        ),
+        CueList::new("Effects", vec![memo(9)]),
+    ]);
+    let groups = &workspace.lists()[0].groups();
+    let told = |id: u32| {
+        let cue = workspace.cue(CueId(id)).expect("it exists");
+        target(&workspace, groups, cue)
+    };
+    assert_eq!(told(41), "1");
+    assert_eq!(told(49), "9 in Effects");
+    assert_eq!(told(139), "");
+}
+
+#[test]
+fn a_light_cue_counts_every_instrument_it_names_even_one_the_patch_lacks() {
+    let light = |ids: &[u32]| {
+        Cue::new(CueId(1), "1", Kind::Light, "Light")
+            .lights(ids.iter().map(|&id| (InstrumentId(id), 50.0)).collect())
+            .build()
+    };
+    let workspace = Workspace::new(vec![CueList::new("Main", vec![])]);
+    let groups = &workspace.lists()[0].groups();
+    assert_eq!(target(&workspace, groups, &light(&[99])), "1 instrument");
+    assert_eq!(
+        target(&workspace, groups, &light(&[1, 99])),
+        "2 instruments"
+    );
+    assert_eq!(target(&workspace, groups, &light(&[])), "0 instruments");
 }

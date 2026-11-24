@@ -104,7 +104,7 @@ impl App {
     /// the keyboard while the stage window has it, since the keys typed
     /// there would never reach the field, so that the status bar says that
     /// the main window takes the key.
-    pub(super) fn searching(self, backward: bool) -> (Self, Task<Message>) {
+    pub(in crate::front) fn searching(self, backward: bool) -> (Self, Task<Message>) {
         if self.stage.has_keyboard() {
             return (
                 Self {

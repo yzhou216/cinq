@@ -100,7 +100,7 @@ fn what_a_change_did_to_the_cues_comes_first_and_stays_whole_beside_long_names()
     );
     assert_eq!(
         in_bar(base.apply(calm)),
-        "Changed the channels of the output Another l… | u: undo"
+        "Changed the channels of Another l… | u: undo | ?: help"
     );
 }
 
@@ -181,8 +181,9 @@ fn a_notice_that_fits_in_no_room_ends_in_an_ellipsis_at_the_edge_of_the_room() {
         ..App::default()
     };
     // Rooms narrower than the notice with its keys cut to their least, which
-    // the cut at a word does not reach
-    (4..14).for_each(|room| {
+    // the cut at a word does not reach, and than the one key that stays
+    // where the notice is left out
+    (4..7).for_each(|room| {
         let hints = hints_in(&app, room);
         assert_eq!(hints.width(), room, "{hints}");
         assert!(hints.ends_with('…'), "{hints}");
@@ -202,4 +203,130 @@ fn a_notice_in_the_least_rooms_never_overruns_them() {
         let hints = hints_in(&app, room);
         assert!(hints.width() <= room, "room {room}: {hints:?}");
     });
+}
+
+#[test]
+fn the_notice_of_a_delete_or_a_new_file_tells_that_the_cue_it_changed_stopped() {
+    let app = |change: Command, stopped: &[CueId]| App {
+        workspace: rain().apply(change),
+        stopped: stopped.to_vec(),
+        ..App::default()
+    };
+    let delete = || Command::Delete(vec![CueId(1)]);
+    let file = || Command::Edit(CueId(1), Edit::File("hail.ogg".into()));
+    assert_eq!(
+        notice(&app(delete(), &[CueId(1)])).as_deref(),
+        Some("Deleted cue 1, which stopped | u: undo")
+    );
+    assert_eq!(
+        notice(&app(file(), &[CueId(1)])).as_deref(),
+        Some("Changed the file of cue 1, which stopped | u: undo")
+    );
+    assert_eq!(
+        notice(&app(file(), &[])).as_deref(),
+        Some("Changed the file of cue 1 | u: undo")
+    );
+    // The undo of the change does not claim the stop
+    let undone = App {
+        workspace: rain().apply(file()).apply(Command::Undo),
+        stopped: vec![CueId(1)],
+        ..App::default()
+    };
+    assert_eq!(
+        notice(&undone).as_deref(),
+        Some("Undid: changed the file of cue 1 | Control+r: redo")
+    );
+}
+
+#[test]
+fn an_undo_or_redo_of_several_changes_tells_how_many_and_the_last() {
+    let added = (0..5).fold(rain(), |workspace, _| {
+        workspace.apply(Command::Add {
+            list: 0,
+            kind: Kind::Memo,
+            at: crate::back::Place::End,
+            count: 1,
+        })
+    });
+    let app = |workspace, turns| App {
+        workspace,
+        turns,
+        ..App::default()
+    };
+    let undone = (0..3).fold(added, |workspace, _| workspace.apply(Command::Undo));
+    assert_eq!(
+        notice(&app(undone.clone(), 3)).as_deref(),
+        Some("Undid 3 changes, the last: added cue 4 | Control+r: redo")
+    );
+    assert_eq!(
+        notice(&app(undone.clone(), 1)).as_deref(),
+        Some("Undid: added cue 4 | Control+r: redo")
+    );
+    let redone = undone.apply(Command::Redo).apply(Command::Redo);
+    assert_eq!(
+        notice(&app(redone, 2)).as_deref(),
+        Some("Redid 2 changes, the last: added cue 5 | u: undo")
+    );
+}
+
+#[test]
+fn light_output_that_cannot_go_out_counts_as_a_warning_until_a_round_gets_out() {
+    let count = |light_problem| {
+        crate::front::view::warnings(&App {
+            light_problem,
+            ..App::default()
+        })
+    };
+    assert_eq!(
+        count(Some("no network interface".to_owned())),
+        count(None) + 1
+    );
+}
+
+#[test]
+fn the_notice_of_a_time_that_reads_as_no_time_tells_that_it_counts_as_zero() {
+    let told = |time: &str| {
+        notice(&App {
+            workspace: rain().apply(Command::Edit(
+                CueId(1),
+                Edit::PreWait(time.to_owned().into()),
+            )),
+            ..App::default()
+        })
+    };
+    assert_eq!(
+        told("1:0:0:5").as_deref(),
+        Some("Changed the pre-wait of cue 1 to zero | u: undo")
+    );
+    assert_eq!(
+        told("2").as_deref(),
+        Some("Changed the pre-wait of cue 1 | u: undo")
+    );
+}
+
+#[test]
+fn the_notice_of_a_cue_gone_silent_outlasts_what_enter_does_but_a_plain_one_does_not() {
+    let app = |sends: Option<Sends>| App {
+        held: true,
+        check_held: true,
+        workspace: rain().apply(Command::Edit(CueId(1), Edit::Sends(sends))),
+        ..opened(Preset::Vi, false, false)
+    };
+    let room = 52;
+    let silent = hints_in(&app(Some(Sends::new())), room);
+    assert!(silent.contains("play nowhere"), "{silent}");
+    assert!(
+        silent.contains("leave") && !silent.contains("Enter"),
+        "{silent}"
+    );
+    let plain = hints_in(&app(None), room);
+    assert!(plain.contains("Enter: flip"), "{plain}");
+}
+
+#[test]
+fn only_a_notice_of_silence_that_an_undo_has_not_taken_back_silences() {
+    assert!(format::silences("changed cue 2 to play nowhere"));
+    assert!(format::silences("1 cue now sends to no output"));
+    assert!(!format::silences("undid: changed cue 2 to play nowhere"));
+    assert!(!format::silences("changed where cue 2 plays"));
 }

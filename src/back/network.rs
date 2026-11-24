@@ -46,7 +46,8 @@ const CHECK: Duration = Duration::from_millis(100);
 
 #[derive(Default)]
 struct Shared {
-    /// Why the last message to each destination failed, until one gets there
+    /// Why the last message to each destination failed, in the words of
+    /// [`warn::words`], until one gets there
     problems: Mutex<BTreeMap<String, String>>,
     pending: AtomicUsize,
 }
@@ -91,15 +92,33 @@ impl Network {
         }
     }
 
-    /// Returns why messages to the `named` destinations last failed.  A
-    /// destination that no cue names any more is forgotten, since fixing a
-    /// typo in a cue would otherwise leave the warning of the old one.
-    pub fn problems(&self, named: &BTreeSet<String>) -> Vec<String> {
+    /// Returns why messages to the `named` destinations last failed, as
+    /// `message not sent: connection refused`, each with the value that
+    /// `named` holds for its destination, such as the cue that names it, whose
+    /// inspector shows the destination.  A destination that no cue names any
+    /// more is forgotten, since fixing a typo in a cue would otherwise leave
+    /// the warning of the old one.
+    pub fn problems<T: Copy>(&self, named: &BTreeMap<String, T>) -> Vec<(T, String)> {
         let mut problems = self.shared.problems();
-        problems.retain(|destination, _| named.contains(destination));
+        problems.retain(|destination, _| named.contains_key(destination));
         problems
             .iter()
-            .map(|(destination, reason)| format!("Network cue to {destination}: {reason}"))
+            .filter_map(|(destination, reason)| {
+                named
+                    .get(destination)
+                    .map(|&named| (named, format!("message not sent: {reason}")))
+            })
+            .collect()
+    }
+
+    /// Returns the `named` destinations that messages last failed to reach,
+    /// so that each cue that names one can tell so on its own row
+    pub fn failed<T>(&self, named: &BTreeMap<String, T>) -> BTreeSet<String> {
+        self.shared
+            .problems()
+            .keys()
+            .filter(|destination| named.contains_key(*destination))
+            .cloned()
             .collect()
     }
 
@@ -167,7 +186,7 @@ fn work(destination: &str, messages: &mpsc::Receiver<(Instant, Outgoing)>, share
                 warn::once(&format!("network cue to {destination}: {error}"));
                 shared
                     .problems()
-                    .insert(destination.to_owned(), error.to_string());
+                    .insert(destination.to_owned(), warn::words(&error));
                 None
             }
         };
@@ -217,9 +236,21 @@ fn time_left(handed: Instant) -> io::Result<Duration> {
 /// resolver can give IPv6 first, as `::1` for `localhost`.
 fn ipv4_address(address: &str) -> io::Result<SocketAddr> {
     address
-        .to_socket_addrs()?
+        .to_socket_addrs()
+        .map_err(unfound)?
         .find(SocketAddr::is_ipv4)
         .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "no IPv4 address for the host"))
+}
+
+/// Words a failed lookup as cinq's own, since the resolver's message, such
+/// as `failed to lookup address information: Name or service not known`,
+/// runs past the sidebar and adds nothing that the operator can act on,
+/// while an address that cannot be read keeps its own
+fn unfound(error: io::Error) -> io::Error {
+    match error.kind() {
+        ErrorKind::InvalidInput => error,
+        kind => io::Error::new(kind, "cannot find the host"),
+    }
 }
 
 /// Returns a socket that may send to a broadcast address, such as

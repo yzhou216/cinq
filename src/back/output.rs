@@ -77,6 +77,12 @@ impl Channels {
         std::iter::once(first).chain(second)
     }
 
+    /// Returns the lowest channel, which a device must have for these to
+    /// sound at all
+    pub fn lowest(self) -> u16 {
+        self.each().min().unwrap_or(0)
+    }
+
     /// Returns how many channels a device needs to hold these
     pub fn needs(self) -> u16 {
         self.each().max().map_or(0, |highest| highest + 1)

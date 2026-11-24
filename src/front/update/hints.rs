@@ -12,9 +12,9 @@
 //! GO and Panic, which act as everywhere and leave the mode, and Backspace,
 //! which takes a letter back, or leaves the mode where none is typed, since
 //! the key of the mode is a letter of the labels in both keymaps.  A click
-//! leaves it too, and so do a turn of the
-//! wheel, a resize of the window, and a start or an end of a run of the Active
-//! list, since the labels would no longer lie on their places.
+//! leaves it too, and so do a turn of the wheel, a resize of the window, a
+//! start or an end of a run of the Active list, and a warning that comes or
+//! goes, since the labels would no longer lie on their places.
 
 mod labels;
 
@@ -29,7 +29,7 @@ use crate::{
     front::{
         Message,
         keymap::Press,
-        view::{Act, Site, hint},
+        view::{self, Act, Site, hint},
     },
 };
 use labels::labels;
@@ -40,6 +40,14 @@ use labels::labels;
 pub struct Hints {
     places: Vec<(String, Site)>,
     typed: String,
+}
+
+/// What the sidebar holds above the places that hint mode labels, which
+/// decides where those places lie
+#[derive(Debug, PartialEq)]
+pub struct Above {
+    active: Vec<CueId>,
+    warnings: usize,
 }
 
 impl Hints {
@@ -113,24 +121,32 @@ impl App {
         }
     }
 
-    /// Returns the cues of the Active list, in its order, which changes where a
-    /// run starts or ends
-    pub(in crate::front) fn active_cues(&self) -> Vec<CueId> {
-        self.workspace
-            .active()
-            .iter()
-            .map(|active| active.id)
-            .collect()
+    /// Returns what the sidebar holds above the places that hint mode labels:
+    /// the cues of the Active list, in its order, and the number of warnings,
+    /// which move those places when a run starts or ends or a warning comes
+    /// or goes
+    pub(in crate::front) fn above_places(&self) -> Above {
+        Above {
+            active: self
+                .workspace
+                .active()
+                .iter()
+                .map(|active| active.id)
+                .collect(),
+            warnings: view::warnings(self),
+        }
     }
 
-    /// Turns hint mode off unless the Active list still holds the cues
-    /// `before`, since the places below an entry that came or went lie
-    /// elsewhere than the labels do
-    pub(in crate::front) fn hints_after(self, before: &[CueId]) -> Self {
-        if self.hints.is_some() && self.active_cues() != before {
-            self.without_hints()
-        } else {
-            self
+    /// Turns hint mode off unless the sidebar still holds what it held
+    /// `before`, which is nothing to compare when the mode was off, since the
+    /// places below an entry that came or went lie elsewhere than the labels
+    /// do
+    pub(in crate::front) fn hints_after(self, before: Option<&Above>) -> Self {
+        match before {
+            Some(before) if self.hints.is_some() && self.above_places() != *before => {
+                self.without_hints()
+            }
+            _ => self,
         }
     }
 

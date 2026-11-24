@@ -80,6 +80,8 @@ struct Seen {
     played: Option<f64>,
     /// Whether the sound still plays
     heard: bool,
+    /// Whether the voice tells that the sound stopped early
+    cut: bool,
 }
 
 /// Run and its sound in a mock backend
@@ -133,11 +135,17 @@ impl Rig {
         let heard = active
             .as_ref()
             .and_then(|active| voice.heard(active, |_| true));
+        let cut = active.as_ref().is_some_and(|active| {
+            let clip = active.sound().expect("the cue has sound");
+            let ends = ticked.cue(CueId(1)).and_then(|cue| cue.sound_ends(clip));
+            ends.is_some_and(|ends| voice.cut_short(clip, ends, |_| true))
+        });
         let workspace = heard.clone().into_iter().fold(ticked, Workspace::apply);
         let seen = Seen {
             position: voice.position().expect("the voice has a sound"),
             played: workspace.active_of(CueId(1)).map(|active| active.played()),
             heard: heard.is_some(),
+            cut,
         };
         (
             Self {
@@ -189,6 +197,7 @@ fn a_loop_section_goes_round_its_loop_and_never_back_before_its_start() {
     assert!(inside.clone().all(|seen| seen.position >= 0.5 - 1e-6));
     assert!(seen.iter().all(|seen| seen.position < 1.5 + 1e-6));
     assert!(seen.iter().all(|seen| seen.heard), "the sound never ends");
+    assert!(seen.iter().all(|seen| !seen.cut));
     let off = drift(&seen);
     assert!(
         off < 0.06,
@@ -223,6 +232,10 @@ fn a_devamped_run_leaves_its_loop_at_the_planned_pass_end_and_plays_to_its_end()
         .expect("the sound ends");
     assert!((3.5..=3.65).contains(&ends), "{ends}");
     assert!(seen.iter().all(|seen| seen.position <= 2.5 + 1e-6));
+    assert!(
+        seen.iter().all(|seen| !seen.cut),
+        "a devamp is no early stop"
+    );
     assert!(rig.workspace.active_of(CueId(1)).is_none(), "the run ends");
     let off = drift(&seen);
     assert!(
@@ -244,6 +257,10 @@ fn a_loop_that_ends_with_its_clip_ends_the_run_at_the_pass_end() {
     });
     assert_eq!(wraps(&seen), 0, "the first pass is the last");
     assert!(seen.iter().all(|seen| seen.position <= 2.5 + 1e-6));
+    assert!(
+        seen.iter().all(|seen| !seen.cut),
+        "a devamp is no early stop"
+    );
     assert!(rig.workspace.active_of(CueId(1)).is_none(), "the run ends");
     assert!(!seen.last().expect("the test steps").heard);
 }

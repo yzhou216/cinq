@@ -44,9 +44,9 @@ Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
 \end{figure}
 
 In a window too narrow to show each device name on one line, the
-\ui{New cues} column gives way, then \ui{State} and \ui{Channels} in a
-narrower one, and the inspector and the sidebar keep what they told, as
-\ui{New cues send}.
+\ui{New cues} column gives way first, then \ui{State}, and then
+\ui{Channels} in a narrower one, and the inspector and the sidebar keep what
+they told, as \ui{New cues send}.
 
 Channels count from 1: \texttt{3} names one channel, and \texttt{1-2} names
 two, left first.  A line of help beside each field says what it takes, and
@@ -72,9 +72,10 @@ show has more outputs than the window shows.  The search keys, \key{/} and
 and the device.  \key{Control+o} of the vi keymap goes back to the place
 before the last jump, and from the outputs it leaves them for the cue list
 that showed.  The status bar names the key and that list while the outputs
-show, as in \texttt{Control+o: back to Main}.  So does \key{h}, or choosing
-the cue list in the sidebar, and the cue list returns with the cue that was
-selected.
+show, as in \texttt{Control+o: back to Main}.  Choosing the cue list in the
+sidebar does the same, and the cue list returns with the cue that was
+selected.  \key{h} shows the last cue list, which is not always the one that
+showed.
 
 The keys that edit cues edit outputs as well.  In the vi keymap, \key{o} and
 \key{O} add an output below and above the selected one, and a count adds that

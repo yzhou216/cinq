@@ -137,6 +137,16 @@ impl Change {
         }
     }
 
+    /// Returns the cue that standby is on once a move of standby is taken
+    /// back, or made again where `redone` is set, which the view follows
+    pub fn standing(&self, redone: bool) -> Option<CueId> {
+        match self {
+            Change::Standby(standby) if redone => standby.after,
+            Change::Standby(standby) => standby.before,
+            _ => None,
+        }
+    }
+
     /// Returns the cue that an addition or a paste went next to, if it did,
     /// which undo returns the selection to, as Vim's undo returns the cursor
     /// to where the change was made, whether the cues went below it or above

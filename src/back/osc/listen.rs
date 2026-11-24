@@ -123,7 +123,7 @@ fn bound(address: SocketAddr, sender: &mpsc::UnboundedSender<Heard>) -> Option<U
                     // the error, without the system's text
                     tell(Heard::Failed(format!(
                         "osc_listen: cannot listen, {}; retrying",
-                        error.kind()
+                        reason(&error)
                     )));
                 }
                 thread::sleep(if failures == 1 { RELEASE } else { RETRY });
@@ -165,11 +165,8 @@ fn commands(datagram: &[u8], sender: IpAddr) -> Vec<Heard> {
     let Some(messages) = incoming::packet(datagram) else {
         return vec![ignored("not an OSC packet".to_owned())];
     };
-    if messages.len() > MESSAGES {
-        warn::once(&format!(
-            "OSC from {sender}: more than {MESSAGES} messages in a datagram, the rest dropped"
-        ));
-    }
+    let dropped = (messages.len() > MESSAGES)
+        .then(|| ignored(format!("more than {MESSAGES} messages, the rest dropped")));
     messages
         .iter()
         .take(MESSAGES)
@@ -178,6 +175,7 @@ fn commands(datagram: &[u8], sender: IpAddr) -> Vec<Heard> {
             Reading::Released => None,
             Reading::Unknown => Some(ignored(format!("unknown {}", address(message)))),
         })
+        .chain(dropped)
         .collect()
 }
 
@@ -187,6 +185,18 @@ fn commands(datagram: &[u8], sender: IpAddr) -> Vec<Heard> {
 fn address(message: &Message) -> String {
     let shown: String = message.address.chars().take(ADDRESS).collect();
     format!("address {shown:?}")
+}
+
+/// Returns the reason of a failed bind in words, the kind of the error when
+/// it has a plain one and the text of the system otherwise, as a kind such
+/// as "uncategorized error" tells nothing
+fn reason(error: &io::Error) -> String {
+    match error.kind() {
+        kind @ (io::ErrorKind::AddrInUse
+        | io::ErrorKind::AddrNotAvailable
+        | io::ErrorKind::PermissionDenied) => kind.to_string(),
+        _ => warn::words(error),
+    }
 }
 
 /// Returns whether a failed receive may repeat at once, as any error may but

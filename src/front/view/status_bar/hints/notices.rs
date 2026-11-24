@@ -14,7 +14,7 @@ use super::{
     acts_here, menu_open,
 };
 use crate::{
-    back::{Change, Turn},
+    back::{Change, CueId, Turn},
     front::{App, keymap::Action, view::answered},
 };
 
@@ -68,11 +68,28 @@ pub(in crate::front::view::status_bar) fn notice(app: &App) -> Option<String> {
         .latest_change()
         .filter(|(_, change)| !app.outputs_shown || matches!(change, Change::Outputs { .. }))?;
     let told = format::change(workspace, change);
+    let told = match (turn, change) {
+        (Turn::Done, Change::Edited { cue, .. }) => stopping(app, told, &[*cue]),
+        (Turn::Done, Change::Deleted { cues, .. }) => stopping(
+            app,
+            told,
+            &cues.iter().map(|placed| placed.cue.id).collect_vec(),
+        ),
+        _ => told,
+    };
     let facts = format::consequences_of(workspace, change);
     let (told, action, next) = match turn {
         Turn::Done => (told, Action::Undo, workspace.undoable()),
-        Turn::Undone => (format!("undid: {told}"), Action::Redo, workspace.redoable()),
-        Turn::Redone => (format!("redid: {told}"), Action::Undo, workspace.undoable()),
+        Turn::Undone => (
+            format::turned("undid", app.turns, &told),
+            Action::Redo,
+            workspace.redoable(),
+        ),
+        Turn::Redone => (
+            format::turned("redid", app.turns, &told),
+            Action::Undo,
+            workspace.undoable(),
+        ),
     };
     let told = format::leading(facts, &told);
     // A text field keeps every key, so that no key takes the change back
@@ -84,4 +101,11 @@ pub(in crate::front::view::status_bar) fn notice(app: &App) -> Option<String> {
             told
         }
     })
+}
+
+/// Tells after `told`, the notice of a change to `cues`, which of them the
+/// change stopped
+fn stopping(app: &App, told: String, cues: &[CueId]) -> String {
+    let stopped = app.stopped.iter().filter(|cue| cues.contains(cue)).count();
+    format::stopping(told, cues.len(), stopped)
 }

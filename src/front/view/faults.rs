@@ -90,13 +90,21 @@ pub(super) fn warnings(app: &App) -> Vec<Warning<'_>> {
 }
 
 /// Returns the outputs that cannot play, which a cue that sends to no other
-/// makes no sound on.  An output past the channels of its device is not one,
-/// since a pair that overlaps the last channel half sounds, which the sidebar
-/// warns of already.
+/// makes no sound on.  An output past the channels of its device is one only
+/// where all its channels are past them, since a pair that overlaps the last
+/// channel half sounds, which the sidebar warns of already.
 pub(super) fn failing(app: &App) -> Vec<OutputId> {
     app.audio_problems
         .iter()
-        .filter(|(_, fault)| !matches!(fault, Fault::Channels(_)))
+        .filter(|(id, fault)| match fault {
+            Fault::Channels(count) => app
+                .workspace
+                .outputs()
+                .iter()
+                .find(|output| output.id == *id)
+                .is_some_and(|output| output.channels.lowest() >= *count),
+            _ => true,
+        })
         .map(|(id, _)| *id)
         .collect()
 }

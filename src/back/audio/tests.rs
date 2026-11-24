@@ -6,6 +6,7 @@
 //! of the time that the sounds of audio and video cues have reached, which
 //! need no audio device
 
+mod cutting;
 mod devamping;
 mod device;
 mod fakes;
@@ -16,6 +17,7 @@ mod patch;
 mod retry;
 mod starting;
 mod voice;
+mod wording;
 
 use std::{
     fs,
@@ -60,7 +62,7 @@ fn ask(wanted: &Wanted) -> Ask {
 
 /// Returns `seconds` of silence as a WAV file: mono, in 16 bits, at 8000
 /// frames a second
-fn silence(seconds: f32) -> Vec<u8> {
+pub(in crate::back) fn silence(seconds: f32) -> Vec<u8> {
     silence_at(seconds, 8000)
 }
 

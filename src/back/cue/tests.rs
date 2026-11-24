@@ -365,3 +365,49 @@ fn loop_lies_within_the_clip_of_its_cue() {
     assert!(backward.loops_nothing());
     assert!(!cue(3.0, 5.0).loops_nothing());
 }
+
+#[test]
+fn minus_infinity_reads_as_silence() {
+    assert_eq!(parse_level("-inf"), Some(SILENCE));
+    assert_eq!(parse_level(" -INF dB "), Some(SILENCE));
+    assert_eq!(parse_level("inf"), None);
+}
+
+#[test]
+fn send_level_reads_off_as_no_send() {
+    assert_eq!(parse_send("off"), Some(None));
+    assert_eq!(parse_send(" Off "), Some(None));
+    assert_eq!(parse_send(""), Some(None));
+    assert_eq!(parse_send("-6"), Some(Some(-6.0)));
+    assert_eq!(parse_send("-inf"), Some(Some(SILENCE)));
+    assert_eq!(parse_send("-61"), None);
+}
+
+#[test]
+fn loop_played_tells_where_the_loop_that_plays_differs_from_the_one_typed() {
+    let cue = |loop_start: f32, loop_end: f32| Cue {
+        start: 1.0.into(),
+        end: 8.0.into(),
+        looping: true,
+        loop_start: loop_start.into(),
+        loop_end: loop_end.into(),
+        ..loaded(audio("vamp", "vamp.ogg"))
+    };
+    assert_eq!(cue(3.0, 5.0).loop_played(), None);
+    assert_eq!(cue(3.0, 30.0).loop_played(), Some((3.0, 8.0)));
+    assert_eq!(cue(0.5, 5.0).loop_played(), Some((1.0, 5.0)));
+    assert_eq!(cue(5.0, 3.0).loop_played(), None);
+    let whole = Cue {
+        loop_start: Seconds::default(),
+        loop_end: Seconds::default(),
+        ..cue(3.0, 5.0)
+    };
+    assert_eq!(whole.loop_played(), None);
+}
+
+#[test]
+fn a_name_with_line_breaks_reads_on_one_line() {
+    let cue = Cue::new(CueId(1), "4", Kind::Audio, "Two\nlines\t name").build();
+    assert_eq!(cue.to_string(), "4 Two lines name");
+    assert_eq!(Cue::one_line("a\n\n  \nb\r\n"), "a b");
+}

@@ -104,4 +104,24 @@ impl Action {
                 | Action::Redo
         )
     }
+
+    /// Returns whether the action changes the show, as the keys of editing
+    /// and naming a cue and those of [`Action::edits_the_show`] do, which
+    /// show mode locks, but for copying and undoing
+    pub fn changes_the_show(self) -> bool {
+        self.edits_the_show()
+            || matches!(self, Action::Edit | Action::EditStart | Action::ChangeName)
+    }
+
+    /// Returns whether a key of the action does nothing while the stage
+    /// window has the keyboard, which leaves to the main window the keys that
+    /// change the show and those that open its search line, the help page, or
+    /// hint mode, all of which the operator could not see work from there
+    pub fn stays_in_main_window(self) -> bool {
+        self.changes_the_show()
+            || matches!(
+                self,
+                Action::Search | Action::SearchBackward | Action::Help | Action::Hint
+            )
+    }
 }

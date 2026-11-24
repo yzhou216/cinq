@@ -14,16 +14,21 @@ use crate::front::{App, keymap::Action};
 /// of every table teach, since it is told only right after a cue is added and
 /// nowhere else.  The keys of the next cue list and of the next tab go first
 /// of all, as they only teach, and that of hint mode follows them, so that a
-/// narrow bar of the cua keymap, where its key is long, still shows it.
-pub(super) const YIELDING: [Action; 15] = [
+/// narrow bar of the cua keymap, where its key is long, still shows it.  The
+/// key of opening a show follows them, since it only teaches, but goes before
+/// the keys that act, since the show with no file and no cues, where alone it
+/// shows, gives them nothing to act on.
+pub(super) const YIELDING: [Action; 17] = [
     Action::NextList,
     Action::NextTab,
     Action::Hint,
+    Action::Open,
     Action::Standby,
     Action::Forward,
     Action::Back,
     Action::Go,
     Action::Panic,
+    Action::Fullscreen,
     Action::Save,
     Action::Help,
     Action::ChangeName,
@@ -38,14 +43,16 @@ pub(super) const YIELDING: [Action; 15] = [
 /// next list, which is the way on, outlasts the keys that only teach, the
 /// hints of GO and Panic, whose buttons the transport shows, and those of the
 /// help page and of renaming a cue just added
-const YIELDING_AT_END: [Action; 15] = [
+const YIELDING_AT_END: [Action; 17] = [
     Action::Hint,
     Action::NextTab,
+    Action::Open,
     Action::Standby,
     Action::Forward,
     Action::Back,
     Action::Go,
     Action::Panic,
+    Action::Fullscreen,
     Action::Save,
     Action::Help,
     Action::ChangeName,
@@ -59,12 +66,14 @@ const YIELDING_AT_END: [Action; 15] = [
 /// Hints in turn of giving way while a text field, a checkbox, or a closed
 /// drop-down list has the keyboard, the first to go first.  The key of the
 /// next field only teaches, and a focus border shows the field, so that it
-/// goes first.  What Enter does outlasts the other keys that only teach, but
-/// gives way before GO and Panic, which act there, and those give way before
-/// the key that leaves the field, which is the way back to the cue list and
-/// panic.
-pub(super) const YIELDING_IN_FIELD: [Action; 16] = [
+/// goes first, and the key of hint mode, which only a checkbox, a button, or
+/// a closed list lets act, follows it.  What Enter does outlasts the other
+/// keys that only teach, but gives way before GO and Panic, which act there,
+/// and those give way before the key that leaves the field, which is the way
+/// back to the cue list and panic.
+pub(super) const YIELDING_IN_FIELD: [Action; 17] = [
     Action::NextField,
+    Action::Hint,
     Action::NextTab,
     Action::Standby,
     Action::NextList,
@@ -87,7 +96,7 @@ pub(super) const YIELDING_IN_FIELD: [Action; 16] = [
 /// as they only teach, and Back stays until after GO, Panic, and Save,
 /// since it is the way out of the outputs, while the transport has buttons
 /// for GO and Panic.
-const YIELDING_IN_OUTPUTS: [Action; 14] = [
+const YIELDING_IN_OUTPUTS: [Action; 15] = [
     Action::Hint,
     Action::ChangeName,
     Action::Forward,
@@ -95,6 +104,7 @@ const YIELDING_IN_OUTPUTS: [Action; 14] = [
     Action::Edit,
     Action::Go,
     Action::Panic,
+    Action::Fullscreen,
     Action::Save,
     Action::Back,
     Action::Help,
@@ -118,11 +128,24 @@ pub(super) fn yielding(app: &App) -> &'static [Action] {
 
 /// Returns the hints that outlast the words of the latest change, which are
 /// the keys that leave a field, since a field takes every other key, and
-/// Escape would panic there.
+/// Escape would panic there, and what Enter does on a checkbox, a button, or
+/// a closed list, since a newcomer may take Space, which is GO, for the key
+/// that does.  Where the keymap binds no key to cancel, Tab is the only key
+/// that leaves a checkbox, a closed list, or the empty File field, where Enter
+/// chooses a file, so that it outlasts the words too.
 pub(super) fn outlasting(app: &App) -> &'static [Action] {
-    if hints::in_field(app) {
-        &[Action::Cancel, Action::CloseMenu]
-    } else {
-        &[]
+    let tab_leaves = (!app.text_held || hints::choosing(app))
+        && app.config.keymap.hint(Action::Cancel, "cancel").is_none();
+    match (hints::in_field(app), tab_leaves, app.text_held) {
+        (true, true, false) => &[
+            Action::Cancel,
+            Action::CloseMenu,
+            Action::NextField,
+            Action::Pick,
+        ],
+        (true, true, true) => &[Action::Cancel, Action::CloseMenu, Action::NextField],
+        (true, false, false) => &[Action::Cancel, Action::CloseMenu, Action::Pick],
+        (true, false, true) => &[Action::Cancel, Action::CloseMenu],
+        (false, ..) => &[],
     }
 }

@@ -48,6 +48,12 @@ fn first_steps_name_the_keys_of_the_keymap_in_use_in_at_most_five_lines() {
 }
 
 #[test]
+fn only_a_keymap_with_sequences_says_how_to_type_them() {
+    assert!(Keymap::from(Preset::Vi).has_sequences());
+    assert!(!Keymap::from(Preset::Cua).has_sequences());
+}
+
+#[test]
 fn the_count_paragraph_names_the_outputs_that_a_count_acts_on() {
     let vi = counts(&Keymap::from(Preset::Vi));
     assert!(vi.contains("adds that many cues or outputs") && vi.contains("as in 3 j"));

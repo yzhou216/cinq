@@ -13,7 +13,7 @@ use std::{
 
 use iced::futures::{FutureExt, Stream, StreamExt};
 
-use super::{Heard, MESSAGES, Remote, commands, listen, pauses};
+use super::{Heard, MESSAGES, Remote, commands, listen, pauses, reason};
 use crate::back::osc;
 
 const LOOPBACK: Ipv4Addr = Ipv4Addr::LOCALHOST;
@@ -136,10 +136,22 @@ fn bundle_gives_the_commands_of_its_first_messages_only() {
         element.repeat(MESSAGES + 10),
     ]
     .concat();
+    let heard = vec![Heard::Command(LOOPBACK.into(), Remote::Go); MESSAGES]
+        .into_iter()
+        .chain([Heard::Ignored(format!(
+            "OSC from {LOOPBACK}: more than {MESSAGES} messages, the rest dropped"
+        ))])
+        .collect::<Vec<_>>();
+    assert_eq!(commands(&bundle, LOOPBACK.into()), heard);
+}
+
+#[test]
+fn bind_failure_without_a_plain_kind_gives_the_text_of_the_system() {
     assert_eq!(
-        commands(&bundle, LOOPBACK.into()),
-        vec![Heard::Command(LOOPBACK.into(), Remote::Go); MESSAGES]
+        reason(&io::Error::from(io::ErrorKind::AddrInUse)),
+        "address in use"
     );
+    assert_eq!(reason(&io::Error::other("no route")), "no route");
 }
 
 #[test]

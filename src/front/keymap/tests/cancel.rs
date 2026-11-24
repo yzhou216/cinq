@@ -18,6 +18,27 @@ fn control_c_cancels_in_the_vi_keymap_and_acts_in_fields() {
 }
 
 #[test]
+fn control_left_bracket_cancels_beside_control_c_which_the_bar_names_first() {
+    let keymap = Keymap::default();
+    let bracket = press("Control+[");
+    assert_eq!(action("Control+["), Some((Action::Cancel, None)));
+    assert!(keymap.acts_in_fields(bracket));
+    assert!(keymap.cancels(bracket));
+    assert_eq!(keymap.in_menu(bracket), Some(Action::Cancel));
+    assert_eq!(typed("d Control+[").pending, []);
+    assert_eq!(
+        keymap.keys(Action::Cancel).first(),
+        Some(&keys("Control+c"))
+    );
+    assert!(
+        keymap
+            .bound()
+            .filter(|(_, bound)| *bound == [bracket])
+            .all(|(action, _)| action == Action::Cancel)
+    );
+}
+
+#[test]
 fn control_c_stays_the_copy_of_the_cua_keymap_which_binds_nothing_to_cancel() {
     let keymap = Keymap::from(Preset::Cua);
     assert!(keymap.keys(Action::Cancel).is_empty());

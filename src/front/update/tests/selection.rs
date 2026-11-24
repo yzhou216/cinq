@@ -93,3 +93,16 @@ fn selection_on_standby_moves_on_with_it_and_stays_elsewhere() {
     assert_eq!(going(1), Some(CueId(2)));
     assert_eq!(going(5), Some(CueId(5)));
 }
+
+#[test]
+fn undo_and_redo_of_a_standby_move_select_the_cue_that_standby_is_on() {
+    let moved = show(Some(CueId(4)))
+        .handled(Message::StandbySelected)
+        .0
+        .handled(Message::Select(CueId(9)))
+        .0;
+    let undone = moved.handled(Message::Undo(1)).0;
+    assert_eq!(undone.selected, Some(CueId(1)));
+    let redone = undone.handled(Message::Redo(1)).0;
+    assert_eq!(redone.selected, Some(CueId(4)));
+}

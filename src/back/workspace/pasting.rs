@@ -30,6 +30,8 @@ impl Workspace {
         Cue {
             file,
             media: Media::Unloaded,
+            // A stamp that matched would tell the recheck that nothing needs reading
+            seen: None,
             ..cue.clone()
         }
     }

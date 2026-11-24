@@ -37,6 +37,19 @@ fn what_a_copy_told_stays_through_pending_keys_and_goes_with_the_next_action() {
 }
 
 #[test]
+fn what_a_cut_told_stays_through_moves_and_list_switches_for_a_paste_into_the_other_list() {
+    let cut = typing(show(Some(CueId(4))), "d d");
+    let moved = typing(cut, "j k l");
+    assert_eq!(on_clipboard(&moved), Some(("Cut cue 4", true)));
+    assert_eq!(moved.list, 1);
+    // Key that does anything else takes it away
+    assert_eq!(on_clipboard(&typing(moved, "u")), None);
+    let pasted = typing(show(Some(CueId(4))), "y y l p");
+    assert_eq!(on_clipboard(&pasted), None);
+    assert_eq!(pasted.workspace.lists()[1].cues.len(), 3);
+}
+
+#[test]
 fn operators_over_a_motion_tell_the_cues_cut_or_copied_as_the_keys_of_a_cut_do() {
     let across = |operator, motion, count| {
         show(Some(CueId(4)))

@@ -7,7 +7,7 @@
 use super::after;
 use crate::{
     back::{CueId, Edit, Place, Workspace},
-    front::{App, Message},
+    front::{App, Focus, Message, Setting},
 };
 
 #[test]
@@ -41,14 +41,23 @@ fn link_that_fails_to_open_shows_until_the_help_page_closes() {
     let (unseen, _) = closed.next(failure());
     assert_eq!(unseen.link_problem, None);
 }
-
-/// Returns the state after a new cue gets the keys of `path` one at a time in
-/// its File field, the way the field applies each key, and the cue
+/// Returns the state after the keys of `path` go one at a time into the File
+/// field of cue `id`, the way the field reports them, with the keyboard still
+/// in it
 fn typed_path(app: App, id: CueId, path: &str) -> App {
     path.char_indices().fold(app, |app, (at, key)| {
-        let typed = Edit::File(path[..at + key.len_utf8()].to_owned());
-        after(app, [Message::Edit(id, typed), Message::Held(true)])
+        let typed = Setting::File(id);
+        let text = path[..at + key.len_utf8()].to_owned();
+        after(
+            app,
+            [Message::SettingTyped(typed, text), Message::Held(true)],
+        )
     })
+}
+
+/// Returns the state after the keyboard leaves the File field
+fn left(app: App) -> App {
+    after(app, [Message::Held(false), Message::Clicked])
 }
 
 fn added() -> (App, CueId) {
@@ -63,12 +72,18 @@ fn named(app: &App, id: CueId) -> (String, String) {
 }
 
 #[test]
-fn a_typed_path_names_the_new_cue_after_its_file_as_the_path_grows() {
+fn a_typed_path_waits_until_the_field_is_left_and_then_names_the_cue() {
     let (app, id) = added();
+    let before = named(&app, id);
     let partway = typed_path(app, id, "sounds/ra");
-    assert_eq!(named(&partway, id).1, "ra");
+    assert_eq!(named(&partway, id), before);
+    assert_eq!(
+        partway.typed,
+        Some((Setting::File(id), "sounds/ra".to_owned()))
+    );
     let (app, id) = added();
-    let typed = typed_path(app, id, "sounds/rain.flac");
+    let typed = left(typed_path(app, id, "sounds/rain.flac"));
+    assert_eq!(typed.typed, None);
     assert_eq!(
         named(&typed, id),
         ("sounds/rain.flac".to_owned(), "rain".to_owned())
@@ -76,10 +91,26 @@ fn a_typed_path_names_the_new_cue_after_its_file_as_the_path_grows() {
 }
 
 #[test]
+fn every_way_of_leaving_the_field_applies_the_typed_path() {
+    [
+        Message::Clicked,
+        Message::Focus(Focus::Next),
+        Message::Focus(Focus::Cues),
+        Message::Go,
+    ]
+    .into_iter()
+    .for_each(|leaving| {
+        let (app, id) = added();
+        let typed = after(typed_path(app, id, "rain.flac"), [leaving.clone()]);
+        assert_eq!(named(&typed, id).0, "rain.flac", "{leaving:?}");
+    });
+}
+
+#[test]
 fn undo_takes_the_whole_typed_path_back_in_one_step() {
     let (app, id) = added();
     let before = named(&app, id);
-    let typed = typed_path(app, id, "sounds/rain.flac");
+    let typed = left(typed_path(app, id, "sounds/rain.flac"));
     assert_eq!(named(&after(typed, [Message::Undo(1)]), id), before);
 }
 
@@ -87,7 +118,7 @@ fn undo_takes_the_whole_typed_path_back_in_one_step() {
 fn a_name_that_the_operator_typed_stays_when_a_path_is_typed() {
     let (app, id) = added();
     let renamed = after(app, [Message::Edit(id, Edit::Name("Thunder".to_owned()))]);
-    let typed = typed_path(renamed, id, "rain.flac");
+    let typed = left(typed_path(renamed, id, "rain.flac"));
     assert_eq!(
         named(&typed, id),
         ("rain.flac".to_owned(), "Thunder".to_owned())
@@ -97,11 +128,9 @@ fn a_name_that_the_operator_typed_stays_when_a_path_is_typed() {
 #[test]
 fn a_path_typed_again_after_the_field_was_emptied_names_the_cue_again() {
     let (app, id) = added();
-    let emptied = after(
-        typed_path(app, id, "rain.flac"),
-        [Message::Edit(id, Edit::File(String::new()))],
-    );
+    let cleared = Message::SettingTyped(Setting::File(id), String::new());
+    let emptied = left(after(left(typed_path(app, id, "rain.flac")), [cleared]));
     assert_eq!(named(&emptied, id).1, "New Audio cue");
-    let again = typed_path(emptied, id, "wind.flac");
+    let again = left(typed_path(emptied, id, "wind.flac"));
     assert_eq!(named(&again, id).1, "wind");
 }

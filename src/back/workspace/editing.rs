@@ -12,7 +12,7 @@ use super::{
     history::{Change, Kept, Placed, Standby},
     numbering::Numbers,
 };
-use crate::back::{CueId, CueList, Edit, Kind, Media, Place};
+use crate::back::{CueId, CueList, Edit, Kind, Media, Place, Stamp};
 
 impl Workspace {
     /// Puts `standby` on standby in a list without recording the move, as
@@ -233,7 +233,7 @@ impl Workspace {
         if refiled {
             workspace
                 .stopped(id)
-                .with_list_of(id, |cues| cues.loaded(id, Media::Unloaded))
+                .with_list_of(id, |cues| cues.loaded(id, Media::Unloaded, None))
         } else {
             workspace
         }
@@ -243,7 +243,7 @@ impl Workspace {
     /// been given another file since loading began.  A run whose sound
     /// could not start then ends, and the rest of its chain plays on, as GO
     /// skips a cue that cannot play.
-    pub(super) fn loaded(self, id: CueId, file: &str, media: Media) -> Self {
+    pub(super) fn loaded(self, id: CueId, file: &str, media: Media, seen: Option<Stamp>) -> Self {
         if self.cue(id).is_none_or(|cue| cue.file != file) {
             return self;
         }
@@ -251,7 +251,7 @@ impl Workspace {
             Media::Failed(_) => self.skipped(id),
             _ => self,
         };
-        workspace.with_list_of(id, |cues| cues.loaded(id, media))
+        workspace.with_list_of(id, |cues| cues.loaded(id, media, seen))
     }
 
     fn place_of(&self, id: CueId) -> Option<Placed> {

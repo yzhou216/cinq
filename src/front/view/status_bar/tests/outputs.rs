@@ -14,12 +14,21 @@ use crate::{
     front::{
         App,
         keymap::{Action, Preset},
+        update::Show,
     },
 };
 
 fn in_outputs(preset: Preset) -> App {
     App {
         outputs_shown: true,
+        ..opened(preset, false, false)
+    }
+}
+
+/// Returns the state with a file for the show, which names no key to open one
+fn on_file(preset: Preset) -> App {
+    App {
+        show: Show::in_file("/shows/storm.cinq.toml"),
         ..opened(preset, false, false)
     }
 }
@@ -37,7 +46,7 @@ fn the_outputs_hint_the_way_back_and_the_keys_to_add_and_to_rename_an_output() {
     );
     // Cue list needs none of them, and has nowhere to go back to
     assert_eq!(
-        shown(&opened(Preset::Vi, false, false), COLUMNS),
+        shown(&on_file(Preset::Vi), COLUMNS),
         "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list | f: hint"
     );
 }
@@ -78,16 +87,18 @@ fn hints_of_the_outputs_give_way_with_the_way_back_lasting_longest_after_help() 
 fn the_cue_list_keeps_its_order_of_giving_way() {
     let cues = yielding(&App::default());
     assert_eq!(
-        cues[..11],
+        cues[..13],
         [
             Action::NextList,
             Action::NextTab,
             Action::Hint,
+            Action::Open,
             Action::Standby,
             Action::Forward,
             Action::Back,
             Action::Go,
             Action::Panic,
+            Action::Fullscreen,
             Action::Save,
             Action::Help,
             Action::ChangeName
@@ -126,5 +137,27 @@ fn a_cut_output_stays_a_cut_in_the_notice_and_in_undo_and_redo() {
     assert_eq!(
         told(deleted).as_deref(),
         Some("Deleted the output Output 1 | u: undo")
+    );
+}
+
+#[test]
+fn the_outputs_of_the_cua_keymap_hint_the_key_that_changes_the_name_to_rename() {
+    let told = |room| shown(&in_outputs(Preset::Cua), room);
+    assert!(told(COLUMNS).contains("F2: rename"));
+    assert!(
+        told(COLUMNS).find("Control+n: add output") < told(COLUMNS).find("F2: rename"),
+        "the order of the hints stays"
+    );
+    // Gives way before add output, and so before GO and Panic
+    assert!(!told(70).contains("F2: rename") && told(70).contains("Escape: Panic"));
+    assert!(
+        (1..COLUMNS).all(|room| !told(room).contains("F2: rename")
+            || told(room).contains("Control+n: add output")),
+        "add output shows at every width where rename does"
+    );
+    assert!(
+        (1..COLUMNS).any(|room| told(room).contains("Control+n: add output")
+            && !told(room).contains("F2: rename")),
+        "rename gives way first"
     );
 }

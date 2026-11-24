@@ -22,7 +22,7 @@ use crate::{
     front::{App, Message, keymap},
 };
 
-/// Interval at which the files that could not be played are tried again
+/// Interval at which the files of the show are looked at again, for a change
 const RECHECK: Duration = Duration::from_secs(2);
 
 /// How long the search line tells that no row matches
@@ -43,7 +43,7 @@ impl App {
         let ticks = chain!(tick, picture)
             .min()
             .map(|wait| pace::after(self.last_tick, wait, self.paced_windows()).map(Message::Tick));
-        let rechecks = (!self.rechecking && self.workspace.failed().next().is_some())
+        let rechecks = (!self.rechecking && self.workspace.to_recheck().next().is_some())
             .then(|| time::every(RECHECK).map(|_| Message::Recheck));
         let settling = self
             .search

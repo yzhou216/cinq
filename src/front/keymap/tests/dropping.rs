@@ -42,3 +42,17 @@ fn digits_past_the_largest_count_are_not_kept() {
     // Key that is no digit still ends the keys
     assert_eq!(typed(&format!("{digits} w")), Outcome::default());
 }
+
+#[test]
+fn a_zero_that_starts_a_sequence_is_dropped_and_one_after_a_digit_counts() {
+    assert_eq!(typed("0"), Outcome::default());
+    assert_eq!(typed("0 j"), typed("j"));
+    assert_eq!(action("1 0 j"), Some((Action::Next, Some(10))));
+    // The zero after a digit stays in the keys that wait
+    assert_eq!(typed("1 0").pending.len(), 2);
+    // Zero that would start the count after an operator drops the operator
+    assert_eq!(typed("d 0"), Outcome::default());
+    assert_eq!(typed("2 d 0"), Outcome::default());
+    assert_eq!(typed("d 1 0 j").motion, Some((Action::Next, Some(10))));
+    assert_eq!(typed("d 1 0").pending.len(), 3);
+}

@@ -44,6 +44,7 @@ fn listed() -> App {
                 duration: 12.0,
                 sound: Some(12.0),
             },
+            seen: None,
         });
     App {
         workspace,

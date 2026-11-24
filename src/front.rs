@@ -18,6 +18,7 @@ mod update;
 mod view;
 
 use std::{
+    collections::BTreeSet,
     env, fs, io,
     path::{self, Path, PathBuf},
     time::{Duration, Instant},
@@ -25,8 +26,9 @@ use std::{
 
 use iced::{Size, window};
 
-use crate::back::{
-    Audio, CueId, CueList, Fault, Kind, Lights, Network, OutputId, Video, Workspace,
+use crate::{
+    back::{Audio, CueId, CueList, Fault, Kind, Lights, Network, OutputId, Video, Workspace},
+    warn,
 };
 use keymap::{Press, config::Config};
 use message::{Caret, Focus, Message, Setting, Tab};
@@ -144,16 +146,23 @@ struct App {
     reader: Option<Reader>,
     /// Why each output that cannot play cannot, by its identity
     audio_problems: Vec<(OutputId, Fault)>,
-    /// Why messages of network cues failed, until one gets there
-    network_problems: Vec<String>,
+    /// Why messages of network cues failed, until one gets there, each with
+    /// the first cue that names the destination
+    network_problems: Vec<(CueId, String)>,
+    /// Destinations that messages of network cues failed to reach, which
+    /// each cue that names one tells on its row
+    network_failed: BTreeSet<String>,
+    /// Why no light gets out, until a round of sending gets some out, while
+    /// the patch has an instrument
+    light_problem: Option<String>,
     /// Why the address of `osc_listen` cannot be listened on, until the
     /// setting changes
     osc_problem: Option<String>,
     /// Latest command from the network that did nothing, as one line, until
     /// a later command acts or the setting changes
     osc_ignored: Option<String>,
-    /// Interval at which to look for news of the network output, while it
-    /// has any
+    /// Interval at which to look for news of the network and light output,
+    /// while either has any
     network_checks: Option<Duration>,
     /// ID and name of each audio device, as they were listed last
     audio_devices: Vec<(String, String)>,
@@ -180,7 +189,7 @@ struct App {
     /// Cues copied or cut, which pasting adds
     clipboard: Clipboard,
     /// What the latest copy or cut told, until the operator does anything
-    /// else
+    /// but move the selection or switch lists
     clipped: Option<Clipped>,
     /// What the latest key found to say that is no change, such as an empty
     /// clipboard, until the operator does anything else
@@ -189,6 +198,12 @@ struct App {
     /// the field forgets once the keyboard has left it, until the operator
     /// does anything else
     unapplied: Option<String>,
+    /// Cues that the latest edit stopped by taking them away or giving them
+    /// another file, which the notice of the change tells
+    stopped: Vec<CueId>,
+    /// Changes that the latest undo or redo took back or made again, which
+    /// its notice counts where there are several
+    turns: usize,
     /// Kind of cue that Add cue creates
     new_kind: Kind,
     /// Time of the last clock tick, or `None` while the clock is stopped
@@ -288,12 +303,17 @@ fn step(from: Option<usize>, offset: isize, count: usize) -> Option<usize> {
     Some(from.map_or(0, |index| index.saturating_add_signed(offset).min(last)))
 }
 
-/// Reads a file, or returns none when there is no such file
+/// Reads a file, or returns none when there is no such file.  A failure
+/// goes on standard error whole, with the path, as a failed save does, and
+/// the screen gets its words alone, as `permission denied`.
 fn read(file: &Path) -> Result<Option<String>, String> {
     match fs::read_to_string(file) {
         Ok(text) => Ok(Some(text)),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(error.to_string()),
+        Err(error) => {
+            warn::once(&format!("cannot open {}: {error}", file.display()));
+            Err(warn::words(&error))
+        }
     }
 }
 

@@ -63,6 +63,12 @@ impl Show {
         }
     }
 
+    /// Returns whether a file holds the show, which a show that was neither
+    /// opened nor saved has not
+    pub fn has_file(&self) -> bool {
+        self.file.is_some()
+    }
+
     pub fn unsaved(&self) -> bool {
         self.text != self.saved
     }
@@ -133,6 +139,8 @@ pub struct Saved {
     file: PathBuf,
     /// Show as the file holds it now
     text: String,
+    /// Why saving failed, in words that the bar and the sidebar can show,
+    /// where standard error holds the whole error with its paths
     result: Result<(), String>,
 }
 

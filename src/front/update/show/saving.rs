@@ -4,12 +4,27 @@
 
 //! Saving the show in its file, or in another that the operator chooses
 
-use std::path::PathBuf;
+use std::{
+    io,
+    path::{Path, PathBuf},
+};
 
 use iced::Task;
 
 use super::{EXTENSION, Saved, Show, chooser, file::write, with_extension};
-use crate::front::{App, Message, update::on_own_thread};
+use crate::{
+    front::{App, Message, update::on_own_thread},
+    warn,
+};
+
+/// Writes the whole `error` of saving `file` on standard error, with the
+/// paths that the screen leaves out, and returns its words for the screen,
+/// as `permission denied`.  The temporary file that tempfile creates hides
+/// the system's error behind its path, so that only the kind goes on.
+pub(super) fn refused(file: &Path, error: &io::Error) -> String {
+    warn::once(&format!("cannot save {}: {error}", file.display()));
+    warn::words(&io::Error::from(error.kind()))
+}
 
 impl App {
     pub(in crate::front::update) fn choose_file(&self) -> Task<Message> {
@@ -36,7 +51,7 @@ impl App {
         let show = self.show.id;
         let text = self.workspace.show(file.parent());
         on_own_thread(move || Saved {
-            result: write(&file, &text, true).map_err(|error| error.to_string()),
+            result: write(&file, &text, true).map_err(|error| refused(&file, &error)),
             show,
             file,
             text,
@@ -67,11 +82,21 @@ impl App {
                     ..self
                 }
             }
-            Err(problem) => Self {
-                file_problem: Some(format!("Cannot save {}: {problem}", saved.file.display())),
-                open_failed: false,
-                ..self
-            },
+            Err(reason) => {
+                // File name rather than path, which the sidebar would cut short
+                let name = saved.file.file_name().map_or_else(
+                    || saved.file.to_string_lossy(),
+                    |name| name.to_string_lossy(),
+                );
+                let problem = format!("Cannot save {name}: {reason}");
+                // The name of the show already stands at the left of the bar
+                Self {
+                    told: Some(format!("Cannot save: {reason}")),
+                    file_problem: Some(problem),
+                    open_failed: false,
+                    ..self
+                }
+            }
         }
     }
 }

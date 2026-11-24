@@ -17,7 +17,10 @@
 //! Control+c to copy a selection, leaves the key to act all the same, but a
 //! letter that a user binds to cancel still types in the field.  The region
 //! decides as each key arrives, so keys act in the order the operator typed
-//! them.
+//! them.  Control+w and Control+u, which the fields let through, delete a
+//! word and everything before the caret there, as in Vim's Insert mode.
+
+mod delete;
 
 #[cfg(test)]
 mod tests;
@@ -54,6 +57,26 @@ pub fn keep_keys<'a>(
 struct Keep<'a>(&'a Keymap);
 
 impl Intercept for Keep<'_> {
+    fn rewrite(
+        &self,
+        content: &mut Element<'_, Message>,
+        tree: &mut Tree,
+        event: &Event,
+        layout: Layout<'_>,
+        renderer: &Renderer,
+    ) -> Option<Vec<Event>> {
+        // A user who binds either key to an action that acts in fields keeps it
+        let taken = key_pressed(event)
+            .and_then(|KeyPress { press, .. }| press)
+            .is_some_and(|press| self.0.acts_in_fields(press));
+        let events = delete::rewrite(event).filter(|_| !taken)?;
+        let mut focus = HasFocus::default();
+        content
+            .as_widget_mut()
+            .operate(tree, layout, renderer, &mut focus);
+        focus.text.then_some(events)
+    }
+
     fn after(
         &self,
         content: &mut Element<'_, Message>,

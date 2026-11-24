@@ -10,7 +10,7 @@ mod placing;
 
 pub use groups::Groups;
 
-use crate::back::{Cue, CueId, Edit, Kind, Media, Place, items::replaced_where};
+use crate::back::{Cue, CueId, Edit, Kind, Media, Place, Stamp, items::replaced_where};
 
 #[derive(Debug, Clone)]
 pub struct CueList {
@@ -140,8 +140,8 @@ impl CueList {
         self.with_cue(id, |cue| cue.edited(edit))
     }
 
-    pub(in crate::back) fn loaded(self, id: CueId, media: Media) -> Self {
-        self.with_cue(id, |cue| Cue { media, ..cue })
+    pub(in crate::back) fn loaded(self, id: CueId, media: Media, seen: Option<Stamp>) -> Self {
+        self.with_cue(id, |cue| Cue { media, seen, ..cue })
     }
 
     fn with_cue(self, id: CueId, change: impl FnOnce(Cue) -> Cue) -> Self {

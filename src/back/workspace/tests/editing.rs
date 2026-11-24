@@ -170,10 +170,14 @@ fn new_numbers_read_spaced_and_large_numbers_exactly_and_do_not_overflow() {
 }
 
 #[test]
-fn files_that_could_not_be_played_are_listed_for_another_try() {
-    let workspace = workspace(vec![audio(1), audio(2)]).apply(not_found(1));
-    let listed: Vec<CueId> = workspace.failed().map(|cue| cue.id).collect();
-    assert_eq!(listed, [CueId(1)]);
+fn files_that_were_read_are_listed_for_another_look_unless_their_cues_run() {
+    let workspace = workspace(vec![audio(1), audio(2), audio(3)])
+        .apply(not_found(1))
+        .apply(GO)
+        .apply(GO);
+    let listed: Vec<CueId> = workspace.to_recheck().map(|cue| cue.id).collect();
+    assert_eq!(workspace.active().len(), 1, "the second GO fires cue 2");
+    assert_eq!(listed, [CueId(1), CueId(3)]);
 }
 
 #[test]
