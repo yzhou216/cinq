@@ -11,7 +11,7 @@ use super::{
     show,
 };
 use crate::{
-    back::{Command, Cue, CueId, CueList, Kind, OutputId, Sends, Workspace},
+    back::{Command, Cue, CueId, CueList, InstrumentId, Kind, OutputId, Sends, Workspace},
     front::view::theme,
 };
 
@@ -77,4 +77,20 @@ fn a_cue_that_a_panic_is_fading_reads_fading_in_the_color_of_a_running_cue() {
     let theme = theme::modus_vivendi();
     assert_eq!(text_of, "fading");
     assert_eq!(style(&theme).color, text::success(&theme).color);
+}
+
+#[test]
+fn a_light_cue_that_sets_no_instrument_or_names_one_the_patch_lacks_reads_it_in_yellow() {
+    let light = |levels: &[(u32, f32)]| {
+        let lights = levels
+            .iter()
+            .map(|&(id, level)| (InstrumentId(id), level))
+            .collect();
+        let cue = Cue::new(CueId(1), "1", Kind::Light, "Light")
+            .lights(lights)
+            .build();
+        Workspace::new(vec![CueList::new("Main", vec![cue])])
+    };
+    assert_eq!(shown(&light(&[])), ("NO LEVELS".to_owned(), true));
+    assert_eq!(shown(&light(&[(99, 50.0)])), ("UNPATCHED".to_owned(), true));
 }

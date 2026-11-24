@@ -34,6 +34,10 @@ const LOCKED: &str = "Show mode does not allow edits";
 /// leaves the keys that change the show to the main window
 const STAGE: &str = "Edits act in the main window";
 
+/// What the status bar tells when the stage window has the keyboard and a key
+/// of search, help, or hint mode reaches it, which belong to the main window
+pub(super) const MAIN_WINDOW: &str = "Search, help, and hint mode act in the main window";
+
 impl App {
     /// Returns why a key of `action` does nothing now, when it is one that
     /// changes the show or names a cue.  Copying and undoing carry on in show
@@ -97,9 +101,13 @@ impl App {
             ),
             // Page opens in the main window, which the fullscreen stage
             // window may cover, so that the page would open out of sight
-            Some((Action::Help | Action::Hint, _)) if app.stage.has_keyboard() => {
-                (app, Task::none())
-            }
+            Some((Action::Help | Action::Hint, _)) if app.stage.has_keyboard() => (
+                Self {
+                    remark: Some(MAIN_WINDOW),
+                    ..app
+                },
+                Task::none(),
+            ),
             Some((
                 action @ (Action::Next | Action::Previous | Action::ScrollDown | Action::ScrollUp),
                 count,

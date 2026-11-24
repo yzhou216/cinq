@@ -222,7 +222,7 @@ fn link<'a, Link>(label: impl IntoFragment<'a>, target: Link) -> Span<'a, Link> 
 fn first_steps(keymap: &Keymap) -> String {
     let key = |action| keymap.key(action).unwrap_or_else(|| "(no key)".to_owned());
     format!(
-        "First steps: {go} is GO, which fires the standby cue, and {panic} is Panic, which stops everything.  {next} and {previous} move the selection, and {standby} puts the selected cue on standby.  {add} adds a cue below the selection, {name} names it, and {undo} undoes the last change.  {close} closes this page, and {standby} opens the tutorial.  The table lists every key, and cinq(5) describes the rest.",
+        "First steps: {go} is GO, which fires the standby cue, and {panic} is Panic, which stops everything.  {next} and {previous} move the selection, and {standby} puts the selected cue on standby.  {add} adds a cue below, {name} names it, and {undo} undoes a change.  {next_field} moves through the fields to the File field, where Enter chooses a file.  {hint} labels each place to click.  {close} closes this page, and {standby} opens the tutorial.  {save} saves the show.  The table lists every key.",
         go = key(Action::Go),
         panic = key(Action::Panic),
         next = key(Action::Next),
@@ -231,7 +231,10 @@ fn first_steps(keymap: &Keymap) -> String {
         add = key(Action::AddBelow),
         name = key(Action::ChangeName),
         undo = key(Action::Undo),
+        next_field = key(Action::NextField),
+        hint = key(Action::Hint),
         close = key(Action::CloseHelp),
+        save = key(Action::Save),
     )
 }
 

@@ -93,3 +93,19 @@ fn saving_keeps_the_permissions_of_the_show_and_the_link_to_it() {
     let mode = fs::metadata(&show).map(|metadata| metadata.permissions().mode() & 0o777);
     assert_eq!(mode.ok(), Some(0o640));
 }
+
+#[test]
+fn saving_ends_the_failure_to_open_whether_it_succeeds_or_fails() {
+    let broken =
+        || App::default().opened(found(Some("/shows/big.cinq.toml"), Some("[[list"), None));
+    assert!(broken().open_failed);
+    let file = "/shows/other.cinq.toml";
+    let succeeded = broken().saved(saving(&broken(), file));
+    assert!(!succeeded.open_failed && succeeded.file_problem.is_none());
+    let failed = Saved {
+        result: Err("disk full".to_owned()),
+        ..saving(&broken(), file)
+    };
+    let failed = broken().saved(failed);
+    assert!(!failed.open_failed && failed.file_problem.is_some());
+}

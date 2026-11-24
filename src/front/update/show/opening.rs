@@ -39,9 +39,15 @@ impl App {
     /// screen with unsaved changes brings back the changes on screen, since
     /// its kept file may still wait for the newest of them.
     pub(in crate::front::update) fn opened(self, read: Read) -> Self {
+        // File name rather than path, which the sidebar would cut short
         let name = read.file.as_deref().map_or_else(
             || "a new show".to_owned(),
-            |file| file.display().to_string(),
+            |file| {
+                file.file_name().map_or_else(
+                    || file.display().to_string(),
+                    |name| name.to_string_lossy().into_owned(),
+                )
+            },
         );
         let from_show = |text: &str| Workspace::from_show(text, &read.directory);
         let workspace = read.text.and_then(|text| match text {
@@ -53,6 +59,7 @@ impl App {
             Err(problem) => {
                 return Self {
                     file_problem: Some(format!("Cannot open {name}: {problem}")),
+                    open_failed: true,
                     ..self
                 };
             }
@@ -84,6 +91,7 @@ impl App {
                 version: self.show.version + 1,
             },
             file_problem: None,
+            open_failed: false,
             keep_problem: None,
             ..self
         };

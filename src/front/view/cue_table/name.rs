@@ -9,9 +9,10 @@
 //! of the cues in a group lie one level right of the name of the group.  A
 //! group has its mark in the gutter, as a tree view marks its nodes: `-` where
 //! the group is expanded and `+` where it is collapsed.  The Target column
-//! tells how many cues a collapsed group hides.  A click on the mark flips the
-//! group.  A list with no group has no gutter, so that its names lie where
-//! they always did.
+//! tells how many cues a collapsed group hides, or its name does where the
+//! list has no room for that column.  A click on the mark flips the
+//! group, and so does its hint label.  A list with no group has no gutter, so
+//! that its names lie where they always did.
 
 use iced::{
     Element, Font,
@@ -25,7 +26,7 @@ use crate::{
     back::{Cue, Kind},
     front::{
         Message,
-        view::{FONT, char_width},
+        view::{FONT, char_width, hinted},
     },
 };
 
@@ -47,9 +48,10 @@ pub(super) fn cell<'a>(cue: &Cue, name: String, depth: u8, gutter: usize) -> Ele
     let vertical = padding::vertical(ROW_PADDING);
     let indent = space().width(f32::from(depth) * INDENT as f32 * char_width());
     let before: Element<'a, Message> = match flip(cue) {
-        Some(flip) => mouse_area(container(text(mark(cue))).padding(vertical))
-            .on_press(flip)
-            .into(),
+        Some(flip) => hinted(
+            mouse_area(container(text(mark(cue))).padding(vertical)).on_press(flip.clone()),
+            flip,
+        ),
         None => space().width(gutter as f32 * char_width()).into(),
     };
     let name: Element<'a, Message> = match cue.kind {

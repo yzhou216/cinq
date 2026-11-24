@@ -36,7 +36,7 @@ use crate::{
     back::{Cue, Groups, Workspace},
     front::{App, Message, keymap::Action},
 };
-use columns::{Column, hidden_problem, lines};
+use columns::{Column, counted, hidden_problem, lines};
 use fitting::fitting;
 use layout::Layout;
 
@@ -125,10 +125,12 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
 fn list<'a>(app: &'a App, room: f32) -> Element<'a, Message> {
     let layout = Rc::new(Layout::of(app.current()));
     let fitting = fitting(app, &layout, room);
+    // Where the Target column is gone, a collapsed group tells its count after its name
+    let counting = fitting.iter().all(|&(column, _)| column != Column::Target);
     let table = |titled: bool, cues: Vec<&'a Cue>| {
         let layout = Rc::clone(&layout);
         let columns = fitting.iter().map(move |&(column, width)| {
-            table_column(app, column, width, titled, Rc::clone(&layout))
+            table_column(app, column, width, titled, counting, Rc::clone(&layout))
         });
         table::table(columns, cues)
             .padding_x(CELL_PADDING)
@@ -170,6 +172,10 @@ pub(super) fn scrolling<'a>(
 
 fn empty(app: &App) -> Element<'_, Message> {
     let hint = match app.config.keymap.key(Action::AddBelow) {
+        // Cues added here would not be those of the show that failed to open
+        _ if app.open_failed && app.file_problem.is_some() => {
+            "The show could not be opened.  See the warning in the sidebar.".to_owned()
+        }
         _ if !app.editable() => "No cues yet.  Leave show mode to add one.".to_owned(),
         Some(keys) => format!("No cues yet.  Press {keys} or Add cue to add one."),
         None => "No cues yet.  Press Add cue to add one.".to_owned(),
@@ -190,6 +196,7 @@ fn table_column<'a>(
     column: Column,
     width: Option<f32>,
     titled: bool,
+    counting: bool,
     layout: Rc<Layout<'a>>,
 ) -> table::Column<'a, 'a, &'a Cue, Message> {
     let header: Element<'a, Message> = if titled {
@@ -197,7 +204,7 @@ fn table_column<'a>(
     } else {
         space().into()
     };
-    table::column(header, move |cue| cell(app, column, cue, &layout))
+    table::column(header, move |cue| cell(app, column, cue, counting, &layout))
         .width(width.map_or(Fill, Length::Fixed))
 }
 
@@ -205,12 +212,19 @@ fn table_column<'a>(
 /// table, so that a click anywhere in it selects the cue, but on the mark of
 /// a group, which flips it.  The cell of a name pads its parts itself, so that
 /// the mark takes the height of the row.
-fn cell<'a>(app: &'a App, column: Column, cue: &'a Cue, layout: &Layout) -> Element<'a, Message> {
+fn cell<'a>(
+    app: &'a App,
+    column: Column,
+    cue: &'a Cue,
+    counting: bool,
+    layout: &Layout,
+) -> Element<'a, Message> {
     let groups = &layout.groups;
     let vertical = padding::vertical(ROW_PADDING);
     let (content, padded): (Element<'a, Message>, _) = match column {
         Column::Name => {
-            let name = column.text(&app.workspace, groups, cue);
+            let count = counted(&app.workspace, groups, cue).filter(|_| counting);
+            let name = column.text(&app.workspace, groups, cue) + &count.unwrap_or_default();
             (
                 name::cell(cue, name, layout.depth(cue), layout.gutter()),
                 false,

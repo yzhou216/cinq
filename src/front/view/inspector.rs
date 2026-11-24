@@ -110,7 +110,7 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
 }
 
 /// Returns the header of a cue over `fields`, which tells what keeps GO from
-/// playing the cue, and which of the `times` that it shows reads as no time
+/// playing the cue or from lighting all that it names, and which of the `times` that it shows reads as no time
 fn inspected<'a>(
     app: &'a App,
     cue: &Cue,
@@ -119,6 +119,7 @@ fn inspected<'a>(
 ) -> Element<'a, Message> {
     let header = row![text(format!("{cue}, {} cue{}", cue.kind, lock(app)))]
         .extend(trouble(app, cue))
+        .extend(unlit(app, cue))
         .extend(unread(cue, times).map(|reason| text(reason).style(text::danger).into()))
         .spacing(3.0 * SPACING)
         .align_y(Center)
@@ -141,6 +142,16 @@ fn trouble<'a>(app: &App, cue: &Cue) -> Option<Element<'a, Message>> {
             .style(text::danger)
             .into(),
     )
+}
+
+/// Returns what keeps a light cue from setting all that it should, in words, in
+/// the warning color, since GO still fires the cue
+fn unlit<'a>(app: &App, cue: &Cue) -> Option<Element<'a, Message>> {
+    app.workspace.unlit(cue).map(|unlit| {
+        text(format!("This cue {unlit}"))
+            .style(text::warning)
+            .into()
+    })
 }
 
 fn lock(app: &App) -> &'static str {

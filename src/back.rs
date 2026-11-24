@@ -46,7 +46,7 @@ pub use output::{
 };
 pub use patch::{Instrument, InstrumentId, PatchEdit, parse_address};
 pub use video::{PICTURE_FILES, Picture, VIDEO_FILES, Video};
-pub use workspace::{Active, Change, Command, Phase, Place, Turn, Workspace};
+pub use workspace::{Active, Change, Command, Phase, Place, Turn, Unlit, Workspace};
 
 /// Cues and workspaces that the tests of the front end build as those of
 /// the back end do

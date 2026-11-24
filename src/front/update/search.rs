@@ -36,7 +36,7 @@ use iced::{
     widget::operation,
 };
 
-use super::history::Spot;
+use super::{history::Spot, keys::MAIN_WINDOW};
 use crate::{
     back::CueId,
     front::{App, Message, view},
@@ -102,10 +102,17 @@ impl Search {
 impl App {
     /// Opens the search line, and gives it the keyboard.  No field takes
     /// the keyboard while the stage window has it, since the keys typed
-    /// there would never reach the field.
+    /// there would never reach the field, so that the status bar says that
+    /// the main window takes the key.
     pub(super) fn searching(self, backward: bool) -> (Self, Task<Message>) {
         if self.stage.has_keyboard() {
-            return (self, Task::none());
+            return (
+                Self {
+                    remark: Some(MAIN_WINDOW),
+                    ..self
+                },
+                Task::none(),
+            );
         }
         let search = Search::opened_at(self.spot(), backward);
         (

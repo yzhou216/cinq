@@ -11,7 +11,7 @@ use unicode_width::UnicodeWidthStr;
 
 use super::{RADIO, STATE_ROOM, TARGET_MOST};
 use crate::{
-    back::{Cue, Groups, Kind, OutputId, Problem, Workspace},
+    back::{Cue, Groups, Kind, OutputId, Problem, Unlit, Workspace},
     front::view::{char_width, format, theme},
 };
 
@@ -150,7 +150,9 @@ pub(super) fn lines(
 /// where a paused cue stopped.  A cue that a fade or Panic is fading reads
 /// fading, since the time left of its phase says nothing of that.  A cue that
 /// sends only to outputs that are gone reads in yellow that it has none,
-/// which GO does not skip.  Red turns lighter where the cue is `selected`, so
+/// which GO does not skip, and a light cue that sets no instrument or names
+/// one that the patch lacks reads so in yellow, which GO does not skip
+/// either.  Red turns lighter where the cue is `selected`, so
 /// that it stays legible on the selected row.  A collapsed group reads the
 /// `hidden` problem of a cue that it hides as that cue would, so that GO does
 /// not fire a broken cue out of sight, but gives way to the state of the
@@ -184,7 +186,11 @@ pub(super) fn state(
         (None, None) => match hidden {
             Some(hidden) => problem(hidden),
             None if workspace.sends_nowhere(cue) => ("NO OUTPUT".to_owned(), text::warning),
-            None => (String::new(), text::default),
+            None => match workspace.unlit(cue) {
+                Some(Unlit::Empty) => ("NO LEVELS".to_owned(), text::warning),
+                Some(Unlit::Unpatched(_)) => ("UNPATCHED".to_owned(), text::warning),
+                None => (String::new(), text::default),
+            },
         },
     }
 }
@@ -204,4 +210,12 @@ pub(super) fn hidden_problem<'a>(
                 .find_map(|member| workspace.problem(member))
         })
         .flatten()
+}
+
+/// Returns how many cues the collapsed group `cue` hides, as ` (10 cues)`
+/// for the end of its name, or none for any other cue.  A list that has no
+/// room for the Target column, which tells it, shows the count there.
+pub(super) fn counted(workspace: &Workspace, groups: &Groups, cue: &Cue) -> Option<String> {
+    (cue.kind == Kind::Group && cue.collapsed)
+        .then(|| format!(" ({})", Column::Target.text(workspace, groups, cue)))
 }

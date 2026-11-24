@@ -21,6 +21,32 @@ Major changes and improvements in each release of cinq, newest first.
   leave it too.  A label lies left of its place, or right of it where it would
   leave the window, and the buttons of GO and Panic have none, since their keys
   act everywhere.  The status bar hints the key and the letters typed.
+- A collapsed group tells how many cues it hides where the list is too narrow
+  for the Target column, as at 1024x768: its name ends in the count, as in `(10
+  cues)`.  Hint mode also labels the `+` or `-` mark of a group, which flips it
+  as a click does.
+- A light cue that sets no instrument, or names one that the patch lacks, as
+  after `Remove` takes an instrument out of the Light Patch, reads `NO LEVELS`
+  or `UNPATCHED` in yellow in the State column, the sidebar lists it among the
+  warnings, as `3 Ghost: names instrument 99, which the patch lacks`, and its
+  inspector says so in yellow, as `This cue sets no instrument`.  GO still fires
+  it.
+- An entry of `[keys]` of which no key can be read, such as `go = "Spacebar"`,
+  no longer leaves its action with no key, which could leave GO or Panic dead in
+  a show: the action keeps the keys of its keymap, and the problem says so, as
+  `go keeps Space`.  An empty list still unbinds.
+- A show file that cannot be opened is no longer mistaken for a new empty show:
+  the sidebar names the file and tells the cause in one line, as `Cannot open
+  big.cinq.toml: line 8, column 14: invalid basic string`, and the empty cue
+  table says that the show could not be opened, in place of `No cues yet`.
+- While the stage window has the keyboard, the status bar says that the main
+  window takes the keys of search, help, and hint mode, as it does for the keys
+  that edit.
+- The first steps on the help page say how a new cue gets its file, with the key
+  of the next field, Enter in the File field, and the key of hint mode, and give
+  the key that saves the show.  A tutorial that is not installed is told in one
+  line, `The tutorial is not installed`, in place of every data directory
+  searched, which go to standard error.
 
 ## v0.1.6
 

@@ -61,6 +61,7 @@ impl App {
                 Self {
                     told: Some(format!("Saved {}", show.name())),
                     file_problem: None,
+                    open_failed: false,
                     keep_problem: None,
                     show,
                     ..self
@@ -68,6 +69,7 @@ impl App {
             }
             Err(problem) => Self {
                 file_problem: Some(format!("Cannot save {}: {problem}", saved.file.display())),
+                open_failed: false,
                 ..self
             },
         }

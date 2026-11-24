@@ -44,11 +44,45 @@ fn file_reports_what_it_cannot_use_and_keeps_the_rest() {
             "no setting is named `colour`",
             "no action is named `fly`",
             "last: `1 G` starts with a digit, which counts",
+            "last keeps G, Control+End",
             "next: `Foo` names no key",
         ]
     );
     assert_eq!(keymap.keys(Action::Next), [keys("m")]);
-    assert!(keymap.keys(Action::Last).is_empty());
+    assert_eq!(
+        keymap.keys(Action::Last),
+        Keymap::default().keys(Action::Last)
+    );
+}
+
+#[test]
+fn entry_that_no_key_can_be_read_from_keeps_the_keys_of_the_action() {
+    let (keymap, _, problems) =
+        config::parse("[keys]\ngo = \"Spacebar\"\npanic = [\"Esc\", 1]\ndelete = []\n");
+    assert_eq!(
+        messages(&problems),
+        [
+            "go: `Spacebar` names no key",
+            "go keeps Space",
+            "panic: `Esc` names no key",
+            "panic should be keys or a list of keys",
+            "panic keeps Escape",
+        ]
+    );
+    assert_eq!(keymap.keys(Action::Go), Keymap::default().keys(Action::Go));
+    assert_eq!(
+        keymap.keys(Action::Panic),
+        Keymap::default().keys(Action::Panic)
+    );
+    // An empty list is written on purpose
+    assert!(keymap.keys(Action::Delete).is_empty());
+}
+
+#[test]
+fn entry_that_some_key_can_be_read_from_binds_those() {
+    let (keymap, _, problems) = config::parse("[keys]\ngo = [\"Spacebar\", \"F5\"]\n");
+    assert_eq!(messages(&problems), ["go: `Spacebar` names no key"]);
+    assert_eq!(keymap.keys(Action::Go), [keys("F5")]);
 }
 
 #[test]

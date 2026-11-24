@@ -18,7 +18,8 @@
 //! [`pasting`], those of outputs in [`outputs`], undo and redo in
 //! [`history`], show files in [`show`], the places of the files of cues in
 //! [`files`], why cues cannot play in
-//! [`problems`], and the cues that send to no output in [`stranded`].
+//! [`problems`], the cues that send to no output in [`stranded`], and the
+//! light cues that light too little in [`unlit`].
 
 mod active;
 mod command;
@@ -40,6 +41,7 @@ mod stopping;
 mod stranded;
 #[cfg(test)]
 pub(super) mod tests;
+mod unlit;
 
 use std::{collections::BTreeMap, path::PathBuf};
 
@@ -54,6 +56,7 @@ use crate::back::{
 use history::{History, Kept};
 use lighting::Dimmer;
 pub use lighting::Universe;
+pub use unlit::Unlit;
 
 /// Show as a whole, with its cue lists, outputs, light patch, running cues,
 /// and editing lock

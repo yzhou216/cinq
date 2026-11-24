@@ -26,6 +26,13 @@ cue on standby, which is the first of each list once the show opens, the cues
 that run, the levels of the lights, and how long each sound or video file
 plays.
 
+A file that cannot be opened, because it is not TOML or holds a mistake that
+this page names, leaves the show on screen as it was, which is an empty one
+when *cinq* has just started, and a warning in the sidebar names the file and
+tells in one line where the mistake lies and what it is.
+The cue table then says that the show could not be opened, in place of
+inviting cues.
+
 Saving leaves out the settings that the kind of a cue does not use, and those
 that keep their defaults, apart from *level*, *duration*, and *stop_target*,
 which it writes for every cue whose kind uses them.
@@ -379,6 +386,13 @@ Pausing a light cue pauses its fade, and stopping it, as a panic does,
 leaves its instruments where the fade has brought them.
 Each time that the show opens, every instrument starts at level 0 until a
 light cue sets it.
+Removing an instrument from the patch leaves its levels in the cues that name
+it, so that *undo* brings them back.
+A light cue that sets no instrument, or names one that the patch lacks, still
+fires, since its other instruments and its time count, but its *State* reads
+*NO LEVELS* or *UNPATCHED* in yellow, the header of its inspector says why in
+yellow, and the sidebar lists it among the warnings, as in _names instrument
+99, which the patch lacks_, until the cue or the patch is put right.
 
 *cinq* sends the levels of each universe that the patch uses in two ways.
 Art-Net goes to the broadcast address of every IPv4 network that the computer

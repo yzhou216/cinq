@@ -55,6 +55,21 @@ fn file_that_is_not_a_show_leaves_the_show_on_screen() {
 }
 
 #[test]
+fn file_that_is_not_a_show_is_told_by_its_name_and_where_it_goes_wrong_in_one_line() {
+    let text = "[[list]]\nname = \"Main\"\n[[list.cue]]\nname = \"Knock\nid = 1\n";
+    let app = App::default().opened(found(Some("/shows/big.cinq.toml"), Some(text), None));
+    assert!(app.open_failed);
+    let problem = app.file_problem.as_deref().unwrap_or_default();
+    assert!(
+        problem.starts_with("Cannot open big.cinq.toml: line 4, column 14: "),
+        "{problem}"
+    );
+    assert_eq!(problem.lines().count(), 1, "{problem}");
+    let opened = app.opened(found(Some(STORM), Some(SHOW), None));
+    assert!(!opened.open_failed && opened.file_problem.is_none());
+}
+
+#[test]
 fn opening_another_show_tells_where_the_unsaved_changes_went() {
     let told = "Kept the unsaved changes to storm.cinq.toml | Control+l: open";
     let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));

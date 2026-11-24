@@ -129,6 +129,9 @@ struct App {
     /// What went wrong with show files last, until opening or saving one
     /// succeeds
     file_problem: Option<String>,
+    /// Whether `file_problem` is a show that failed to open, which leaves the
+    /// show on screen, an empty one when cinq has just started
+    open_failed: bool,
     /// Why the keeper failed to keep unsaved changes last, until opening or
     /// saving a show succeeds.  It arrives late and about an earlier change,
     /// so it has a slot of its own.

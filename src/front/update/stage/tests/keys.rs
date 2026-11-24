@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Tests of the keys while the stage window has the keyboard: the fields that
-//! take no keys, the key of fullscreen, and the keys of the help page
+//! take no keys, the key of fullscreen, and the keys of the help page, search,
+//! and hint mode
 
 use iced::keyboard::{Key, key::Named};
 
@@ -92,4 +93,18 @@ fn other_help_page_keys_act_from_the_stage_window_so_that_it_closes() {
         (false, 0),
     ];
     assert_eq!(typed, expected);
+}
+
+#[test]
+fn keys_of_search_help_and_hints_answer_from_the_stage_window_that_the_main_window_takes_them() {
+    let typed = |key: Key, in_stage: bool| {
+        let (open, _) = show(Kind::Video).staged();
+        focusing(open, in_stage).typed(press(key), false).0.remark
+    };
+    let words = Some("Search, help, and hint mode act in the main window");
+    assert_eq!(typed(Key::Named(Named::F1), true), words);
+    assert_eq!(typed(Key::Character("f".into()), true), words);
+    assert_eq!(typed(Key::Named(Named::F1), false), None);
+    let (open, _) = show(Kind::Video).staged();
+    assert_eq!(focusing(open, true).searching(false).0.remark, words);
 }

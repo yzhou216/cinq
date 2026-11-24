@@ -5,7 +5,11 @@
 //! Tests of the State column of a collapsed group that hides a problem
 
 use super::{
-    super::{Column, columns::state, hidden_problem, lines},
+    super::{
+        Column,
+        columns::{counted, state},
+        hidden_problem, lines,
+    },
     texts,
 };
 use crate::{
@@ -91,4 +95,15 @@ fn the_text_of_the_state_column_of_a_collapsed_group_reads_the_hidden_problem() 
     let workspace = troubled(true);
     assert_eq!(texts(&workspace, Column::State)[0], "NEXT\nNO FILE");
     assert_eq!(texts(&troubled(false), Column::State)[0], "NEXT");
+}
+
+#[test]
+fn only_a_collapsed_group_counts_the_cues_it_hides_after_its_name() {
+    let count = |workspace: &Workspace, row: usize| {
+        let list = &workspace.lists()[0];
+        counted(workspace, &list.groups(), &list.cues[row])
+    };
+    assert_eq!(count(&troubled(true), 0).as_deref(), Some(" (3 cues)"));
+    assert_eq!(count(&troubled(true), 1), None);
+    assert_eq!(count(&troubled(false), 0), None);
 }

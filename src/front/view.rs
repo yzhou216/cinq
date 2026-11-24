@@ -238,6 +238,7 @@ fn char_width() -> f32 {
 fn warnings(app: &App) -> usize {
     app.workspace.problems().count()
         + app.workspace.stranded().count()
+        + app.workspace.unlit_cues().count()
         + faults::warnings(app).len()
         + app.network_problems.len()
         + usize::from(app.file_problem.is_some())

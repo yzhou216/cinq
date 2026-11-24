@@ -115,12 +115,16 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
             Message::Select(cue.id),
         )
     });
+    let unlit = workspace
+        .unlit_cues()
+        .map(|(cue, unlit)| pressing(format!("{cue}: {unlit}"), Message::Select(cue.id)));
     let everything: Vec<Element<'_, Message>> = outputs_failing
         .chain(network)
         .chain(files)
         .chain(settings)
         .chain(problems)
         .chain(stranded)
+        .chain(unlit)
         .collect();
     let (shown, left) = limited(everything);
     let more = (left > 0).then(|| text(format!("and {left} more")).style(text::warning).into());

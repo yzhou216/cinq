@@ -25,6 +25,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use super::Workspace;
@@ -100,7 +101,7 @@ impl Workspace {
     /// level typed wrong by hand, such as 60 for -60, would play at a
     /// thousand times the amplitude of its file.
     pub fn from_show(text: &str, directory: impl Into<PathBuf>) -> Result<Self, String> {
-        let show: ShowFile = toml::from_str(text).map_err(|error| error.to_string())?;
+        let show: ShowFile = toml::from_str(text).map_err(|error| read_problem(text, &error))?;
         let outputs = outputs::read(show.outputs)?;
         let lists = show
             .lists
@@ -256,4 +257,24 @@ fn is_top(depth: &u8) -> bool {
 
 fn is_manual(advance: &Advance) -> bool {
     *advance == Advance::Manual
+}
+
+/// Returns what keeps `text` from being TOML or a show in one line, led by
+/// where it lies, since the drawing of the line and the caret that the error
+/// holds would not fit where the problem is told
+fn read_problem(text: &str, error: &toml::de::Error) -> String {
+    let message = error.message().lines().join(" ");
+    match error.span() {
+        Some(span) => {
+            let before = text.get(..span.start).unwrap_or(text);
+            let line = before.matches('\n').count() + 1;
+            let column = before
+                .rsplit('\n')
+                .next()
+                .map_or(0, |row| row.chars().count())
+                + 1;
+            format!("line {line}, column {column}: {message}")
+        }
+        None => message,
+    }
 }

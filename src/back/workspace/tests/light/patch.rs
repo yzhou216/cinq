@@ -118,3 +118,35 @@ fn instrument_is_not_added_after_the_last_address_of_the_last_universe() {
         .apply(Command::Patch(PatchEdit::Add));
     assert_eq!(before.patch()[2].address_text(), "32768/512");
 }
+
+#[test]
+fn a_light_cue_that_sets_no_instrument_or_names_one_the_patch_lacks_is_unlit() {
+    let workspace = lit(vec![
+        light(1, &[(1, 50.0)]),
+        light(2, &[]),
+        light(3, &[(1, 50.0), (99, 50.0)]),
+        light(4, &[(98, 10.0), (99, 20.0)]),
+    ]);
+    let told = |workspace: &Workspace| -> Vec<(u32, String)> {
+        workspace
+            .unlit_cues()
+            .map(|(cue, unlit)| (cue.id.0, unlit.to_string()))
+            .collect()
+    };
+    assert_eq!(
+        told(&workspace),
+        [
+            (2, "sets no instrument".to_owned()),
+            (3, "names instrument 99, which the patch lacks".to_owned()),
+            (
+                4,
+                "names instruments 98, 99, which the patch lacks".to_owned()
+            ),
+        ]
+    );
+    // Removing an instrument keeps its levels in the cues, so that undo restores them
+    let removed = workspace.apply(Command::Patch(PatchEdit::Remove(InstrumentId(1))));
+    assert_eq!(told(&removed).len(), 4);
+    assert_eq!(removed.cue(CueId(1)).unwrap().lights.len(), 1);
+    assert_eq!(told(&removed.apply(Command::Undo)).len(), 3);
+}

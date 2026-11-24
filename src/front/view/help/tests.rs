@@ -33,11 +33,16 @@ fn first_steps_name_the_keys_of_the_keymap_in_use_in_at_most_five_lines() {
     assert!(vi.contains("Space is GO") && vi.contains("Escape is Panic"));
     assert!(vi.contains("j and k move") && vi.contains("cc names it"));
     assert!(vi.contains("o adds a cue") && vi.contains("u undoes"));
-    assert!(vi.contains("q closes this page"));
+    assert!(vi.contains("q closes this page") && vi.contains("Control+s saves the show"));
+    assert!(
+        vi.contains("Tab moves through the fields to the File field, where Enter chooses a file")
+            && vi.contains("f labels each place to click")
+    );
     let cua = steps(Preset::Cua);
     assert!(cua.contains("ArrowDown and ArrowUp move") && cua.contains("F2 names it"));
     assert!(cua.contains("Control+n adds a cue") && cua.contains("Control+z undoes"));
     assert!(cua.contains("Control+w closes this page"));
+    assert!(cua.contains("Tab moves through the fields to the File field"));
     // Page is 960 pixels wide in a font 9 pixels wide
     assert!([&vi, &cua].iter().all(|steps| steps.len() <= 5 * 100));
 }

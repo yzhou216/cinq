@@ -206,7 +206,16 @@ fn entry(
             keys.map_err(|problem| Problem::at(value.span(), problem))
         })
         .partition_result();
-    let sequences = sequences.into_iter().unique().collect();
+    let sequences: Vec<_> = sequences.into_iter().unique().collect();
+    // Entry of which no key can be read keeps the keys of the action, so that
+    // a slip leaves GO and Panic bound, but an empty list unbinds on purpose
+    if sequences.is_empty() && !problems.is_empty() && keymap.key(action).is_some() {
+        let kept = Problem::at(
+            value.span(),
+            format!("{name} keeps {}", keymap.listed(action)),
+        );
+        return (keymap, [problems, vec![kept]].concat());
+    }
     (keymap.with(action, sequences), problems)
 }
 

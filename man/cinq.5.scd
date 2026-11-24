@@ -41,8 +41,10 @@ editor that has the file open may offer to load it again.
 
 The help page, which the key of *help* opens, names the keymap in use, opens
 with a short paragraph of first steps that names the keys of GO and Panic, of
-moving and standby, of adding, naming, and undoing, of closing the page, and of
-opening the tutorial, links to the tutorial, which the key of *standby* opens too,
+moving and standby, of adding, naming, and undoing, of reaching the File field
+and choosing a file, of hint mode, of closing the page, of opening the
+tutorial, and of saving the show,
+links to the tutorial, which the key of *standby* opens too,
 lists each action that the keymap binds to a key with its keys and its name in
 the file, links to the file that the keys come from, or would come from, and
 ends with the notice of the license of cinq.
@@ -57,6 +59,8 @@ that points to this page.
 Following the link to the tutorial opens the PDF that *FILES* names in the
 program that the desktop opens it with.
 Why a link failed to open shows below the page until the page closes.
+A tutorial that is not installed is told in one line there, and the
+directories searched go to standard error.
 
 # FILES
 
@@ -740,7 +744,8 @@ While the stage window has the keyboard, as the window manager may leave it
 once the stage window opens, and as each GO that makes it fullscreen gives
 it, *edit*, *edit_start*, *change_name*, *next_field*, *previous_field*, and
 *hint* do nothing, since the keys typed there would never reach a field of
-the main window.
+the main window, and neither do *search*, *search_backward*, and *help*, which
+open the search line and the page in that window.
 The keys that change the show or fill the clipboard do nothing there either:
 *add_below*, *add_above*, *cut*, *copy*, *paste_below*, *paste_above*,
 *delete*, *move_down*, *move_up*, *indent*, *outdent*, *undo*, and *redo*, and
@@ -760,7 +765,8 @@ read-only buffer.
 A key that show mode locks, other than *undo* and *redo*, has the status bar
 say so, until the next key that acts.
 The stage window says so in the same way for the keys that it leaves to the
-main window.
+main window, and for those of *search*, *search_backward*, *help*, and *hint*,
+which it tells belong there.
 
 The outputs of the show, which *Outputs* below the cue lists in the sidebar
 shows in place of the cue list, take the actions that move through rows as
@@ -1032,6 +1038,8 @@ page.
 	A group has a mark before its name, *-* while it is expanded and *+* while it
 	is collapsed, and the *Target* column of a collapsed group tells how many cues
 	it hides.
+	Where the list is too narrow for that column, the name of the group ends in
+	the count, as in *(10 cues)*.
 	A cue list that holds no group leaves no room for the mark.
 	A click on the mark collapses the group, or expands it where it is
 	collapsed.
@@ -1191,9 +1199,9 @@ page.
 	typing its label, as Vimium and Tridactyl do in a browser.
 	The places are the buttons that can be pressed, the checkboxes, the tabs of
 	the inspector and the lists of the sidebar, the drop-down lists, the text
-	fields, and the links of the help page, as far as they are in view, but not
-	the buttons of GO and Panic, whose keys act from everywhere, in hint mode
-	too.
+	fields, the links of the help page, and the mark of a group in the cue list,
+	as far as they are in view, but not the buttons of GO and Panic, whose keys
+	act from everywhere, in hint mode too.
 	The rows of the cue list and of the outputs have keys of their own, and the
 	stage window has no place to label.
 	Each label is a few letters of *sadfjklewcmpgh*, as many for every place as
@@ -1435,7 +1443,10 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   the rest of the file applies.
 - An empty string, a key that names no key or that *KEYS* rules out, a
   sequence that starts with a digit, and a value that is not a string are left
-  out, and the action keeps the other keys listed for it, which may be none.
+  out, and the action takes the other keys listed for it.
+  An entry of which none can be read leaves the action the keys that the
+  keymap gave it, and a problem says so, as *go keeps Space* does; an empty
+  list, written on purpose, leaves it none.
 - A sequence bound to two actions goes to the one listed first under
   *ACTIONS*, and the other goes without it, unless the two act in different
   places: *pick* and *close_menu* act only in an open menu, so a sequence may

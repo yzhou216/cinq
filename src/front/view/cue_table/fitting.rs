@@ -9,7 +9,7 @@ use unicode_width::UnicodeWidthStr;
 
 use super::{
     CELL_SPACE, Column, FAILED_ROOM, INDENT, NAME_LEAST, NAME_MOST, STATE_LEAST, TARGET_GROWN,
-    TARGET_ROOM, faults, layout::Layout,
+    TARGET_ROOM, columns::counted, faults, layout::Layout,
 };
 use crate::front::{
     App,
@@ -84,7 +84,10 @@ pub(super) fn fitting(app: &App, layout: &Layout, room: f32) -> Vec<(Column, Opt
         .list()
         .cues
         .iter()
-        .map(|cue| cue.name.width() + usize::from(layout.depth(cue)) * INDENT)
+        .map(|cue| {
+            let count = counted(&app.workspace, groups, cue).map_or(0, |count| count.width());
+            cue.name.width() + count + usize::from(layout.depth(cue)) * INDENT
+        })
         .max()
         .unwrap_or(0);
     // Room of a name in columns of the font, counting the gutter of the mark

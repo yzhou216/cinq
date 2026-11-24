@@ -212,11 +212,13 @@ A group collapses into one row, which hides the cues that it holds, as a closed
 fold does in Vim.  Select the group and press \key{zc}, or \key{ArrowLeft} with
 the cua keymap, and the row of the group gains a \texttt{+} before its name,
 while an open group has a \texttt{-} before its name.  Its \texttt{Target}
-column says how many cues the group holds, as in \texttt{2 cues}.
+column says how many cues the group holds, as in \texttt{2 cues}, or its name
+ends in the count, as in \texttt{(2 cues)}, where the list is too narrow for
+that column.
 \key{zo}, or \key{ArrowRight} with the cua
 keymap, opens it again, \key{za} does either, and \key{zM} and \key{zR}
 collapse and open every group.  A click on the \texttt{+} or the \texttt{-}
-does the same.  A collapsed group fires, stops, and pauses its cues as an open
+does the same, and so does its hint label.  A collapsed group fires, stops, and pauses its cues as an open
 one does, and keys that count rows, such as \key{3j}, count it as one row.  A
 search, a jump, and GO that move the selection to a hidden cue open the groups
 around it, so that the selection never goes out of sight, but a search that is
