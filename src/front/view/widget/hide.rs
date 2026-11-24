@@ -8,7 +8,8 @@
 //! focus and how far a list has scrolled, only while the widget stays in
 //! the tree.  Hidden content stays, so that it comes back as it was.  It
 //! draws nothing, sees no event, so that no key reaches its fields, and
-//! shows none of its menus, which would otherwise draw above the page.
+//! shows none of its menus, which would otherwise draw above the page, and
+//! takes no label of hint mode.
 
 use iced::Element;
 

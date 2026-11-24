@@ -14,6 +14,7 @@ mod dispatch;
 mod editing;
 mod focus_order;
 mod folding;
+mod hints;
 mod history;
 mod keyboard;
 mod keys;
@@ -43,6 +44,7 @@ use super::{App, Message};
 use crate::back::Command;
 pub(super) use clipboard::{Clipboard, Clipped};
 use dispatch::on_own_thread;
+pub(super) use hints::Hints;
 pub(super) use history::{History, Spot};
 use link::{edit_config, open_link, open_tutorial};
 pub(super) use paging::kept::{Measured, Measures};
@@ -87,7 +89,7 @@ impl App {
                 (self, measure)
             }
             Message::Remeasure => {
-                let app = self.remeasured();
+                let app = self.without_hints().remeasured();
                 let measure = app.measure_rows();
                 (app, measure)
             }
@@ -172,6 +174,8 @@ impl App {
                     (app, Task::none())
                 }
             }
+            Message::Hint => self.hinting(),
+            Message::Hinted(places) => (self.hinted(places), Task::none()),
             // Keys typed so far went already, as for any message
             Message::Cancel => self.cancelled(),
             Message::ShowOutputs => self.jumping(Self::showing_outputs).revealed(),

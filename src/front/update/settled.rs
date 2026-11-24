@@ -97,8 +97,8 @@ impl App {
                 self.send(Command::EditOutput(output, OutputEdit::Device(device)))
             }
             // Click on blank space would leave the search line open with no
-            // way to close it but Panic
-            Message::Clicked => self.without_search(),
+            // way to close it but Panic, and any click leaves hint mode
+            Message::Clicked => self.without_search().without_hints(),
             // Stage window holds no cue list to keep in view
             Message::WindowFocused(window) => Self {
                 stage: self.stage.with_keyboard_in(window),

@@ -24,7 +24,7 @@ use iced::{
 
 use self::focused::Focused;
 use super::{
-    pressed,
+    hinted, pressed,
     wrap::{Intercept, wrap},
 };
 use crate::front::{Message, keymap::Keymap, view::theme};
@@ -38,6 +38,8 @@ pub struct Button<'a> {
     /// Whether Enter gives the keyboard back to the cue list after it presses
     /// the button
     leaves: bool,
+    /// Whether hint mode labels the button
+    hinted: bool,
 }
 
 /// Returns a disabled button that shows `content`, until it has a message
@@ -47,6 +49,7 @@ pub fn button<'a>(content: impl Into<Element<'a, Message>>) -> Button<'a> {
         on_press: None,
         keymap: None,
         leaves: false,
+        hinted: true,
     }
 }
 
@@ -79,6 +82,21 @@ impl Button<'_> {
 }
 
 impl<'a> Button<'a> {
+    /// Leaves the button out of hint mode, for a button whose key acts from
+    /// everywhere, so that its label would add no reach
+    pub fn unhinted(self) -> Self {
+        Self {
+            hinted: false,
+            ..self
+        }
+    }
+
+    /// Returns the message that hint mode sends for the button, unless it is
+    /// disabled or left out of hint mode
+    pub(in crate::front::view) fn place(&self) -> Option<&Message> {
+        self.on_press.as_ref().filter(|_| self.hinted)
+    }
+
     /// Makes the button a stop of the Tab order, which Enter presses, unless
     /// it has no message, as it has not while show mode locks it
     pub fn reachable(self, keymap: &'a Keymap) -> Self {
@@ -102,12 +120,17 @@ impl<'a> Button<'a> {
 
 impl<'a> From<Button<'a>> for Element<'a, Message> {
     fn from(button: Button<'a>) -> Self {
+        let place = button.place().cloned();
         let look = wrap(button.look, OnPress(button.on_press.clone()));
-        match (button.keymap, button.on_press) {
+        let reached = match (button.keymap, button.on_press) {
             (Some(keymap), Some(press)) => {
                 Element::new(Focused::new(look, press, button.leaves, keymap))
             }
             _ => look,
+        };
+        match place {
+            Some(press) => hinted(reached, press),
+            None => reached,
         }
     }
 }

@@ -150,6 +150,32 @@ where it began, or to the cue before a step to the next match, and
 \key{Control+i} returns to the match.  The cua keymap uses \key{Alt+ArrowLeft}
 and \key{Alt+ArrowRight}.
 
+\section{Hint mode}
+
+The keys do not reach everything that a click does, so a key can label each
+place for you, as Vimium does in a browser.
+
+\begin{enumerate}
+\item Press the hint key, \key{f} in both keymaps.  A small label of a few
+  letters appears left of each button, checkbox, inspector tab, cue list of
+  the sidebar, drop-down list, and text field that is in view.  The status bar
+  asks for a label.
+\item Type the letters of one label.  The labels that the letters do not begin
+  disappear, and \key{Backspace} takes a letter back.  When the letters are
+  whole, cinq acts as a click on that place would: it presses the button,
+  flips the checkbox, shows the tab or the cue list, or gives the text field or
+  the drop-down list the keyboard, where \key{Enter} opens the menu.
+\item To leave without choosing, press \key{Control+c} in the vi keymap, or
+  \key{Backspace} where no letter is typed, or click.  A letter that begins no label is
+  ignored, so that a slip never runs the next letters as commands.  GO and
+  Panic act as ever and leave too, and so does a cue that starts or ends in the
+  Active list of the sidebar, since the labels would no longer lie on their
+  places.
+\end{enumerate}
+
+The help page takes labels on its links.  The rows of the cue list have their
+own keys.  GO and Panic have no label, as their keys act from everywhere.
+
 \section{Changing the keys}
 
 The configuration file, \texttt{config.toml}, selects the keymap and binds

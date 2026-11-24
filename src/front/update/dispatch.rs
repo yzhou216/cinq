@@ -43,6 +43,7 @@ pub(super) fn passive(message: &Message) -> bool {
             | Message::Landed { .. }
             | Message::Measured(_)
             | Message::Remeasure
+            | Message::Hinted(_)
             | Message::Drawn(_)
             | Message::Reached { .. }
     )

@@ -13,7 +13,8 @@
 //! which are Enter where the keymap binds no key to cancel and a text field
 //! has the keyboard, and what Enter does in a checkbox, which flips it, and
 //! in a closed list, which opens it, while no field has the keyboard, the key
-//! of the next inspector tab, the key of the next cue list, and, while the
+//! of the next inspector tab, the key of the next cue list, the key of hint
+//! mode, and, while the
 //! selected cue is not the standby cue, the key of standby
 //!
 //! A text field keeps every key, so that the keys of undoing, redoing,
@@ -23,17 +24,18 @@
 //! The bar keeps to one line, with two columns between the
 //! status and the hints.  When it is too narrow for all of it, the name
 //! of the show is cut short at its end with an ellipsis, down to 16 columns,
-//! and then the keys of the next list, of the next tab, of standby, of going
-//! forward and back, of GO, of Panic, of saving, of the help page, of renaming a
-//! cue just added, of the next field, and of leaving it give way in turn,
+//! and then the keys of hint mode, of the next list, of the next tab, of
+//! standby, of going forward and back, of GO, of Panic, of saving, of the help
+//! page, of renaming a cue just added, of the next field, and of leaving it
+//! give way in turn,
 //! each one whole, and then what the latest change told gives way, at a word,
 //! with an ellipsis, so that the status shows in full, while the keys typed so
 //! far and the key of cancel always show in full.
 //! While the outputs show, the bar names the keys that add and rename an
 //! output, and the key that goes back always, since it is the way out, so
-//! that the keys give way in another order: rename a cue, forward, add,
-//! rename an output, GO, Panic,
-//! saving, back, the help page, the next field, and leaving a field.
+//! that the keys give way in another order: hint mode, rename a cue, forward,
+//! add, rename an output, GO, Panic, saving, back, the help page, the next
+//! field, and leaving a field.
 //! Where standby lies past the end of a list that another follows, GO fires
 //! nothing, so that the key of the next list gives way after those of the help
 //! page and of renaming instead.
@@ -43,6 +45,9 @@
 //! and outlasts the words of the latest change, which are cut instead.
 //! An open search line takes the place of the status, and the hints give way
 //! to its text as well.
+//! While hint mode is on, the hints are only the letters of a label typed so
+//! far, the key that leaves the mode, and the keys of GO and Panic, since no
+//! other key acts there.
 
 mod fit;
 mod hints;

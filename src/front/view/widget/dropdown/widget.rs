@@ -31,7 +31,7 @@ use crate::front::{
     keymap::KeyPress,
     view::{
         TEXT_SIZE, line_height,
-        widget::{key_pressed, pointer_over, pressed},
+        widget::{Act, Target, key_pressed, pointer_over, pressed},
     },
 };
 
@@ -142,6 +142,7 @@ impl Widget<Message, Theme, Renderer> for Dropdown<'_> {
         _renderer: &Renderer,
         operation: &mut dyn Operation,
     ) {
+        operation.custom(None, layout.bounds(), &mut Target(Act::Reach));
         operation.focusable(None, layout.bounds(), tree.state.downcast_mut::<State>());
     }
 

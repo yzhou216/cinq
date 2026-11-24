@@ -15,7 +15,7 @@ use crate::{
     back::{Advance, Cue, Destination, Edit, Kind, osc_packet},
     front::{
         App, Message,
-        view::{FILE, NAME, SPACING, button, dropdown, format, theme},
+        view::{FILE, NAME, SPACING, button, dropdown, format, reached, theme},
     },
 };
 
@@ -91,14 +91,13 @@ impl Field {
                 .style(theme::field(self.valid(cue)));
             // Enter in the empty File field opens the chooser, since Tab skips
             // the Choose button, and leaves the field once a file is named
-            match self {
+            reached(match self {
                 Field::Name => input.id(NAME),
                 Field::Target if cue.kind.has_file() => input
                     .id(FILE)
                     .on_submit_maybe(value.is_empty().then_some(Message::ChooseFile(id))),
                 _ => input,
-            }
-            .into()
+            })
         };
         match self {
             Field::Number => field(&cue.number, Edit::Number),

@@ -58,6 +58,7 @@ pub enum Action {
     ChangeName,
     NextField,
     PreviousField,
+    Hint,
     Pick,
     CloseMenu,
     AddBelow,
@@ -166,10 +167,11 @@ impl Action {
 
     /// Returns whether a key of the action that is held down acts only
     /// once: those of [`Action::AT_ONCE`], so that holding the key of Panic
-    /// does not cut a panic short, and that of fullscreen, which would
-    /// otherwise toggle the stage window back and forth
+    /// does not cut a panic short, and those of fullscreen and hint mode,
+    /// which would otherwise toggle the stage window or the labels back and
+    /// forth
     pub fn acts_once_a_press(self) -> bool {
-        self.acts_at_once() || self == Action::Fullscreen
+        self.acts_at_once() || matches!(self, Action::Fullscreen | Action::Hint)
     }
 
     /// Returns whether a key of the action acts while a closed drop-down
@@ -195,9 +197,9 @@ impl Action {
 
     /// Returns whether a key of the action acts while the help page is
     /// open.  The keys that scroll the page are the page's own, which
-    /// `typed` handles before it asks.
+    /// `typed` handles before it asks.  The links of the page take labels.
     pub fn acts_over_help(self) -> bool {
-        self.acts_at_once() || matches!(self, Action::Help | Action::CloseHelp)
+        self.acts_at_once() || matches!(self, Action::Help | Action::CloseHelp | Action::Hint)
     }
 
     /// Returns the page that the action moves by, if it is one of the four

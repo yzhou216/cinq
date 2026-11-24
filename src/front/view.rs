@@ -41,9 +41,10 @@ use super::{
     App, Message,
     keymap::{Action, Keymap},
 };
+pub(in crate::front) use widget::{Act, Site, hint};
 use widget::{
-    button, check, check_and_leave, dropdown, dropdown_width, hide, keep_keys, line_keys,
-    marked_row,
+    button, check, check_and_leave, dropdown, dropdown_width, hide, hinted, keep_keys, line_keys,
+    marked_row, radio, reached,
 };
 
 /// Identity of the cue list, through which the selection scrolls into view
@@ -189,7 +190,14 @@ pub fn view(app: &App) -> Element<'_, Message> {
         rule::horizontal(1),
         status_bar::view(app),
     ];
-    stack![hide(window, app.help), app.help.then(|| help::view(app))].into()
+    stack![
+        widget::window(stack![
+            hide(window, app.help),
+            app.help.then(|| help::view(app))
+        ]),
+        app.hints.as_ref().map(|hints| hint::layer(hints.labels()))
+    ]
+    .into()
 }
 
 /// Returns what `shown` makes of the items of `yielding` that have given

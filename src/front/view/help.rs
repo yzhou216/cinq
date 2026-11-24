@@ -25,7 +25,7 @@ use unicode_width::UnicodeWidthStr;
 use super::{
     HELP, SPACING, button, char_width,
     cue_table::{CELL_SPACE, SCROLL_BAR},
-    theme,
+    hinted, theme,
 };
 use crate::front::{
     App, Message,
@@ -204,9 +204,12 @@ fn paragraph<'a, Link: Clone + 'static>(
     after: &'a str,
     open: impl Fn(Link) -> Message + 'a,
 ) -> Element<'a, Message> {
-    rich_text([span(before), link, span(after)])
-        .on_link_click(open)
-        .into()
+    let hint = link.link.clone().map(&open);
+    let text = rich_text([span(before), link, span(after)]).on_link_click(open);
+    match hint {
+        Some(message) => hinted(text, message),
+        None => text.into(),
+    }
 }
 
 fn link<'a, Link>(label: impl IntoFragment<'a>, target: Link) -> Span<'a, Link> {

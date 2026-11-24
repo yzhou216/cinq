@@ -13,7 +13,7 @@ impl Action {
             Action::Panic => "Panic: fade everything out, or stop it at once",
             Action::Standby => "Put the selected cue on standby",
             Action::Cancel => {
-                "Drop the keys typed so far, close the search line or a menu, and leave a field"
+                "Drop the keys typed so far, close the search line or a menu, and leave a field or hint mode"
             }
             Action::Next => "Select the next cue, output, or menu option",
             Action::Previous => "Select the previous cue, output, or menu option",
@@ -77,6 +77,9 @@ impl Action {
             }
             Action::NextField => "Move to the next field",
             Action::PreviousField => "Move to the previous field",
+            Action::Hint => {
+                "Label the buttons, checkboxes, tabs, drop-down lists, fields, and links, to act on one by typing its label"
+            }
             Action::Pick => "Pick the highlighted option of an open menu",
             Action::CloseMenu => "Close an open menu without picking an option",
             Action::AddBelow => "Add a cue, or an output, below the selection",

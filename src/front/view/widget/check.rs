@@ -15,7 +15,7 @@
 mod widget;
 use iced::{Element, advanced::Shell, keyboard::Key};
 
-use super::focus;
+use super::{focus, hinted};
 use crate::front::{Focus, Message, keymap::Keymap};
 
 pub struct Check<'a> {
@@ -59,15 +59,20 @@ fn checkbox<'a>(
     leaves: bool,
     keymap: &'a Keymap,
 ) -> Element<'a, Message> {
-    Element::new(Check {
-        flip: on_toggle.clone().map(|on_toggle| on_toggle(!checked)),
+    let flip = on_toggle.clone().map(|on_toggle| on_toggle(!checked));
+    let check = Element::new(Check {
+        flip: flip.clone(),
         look: iced::widget::checkbox(checked)
             .label(label)
             .on_toggle_maybe(on_toggle)
             .into(),
         leaves,
         keymap,
-    })
+    });
+    match flip {
+        Some(flip) => hinted(check, flip),
+        None => check,
+    }
 }
 
 impl Check<'_> {

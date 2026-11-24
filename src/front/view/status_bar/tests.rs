@@ -9,6 +9,7 @@ mod adding;
 mod cancel;
 mod changes;
 mod fields;
+mod hint_mode;
 mod lists;
 mod menu;
 mod name;

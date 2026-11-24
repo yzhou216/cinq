@@ -14,7 +14,7 @@ mod tests;
 
 use iced::{
     Element, Fill,
-    widget::{Radio, column, container, radio, rule, scrollable, text},
+    widget::{column, container, rule, scrollable, text},
 };
 use unicode_width::UnicodeWidthStr;
 
@@ -22,7 +22,7 @@ use super::{
     CURRENT_LIST, SIDEBAR, SIDEBAR_SCROLL, SPACING, button, char_width,
     cue_table::{RADIO, SCROLL_BAR},
     faults::{self, Warning},
-    format, outputs, warnings,
+    format, outputs, radio, warnings,
     widget::shortened,
 };
 use crate::front::{App, Message};
@@ -161,11 +161,11 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
 }
 
 /// Returns `entry`, marked for the sidebar to scroll to when it `shows`
-fn current<'a>(entry: Radio<'a, Message>, shows: bool) -> Element<'a, Message> {
+fn current<'a>(entry: Element<'a, Message>, shows: bool) -> Element<'a, Message> {
     if shows {
         container(entry).id(CURRENT_LIST).into()
     } else {
-        entry.into()
+        entry
     }
 }
 

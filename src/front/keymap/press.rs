@@ -95,6 +95,15 @@ impl Press {
         self.ctrl || self.alt
     }
 
+    /// Returns the character that the key types, held with no modifier, which
+    /// the labels of hint mode are typed with
+    pub fn letter(self) -> Option<char> {
+        match self.key {
+            Name::Char(c) if self.is_bare() => Some(c),
+            _ => None,
+        }
+    }
+
     /// Returns whether the key is pressed with no modifier held
     pub fn is_bare(self) -> bool {
         self == self.bare()

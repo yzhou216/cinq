@@ -29,22 +29,27 @@ fn shown(app: &App, room: usize) -> String {
 
 #[test]
 fn the_key_of_the_next_list_is_hinted_in_both_keymaps() {
-    let told = |preset| shown(&two_lists(preset, false), 100);
-    assert!(told(Preset::Vi).ends_with("l: next list"));
-    assert!(told(Preset::Cua).ends_with("Control+PageDown: next list"));
+    let told = |preset| shown(&two_lists(preset, false), 120);
+    assert!(told(Preset::Vi).ends_with("l: next list | f: hint"));
+    assert!(told(Preset::Cua).ends_with("Control+PageDown: next list | f: hint"));
 }
 
 #[test]
-fn the_hint_gives_way_before_every_other_in_a_list_with_a_standby_cue() {
+fn the_hint_gives_way_after_the_next_list_and_the_next_tab_in_a_list_with_a_standby_cue() {
     let app = two_lists(Preset::Vi, false);
     let all = shown(&app, 100);
     assert_eq!(
         all,
-        "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list"
+        "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list | f: hint"
     );
     assert_eq!(
         shown(&app, all.len() - 1),
-        "Space: GO | Escape: Panic | ?: help | gt: next tab"
+        "Space: GO | Escape: Panic | ?: help | gt: next tab | f: hint"
+    );
+    // The keys of the next tab and the next list, which only teach, go first
+    assert_eq!(
+        shown(&app, all.len() - 16),
+        "Space: GO | Escape: Panic | ?: help | f: hint"
     );
     assert_eq!(yielding(&app), YIELDING);
 }
@@ -55,7 +60,7 @@ fn the_hint_outlasts_the_hint_of_go_where_standby_is_past_the_end_and_a_list_fol
     let all = shown(&app, 100);
     assert_eq!(
         all,
-        "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list"
+        "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list | f: hint"
     );
     // Tab and the rest give way first, then GO, which fires nothing there, and
     // Panic, while the key of the next list outlasts the key of help

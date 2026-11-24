@@ -94,7 +94,7 @@ fn the_key_of_the_next_tab_is_hinted_late_while_no_field_has_the_keyboard() {
         hints(false)
             .iter()
             .rev()
-            .nth(1)
+            .nth(2)
             .map(|(_, hint)| hint.as_str()),
         Some("gt: next tab")
     );

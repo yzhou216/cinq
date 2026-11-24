@@ -5,10 +5,10 @@
 //! Light patch of the show, and the levels of a light cue, each by instrument
 
 use iced::{
-    Center, Element, Fill,
+    Center, Element, Fill, Padding,
     widget::{
-        button::DEFAULT_PADDING, column, responsive, row, scrollable, space, table, text,
-        text_input,
+        button::DEFAULT_PADDING, column, container, responsive, row, scrollable, space, table,
+        text, text_input,
     },
 };
 use unicode_width::UnicodeWidthStr;
@@ -26,7 +26,8 @@ use crate::{
         view::{
             ADDRESS, button, char_width,
             cue_table::{CELL_SPACE, SCROLL_BAR},
-            theme,
+            reached, theme,
+            widget::hint,
         },
     },
 };
@@ -67,10 +68,11 @@ fn page(app: &App, width: f32) -> Element<'_, Message> {
     let name = table::column(text("Name"), move |instrument: &Instrument| {
         let id = instrument.id;
         if editable {
-            text_input("", &instrument.name)
-                .style(theme::field(true))
-                .on_input(move |name| Message::Patch(PatchEdit::Name(id, name)))
-                .into()
+            reached(
+                text_input("", &instrument.name)
+                    .style(theme::field(true))
+                    .on_input(move |name| Message::Patch(PatchEdit::Name(id, name))),
+            )
         } else {
             locked(&instrument.name, "", None, Fill)
         }
@@ -101,10 +103,15 @@ fn page(app: &App, width: f32) -> Element<'_, Message> {
             .collect::<Vec<_>>(),
         app.workspace.patch(),
     );
+    // Left of the names, room for the labels of hint mode, which the Setting
+    // column gives in the other tabs, so that they do not meet the labels of
+    // the tabs beside them
     let body: Element<'_, Message> = if app.workspace.patch().is_empty() {
         text("The light patch has no instruments yet").into()
     } else {
-        scrollable(instruments).height(Fill).into()
+        container(scrollable(instruments).height(Fill))
+            .padding(Padding::ZERO.left(hint::width(2)))
+            .into()
     };
     // Below the table, since the column of addresses is too narrow for it.  A
     // row of its own takes the room of an instrument at 1024x768, so it shows

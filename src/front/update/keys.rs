@@ -54,6 +54,9 @@ impl App {
     }
 
     pub(super) fn typed(self, press: Press, repeat: bool) -> (Self, Task<Message>) {
+        if self.hints.is_some() {
+            return self.hint_typed(press, repeat);
+        }
         let outcome = self.config.keymap.parse(&self.keys, press);
         let across = outcome.across();
         let app = Self {
@@ -94,7 +97,9 @@ impl App {
             ),
             // Page opens in the main window, which the fullscreen stage
             // window may cover, so that the page would open out of sight
-            Some((Action::Help, _)) if app.stage.has_keyboard() => (app, Task::none()),
+            Some((Action::Help | Action::Hint, _)) if app.stage.has_keyboard() => {
+                (app, Task::none())
+            }
             Some((
                 action @ (Action::Next | Action::Previous | Action::ScrollDown | Action::ScrollUp),
                 count,
@@ -185,7 +190,7 @@ pub(super) fn key_press(event: keyboard::Event) -> Option<Message> {
 /// replaces it as in desktop programs, while a click keeps the caret where
 /// it fell, and scrolls the sends or the sidebar to show the field if it is
 /// in one of them
-fn reached(moved: Task<Message>) -> Task<Message> {
+pub(super) fn reached(moved: Task<Message>) -> Task<Message> {
     moved.chain(select_focused()).chain(reveal_focused())
 }
 

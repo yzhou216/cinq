@@ -25,6 +25,9 @@
 //! the keyboard back to the list, so that the key that moves on goes to the
 //! field after it.
 //!
+//! Hint mode labels the list, and its label gives the list the keyboard, so
+//! that Enter opens the menu.
+//!
 //! A list with less room than its longest name cuts the name it shows
 //! short, and its menu grows as wide as that name, so that a list in the
 //! narrow sidebar can hold the long names of audio devices.

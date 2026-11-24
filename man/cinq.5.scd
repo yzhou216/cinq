@@ -350,6 +350,9 @@ of the help page.
 |  previous_field
 :  Shift+Tab
 :  Shift+Tab
+|  hint
+:  f
+:  f
 |  pick
 :  Control+y
 :  none
@@ -700,9 +703,11 @@ The help page
 	*half_page_up*, *page_down*, and *page_up* scroll it by half or all of
 	what the window shows, with a count of lines for the half pages, which
 	the cue list shares, and of pages for the whole pages.  Of the rest, only
-	the keys of *go*, *panic*, *help*, and *close_help* act, whichever window
-	has the keyboard, so that no field takes a key meanwhile, and that of
-	*standby* opens the tutorial, as its link does.  The keys of *go*
+	the keys of *go*, *panic*, *help*, and *close_help* act, whichever
+	window has the keyboard, so that no field takes a key meanwhile, and that of
+	*standby* opens the tutorial, as its link does, and that of *hint* labels
+	its links and its button while the main window has the keyboard, and does
+	nothing while the stage window has it.  The keys of *go*
 	and *panic* close the page as well, so that the show is in view.  The key
 	of *help* opens the page from the main window only, since the stage window
 	may cover that window when it is fullscreen, and does nothing while the
@@ -733,9 +738,9 @@ The menu of a drop-down list
 
 While the stage window has the keyboard, as the window manager may leave it
 once the stage window opens, and as each GO that makes it fullscreen gives
-it, *edit*, *edit_start*, *change_name*, *next_field*, and *previous_field* do
-nothing, since the keys typed there would never reach a field of the main
-window.
+it, *edit*, *edit_start*, *change_name*, *next_field*, *previous_field*, and
+*hint* do nothing, since the keys typed there would never reach a field of
+the main window.
 The keys that change the show or fill the clipboard do nothing there either:
 *add_below*, *add_above*, *cut*, *copy*, *paste_below*, *paste_above*,
 *delete*, *move_down*, *move_up*, *indent*, *outdent*, *undo*, and *redo*, and
@@ -870,7 +875,7 @@ page.
 	Put the selected cue on standby, so that the next GO fires it.
 	While the selected cue is not the standby cue and no field or list has the
 	keyboard, the status bar hints this key, and gives way to the hint right
-	after that of *next_tab*.
+	after those of *next_tab* and *hint*.
 
 *cancel*
 	Drop the keys typed so far, close the search line, with the selection going
@@ -882,7 +887,8 @@ page.
 	It acts in text fields, where a text field that has a selection still copies
 	it first.
 	The cua keymap binds no key to it, since Control+c copies there.
-	While keys wait or the search line is open, the status bar hints its key.
+	While keys wait, the search line is open, or hint mode is on, the status bar
+	hints its key.
 	While a text field or a drop-down list has the keyboard, it hints the key
 	of *next_field* and this key as the one that leaves, so that the way out is
 	told where Escape would panic.
@@ -1179,6 +1185,49 @@ page.
 *previous_field*
 	Move the keyboard to the previous field, or, before the first, back to the
 	cue list.
+
+*hint*
+	Label every place in the main window that a click acts on, to act on one by
+	typing its label, as Vimium and Tridactyl do in a browser.
+	The places are the buttons that can be pressed, the checkboxes, the tabs of
+	the inspector and the lists of the sidebar, the drop-down lists, the text
+	fields, and the links of the help page, as far as they are in view, but not
+	the buttons of GO and Panic, whose keys act from everywhere, in hint mode
+	too.
+	The rows of the cue list and of the outputs have keys of their own, and the
+	stage window has no place to label.
+	Each label is a few letters of *sadfjklewcmpgh*, as many for every place as
+	the number of places needs, given out in the order that the places lie in the
+	window.
+	A label lies left of its place, with its right edge at the left edge of the
+	place and its top at the top of the place, so that it hides neither a value
+	nor the circle or box that shows a choice.
+	Where that would leave the window, it lies right of the place instead, with its
+	left edge at the right edge of the place, so that what lies at the left edge of
+	the window stays in view.
+	A label typed whole acts as the click would: a button is pressed, a checkbox
+	is flipped, a tab or a list is shown, a drop-down list or a text field takes
+	the keyboard, so that Enter opens the menu of the list, and a link opens.
+	The letters typed so far hide the labels that they do not begin, and
+	Backspace takes the last one back, or leaves hint mode where none is typed.
+	A key that types a character but continues no label is ignored, and the mode
+	stays on, so that a slip never runs the keys after it as commands.
+	A key that types no character leaves hint mode and does nothing else, the key
+	of *cancel* among them.
+	The keys of *go* and *panic* act as everywhere and leave it too, and so does
+	any press of a mouse button, any turn of the wheel, any change of the size of
+	the window, and any start or end of a cue in the Active list of the sidebar,
+	which moves the places below it.
+	The key of this action is a letter in both keymaps, so that it types a letter
+	of a label while the mode is on.
+	The status bar hints this key where it acts, and the hint gives way right
+	after those of *next_list* and *next_tab*.
+	While the mode is on, it shows only what acts there: a request for a label,
+	or the letters typed so far, the key of *cancel* as the key that leaves, or
+	Backspace where no key is bound to *cancel*, and the keys of *go* and
+	*panic*.
+	It does nothing while a text field or a drop-down list has the keyboard, which
+	takes the key for typing, or while the stage window has it.
 
 *pick*
 	Pick the highlighted option of an open menu, as Enter does and as Control+y

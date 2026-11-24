@@ -13,7 +13,10 @@ use iced::{
 };
 use itertools::Itertools;
 
-use super::{SPACING, TEXT_SIZE, button, char_width, faults, format, theme, widget::shortened};
+use super::{
+    SPACING, TEXT_SIZE, button, char_width, faults, format, theme,
+    widget::{Button, shortened},
+};
 use crate::front::{App, Message};
 
 /// Size of the title, which names the standby cue
@@ -62,7 +65,7 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
     let buttons = row![
         button("Pause all").on_press_maybe(app.running().then_some(Message::PauseAll)),
         button("Resume all").on_press_maybe(paused.then_some(Message::ResumeAll)),
-        button("Panic").style(theme::panic).on_press(Message::Panic),
+        panic(),
     ]
     .spacing(SPACING);
     // The notes and the chain take the width under the title and the buttons,
@@ -79,18 +82,34 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
     // cannot play, but it looks as a disabled button does
     let fires = app.workspace.next_go(list).next().is_some();
     row![
-        button(text("GO").size(40))
-            .style(if fires {
-                theme::go
-            } else {
-                theme::go_without_cues
-            })
-            .on_press_maybe(standby.map(|_| Message::Go)),
+        go(standby.is_some(), fires),
         container(summary).width(Fill).clip(true),
     ]
     .spacing(SPACING)
     .padding(SPACING)
     .into()
+}
+
+/// Returns the GO button, which hint mode leaves out since Space fires GO from
+/// everywhere, in hint mode too
+fn go<'a>(standby: bool, fires: bool) -> Button<'a> {
+    button(text("GO").size(40))
+        .style(if fires {
+            theme::go
+        } else {
+            theme::go_without_cues
+        })
+        .on_press_maybe(standby.then_some(Message::Go))
+        .unhinted()
+}
+
+/// Returns the Panic button, which hint mode leaves out since Escape panics
+/// from everywhere, in hint mode too
+fn panic<'a>() -> Button<'a> {
+    button("Panic")
+        .style(theme::panic)
+        .on_press(Message::Panic)
+        .unhinted()
 }
 
 /// Returns `told` of text `size`, which ends in an ellipsis where the room
@@ -109,8 +128,20 @@ fn line<'a>(told: String, size: f32) -> Element<'a, Message> {
 
 #[cfg(test)]
 mod tests {
-    use super::{BESIDE, beside};
-    use crate::front::view::char_width;
+    use super::{BESIDE, beside, go, panic};
+    use crate::front::view::{button, char_width};
+
+    #[test]
+    fn go_and_panic_are_no_places_of_hint_mode_but_the_other_buttons_are() {
+        assert!(go(true, true).place().is_none());
+        assert!(panic().place().is_none());
+        assert!(
+            button("Pause all")
+                .on_press(crate::front::Message::PauseAll)
+                .place()
+                .is_some()
+        );
+    }
 
     #[test]
     fn a_window_too_narrow_for_the_title_puts_the_buttons_under_it() {

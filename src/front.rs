@@ -31,7 +31,7 @@ use crate::back::{
 use keymap::{Press, config::Config};
 use message::{Caret, Focus, Message, Setting, Tab};
 use update::{
-    Clipboard, Clipped, History, Keeper, Measures, Reader, Search, Searched, Show, Stage,
+    Clipboard, Clipped, Hints, History, Keeper, Measures, Reader, Search, Searched, Show, Stage,
 };
 
 /// Opens the main window with the show in `show`, or a new show without
@@ -192,6 +192,8 @@ struct App {
     /// Text of the search accepted last, which the keys of the next and
     /// previous match look for
     searched: Searched,
+    /// Labels of hint mode, while it is on
+    hints: Option<Hints>,
     help: bool,
     /// Whether the menu of a drop-down list is open, which the status bar
     /// hints the keys of

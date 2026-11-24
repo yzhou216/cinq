@@ -33,12 +33,12 @@ pub(super) fn shown(app: &App, room: usize) -> String {
 fn the_outputs_hint_the_way_back_and_the_keys_to_add_and_to_rename_an_output() {
     assert_eq!(
         shown(&in_outputs(Preset::Vi), COLUMNS),
-        "o: add output | i: rename | Control+o: back to Main | Space: GO | Escape: Panic | ?: help"
+        "o: add output | i: rename | Control+o: back to Main | Space: GO | Escape: Panic | ?: help | f: hint"
     );
     // Cue list needs none of them, and has nowhere to go back to
     assert_eq!(
         shown(&opened(Preset::Vi, false, false), COLUMNS),
-        "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list"
+        "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list | f: hint"
     );
 }
 
@@ -50,7 +50,7 @@ fn show_mode_locks_the_outputs_so_that_no_key_to_edit_them_is_hinted() {
     };
     assert_eq!(
         shown(&locked, COLUMNS),
-        "Control+o: back to Main | Space: GO | Escape: Panic | ?: help"
+        "Control+o: back to Main | Space: GO | Escape: Panic | ?: help | f: hint"
     );
 }
 
@@ -78,10 +78,11 @@ fn hints_of_the_outputs_give_way_with_the_way_back_lasting_longest_after_help() 
 fn the_cue_list_keeps_its_order_of_giving_way() {
     let cues = yielding(&App::default());
     assert_eq!(
-        cues[..10],
+        cues[..11],
         [
             Action::NextList,
             Action::NextTab,
+            Action::Hint,
             Action::Standby,
             Action::Forward,
             Action::Back,

@@ -20,6 +20,7 @@ use iced::{
     },
 };
 
+use super::hint::Hidden;
 use crate::front::Message;
 
 pub trait Intercept {
@@ -54,7 +55,9 @@ pub trait Intercept {
 
     /// Returns whether the content takes part: draws, sees events, and
     /// shows its overlays.  Content that does not take part still lays
-    /// out, answers operations, and keeps the state that its widgets hold.
+    /// out, answers operations, and keeps the state that its widgets hold,
+    /// but tells them when it begins and ends, so that those that look for
+    /// places to act on leave the places in it out.
     fn shown(&self) -> bool {
         true
     }
@@ -136,9 +139,18 @@ impl<I: Intercept> Widget<Message, Theme, Renderer> for Wrap<'_, I> {
         operation: &mut dyn Operation,
     ) {
         self.intercept.operate(layout, operation);
+        // Operations that find places to act on leave out those that the
+        // operator cannot see
+        let hidden = !self.intercept.shown();
+        if hidden {
+            operation.custom(None, layout.bounds(), &mut Hidden(true));
+        }
         self.content
             .as_widget_mut()
             .operate(tree, layout, renderer, operation);
+        if hidden {
+            operation.custom(None, layout.bounds(), &mut Hidden(false));
+        }
     }
 
     fn update(

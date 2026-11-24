@@ -12,11 +12,13 @@ use crate::front::{App, keymap::Action};
 /// outlasts GO and Panic, whose buttons the transport shows, saving, whose
 /// mark the status shows, and the help page, which the first steps and a key
 /// of every table teach, since it is told only right after a cue is added and
-/// nowhere else.  The key of the next cue list goes first of all, as it only
-/// teaches.
-pub(super) const YIELDING: [Action; 14] = [
+/// nowhere else.  The keys of the next cue list and of the next tab go first
+/// of all, as they only teach, and that of hint mode follows them, so that a
+/// narrow bar of the cua keymap, where its key is long, still shows it.
+pub(super) const YIELDING: [Action; 15] = [
     Action::NextList,
     Action::NextTab,
+    Action::Hint,
     Action::Standby,
     Action::Forward,
     Action::Back,
@@ -36,7 +38,8 @@ pub(super) const YIELDING: [Action; 14] = [
 /// next list, which is the way on, outlasts the keys that only teach, the
 /// hints of GO and Panic, whose buttons the transport shows, and those of the
 /// help page and of renaming a cue just added
-const YIELDING_AT_END: [Action; 14] = [
+const YIELDING_AT_END: [Action; 15] = [
+    Action::Hint,
     Action::NextTab,
     Action::Standby,
     Action::Forward,
@@ -84,7 +87,8 @@ pub(super) const YIELDING_IN_FIELD: [Action; 16] = [
 /// as they only teach, and Back stays until after GO, Panic, and Save,
 /// since it is the way out of the outputs, while the transport has buttons
 /// for GO and Panic.
-const YIELDING_IN_OUTPUTS: [Action; 13] = [
+const YIELDING_IN_OUTPUTS: [Action; 14] = [
+    Action::Hint,
     Action::ChangeName,
     Action::Forward,
     Action::AddBelow,

@@ -165,7 +165,7 @@ fn a_change_to_a_cue_is_not_told_while_the_outputs_show_so_that_their_keys_stay(
     assert_eq!(notice(&app(edited.clone(), true)), None);
     assert_eq!(
         shown(&app(edited, true), COLUMNS),
-        "o: add output | i: rename | Control+o: back to Main | Space: GO | Escape: Panic | ?: help"
+        "o: add output | i: rename | Control+o: back to Main | Space: GO | Escape: Panic | ?: help | f: hint"
     );
     // A change to the outputs is told there
     let renamed = rain().apply(rename(1, "Pit"));

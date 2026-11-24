@@ -10,6 +10,18 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+- A new action, `hint`, bound to `f` in both keymaps, labels with a few letters
+  every place that a click acts on, as Vimium and Tridactyl do: the buttons,
+  checkboxes, tabs of the inspector, cue lists of the sidebar, drop-down lists,
+  text fields, and links of the help page, as far as they are in view.  Typing a
+  label acts as a click would.  A letter that no label continues is ignored, so
+  that a slip never runs the next letters as commands.  Backspace takes a letter
+  back, or leaves the mode where none is typed, and `Control+c` in the vi
+  keymap, GO, Panic, any click, and any start or end of a cue in the Active list
+  leave it too.  A label lies left of its place, or right of it where it would
+  leave the window, and the buttons of GO and Panic have none, since their keys
+  act everywhere.  The status bar hints the key and the letters typed.
+
 ## v0.1.6
 
 - A level typed into a field, that of a cue, a send, the new cues of an

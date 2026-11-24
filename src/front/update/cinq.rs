@@ -67,6 +67,7 @@ impl Cinq {
         // Whatever the operator does can move the keyboard between fields,
         // which only the widgets know
         let asking = !passive(&message);
+        let active = self.app.active_cues();
         let (app, task) = std::mem::take(&mut self.app).next(message);
         if routed {
             self.audio.route(app.config.sound.device.as_deref());
@@ -89,6 +90,7 @@ impl Cinq {
             ..app
         }
         .with_keep_problem(kept)
+        .hints_after(&active)
         .clocked();
         let (app, load) = app.load();
         let (app, stage) = app.staged();

@@ -8,8 +8,8 @@
 use iced::{Color, widget::text_input::Status};
 
 use super::{
-    BG_MAIN, BLUE, BLUE_COOLER, FG_MAIN, FOCUS_WIDTH, RED, RED_COOLER, SELECTION, YELLOW_WARMER,
-    danger, field, modus_vivendi,
+    BG_MAIN, BLUE, BLUE_COOLER, FG_MAIN, FOCUS_WIDTH, HINT_BACKGROUND, HINT_TEXT, RED, RED_COOLER,
+    SELECTION, YELLOW_WARMER, danger, field, modus_vivendi,
 };
 
 #[test]
@@ -76,4 +76,15 @@ fn the_other_colors_of_text_stay_legible_on_the_selected_row() {
         .for_each(|color| {
             assert!(contrast(color, SELECTION) >= 4.5, "{color:?}");
         });
+}
+
+#[test]
+fn the_letters_of_a_hint_label_read_at_7_to_1_on_its_box() {
+    let ratio = contrast(HINT_TEXT, HINT_BACKGROUND);
+    assert!(ratio >= 7.0, "{ratio}");
+    assert_eq!(
+        format!("{ratio:.1}"),
+        "9.3",
+        "the ratio that the docs state"
+    );
 }

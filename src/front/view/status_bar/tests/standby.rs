@@ -49,12 +49,12 @@ fn no_field_list_view_or_page_that_has_the_keys_hints_standby() {
 }
 
 #[test]
-fn the_hint_of_standby_gives_way_right_after_the_one_of_the_next_tab() {
+fn the_hint_of_standby_outlasts_the_hints_of_the_next_list_the_next_tab_and_hint_mode() {
     let app = with(Some(2));
     let all = fitted(&hinted(&app), 100, &YIELDING);
     assert_eq!(
         all,
-        "Space: GO | Escape: Panic | ?: help | Enter: standby | gt: next tab | l: next list"
+        "Space: GO | Escape: Panic | ?: help | Enter: standby | gt: next tab | l: next list | f: hint"
     );
     let without = |keys: &[&str]| {
         let gone: usize = keys.iter().map(|key| key.len() + 3).sum();
@@ -62,10 +62,14 @@ fn the_hint_of_standby_gives_way_right_after_the_one_of_the_next_tab() {
     };
     assert_eq!(
         without(&["l: next list"]),
-        "Space: GO | Escape: Panic | ?: help | Enter: standby | gt: next tab"
+        "Space: GO | Escape: Panic | ?: help | Enter: standby | gt: next tab | f: hint"
     );
     assert_eq!(
         without(&["l: next list", "gt: next tab"]),
+        "Space: GO | Escape: Panic | ?: help | Enter: standby | f: hint"
+    );
+    assert_eq!(
+        without(&["l: next list", "gt: next tab", "f: hint"]),
         "Space: GO | Escape: Panic | ?: help | Enter: standby"
     );
     assert_eq!(

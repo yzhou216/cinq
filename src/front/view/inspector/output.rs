@@ -28,7 +28,7 @@ use crate::{
     back::Output,
     front::{
         App, Message, Setting,
-        view::{FORMS, OUTPUT_NAME, SPACING, char_width, dropdown_width, format, theme},
+        view::{FORMS, OUTPUT_NAME, SPACING, char_width, dropdown_width, format, reached, theme},
     },
 };
 
@@ -87,7 +87,7 @@ pub(super) fn styled<'a>(
     valid: bool,
 ) -> Element<'a, Message> {
     if app.editable() {
-        input.style(theme::field(valid)).into()
+        reached(input.style(theme::field(valid)))
     } else {
         locked(shown, placeholder, None, room(columns).into())
     }
@@ -152,7 +152,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     let settings = [
         (
             "Name",
-            [name.id(OUTPUT_NAME).into(), help("", name_rejection)],
+            [reached(name.id(OUTPUT_NAME)), help("", name_rejection)],
         ),
         (
             "Device",
@@ -161,7 +161,7 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
         (
             "Channels",
             [
-                channels.into(),
+                reached(channels),
                 help(reasons::channels_help(), channels_rejection),
             ],
         ),
@@ -170,9 +170,13 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
             [
                 // Unit keeps a gap from the help that follows it, which
                 // would otherwise read on from it
-                container(row![new_cues, text("dB")].spacing(SPACING).align_y(Center))
-                    .padding(Padding::ZERO.right(SPACING))
-                    .into(),
+                container(
+                    row![reached(new_cues), text("dB")]
+                        .spacing(SPACING)
+                        .align_y(Center),
+                )
+                .padding(Padding::ZERO.right(SPACING))
+                .into(),
                 help(
                     "New cues send here at this level; empty for none",
                     new_cues_rejection,

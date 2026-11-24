@@ -109,10 +109,11 @@ impl App {
         }
         // Rows of a half page that a count set, which Vim resets as the window
         // changes size, and the measures with them, which the task measures
-        // anew so that the first page key finds one kept
+        // anew so that the first page key finds one kept.  The labels of hint
+        // mode would no longer lie on their places.
         Self {
             scroll: None,
-            ..app
+            ..app.without_hints()
         }
         .with_window_height(size.height)
         .revealed()
@@ -131,7 +132,8 @@ impl App {
 
 /// Reports a press of any mouse button, captured by a widget or not, so
 /// that a click drops a command typed halfway, and the end of a press or a
-/// turn of the wheel, after which the cue list may have scrolled
+/// turn of the wheel, after which the cue list may have scrolled and the labels
+/// of hint mode no longer lie on their places
 fn clicked(event: Event, _status: event::Status, _window: window::Id) -> Option<Message> {
     match event {
         Event::Mouse(mouse::Event::ButtonPressed(_)) => Some(Message::Clicked),

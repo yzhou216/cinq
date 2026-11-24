@@ -73,6 +73,8 @@ impl Preset {
             Action::ChangeName => [&["c c", "S"], &["F2"]],
             Action::NextField => [&["Tab"], &["Tab"]],
             Action::PreviousField => [&["Shift+Tab"], &["Shift+Tab"]],
+            // Vim's f finds a character in a line, which no list has, and it is the key of Vimium and Tridactyl; the cua keymap binds no other bare letter
+            Action::Hint => [&["f"], &["f"]],
             Action::Pick => [&["Control+y"], &[]],
             Action::CloseMenu => [&["Control+e"], &["F4"]],
             Action::AddBelow => [&["o"], &["Control+n"]],

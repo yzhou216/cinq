@@ -16,9 +16,10 @@
 //! [`panic`](fn@panic) paint green and red, [`field`], since iced has no
 //! style for a field that holds a mistake and draws the border of a field that
 //! has the keyboard no thicker than any other, [`line`], which drops the border
-//! of the search line so that it fits the status bar, and [`LINK`] and
-//! [`SELECTION`], since iced has no role for links or for the selected row of
-//! a table.  On that row the blue, green, and red state words read at 4.5:1
+//! of the search line so that it fits the status bar, and [`LINK`],
+//! [`SELECTION`], [`HINT_BACKGROUND`], and [`HINT_TEXT`], since iced has no
+//! role for links, for the selected row of a table, or for the labels of hint
+//! mode.  On that row the blue, green, and red state words read at 4.5:1
 //! and not at 7:1, since no blue, green, or red of modus-vivendi reaches 7:1
 //! there, and the words carry the meaning, so that the color is never the
 //! only sign.
@@ -72,6 +73,14 @@ pub(super) const LINK: Color = BLUE_WARMER;
 /// `bg-hl-line`, the line of the cursor, and on which every color of text
 /// stays legible
 pub(super) const SELECTION: Color = BG_HL_LINE;
+
+/// Background of the label that hint mode draws over a place that a click
+/// acts on, which modus-vivendi gives to `bg-completion`.  The white of
+/// [`HINT_TEXT`] reads on it at 9.3:1.
+pub(super) const HINT_BACKGROUND: Color = BG_COMPLETION;
+
+/// Color of the letters of a hint label
+pub(super) const HINT_TEXT: Color = FG_MAIN;
 
 /// Colors of the roles of iced's palette, which spans of rich text take as
 /// they are

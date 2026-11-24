@@ -17,11 +17,11 @@ mod sends;
 
 use iced::{
     Center, Element, Fill,
-    widget::{column, container, progress_bar, radio, row, rule, slider, text},
+    widget::{column, container, progress_bar, row, rule, slider, text},
 };
 use strum::VariantArray;
 
-use super::{INSPECTOR, SPACING, check, format, keep_keys};
+use super::{INSPECTOR, SPACING, check, format, keep_keys, radio};
 use crate::{
     back::{Cue, Edit, Kind, LEVELS, Media, Problem},
     front::{App, Message, Setting, Tab},
@@ -73,7 +73,7 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
             Tab::VARIANTS
                 .iter()
                 .filter(|_| !app.outputs_shown)
-                .map(|&tab| radio(tab.to_string(), tab, Some(app.tab), Message::Tab).into()),
+                .map(|&tab| radio(tab.to_string(), tab, Some(app.tab), Message::Tab)),
         )
         .spacing(SPACING);
     let body = match (app.tab, app.selected.and_then(|id| app.workspace.cue(id))) {

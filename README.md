@@ -18,7 +18,8 @@ Minimal cue-based show controller, the
   closing the window or a crash, and come back as one change that undo takes
   back.  Undo covers every edit, and nothing ever asks before acting.
 - **Keyboard first.**  vi and CUA keymaps, rebindable in a file that reloads
-  as you save it.  GO and Panic act from anywhere, even halfway through
+  as you save it, and a hint mode on `f` that labels each place to click with
+  a few letters.  GO and Panic act from anywhere, even halfway through
   another key sequence, apart from Space while a text field has the keyboard.
 - **Audio cues** in WAV, FLAC, Ogg Vorbis, MP3, or AAC, with start and end
   times, seamless loops of the whole clip or a section of it, and levels that

@@ -19,6 +19,7 @@ use iced::{Size, mouse, window};
 use super::{
     keymap::{Action, Press, config::Config},
     update::{Measured, Read, Saved, Spot},
+    view::Site,
 };
 use crate::back::{Command, CueId, Device, Edit, Kind, OutputId, PatchEdit, Place};
 pub use field::{Caret, Focus, Setting};
@@ -162,6 +163,12 @@ pub enum Message {
     /// Redoes a number of changes, stopping at the newest
     Redo(usize),
     Focus(Focus),
+    /// Labels every place that a click acts on, or takes the labels away if
+    /// they are there
+    Hint,
+    /// Places that a click acts on and the operator can see, in the order that
+    /// they lie in the window, which the labels of hint mode go to
+    Hinted(Vec<Site>),
     /// Nothing, which the keys of a menu amount to outside one
     Nothing,
     ToggleHelp,

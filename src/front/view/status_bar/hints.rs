@@ -41,6 +41,25 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     // Key that is hinted only where it acts, which a field or a list that
     // has the keyboard may keep from it
     let here = |action: Action, label: &str| key(action, label).filter(|_| acts_here(app, action));
+    // Only the keys that act in hint mode, since the others type a letter of a
+    // label or leave it
+    if let Some(hints) = &app.hints {
+        let letters = Some(hints.typed()).filter(|typed| !typed.is_empty());
+        // Backspace takes a letter back while any is typed, and leaves
+        // only where none is
+        let backspace = if letters.is_some() { "back" } else { "leave" };
+        let leave = key(Action::Cancel, "cancel")
+            .or_else(|| Some((None, format!("Backspace: {backspace}"))));
+        return [
+            Some((None, letters.unwrap_or("Type a label").to_owned())),
+            leave.map(|(_, hint)| (None, hint)),
+            key(Action::Go, "GO"),
+            key(Action::Panic, "Panic"),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+    }
     let typed = (!app.keys.is_empty()).then(|| (None, shown(&app.keys)));
     let told = told.map(|told| (None, told));
     let back = going(app, Action::Back, app.back_to());
@@ -127,6 +146,8 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
     // acting, and `?` types there, while an open menu and the page itself take it
     let help = key(Action::Help, Action::Help.name())
         .filter(|_| app.help || in_menu || acts_here(app, Action::Help));
+    // Key of hint mode, taught where it acts
+    let hint_mode = here(Action::Hint, "hint").filter(|_| !in_menu);
     typed
         .into_iter()
         .chain(told)
@@ -148,6 +169,7 @@ pub(super) fn hints_told(app: &App, told: Option<String>) -> Vec<(Option<Action>
         .chain(standby)
         .chain(tab)
         .chain(next_list)
+        .chain(hint_mode)
         .collect()
 }
 

@@ -22,6 +22,7 @@ mod counts;
 mod field_runs;
 mod grouping;
 mod help_page;
+mod hints;
 mod history;
 mod inputs;
 mod loading;
