@@ -10,6 +10,8 @@ Major changes and improvements in each release of cinq, newest first.
 
 ## Unreleased
 
+## v0.1.7
+
 - A new action, `hint`, bound to `f` in both keymaps, labels with a few letters
   every place that a click acts on, as Vimium and Tridactyl do: the buttons,
   checkboxes, tabs of the inspector, cue lists of the sidebar, drop-down lists,
