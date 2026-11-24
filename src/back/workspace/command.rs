@@ -10,8 +10,8 @@ use crate::back::{
 
 /// Request to change the show
 ///
-/// The interface sends these through [`super::Workspace::apply`].  Other
-/// front ends, such as an OSC server, could send the same commands.
+/// The interface sends these through [`super::Workspace::apply`], for the
+/// keys and buttons as well as for the commands that arrive over OSC.
 #[derive(Debug, Clone)]
 pub enum Command {
     /// Fires the standby cue of a list along with its chain
@@ -23,6 +23,15 @@ pub enum Command {
     Pause(bool),
     /// Stops one running cue
     Stop(CueId),
+    /// Fires a cue with its chain, or resumes it where it is paused, as a
+    /// start cue does
+    Start(CueId),
+    /// Holds the run of a cue, as a pause cue does
+    Hold(CueId),
+    /// Resumes the run of a cue that is held, as a start cue does
+    Resume(CueId),
+    /// Moves standby to a cue in the list that holds it, as a GoTo cue does
+    GoTo(CueId),
     /// Advances the playback clock by a number of seconds
     Tick(f64),
     /// Moves the standby position of a list

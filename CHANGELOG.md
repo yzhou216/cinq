@@ -47,6 +47,18 @@ Major changes and improvements in each release of cinq, newest first.
   the key that saves the show.  A tutorial that is not installed is told in one
   line, `The tutorial is not installed`, in place of every data directory
   searched, which go to standard error.
+- A new setting, `osc_listen`, gives an IP address and a port, such as
+  `"127.0.0.1:53000"`, on which cinq takes commands as OSC over UDP, so that a
+  tablet, a lighting console, or a backup machine can fire cues.  The addresses
+  are those of QLab: `/go`, `/panic`, `/pause`, `/resume`,
+  `/cue/{number}/start`, `stop`, `pause`, and `resume`, and
+  `/playhead/{number}`.  Where several cues have a number, the first is meant.
+  A message whose only argument is 0 or false does nothing, so that the release
+  of a button fires no second GO.  Anyone who can reach the address can fire
+  cues.  The sidebar warns, naming `osc_listen`, when the address cannot be
+  bound, and cinq tries again every two seconds.  It also shows the latest
+  command that did nothing, such as one for a cue number that no cue has, with
+  the address that it came from, until a command acts.
 
 ## v0.1.6
 

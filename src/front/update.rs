@@ -24,6 +24,7 @@ mod navigation;
 mod operators;
 mod outputs;
 mod paging;
+mod remote;
 mod reveal_focused;
 mod reveal_list;
 mod rows;
@@ -77,10 +78,7 @@ impl App {
             }
             // Selection scrolls into view as it or the rows around it move,
             // and as the main window changes size
-            Message::Select(id) => self
-                .without_search()
-                .crossing(|app| app.showing_cues().with_selection(id))
-                .revealed(),
+            Message::Select(id) => self.picked(id),
             Message::Step(offset) => self.stepped(offset).revealed(),
             Message::Row(row) => self.jumping(|app| app.at_row(row)).revealed(),
             Message::Page(page, count) => self.paged(page, count),
@@ -174,6 +172,7 @@ impl App {
                     (app, Task::none())
                 }
             }
+            Message::Remote(from, remote) => self.remote(from, remote),
             Message::Hint => self.hinting(),
             Message::Hinted(places) => (self.hinted(places), Task::none()),
             // Keys typed so far went already, as for any message
@@ -227,6 +226,9 @@ impl App {
             | Message::Loaded(..)
             | Message::Rechecked(..)
             | Message::NetworkChecked
+            | Message::OscFailed(_)
+            | Message::OscIgnored(_)
+            | Message::OscListening
             | Message::Saved(_)
             | Message::Reconfigured(_)
             | Message::LinkOpened(_)

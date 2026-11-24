@@ -241,6 +241,8 @@ fn warnings(app: &App) -> usize {
         + app.workspace.unlit_cues().count()
         + faults::warnings(app).len()
         + app.network_problems.len()
+        + usize::from(app.osc_problem.is_some())
+        + usize::from(app.osc_ignored.is_some())
         + usize::from(app.file_problem.is_some())
         + usize::from(app.keep_problem.is_some())
         + usize::from(app.device_problem.is_some())

@@ -37,6 +37,7 @@ mod output_rows;
 mod output_stranded;
 mod outputs;
 mod paging;
+mod remote;
 mod scrolling;
 mod search;
 mod search_columns;

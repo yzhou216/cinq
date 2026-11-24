@@ -32,6 +32,7 @@ mod outputs;
 mod pasting;
 mod picture;
 mod playback;
+mod remote;
 mod show;
 mod show_loops;
 mod starting;

@@ -146,6 +146,12 @@ struct App {
     audio_problems: Vec<(OutputId, Fault)>,
     /// Why messages of network cues failed, until one gets there
     network_problems: Vec<String>,
+    /// Why the address of `osc_listen` cannot be listened on, until the
+    /// setting changes
+    osc_problem: Option<String>,
+    /// Latest command from the network that did nothing, as one line, until
+    /// a later command acts or the setting changes
+    osc_ignored: Option<String>,
     /// Interval at which to look for news of the network output, while it
     /// has any
     network_checks: Option<Duration>,

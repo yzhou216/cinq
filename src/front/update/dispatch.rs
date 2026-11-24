@@ -27,6 +27,9 @@ pub(super) fn passive(message: &Message) -> bool {
             | Message::Recheck
             | Message::Rechecked(..)
             | Message::NetworkChecked
+            | Message::OscFailed(_)
+            | Message::OscIgnored(_)
+            | Message::OscListening
             | Message::LinkOpened(_)
             | Message::AudioDevicesListed(_)
             | Message::AudioDeviceKept(_)
@@ -50,6 +53,13 @@ pub(super) fn passive(message: &Message) -> bool {
 }
 
 impl App {
+    /// Returns whether `message` is a command for a cue number that no cue
+    /// has, which interrupts nothing that the operator was doing, as a
+    /// passive message does
+    fn aimless(&self, message: &Message) -> bool {
+        matches!(message, Message::Remote(_, remote) if self.unnumbered(remote).is_some())
+    }
+
     pub(super) fn with_task(
         self,
         task: impl FnOnce(&Self) -> Task<Message>,
@@ -89,7 +99,7 @@ impl App {
     /// typed and no key after a click opens a device.  A link that failed to
     /// open is forgotten once its help page closes.
     pub(super) fn next(self, message: Message) -> (Self, Task<Message>) {
-        let passive = passive(&message);
+        let passive = passive(&message) || self.aimless(&message);
         let typing = passive || matches!(message, Message::Typed { .. });
         let clicked = matches!(message, Message::Clicked);
         // Typing into a field keeps its text, which the operator leaves with

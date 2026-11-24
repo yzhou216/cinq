@@ -6,7 +6,7 @@
 //! settings of the sound output, along with the problems that leave parts
 //! of it unused, each in the part of the text that it lies in
 
-use std::{ops::Range, slice};
+use std::{net::SocketAddr, ops::Range, slice};
 
 use itertools::Itertools;
 use toml::{
@@ -20,14 +20,23 @@ use crate::{
     front::keymap::{Action, Keymap, Preset, binding},
 };
 
-const SETTINGS: [&str; 5] = ["audio_device", "keymap", "keymaps", "keys", "ready_ahead"];
+const SETTINGS: [&str; 6] = [
+    "audio_device",
+    "keymap",
+    "keymaps",
+    "keys",
+    "osc_listen",
+    "ready_ahead",
+];
 
-pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, Sound, Vec<Problem>) {
+pub(in crate::front::keymap) fn parse(
+    text: &str,
+) -> (Keymap, Sound, Option<SocketAddr>, Vec<Problem>) {
     let table = match DeTable::parse(text) {
         Ok(table) => table.into_inner(),
         Err(error) => {
             let problem = Problem::at(error.span(), format!("is not TOML: {}", error.message()));
-            return (Keymap::default(), Sound::default(), vec![problem]);
+            return (Keymap::default(), Sound::default(), None, vec![problem]);
         }
     };
     let unknown = table
@@ -65,6 +74,7 @@ pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, Sound, Vec<Problem
     };
     let (device, unrouted) = audio_device(&table);
     let (ready_ahead, unready) = ready_ahead(&table);
+    let (osc_listen, unlistened) = osc_listen(&table);
     let problems = unknown
         .chain(malformed)
         .chain(shadowed)
@@ -73,6 +83,7 @@ pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, Sound, Vec<Problem
         .chain(unbound)
         .chain(unrouted)
         .chain(unready)
+        .chain(unlistened)
         .chain(keymap.conflicts().into_iter().map(Problem::new))
         .collect();
     (
@@ -81,8 +92,33 @@ pub(in crate::front::keymap) fn parse(text: &str) -> (Keymap, Sound, Vec<Problem
             device,
             ready_ahead,
         },
+        osc_listen,
         problems,
     )
+}
+
+/// Returns the address that `osc_listen` gives, or none to listen to
+/// nothing, with a problem when the setting is not an IP address and a
+/// port above 0.  A host name is not taken, since it could name no
+/// address or several.
+fn osc_listen(table: &DeTable) -> (Option<SocketAddr>, Option<Problem>) {
+    let Some((value, span)) = table.get("osc_listen").map(spanned) else {
+        return (None, None);
+    };
+    let address = match value {
+        DeValue::String(text) => text
+            .parse::<SocketAddr>()
+            .ok()
+            .filter(|address| address.port() > 0),
+        _ => None,
+    };
+    match address {
+        Some(address) => (Some(address), None),
+        None => {
+            let bad = "osc_listen should be an IP address and a port, such as \"127.0.0.1:53000\"";
+            (None, Some(Problem::at(span, bad)))
+        }
+    }
 }
 
 /// Returns the ID that `audio_device` gives, or none for the default

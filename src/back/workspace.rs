@@ -158,6 +158,16 @@ impl Workspace {
         self.cues().find(|cue| cue.id == id)
     }
 
+    /// Returns the first cue whose number is `number`, in the order of the
+    /// lists and then of the rows, since cue numbers need not be unique.
+    /// Surrounding spaces count for nothing, and no cue is the one with no
+    /// number.
+    pub fn numbered(&self, number: &str) -> Option<&Cue> {
+        let number = number.trim();
+        self.cues()
+            .find(|cue| !number.is_empty() && cue.number.trim() == number)
+    }
+
     pub fn target(&self, cue: &Cue) -> Option<&Cue> {
         cue.target.and_then(|id| self.cue(id))
     }
@@ -209,6 +219,10 @@ impl Workspace {
             Command::Panic => self.panic(),
             Command::Pause(paused) => self.paused(paused),
             Command::Stop(id) => self.stopped(id),
+            Command::Start(id) => self.started_cue(id, 0.0).tick(0.0),
+            Command::Hold(id) => self.held(id),
+            Command::Resume(id) => self.resumed(id),
+            Command::GoTo(id) => self.moved_to(id),
             Command::Tick(seconds) => self.tick(seconds),
             Command::Standby { list, cue } => self.moved_standby(list, cue),
             Command::ShowMode(show_mode) => Self { show_mode, ..self },

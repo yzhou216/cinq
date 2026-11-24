@@ -33,7 +33,8 @@ Minimal cue-based show controller, the
 - **Light cues** that fade dimmers over Art-Net and sACN, each instrument
   keeping its level until a later light cue names it.
 - **Network cues** that send OSC over TCP or UDP, such as to fire the cues
-  of a lighting console.
+  of a lighting console, and a listener for OSC over UDP, with the addresses
+  of QLab, so that a tablet or a console can fire cues.
 - **Fade, start, stop, pause, devamp, GoTo, group, wait, and memo cues**,
   chained by auto-continue and auto-follow, with pre-waits and post-waits.  A
   devamp cue lets a looping sound or video leave its loop and play on to its

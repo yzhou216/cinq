@@ -40,7 +40,7 @@ pub use cue::{
 pub use light::Lights;
 pub use load::{Load, load_files};
 pub use network::Network;
-pub use osc::{Destination, Outgoing, packet as osc_packet};
+pub use osc::{Destination, Heard, Outgoing, Remote, listen as osc_listen, packet as osc_packet};
 pub use output::{
     Channels, DEVICE_CHANNELS, Device, Output, OutputEdit, OutputId, Sends, moved_output,
 };

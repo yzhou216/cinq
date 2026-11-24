@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Configuration file, which chooses a keymap, binds actions to keys, and
-//! sets the audio device that sound plays on and how far ahead sounds are
-//! made ready
+//! Configuration file, which chooses a keymap, binds actions to keys, sets
+//! the audio device that sound plays on and how far ahead sounds are made
+//! ready, and gives the address on which OSC commands are taken
 //!
 //! `keymap` names the keymap that the keys start from, which is vi unless
 //! the file names another: a shipped one, or one of the `[keymaps]` table,
@@ -12,14 +12,16 @@
 //! all without one.  A keymap of the file's own and the `[keys]` table bind
 //! each action they name to a key sequence or a list of them, in place of
 //! the keys that the keymap they build on gives it.  `audio_device` gives
-//! the ID of an audio device in place of the default one, and
-//! `ready_ahead` counts the seconds before a sound starts that it is made
-//! ready:
+//! the ID of an audio device in place of the default one, `ready_ahead`
+//! counts the seconds before a sound starts that it is made ready, and
+//! `osc_listen` gives the address and port on which cinq takes OSC commands
+//! over UDP:
 //!
 //! ```toml
 //! keymap = "booth"
 //! audio_device = "alsa:plughw:CARD=1,DEV=0"
 //! ready_ahead = 5
+//! osc_listen = "127.0.0.1:53000"
 //!
 //! [keymaps.booth]
 //! from = "cua"
@@ -37,6 +39,7 @@ mod watch;
 use std::{
     fs::{self, File},
     io::{self, Write},
+    net::SocketAddr,
     path::{self, Path, PathBuf},
 };
 
@@ -51,6 +54,8 @@ pub use watch::{Errors, guard, restore, watch};
 pub struct Config {
     pub keymap: Keymap,
     pub sound: Sound,
+    /// Address to listen on for OSC commands, or none to listen to nothing
+    pub osc_listen: Option<SocketAddr>,
     pub source: Source,
     /// Text of the file, when it could be read, which the problems point
     /// into
@@ -143,10 +148,11 @@ pub fn load(file: Option<&Path>) -> Config {
     };
     match read(file) {
         Ok(Some(text)) => {
-            let (keymap, sound, problems) = parse(&text);
+            let (keymap, sound, osc_listen, problems) = parse(&text);
             Config {
                 keymap,
                 sound,
+                osc_listen,
                 source: Source::File(file.to_owned()),
                 text: Some(text),
                 problems,

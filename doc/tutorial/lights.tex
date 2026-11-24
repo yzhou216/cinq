@@ -9,8 +9,9 @@ Lighting consoles, dimmers, and nodes take levels over a network as sACN,
 the open standard ANSI E1.31, or as Art-Net.  cinq sends both, so light cues
 can set the lights along with the sound.  Network cues send Open Sound
 Control (OSC) messages, which can fire a cue on a lighting console or in
-another program.  This chapter needs no lighting hardware, since the window
-shows every level that cinq sends.
+another program, and cinq takes OSC commands in return, so that a tablet or a
+console can fire its cues.  This chapter needs no lighting hardware, since the
+window shows every level that cinq sends.
 
 Press \key{Control+l} and open \texttt{lights.cinq.toml} in your copy of the
 demo.
@@ -123,6 +124,54 @@ A message that cannot be sent, as when no program accepts its TCP
 connection, appears among the warnings in the sidebar.  cinq drops a message
 that it cannot send within a second of its cue, since a console cue that
 fires late can do more harm than one that does not fire.
+
+\section{Commands from the network}
+
+A tablet, a console, or another program can fire cues over the network with
+OSC commands.  Add this line to \texttt{config.toml}, at the top, above any
+line that starts with \texttt{[}, since a setting below a table belongs to the
+table.  The help page links to the file, as Chapter~\ref{ch:keys} tells.  cinq
+rereads the file when it is saved:
+
+\begin{verbatim}
+osc_listen = "127.0.0.1:53000"
+\end{verbatim}
+
+The address \texttt{127.0.0.1} lets programs on this computer alone send
+commands.  Anyone who can reach the address and port can fire cues, so for
+another computer give the address of the interface that the show network
+uses, such as \texttt{192.168.1.20:53000}, and keep the port from other
+networks.  Without the line, cinq listens to nothing.
+
+The commands are those of QLab, so remote controls made for QLab work as they
+are.  \texttt{/go} and \texttt{/panic} act as the keys do, and \texttt{/pause}
+and \texttt{/resume} act on every running cue.  A cue goes by its number as the
+cue list shows it: \texttt{/cue/5/start}, \texttt{/cue/5/stop},
+\texttt{/cue/5/pause}, \texttt{/cue/5/resume}, and \texttt{/playhead/5}, which
+moves standby to cue~5.  A program such as \texttt{oscsend} from liblo sends
+one, to the address of the setting:
+
+\begin{verbatim}
+oscsend 127.0.0.1 53000 /go
+\end{verbatim}
+
+Without liblo, bash sends the same message.  An OSC string ends in a zero byte
+and is padded with zero bytes to a multiple of four bytes, so that \texttt{/go}
+takes one zero byte, and the comma that lists no arguments takes three:
+
+\begin{verbatim}
+printf "/go\0,\0\0\0" > /dev/udp/127.0.0.1/53000
+\end{verbatim}
+
+cinq fires the cue that is on standby, as \ui{GO} does.  A remote control
+whose button sends a 1 when pressed and a 0 when released fires once, since a
+message whose only argument is 0 does nothing.  The sidebar warns when the
+address cannot be used, as when another program holds the port.  A command
+that does nothing, such as one for a cue that does not exist, shows in the
+sidebar among the warnings, with the address that it came from, as in
+\texttt{OSC from 127.0.0.1: no cue is numbered "99"}, and stays until a
+command acts.  It goes to standard error as well, which a launcher does not
+show.  The manual page \texttt{cinq(5)} describes the setting in full.
 
 \section*{Exercise}
 

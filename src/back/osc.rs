@@ -13,11 +13,19 @@
 //! `/scene/recall "Act 1" 2`.
 //!
 //! The encoding is written by hand, since the `rosc` crate is unmaintained.
+//! So is the decoding of the packets that arrive, which [`incoming`] reads,
+//! [`remote`] turns into commands, and [`listen`] receives over UDP.
 
+mod incoming;
+mod listen;
+mod remote;
 #[cfg(test)]
 mod tests;
 
 use std::fmt;
+
+pub use listen::{Heard, listen};
+pub use remote::Remote;
 
 /// Ends a SLIP frame and starts one too, so that a receiver drops any noise
 /// before it

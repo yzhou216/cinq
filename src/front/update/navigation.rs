@@ -5,9 +5,11 @@
 //! Standby as GO moves it, the selection of a cue, and switching the cue
 //! list on screen
 
+use iced::Task;
+
 use crate::{
     back::{Command, CueId},
-    front::{App, step},
+    front::{App, Message, step},
 };
 
 impl App {
@@ -31,6 +33,15 @@ impl App {
             stage: if staged { app.stage.cued() } else { app.stage },
             ..app
         }
+    }
+
+    /// Selects a cue as a click on its row does: the search line closes, the
+    /// cue lists show in place of the outputs, a jump to another list or out
+    /// of the outputs is remembered, and the row scrolls into view
+    pub(super) fn picked(self, id: CueId) -> (Self, Task<Message>) {
+        self.without_search()
+            .crossing(|app| app.showing_cues().with_selection(id))
+            .revealed()
     }
 
     pub(super) fn with_selection(self, id: CueId) -> Self {

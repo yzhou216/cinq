@@ -73,10 +73,28 @@ impl App {
             Message::Loaded(show, found) => self.loaded(show, found),
             Message::Rechecked(show, found) => self.rechecked(show, found),
             Message::NetworkChecked => self,
+            Message::OscFailed(problem) => Self {
+                osc_problem: Some(problem),
+                ..self
+            },
+            Message::OscIgnored(line) => self.with_ignored(line),
+            Message::OscListening => Self {
+                osc_problem: None,
+                ..self
+            },
             Message::Saved(saved) => self.saved(saved),
             // Keys typed halfway went by the bindings before, so the update
             // drops them, as it does for most messages
-            Message::Reconfigured(config) => Self { config, ..self },
+            Message::Reconfigured(config) => Self {
+                osc_problem: self
+                    .osc_problem
+                    .filter(|_| config.osc_listen == self.config.osc_listen),
+                osc_ignored: self
+                    .osc_ignored
+                    .filter(|_| config.osc_listen == self.config.osc_listen),
+                config: *config,
+                ..self
+            },
             Message::LinkOpened(result) => Self {
                 link_problem: result.err(),
                 ..self

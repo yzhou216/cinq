@@ -91,11 +91,17 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
     let network = app
         .network_problems
         .iter()
+        .chain(&app.osc_problem)
         .map(|problem| text(problem).style(text::danger).into());
     let files = [&app.file_problem, &app.keep_problem, &app.device_problem]
         .into_iter()
         .flatten()
         .map(|problem| text(problem).style(text::warning).into());
+    // Latest alone, whatever the flood of commands that did nothing
+    let ignored = app
+        .osc_ignored
+        .iter()
+        .map(|line| text(line).style(text::warning).into());
     let settings = app
         .config
         .warnings()
@@ -121,6 +127,7 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
     let everything: Vec<Element<'_, Message>> = outputs_failing
         .chain(network)
         .chain(files)
+        .chain(ignored)
         .chain(settings)
         .chain(problems)
         .chain(stranded)

@@ -28,10 +28,22 @@ impl Workspace {
     pub(super) fn started_cue(self, target: CueId, offset: f64) -> Self {
         let paused = self.active_of(target).is_some_and(|run| run.paused);
         match self.list_of(target) {
-            _ if paused => self.with_pause_of(target, false),
+            _ if paused => self.resumed(target),
             Some(list) => self.fired(list, target, offset),
             None => self,
         }
+    }
+
+    /// Resumes the run of `target`, with the runs that it would start
+    pub(super) fn resumed(self, target: CueId) -> Self {
+        self.with_pause_of(target, false)
+    }
+
+    /// Returns the cues that a start cue on `target` fires, which are the
+    /// chain of the target and those that its start cues fire in turn, each
+    /// with the seconds until it fires
+    pub fn firing(&self, target: CueId) -> Vec<(&Cue, f32)> {
+        self.reached(self.chain_of(target).collect())
     }
 
     /// Carries out a pause cue, which holds the run of its target, whatever

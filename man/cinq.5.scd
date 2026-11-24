@@ -196,6 +196,68 @@ _tutorial.pdf_
 	so that an empty array leaves it with no keys at all, and the actions
 	that the table leaves out keep the keys of the keymap.
 
+*osc_listen*
+	IP address and port, as _0.0.0.0:53000_, _127.0.0.1:53000_, or
+	_[::]:53000_, on which *cinq* takes commands as Open Sound Control (OSC)
+	over UDP, one packet to a datagram, so that a tablet, a console, or another
+	program can fire cues from a distance, and a main and a backup machine can
+	run together when the same commands go to both.
+	A host name is not taken.
+	*cinq* listens to nothing unless the file sets it, and follows a change
+	of it as soon as the file is saved.
+	A packet is a message or a bundle of them.
+	A message is carried out at once, and the time tag of a bundle is
+	ignored.
+	Of the messages of one packet the first 32 are carried out, and a warning
+	says that the rest were dropped.
+	The addresses are those that QLab names, so that remote controls made for
+	QLab work as they are:
+
+	_/go_ is GO on the cue list in view, as the key does, and _/panic_ is
+	Panic.
+	_/pause_ and _/resume_ pause and resume every running cue.
+	_/cue/{number}/start_ fires the cue with its chain, as a start cue does, or
+	resumes it where it is paused, and _/cue/{number}/stop_ stops it.
+	_/cue/{number}/pause_ holds the cue, as a pause cue does, and
+	_/cue/{number}/resume_ resumes it.
+	_/playhead/{number}_ moves standby to the cue, in the list that holds it, as
+	a GoTo cue does, and selects the cue, which shows its list.
+
+	The number is that of the cue as the cue list shows it, matched exactly
+	after the spaces around it are taken off.
+	Where several cues have the same number, the first of them is meant, in
+	the order of the cue lists and then of their rows.
+	An address may begin with _/workspace/{id}_, whatever the ID.
+	There are no wildcards and no replies.
+	A message whose only argument is the number 0 or false does nothing, as
+	the button of a remote sends 1 when it is pressed and 0 when it is
+	released, and the release must not fire GO again.
+	Any other arguments are ignored.
+	The commands act in show mode, while a field has the keyboard, and over the
+	help page, as GO and Panic do, and each leaves hint mode as a click does,
+	apart from one for a number that no cue has, which leaves it only when the
+	sidebar gains the line for it, and changes nothing else.
+	A command that moves the selection or the cue list in view also takes the
+	keyboard out of the field, so that what is typed next cannot edit another
+	cue.
+	None of them changes the show, and none can be undone.
+	A packet that is not OSC, an address that is not listed, and a number that no
+	cue has do nothing and go to standard error, once for each sender and
+	address, until a thousand different lines have gone out, after which one
+	last line says that further warnings go unreported and nothing more is
+	written.
+	The sidebar lists the latest of them, with the address that it came from, as
+	one entry among the warnings, as in _OSC from 192.168.1.5: no cue is numbered
+	"99"_, until a command acts or the setting changes.
+	When the address cannot be listened on, as when another program holds the
+	port, the warnings in the sidebar say so, naming *osc_listen*, and *cinq*
+	tries again every two seconds, so that the port comes into use, and the
+	warning goes, once the other program lets it go.
+	Anyone who can reach the address can fire and stop cues, so give the
+	address of the interface of the network that the show runs on, or
+	_127.0.0.1_ for programs on the same computer, and keep the port from
+	other networks.
+
 *ready_ahead*
 	Number of seconds, 0 or more and whole or fractional, before a sound starts
 	that *cinq* makes it ready, so that GO opens no sound file itself.
@@ -1428,7 +1490,8 @@ A file or a pipe takes the problems of each reading in turn, as does a
 terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
 
 - A file that cannot be read, or that is not TOML, leaves the keys of the vi
-  keymap, the default audio device, and the default *ready_ahead*.
+  keymap, the default audio device, no listening for OSC, and the default
+  *ready_ahead*.
 - An *audio_device* that is not a string, or is an empty one, leaves the
   default device.
 - A *keymap* that names no keymap leaves the keys of vi, and a *keys* that is
@@ -1438,9 +1501,11 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   keymap in use, and one named after a shipped keymap goes unused.
 - A *ready_ahead* that is not a number, or is below 0, such as a negative
   number or a string, leaves the default of 10 seconds.
-- A setting other than *audio_device*, *keymap*, *keymaps*, *keys*, and
-  *ready_ahead*, and an entry of a table that names no action, are ignored, and
-  the rest of the file applies.
+- An *osc_listen* that is not a string, or is not an IP address and a port
+  above 0, leaves *cinq* listening to nothing.
+- A setting other than *audio_device*, *keymap*, *keymaps*, *keys*,
+  *osc_listen*, and *ready_ahead*, and an entry of a table that names no
+  action, are ignored, and the rest of the file applies.
 - An empty string, a key that names no key or that *KEYS* rules out, a
   sequence that starts with a digit, and a value that is not a string are left
   out, and the action takes the other keys listed for it.
@@ -1500,6 +1565,13 @@ Make ready the sounds that start within 2.5 seconds, on a small system:
 
 ```
 ready_ahead = 2.5
+```
+
+Take OSC commands, such as _/go_ and _/cue/5/start_, from programs on the same
+computer alone, on the port that QLab uses:
+
+```
+osc_listen = "127.0.0.1:53000"
 ```
 
 ; if xdg

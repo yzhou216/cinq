@@ -18,7 +18,7 @@ use itertools::chain;
 
 use super::keys;
 use crate::{
-    back::TICK,
+    back::{Heard, TICK, osc_listen},
     front::{App, Message, keymap},
 };
 
@@ -66,7 +66,18 @@ impl App {
             Subscription::run_with(file.to_owned(), |file| {
                 keymap::config::watch(file.clone(), keymap::config::Errors::standard())
             })
-            .map(Message::Reconfigured)
+            .map(|config| Message::Reconfigured(Box::new(config)))
+        });
+        // Another address ends this subscription and starts the next, which
+        // iced does by the changed data
+        let listening = self.config.osc_listen.map(|address| {
+            Subscription::run_with(address, |address| osc_listen(*address)).map(|heard| match heard
+            {
+                Heard::Command(from, remote) => Message::Remote(from, remote),
+                Heard::Ignored(line) => Message::OscIgnored(line),
+                Heard::Failed(problem) => Message::OscFailed(problem),
+                Heard::Listening => Message::OscListening,
+            })
         });
         Subscription::batch(chain!(
             always,
@@ -75,7 +86,8 @@ impl App {
             rechecks,
             settling,
             network,
-            reconfigured
+            reconfigured,
+            listening
         ))
     }
 

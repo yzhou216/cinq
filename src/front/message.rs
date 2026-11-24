@@ -12,7 +12,7 @@ mod rows;
 mod scrolling;
 mod tab;
 
-use std::{ffi::OsString, path::PathBuf, time::Instant};
+use std::{ffi::OsString, net::IpAddr, path::PathBuf, time::Instant};
 
 use iced::{Size, mouse, window};
 
@@ -21,7 +21,7 @@ use super::{
     update::{Measured, Read, Saved, Spot},
     view::Site,
 };
-use crate::back::{Command, CueId, Device, Edit, Kind, OutputId, PatchEdit, Place};
+use crate::back::{Command, CueId, Device, Edit, Kind, OutputId, PatchEdit, Place, Remote};
 pub use field::{Caret, Focus, Setting};
 pub use line::LineKey;
 pub use scrolling::{Fold, Height, Page};
@@ -187,12 +187,21 @@ pub enum Message {
     Recheck,
     /// Time to look for news of the network output
     NetworkChecked,
+    /// Command that arrived over OSC from a host, which acts as a click that
+    /// leaves hint mode
+    Remote(IpAddr, Remote),
+    /// Packet or message that arrived over OSC and is no command
+    OscIgnored(String),
+    /// Why the address of `osc_listen` could not be listened on
+    OscFailed(String),
+    /// The address of `osc_listen` that could not be listened on is now
+    OscListening,
     /// What loading again the files that could not be played found, for
     /// the show of an identity
     Rechecked(u64, Vec<Command>),
     /// Configuration as its file holds it, read once the watch on the file
     /// is in place and again after each change to it
-    Reconfigured(Config),
+    Reconfigured(Box<Config>),
     /// Opens a web page or a file in the program that the desktop opens it
     /// with
     OpenLink(OsString),
