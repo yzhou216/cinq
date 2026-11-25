@@ -40,10 +40,10 @@ It stays black until a picture appears.
   \label{fig:showing}
 \end{figure}
 
-A picture cue shows its picture until something stops it, so the next cue
-always waits for GO, even if the picture cue is set to auto-follow.  A video
-cue plays its picture along with its sound, and its start, end, loop, and
-level work as they do for an audio cue.  A picture is shown whole, as large
+A picture cue shows its picture until something stops it, so its action never
+ends, and auto-follow never fires the next cue, though auto-continue does.  A
+video cue plays its picture along with its sound, and its start, end, loop,
+and level work as they do for an audio cue.  A picture is shown whole, as large
 as the window allows.  A new picture covers those of earlier cues, which
 reappear once it is gone, and a fade cue that stops a picture or video fades
 it out, as Panic does.

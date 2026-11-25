@@ -125,12 +125,13 @@ with SLIP framing on port~3037, and \texttt{/eos/cue/1/5/fire} fires cue~5
 of cue list~1.
 
 A message that cannot be sent, as when no program accepts its TCP
-connection, appears among the warnings in the sidebar, for the cue that
-sends it, and the \texttt{State} of every cue that names the same destination
-reads \texttt{SEND FAILED}.  Pressing the warning selects the cue, whose
-inspector shows the destination.  cinq drops a message
-that it cannot send within a second of its cue, since a console cue that
-fires late can do more harm than one that does not fire.  A UDP message
+connection, appears among the warnings in the sidebar, for the first cue
+that names the destination, and the \texttt{State} of every cue that names
+the same destination reads \texttt{SEND FAILED}.  Pressing the warning selects
+the cue, whose inspector shows the destination.  cinq drops a message that it
+cannot send within a second of its cue, since a console cue that fires late
+can do more harm than one that does not fire.  A UDP message fails in the same
+way when its host cannot be found, but one that goes out and reaches no program
 reports no failure, since nothing answers it.
 
 \section{Commands from the network}
