@@ -69,6 +69,8 @@ Each output is a table in the array *output*, in order:
 *channels*
 	Channels of the device that the output plays on, counted from 1 to 256: _3_
 	for one channel, and _1-2_ or _1,3_ for two, the left first.
+	A dash joins two neighboring channels in rising order, and a comma any
+	two different ones.
 	Every output has them, and a file whose output lacks them cannot be opened:
 	the warning names the output by its place among the *output* tables, as
 	*output 2*, and gives the line of its table.
@@ -90,6 +92,9 @@ So does an output on channels past those of its device, while the other outputs
 of the device play.
 *cinq* tries such a device again every two seconds, so that a device plugged in,
 or a Dante Virtual Soundcard started, plays with nothing for the operator to do.
+A device that takes no samples that *cinq* can play, as an ALSA card that takes
+packed 24-bit samples alone does, is not tried again, and its warning says
+why.
 A device that has fewer channels than an output names is looked at again as
 well, so that a Dante Virtual Soundcard whose channels are raised plays them,
 ever more seldom while it offers no more, up to every thirty seconds.
@@ -166,8 +171,8 @@ Each cue is a table in the array *cue* of its list:
 	describes, and a network cue sends a message over the network, as
 	*NETWORK* describes.
 	A start cue starts another cue, a pause cue pauses it, a devamp cue lets
-	it leave its loop, and a GoTo cue moves the standby cue of its list to
-	it, as *CONTROL CUES* describes.
+	it leave its loop, and a GoTo cue moves the standby cue of the list that
+	holds its target to the target, as *CONTROL CUES* describes.
 	A group cue fires the cues below it that it holds all at once, as
 	*GROUPS* describes.
 	The clock of an audio or video cue follows its sound as the audio device
@@ -190,16 +195,18 @@ Each cue is a table in the array *cue* of its list:
 	A file that no decoder of sound reads, as one of another format or
 	one cut off within its first bytes, reads _not a sound file that cinq
 	can play_.
-	*cinq* looks at the size and the modification time of every file of the
-	show every two seconds, and reads again a file that has changed or gone,
-	so that a file that goes warns before its cue fires, and replacing or
-	restoring the file clears the warning.
+	A WAV file of more than two channels reads _holds more than two channels_,
+	since the decoder of *cinq* plays one or two.
+	Every two seconds, *cinq* looks at the size and the modification time of
+	each file of a cue that does not run, and reads again a file that has
+	changed or gone, so that a file that goes warns before its cue fires, and
+	replacing or restoring the file clears the warning.
 	A failure that only playing finds, such as a picture cut short, stays
 	until the file changes.
 	A sound that stops while more than a second of its file remains, or a
 	sound that loops and stops at all, while its audio device plays on,
-	is such a failure, as a file cut short or one of more than two channels,
-	which *cinq* cannot decode, makes it: its cue reads *BROKEN* with the
+	is such a failure, as a file cut short or one of more than two channels in
+	a format other than WAV, which *cinq* cannot decode, makes it: its cue reads *BROKEN* with the
 	reason _its sound stopped early_, and *cinq* says so once on standard
 	error.
 	A device that stalls, a fade, a stop, a panic, or a devamp never
@@ -387,7 +394,7 @@ black where it is not wholly opaque.
 A picture of more than 134 million pixels, as a damaged file can declare, reads
 _holds a picture too large to show_.
 It shows until something stops it, such as a fade cue that stops it, a stop
-cue, or a panic, so that a cue that follows it waits for GO.
+cue, or a panic, so that the *follow* advance never fires the cue after it.
 
 The pictures of picture and video cues show in a stage window of their own,
 which opens beside the main window once the show holds a picture or video
@@ -537,10 +544,13 @@ since a cue that fires late can do more harm than one that does not fire.
 This happens when the destination refuses the connection, or does not take it
 in time, as a console that has lost its power or its cable does.
 It happens as well when the message waits behind others.
-A UDP message reports no failure, since nothing answers it.
-The sidebar warns of it for the first cue that names the destination, as
-_3 Send: message not sent: connection refused_, and pressing the warning
-selects the cue, whose inspector shows the destination.
+A UDP message fails only where the host cannot be found in time or the system
+cannot send it, since nothing answers it.
+Where *cinq* ends with messages on their way, it waits for them, for a second at
+most, so that a cue fired just before the window closes still sends.
+The sidebar warns of a lost message for the first cue that names the
+destination, as _3 Send: message not sent: connection refused_, and pressing
+the warning selects the cue, whose inspector shows the destination.
 The *State* of every network cue that names the destination reads *SEND
 FAILED* in yellow, as that of a cue that sends to a failed output reads
 *OUTPUT FAILED*, also while the cue is only next, so that the cue that was
@@ -640,8 +650,8 @@ GO with a cue inside a group on standby fires that cue alone, together with
 the cues that it holds where it is a group, and standby moves to the next cue
 below it, whether that is in the group or not.
 
-The *advance* of a cue inside a group has no effect, since the group fires the
-cues beside it, and the inspector shows the setting disabled.
+The *advance* and *post_wait* of a cue inside a group have no effect, since the
+group fires the cues beside it, and the inspector shows both settings disabled.
 The group goes on by its own *advance*, to the cue below everything that it
 holds:
 
@@ -748,7 +758,7 @@ absolute path of the file, and those to a show that has no file yet go in
 _untitled.cinq.toml_.
 ; if windows
 The drive of the file leads its path, as _C_ for _C:\\_, and a network share
-does as _UNC\\server\\share_, so that files of the same path on another drive
+does as _server\\share_, so that files of the same path on another drive
 or share keep their changes apart.
 ; end
 

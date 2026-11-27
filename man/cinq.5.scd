@@ -27,8 +27,9 @@ runs most of it.
 It ships one keymap, *vi*, as *KEYMAPS* describes it.
 A configuration file in TOML keeps it or declares keymaps of its own under
 *keymaps*,
-binds actions to other keys, and sets the audio device that outputs play on by
-default and how far ahead *cinq* makes sounds ready.
+binds actions to other keys, sets the audio device that outputs play on by
+default, how far ahead *cinq* makes sounds ready, and the address on which it
+takes OSC commands.
 *cinq* reads the file when it starts and again whenever it changes, so that the
 keys, the help page that lists them, and the other settings follow each change
 as soon as it is saved.
@@ -42,13 +43,14 @@ editor that has the file open may offer to load it again.
 
 The help page, which the key of *help* opens, names the keymap in use, opens
 with a short paragraph of first steps that names the keys of GO and Panic, of
-moving and standby, of adding, naming, and undoing, of reaching the File field
-and choosing a file, of hint mode, of closing the page, of opening the
-tutorial, and of saving the show,
+moving and standby, of adding, naming, and undoing, of reaching the File field,
+of Enter as the key that chooses a file, of hint mode, of closing the page, of
+opening the tutorial, and of saving the show,
 links to the tutorial, which the key of *standby* opens too,
-lists each action that the keymap binds to a key with its keys and its name in
-the file, links to the file that the keys come from, or would come from, and
-ends with the notice of the license of cinq.
+lists each action that the keymap binds to a key with its keys and, in a window
+wide enough, its name in the file, links to the file that the keys come from,
+or would come from, and ends with the notice of the license of cinq and a
+Close button.
 Following the link to the file opens it in
 ; if xdg windows
 the program that the desktop opens it with,
@@ -207,6 +209,8 @@ _tutorial.pdf_
 	An action that the table names loses the keys that the keymap gives it,
 	so that an empty array leaves it with no keys at all, and the actions
 	that the table leaves out keep the keys of the keymap.
+	An entry of which no key can be read is a problem, and its action keeps
+	its keys.
 
 *osc_listen*
 	IP address and port, as _0.0.0.0:53000_, _127.0.0.1:53000_, or
@@ -671,8 +675,8 @@ A move or jump that leaves the selected row far outside the view, such as
 *last*, *next_match*, or *back*, puts it in the middle of the view instead,
 much as Vim does after a jump that far.
 Above the view, the row goes to the middle once it, with its three rows of
-margin, lies half the view less one row above the top of the view, which is
-seven rows above it in a view of 23 rows.
+margin, lies half the view, rounded down to whole rows, less one row above the
+top of the view, which is seven rows above it in a view of 23 rows.
 Below the view, it goes to the middle once its bottom lies more than half the
 view and a row past the bottom of the view, which is 13 rows past the last
 row in view in a view of 23 rows.
@@ -684,9 +688,9 @@ the list taller, so the thresholds of *cinq* are in pixels of the view.
 Keys act on the cue list, whether the main window or the stage window has
 the keyboard, apart from the keys typed while one of these has the keyboard:
 
-A text field of the inspector, a drop-down list, or a checkbox
+A text field of the inspector, a drop-down list, or a check box
 	A click gives a text field the keyboard, and the keys of *next_field* and
-	*previous_field* move it from one text field, drop-down list, or checkbox
+	*previous_field* move it from one text field, drop-down list, or check box
 	to the next, which shows a border in the color of focus, twice as thick as at
 	rest.
 	A text field that these keys reach has its text selected, so that typing
@@ -701,7 +705,7 @@ A text field of the inspector, a drop-down list, or a checkbox
 	and then on through the rest of the inspector, the toolbar, and the sidebar,
 	which *previous_field* does the other way.
 	Past the last field, and before the first, no field has the keyboard, which
-	gives the keys back to the cue list, or the outputs, so that a checkbox or a
+	gives the keys back to the cue list, or the outputs, so that a check box or a
 	closed drop-down list never keeps them, even in a keymap that binds no
 	*cancel*.
 	One more press goes round again.
@@ -719,15 +723,15 @@ A text field of the inspector, a drop-down list, or a checkbox
 	It lets the keys of *hint*, *add_below*, and *add_above* act too, and each
 	of them gives the keyboard back to the cue list, so that the labels of hint
 	mode take letters and the cue that was added has the keys.
-	A checkbox and a button do the same.
-	The checkboxes of the inspector, *Loop until stopped or devamped* and
+	A check box and a button do the same.
+	The check boxes of the inspector, *Loop until stopped or devamped* and
 	*Stop target when done*, are stops of these keys as well, and show the same
 	border around their label.
 	Enter flips the one that has the keyboard, and then neither leaves it nor
 	puts a cue on standby, while Space and Escape keep GO and Panic and never flip
 	it.
-	Show mode locks those checkboxes, which take no keyboard then.
-	The *Show mode* checkbox of the toolbar, above the cue list and above the
+	Show mode locks those check boxes, which take no keyboard then.
+	The *Show mode* check box of the toolbar, above the cue list and above the
 	outputs, is a stop as well, which comes after the fields of the inspector,
 	before the list of the kind of cue to add, and which Enter flips in the same
 	way, except that the keyboard then goes back to the cue list, since the
@@ -753,7 +757,7 @@ A text field of the inspector, a drop-down list, or a checkbox
 	Enter in the empty File field of a cue opens the dialog that chooses the
 	file, as the *Choose* button does, and the status bar hints it.
 	Anywhere else Enter leaves a text field, opens the menu of a drop-down list,
-	which takes the keyboard from there, presses a button, and flips a checkbox.
+	which takes the keyboard from there, presses a button, and flips a check box.
 	A level typed into a field, the level of a cue, a send, the level of new
 	cues of an output, or that of an instrument of a light cue, applies once
 	the field is left, by Enter, Tab, a click, GO, or anything else the
@@ -806,10 +810,10 @@ The menu of a drop-down list
 	PageDown, PageUp, Home, and End move it too, as in the popup menu of Vim,
 	whether or not the keymap binds them.
 	Enter and the key of *pick* pick the highlighted option, and the key of
-	*close_menu* closes the menu without picking one, and either leaves the
-	keyboard on the list, so that *next_field* goes on to the field after it,
-	except that a pick in the *New cue* list of the toolbar gives the keyboard
-	back to the cue list, so that the key of *add_below* acts at once.
+	*close_menu* and *cancel* close the menu without picking one, and either
+	leaves the keyboard on the list, so that *next_field* goes on to the field
+	after it, except that a pick in the *New cue* list of the toolbar gives the
+	keyboard back to the cue list, so that the key of *add_below* acts at once.
 	The keys of *go* and *panic* act as they do everywhere and close the menu
 	as well.
 	The key of *help* opens the help page and leaves the menu open, hidden
@@ -858,8 +862,7 @@ outputs than rows in the view.
 *search*, *search_backward*, *next_match*, and *previous_match* search the
 columns of the outputs, in any case, with the rules of *SEARCHING*, and the
 line tells that no output matches.
-*first* and *last* with a count, and the searches, are jumps there, as they
-are for cues.
+*first* and *last*, and the searches, are jumps there, as they are for cues.
 The inspector of an output has a line of help beside each field, which says
 what the field takes and what it does, and which turns red and says why where
 the value typed is not applied, as for a name that another output has,
@@ -932,9 +935,9 @@ the cue list is out of sight.
 While the outputs show, the status bar names the keys of *add_below*, *edit*,
 and *back*, and the key of *change_name* in place of that of *edit* where the
 keymap binds none to it.  The bar gives way,
-from the first to the last, to the key of *change_name*, *forward*,
-*add_below*, *edit*, GO, Panic, *save*, *back*, and the help page, so that
-the key that leaves the outputs outlasts all but the help page.
+from the first to the last, to the key of *hint*, *change_name*, *forward*,
+*add_below*, *edit*, GO, Panic, *fullscreen*, *save*, *back*, and the help page,
+so that the key that leaves the outputs outlasts all but the help page.
 There the status bar tells a change to the outputs and none to the cues, so
 that the notice of a cue never takes the room of these keys.
 In every view, the name of the show in the status bar gives way before any of
@@ -994,7 +997,7 @@ page.
 	While a text field or a drop-down list has the keyboard, it hints the key
 	of *next_field* and this key as the one that leaves, so that the way out is
 	told where Escape would panic.
-	While a checkbox has it, the bar hints Enter as the key that flips it,
+	While a check box has it, the bar hints Enter as the key that flips it,
 	while a button has it, as the key that presses it, and
 	while a closed drop-down list has it, as the key that opens it, unless Enter
 	is bound to *go*, *panic*, or another action that acts in fields, so that a
@@ -1004,7 +1007,7 @@ page.
 	this key, so that the key that leaves outlasts them all, and GO and Panic
 	outlast what only teaches.
 	The key that leaves also outlasts the words of the latest change, which
-	are cut at a word instead, and so does what Enter does on a checkbox, a
+	are cut at a word instead, and so does what Enter does on a check box, a
 	button, or a closed drop-down list.
 	Where no key is bound to it, a text field has Enter hinted as the key that
 	leaves, unless Enter is bound to *go*, *panic*, or another action that acts
@@ -1108,8 +1111,9 @@ page.
 	While a menu is open, *Control+y* picks the highlighted option instead.
 
 *top_row*
-	Select the first cue row in view, or the row that many rows below it
-	for a count, stopping at the last row in view, as *H* does in Vim.
+	Select the first cue row in view, or for a count the row of that number,
+	counted from one at the first row in view, stopping at the last row in view,
+	as *H* does in Vim.
 	The view stays where it is.
 	It is a jump for *back*.
 
@@ -1120,8 +1124,9 @@ page.
 	It is a jump for *back*.
 
 *bottom_row*
-	Select the last cue row in view, or the row that many rows above it for a
-	count, stopping at the first row in view, as *L* does in Vim.
+	Select the last cue row in view, or for a count the row of that number,
+	counted from one at the last row in view going up, stopping at the first
+	row in view, as *L* does in Vim.
 	It is a jump for *back*.
 
 *row_to_middle*
@@ -1194,12 +1199,12 @@ page.
 
 *next_list*
 	Show the next cue list, or the outputs of the show after the last one.
-	While no field has the keyboard, the status bar hints its key last, so that
-	it gives way before any other.
+	While no field has the keyboard, the status bar hints its key, which gives
+	way before any other.
 	While standby lies past the end of the cue list on show and a later list
 	exists, where GO fires nothing, the hint gives way instead only after the
-	hints of GO, Panic, *save*, the help page, and *change_name*, so that the key
-	that goes on to the next list shows on a short bar.
+	hints of GO, Panic, *fullscreen*, *save*, the help page, and *change_name*,
+	so that the key that goes on to the next list shows on a short bar.
 
 *previous_list*
 	Show the previous cue list, or the last one from the outputs of the show.
@@ -1211,8 +1216,10 @@ page.
 *next_tab*
 	Show the next tab of the inspector, or the tab whose number the count gives,
 	counted from one, or the last tab when there are fewer.
-	While no field has the keyboard, the status bar hints its key next to last,
-	so that it gives way right after the key of *next_list*, before any other.
+	While no field has the keyboard, the status bar hints its key, which gives
+	way right after the key of *next_list*, before any other.
+	Where standby lies past the end of the cue list on show and a later list
+	exists, only the key of *hint* gives way before it.
 
 *previous_tab*
 	Show the previous tab of the inspector, or go back as many tabs as the count,
@@ -1235,7 +1242,8 @@ page.
 	its selected cue, and *forward* returns to the outputs.
 	Moving the selection one row at a time, clicking a cue of the cue list
 	shown, GO moving the standby cue, adding, deleting, and moving cues,
-	undo, redo, changing the tab, and the help page are not.
+	changing the tab, and the help page are not, nor are undo and redo, unless
+	one shows the outputs.
 	A count goes that many places back, or to the oldest.
 	Going back remembers the place left, so that *forward* returns to it.
 	A jump after going back moves the places ahead behind the place left, in
@@ -1283,8 +1291,8 @@ page.
 
 *previous_match*
 	Select the next cue that matches the search accepted last in the opposite
-	direction, wrapping around at the top of the list, or as many matches back
-	as the count, going around the matches at most once.
+	direction, wrapping around at the end of the list in that direction, or as
+	many matches back as the count, going around the matches at most once.
 	It is a jump for *back*.
 
 *edit*
@@ -1303,9 +1311,9 @@ page.
 	before any other key is dropped with that key, as *TYPING* describes.
 
 *next_field*
-	Move the keyboard to the next field: a text field, drop-down list, or
-	checkbox of the inspector, or the list of the kind of cue that *add_below*
-	and *add_above* add.
+	Move the keyboard to the next field: a text field, drop-down list,
+	check box, or button of the inspector, or the list of the kind of cue that
+	*add_below* and *add_above* add.
 	After the last field it gives the keyboard back to the cue list.
 
 *previous_field*
@@ -1315,7 +1323,7 @@ page.
 *hint*
 	Label every place in the main window that a click acts on, to act on one by
 	typing its label, as Vimium and Tridactyl do in a browser.
-	The places are the buttons that can be pressed, the checkboxes, the tabs of
+	The places are the buttons that can be pressed, the check boxes, the tabs of
 	the inspector and the lists of the sidebar, the drop-down lists, the text
 	fields, the links of the help page, and the mark of a group in the cue list,
 	as far as they are in view, but not the buttons of GO and Panic, whose keys
@@ -1332,7 +1340,7 @@ page.
 	left edge at the right edge of the place, so that what lies at the left edge of
 	the window stays in view, unless another label lies there, when it lies at the
 	left edge of the window, so that no label hides another.
-	A label typed whole acts as the click would: a button is pressed, a checkbox
+	A label typed whole acts as the click would: a button is pressed, a check box
 	is flipped, a tab or a list is shown, a drop-down list or a text field takes
 	the keyboard, so that Enter opens the menu of the list, and a link opens.
 	The letters typed so far hide the labels that they do not begin, and
@@ -1342,20 +1350,24 @@ page.
 	A key that types no character leaves hint mode and does nothing else, the key
 	of *cancel* among them.
 	The keys of *go* and *panic* act as everywhere and leave it too, and so does
-	any press of a mouse button, any turn of the wheel, any change of the size of
-	the window, and any start or end of a cue in the Active list of the sidebar,
-	which moves the places below it.
+	any press of a mouse button or turn of the wheel in the main window, any
+	change of the size of the window, any start or end of a cue in the Active list of the sidebar and
+	any warning there that comes or goes, which move the places below them, any
+	OSC command that acts, the opening of another show, and the stage window
+	taking the keyboard.
 	The key of this action is a letter in the vi keymap, so that it types a letter
 	of a label while the mode is on.
 	The status bar hints this key where it acts, and the hint gives way right
-	after those of *next_list* and *next_tab*.
+	after those of *next_list* and *next_tab*, or first where standby lies past
+	the end of the cue list on show and a later list exists, or while the
+	outputs show.
 	While the mode is on, it shows only what acts there: a request for a label,
 	or the letters typed so far, the key of *cancel* as the key that leaves, or
 	Backspace where no key is bound to *cancel*, and the keys of *go* and
 	*panic*.
 	It does nothing while a text field has the keyboard, which takes the key for
 	typing, or while the stage window has it.
-	A closed drop-down list, a checkbox, or a button that has the keyboard gives
+	A closed drop-down list, a check box, or a button that has the keyboard gives
 	it up when the mode begins.
 
 *add_below*
@@ -1366,9 +1378,12 @@ page.
 	goes to the last line that *3o* inserts.
 	The inspector shows its *Basics* tab, so that the new cue has its name and
 	its file in reach.
-	Below a group, or below a cue that a group holds, the cue joins the group,
-	the notice says *in a group*, and the key of *outdent* takes the cue out.
-	The key acts while a closed drop-down list, a checkbox, or a button has
+	Below an expanded group, or below a cue that a group holds, the cue joins the
+	group, the notice says *in a group*, and the key of *outdent* takes the cue
+	out.
+	Below a collapsed group, the cue lands below the cues that the group holds,
+	outside it.
+	The key acts while a closed drop-down list, a check box, or a button has
 	the keyboard, and gives the keyboard back to the cue list.
 	The status bar then hints the key of *change_name*, which renames the cue,
 	after the key of *undo*, and gives way to it only after the keys of GO,
@@ -1501,8 +1516,9 @@ page.
 	Toggle the stage window, which shows the pictures of picture and video
 	cues, between fullscreen and a window, until the next GO that fires such
 	a cue makes it fullscreen again, as *cinq-show*(5) describes.
-	While the stage window is closed, it opens the window fullscreen, as a
-	cue that shows on it does, so that the film that runs shows again.
+	While the stage window is closed and the show holds a picture or video cue,
+	it opens the window fullscreen, as a cue that shows on it does, so that the
+	film that runs shows again.
 	While the stage window is closed and a picture or video cue shows on it,
 	the sidebar warns *Stage window closed*, the status bar counts it, and
 	hints this key, which gives way right after those of *go* and *panic*.
@@ -1592,7 +1608,9 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   *ACTIONS*, and the other loses it, as the problem tells, unless the two act
   in different places: *pick* and *close_menu* act only in an open menu, so a
   sequence may be bound to one of them and to an action that acts on the cue
-  list, as *Control+y* is to *pick* and to *scroll_up* in the vi keymap.
+  list and not in a menu, as *Control+y* is to *pick* and to *scroll_up* in
+  the vi keymap.  An action that acts in both, such as *next*, clashes with
+  them.
   A sequence that begins a longer one, as *g* begins *g g*, leaves the longer
   one impossible to type.
   A key bound by itself to *go* or *panic* makes every other sequence that
