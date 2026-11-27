@@ -6,9 +6,9 @@
 
 use super::{CELL_SPACE, fitting};
 use crate::{
-    back::{Cue, CueId, CueList, Kind, Workspace},
+    back::{Cue, CueId, Kind, fresh},
     front::{
-        App,
+        fixtures::app_of,
         view::{
             char_width,
             cue_table::{Column, NAME_LEAST, STATE_LEAST, STATE_ROOM, layout::Layout},
@@ -24,10 +24,7 @@ fn widths(room: f32) -> (Vec<(Column, f32)>, f32) {
         .zip(1..)
         .map(|(name, number)| Cue::new(CueId(number), number.to_string(), Kind::Memo, name).build())
         .collect();
-    let app = App {
-        workspace: Workspace::new(vec![CueList::new("Main", cues)]),
-        ..App::default()
-    };
+    let app = app_of(fresh(cues));
     let layout = Layout::of(app.current());
     let kept: Vec<_> = fitting(&app, &layout, room)
         .into_iter()
@@ -105,10 +102,7 @@ fn the_state_column_takes_fourteen_columns_only_while_a_row_shows_no_destination
             destination: destination.to_owned(),
             ..Cue::new(CueId(1), "1", kind, "Ping").build()
         };
-        let app = App {
-            workspace: Workspace::new(vec![CueList::new("Main", vec![cue])]),
-            ..App::default()
-        };
+        let app = app_of(fresh(vec![cue]));
         let layout = Layout::of(app.current());
         fitting(&app, &layout, 1000.0)
             .into_iter()

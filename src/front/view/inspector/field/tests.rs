@@ -132,7 +132,7 @@ fn an_end_or_a_loop_time_that_reads_as_no_time_is_told_as_empty() {
 }
 
 #[test]
-fn minutes_and_seconds_and_an_empty_field_read_as_times() {
+fn minutes_and_seconds_an_empty_field_and_a_duration_the_cue_does_not_hold_are_no_time_to_tell() {
     let columns: [&[Field]; 2] = [&[Field::PreWait], &[Field::PostWait]];
     let typed = Cue {
         pre_wait: "1:30".to_owned().into(),
@@ -140,16 +140,12 @@ fn minutes_and_seconds_and_an_empty_field_read_as_times() {
         ..cue(Kind::Audio)
     };
     assert_eq!(unread(&typed, false, &columns), None);
-}
-
-#[test]
-fn a_duration_that_the_cue_does_not_hold_is_not_a_time_to_tell() {
     let columns: [&[Field]; 2] = [&[Field::Duration], &[]];
-    let typed = Cue {
+    let memo = Cue {
         duration: "abc".to_owned().into(),
         ..cue(Kind::Memo)
     };
-    assert_eq!(unread(&typed, false, &columns), None);
+    assert_eq!(unread(&memo, false, &columns), None);
 }
 
 #[test]

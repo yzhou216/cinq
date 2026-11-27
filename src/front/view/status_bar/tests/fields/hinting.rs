@@ -13,12 +13,7 @@ fn the_help_key_is_hinted_only_where_it_acts() {
     assert!(!told(held(Keymap::default(), true)));
     assert!(!told(held(Keymap::default(), false)));
     assert!(told(App {
-        keyboard: Keyboard::default()
-            .with_held(Held {
-                any: true,
-                ..Held::default()
-            })
-            .with_menu(true),
+        keyboard: holding(true).with_menu(true),
         ..opened(true, false)
     }));
     assert!(told(App {
@@ -75,10 +70,7 @@ fn enter_is_not_hinted_to_leave_the_empty_file_field_where_it_chooses_a_file() {
 fn the_key_of_the_next_tab_is_hinted_late_while_no_field_has_the_keyboard() {
     let hints = |held| {
         hinted(&App {
-            keyboard: Keyboard::default().with_held(Held {
-                any: held,
-                ..Held::default()
-            }),
+            keyboard: holding(held),
             ..opened(false, false)
         })
     };

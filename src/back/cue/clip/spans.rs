@@ -31,20 +31,21 @@ impl Cue {
     /// Returns whether the cue loops nothing, as one whose loop starts at or
     /// after the end of its loop does
     pub(in crate::back) fn loops_nothing(&self) -> bool {
-        self.loops()
-            && self
-                .span()
-                .is_some_and(|(start, end)| self.section(start, end).length() <= 0.0)
+        self.loop_section()
+            .is_some_and(|section| section.length() <= 0.0)
     }
 
     /// Returns whether the loop of the cue lasts too short a time to play,
     /// though it lasts some
     pub(in crate::back) fn loops_briefly(&self) -> bool {
-        self.loops()
-            && self.span().is_some_and(|(start, end)| {
-                let section = self.section(start, end);
-                section.length() > 0.0 && !section.plays()
-            })
+        self.loop_section()
+            .is_some_and(|section| section.length() > 0.0 && !section.plays())
+    }
+
+    /// Returns the loop of a cue that loops, as far as its clip allows
+    fn loop_section(&self) -> Option<Loop> {
+        let (start, end) = self.span().filter(|_| self.loops())?;
+        Some(self.section(start, end))
     }
 
     /// Returns the loop that the cue plays, as seconds from its start to its
@@ -52,8 +53,7 @@ impl Cue {
     /// typed time lies outside the clip, so that the operator can be told
     /// what plays instead
     pub fn loop_played(&self) -> Option<(f64, f64)> {
-        let (start, end) = self.span().filter(|_| self.loops())?;
-        let section = self.section(start, end);
+        let section = self.loop_section()?;
         let cut =
             |typed: Option<f32>, played: f64| typed.is_some_and(|typed| f64::from(typed) != played);
         (section.plays()

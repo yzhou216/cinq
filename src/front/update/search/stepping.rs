@@ -13,11 +13,6 @@ use super::{
 };
 use crate::front::{App, Message, view::no_match};
 
-/// What the status bar tells when a key of the next or previous match is
-/// pressed before any search was accepted, as Vim tells that there is no
-/// previous regular expression
-const NO_PREVIOUS: &str = "No previous search";
-
 impl App {
     /// Selects the row `offset` matches of the last search further on in the
     /// direction that it went, or the other way when negative, wrapping
@@ -35,7 +30,9 @@ impl App {
             (next.or(row), round || wrapped(row, next, backward))
         });
         let remark = if text.is_empty() {
-            Some(NO_PREVIOUS)
+            // Before any search was accepted, as Vim tells of no previous regular
+            // expression
+            Some("No previous search")
         } else if found_rows == 0 {
             Some(no_match(self.outputs_shown))
         } else {

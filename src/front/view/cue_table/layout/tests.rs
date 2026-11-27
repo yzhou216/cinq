@@ -57,19 +57,18 @@ fn a_hidden_cue_stands_on_the_row_of_the_collapsed_group_that_holds_it() {
 }
 
 #[test]
-fn the_row_of_a_collapsed_group_that_holds_standby_reads_next() {
-    let list = list(4);
-    let layout = Layout::of(&list);
-    let next: Vec<_> = list.cues.iter().map(|cue| layout.is_next(cue)).collect();
-    assert_eq!(next, [false, true, false, false, false, false, false]);
-}
-
-#[test]
-fn the_row_of_a_cue_on_standby_that_a_group_does_not_hide_reads_next() {
-    let list = list(7);
-    let layout = Layout::of(&list);
-    let next: Vec<_> = list.cues.iter().map(|cue| layout.is_next(cue)).collect();
-    assert_eq!(next, [false, false, false, false, false, false, true]);
+fn the_row_of_standby_reads_next_and_so_does_that_of_the_collapsed_group_that_holds_it() {
+    let next = |standby| {
+        let list = list(standby);
+        let layout = Layout::of(&list);
+        list.cues
+            .iter()
+            .map(|cue| layout.is_next(cue))
+            .collect::<Vec<_>>()
+    };
+    // Standby lies in the collapsed group 2, then on the shown memo 7
+    assert_eq!(next(4), [false, true, false, false, false, false, false]);
+    assert_eq!(next(7), [false, false, false, false, false, false, true]);
 }
 
 #[test]

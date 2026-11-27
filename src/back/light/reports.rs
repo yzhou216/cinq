@@ -10,7 +10,7 @@
 
 use std::{
     hash::{Hash, Hasher},
-    sync::{Arc, Mutex, PoisonError},
+    sync::{Arc, Mutex},
 };
 
 use iced::{
@@ -21,6 +21,8 @@ use iced::{
         stream,
     },
 };
+
+use crate::lock::lock;
 
 /// Sender of the thread, which tells why no light gets out, or that some
 /// does
@@ -45,7 +47,7 @@ impl Reports {
     /// Returns the reports, which only the first call gets, since the
     /// channel has one receiver
     fn stream(&self) -> impl Stream<Item = Option<String>> + use<> {
-        let receiver = self.0.lock().unwrap_or_else(PoisonError::into_inner).take();
+        let receiver = lock(&self.0).take();
         stream::iter(receiver).flatten()
     }
 }

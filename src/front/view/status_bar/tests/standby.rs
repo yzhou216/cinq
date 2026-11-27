@@ -6,19 +6,17 @@
 
 use super::{YIELDING, covered, fitted, has_hint, hinted, memo, opened};
 use crate::{
-    back::{Command, CueId, CueList, Workspace},
+    back::{Command, CueId, fresh},
     front::App,
 };
 
 /// Returns an app of two cues with standby on the first and `selected` selected
 fn with(selected: Option<u32>) -> App {
     App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![memo(1), memo(2)])]).apply(
-            Command::Standby {
-                list: 0,
-                cue: Some(CueId(1)),
-            },
-        ),
+        workspace: fresh(vec![memo(1), memo(2)]).apply(Command::Standby {
+            list: 0,
+            cue: Some(CueId(1)),
+        }),
         selected: selected.map(CueId),
         ..opened(false, false)
     }

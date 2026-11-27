@@ -12,6 +12,7 @@ use crate::{
     front::{
         App,
         app::{Held, Keyboard},
+        fixtures::app_of,
         view::{char_width, widget::focus::State},
     },
 };
@@ -59,10 +60,7 @@ fn patched(count: usize) -> App {
     let workspace = (0..count).fold(Workspace::default(), |workspace, _| {
         workspace.apply(Command::Patch(PatchEdit::Add))
     });
-    App {
-        workspace,
-        ..App::default()
-    }
+    app_of(workspace)
 }
 
 #[test]

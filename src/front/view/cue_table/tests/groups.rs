@@ -8,7 +8,7 @@ use super::{
     super::{Column, columns::states::state},
     texts,
 };
-use crate::back::{Advance, Command, Cue, CueId, CueList, Edit, Kind, Workspace, loaded, sound};
+use crate::back::{Advance, Command, Cue, CueId, Edit, Kind, Workspace, fresh, loaded, sound};
 
 /// Returns a list of a looping audio cue, a group that holds an audio cue of
 /// ten seconds after a pre-wait of one, and a group that holds nothing
@@ -23,7 +23,7 @@ fn grouped(depth: u8) -> Workspace {
             .build()
     };
     let group = |id: u32| Cue::new(CueId(id), id.to_string(), Kind::Group, "Group").build();
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![group(1), ten(2), group(3)])]);
+    let workspace = fresh(vec![group(1), ten(2), group(3)]);
     workspace.apply(loaded(2, "rain.ogg", sound(10.0)))
 }
 
@@ -60,7 +60,7 @@ fn a_start_cue_in_the_group_that_it_starts_reads_in_target() {
         .target(CueId(1))
         .depth(1)
         .build();
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![group, start])]);
+    let workspace = fresh(vec![group, start]);
     let list = &workspace.lists()[0];
     let (state, _) = state(&workspace, &list.cues[1], None, false);
     assert_eq!(state, "IN TARGET");
@@ -83,7 +83,7 @@ fn a_control_cue_that_names_itself_reads_bad_target_and_one_with_no_target_reads
             .target(CueId(target))
             .build()
     };
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![stop(1, 1), stop(2, 9)])]);
+    let workspace = fresh(vec![stop(1, 1), stop(2, 9)]);
     let list = &workspace.lists()[0];
     let read = |at: usize| state(&workspace, &list.cues[at], None, false).0;
     assert_eq!(

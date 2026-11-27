@@ -11,7 +11,7 @@ use iced::{
 };
 
 use super::App;
-use crate::back::{Command, CueList, Output, OutputId, Workspace};
+use crate::back::{Command, Output, OutputId, Workspace, fresh};
 
 /// Scrollable that tells where it was scrolled to
 #[derive(Default)]
@@ -35,9 +35,12 @@ impl Scrollable for Scrolled {
 
 /// Returns the interface of a show of two outputs, Main and Output 1
 pub(super) fn two_outputs() -> App {
+    app_of(fresh(vec![]).apply(Command::add_output(1, 1)))
+}
+
+pub(super) fn app_of(workspace: Workspace) -> App {
     App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![])])
-            .apply(Command::add_output(1, 1)),
+        workspace,
         ..App::default()
     }
 }

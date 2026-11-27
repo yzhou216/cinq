@@ -26,14 +26,6 @@ use crate::{
     },
 };
 
-/// What the status bar tells when show mode drops a key that changes the show
-const LOCKED: &str = "Leave show mode to edit";
-
-/// What the status bar tells when the stage window has the keyboard, which
-/// leaves the keys that change the show to the main window, and how to give
-/// it the keyboard
-const STAGE: &str = "Click the main window to edit";
-
 /// What the status bar tells when the stage window has the keyboard and a key
 /// of search, help, or hint mode reaches it, which belong to the main window,
 /// and how to give it the keyboard
@@ -52,12 +44,12 @@ impl App {
             && !matches!(action, Action::Copy | Action::Undo | Action::Redo);
         match (self.help, self.stage.has_keyboard()) {
             (_, true) if action.stays_in_main_window() => Some(if action.changes_the_show() {
-                STAGE
+                "Click the main window to edit"
             } else {
                 MAIN_WINDOW
             }),
             (true, _) => None,
-            (false, _) => (!self.editable() && locked).then_some(LOCKED),
+            (false, _) => (!self.editable() && locked).then_some("Leave show mode to edit"),
         }
     }
 

@@ -8,14 +8,14 @@ use strum::VariantArray;
 
 use super::super::{CELL_SPACE, Column, NAME_LEAST, NAME_MOST, fitting, layout::Layout};
 use crate::{
-    back::{Cue, CueId, CueList, Kind, Workspace},
+    back::{Cue, CueId, CueList, Kind, Workspace, fresh},
     front::{App, view::char_width},
 };
 
 /// Returns an app whose one list holds `cue` alone
 fn lone(cue: Cue) -> App {
     App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![cue])]),
+        workspace: fresh(vec![cue]),
         ..App::default()
     }
 }

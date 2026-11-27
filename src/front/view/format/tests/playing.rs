@@ -22,10 +22,7 @@ fn a_run_moved_below_silence_is_told_at_silence() {
             .stop_target(false)
             .build()
     };
-    let workspace = Workspace::new(vec![CueList::new(
-        "Main",
-        vec![cue(1, Kind::Audio, 0.0), cue(2, Kind::Fade, -60.0)],
-    )]);
+    let workspace = fresh(vec![cue(1, Kind::Audio, 0.0), cue(2, Kind::Fade, -60.0)]);
     let loaded = loaded(1, "sound.ogg", sound(10.0));
     let ducked = [loaded, Command::Go { list: 0 }, Command::Tick(2.0)]
         .into_iter()
@@ -63,10 +60,7 @@ fn a_devamped_run_is_told_by_the_time_it_has_left_instead_of_looping() {
         Command::Tick(1.0),
     ]
     .into_iter()
-    .fold(
-        Workspace::new(vec![CueList::new("Main", vec![rain, devamp])]),
-        Workspace::apply,
-    );
+    .fold(fresh(vec![rain, devamp]), Workspace::apply);
     let told = |workspace: &Workspace| {
         let cue = workspace.cue(CueId(1)).expect("the cue is there");
         activity(workspace.active_of(CueId(1)).expect("the cue plays"), cue)
@@ -85,10 +79,7 @@ fn a_wait_ahead_is_told_in_the_figures_of_the_time_left() {
         Command::Go { list: 0 },
     ]
     .into_iter()
-    .fold(
-        Workspace::new(vec![CueList::new("Main", vec![memo(1)])]),
-        Workspace::apply,
-    );
+    .fold(fresh(vec![memo(1)]), Workspace::apply);
     let active = waiting.active_of(CueId(1)).expect("the cue waits");
     assert_eq!(phase(active), "in 0:16.1");
 }

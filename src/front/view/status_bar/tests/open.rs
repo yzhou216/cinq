@@ -5,12 +5,11 @@
 //! Tests of the hint of the key that opens a show, which names the first step
 //! while no show is open
 
-use super::{cancel::COLUMNS, has_hint, hints_fitted, memo, opened, opened_with, taken};
+use super::{cancel::COLUMNS, has_hint, hints_fitted, holding, memo, opened, opened_with, taken};
 use crate::{
-    back::{CueList, Workspace},
+    back::fresh,
     front::{
         App,
-        app::{Held, Keyboard},
         keymap::{Keymap, desk},
         update::Show,
     },
@@ -28,7 +27,7 @@ fn the_key_of_opening_a_show_is_not_hinted_once_a_file_or_a_cue_exists() {
         ..opened(false, false)
     };
     let with_cue = App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![memo(1)])]),
+        workspace: fresh(vec![memo(1)]),
         ..opened(false, false)
     };
     assert!(!has_hint(&with_file, "Control+l: open"));
@@ -38,10 +37,7 @@ fn the_key_of_opening_a_show_is_not_hinted_once_a_file_or_a_cue_exists() {
 #[test]
 fn the_key_of_opening_a_show_is_not_hinted_where_a_field_or_the_outputs_have_the_keys() {
     let app = |held, outputs_shown| App {
-        keyboard: Keyboard::default().with_held(Held {
-            any: held,
-            ..Held::default()
-        }),
+        keyboard: holding(held),
         outputs_shown,
         ..opened(false, false)
     };

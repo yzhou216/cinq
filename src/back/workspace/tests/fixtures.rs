@@ -17,7 +17,7 @@ pub(in crate::back) fn workspace(cues: Vec<Cue>) -> Workspace {
 }
 
 /// Returns a workspace with one list of cues, none of whose files has loaded
-pub(in crate::back) fn fresh(cues: Vec<Cue>) -> Workspace {
+pub(crate) fn fresh(cues: Vec<Cue>) -> Workspace {
     Workspace::new(vec![CueList::new("Main", cues)])
 }
 

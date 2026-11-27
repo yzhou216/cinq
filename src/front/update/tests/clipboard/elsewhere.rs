@@ -11,8 +11,7 @@ use super::*;
 /// identities from one in that order
 fn with_outputs(cues: Vec<Cue>, names: &[&str]) -> Workspace {
     names.iter().enumerate().fold(
-        Workspace::new(vec![CueList::new("Main", cues)])
-            .apply(Command::add_output(1, names.len() - 1)),
+        fresh(cues).apply(Command::add_output(1, names.len() - 1)),
         |workspace, (row, name)| {
             let id = workspace.outputs()[row].id;
             workspace.apply(Command::EditOutput(

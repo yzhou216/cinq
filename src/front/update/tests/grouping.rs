@@ -6,13 +6,12 @@
 //! copying and cutting a group
 
 use super::{operators::rows, *};
-use crate::back::{Cue, Kind};
+use crate::back::{Cue, group};
 
 /// Returns a show of one list: audio cues 1, 3, 5, and 6, and the groups 2
 /// and 4, so that 2 holds 3 and 4, and 4 holds 5
 fn grouped(selected: u32) -> App {
     let at = |depth: u8, cue: Cue| Cue { depth, ..cue };
-    let group = |id: u32| Cue::new(CueId(id), id.to_string(), Kind::Group, "Group").build();
     one_list(
         vec![
             audio(1),

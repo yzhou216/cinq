@@ -31,12 +31,12 @@ use super::{
     search_columns,
 };
 use crate::{
-    back::{Command, Workspace},
+    back::{Command, Workspace, memo},
     front::{App, app::Notices, keymap::Action, view::NO_MATCH},
 };
 use fixtures::{
-    GO, add, added, before, clipping, covered, deleted, has_hint, held, hints, hints_fitted, keyed,
-    memo, opened, opened_with, owned, taken, texts,
+    GO, add, added, before, clipping, covered, deleted, has_hint, held, hints, hints_fitted,
+    holding, keyed, opened, opened_with, owned, taken, texts,
 };
 
 #[test]

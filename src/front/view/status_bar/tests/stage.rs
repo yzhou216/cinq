@@ -11,7 +11,7 @@ use super::{
     added, has_hint, hinted, opened, opened_with,
 };
 use crate::{
-    back::{Command, Cue, CueId, CueList, Kind, Workspace, loaded, silent},
+    back::{Command, Cue, CueId, Kind, fresh, loaded, silent},
     front::{
         App,
         keymap::{Action, Keymap, desk},
@@ -25,11 +25,7 @@ fn closed(go: bool) -> App {
     let cue = Cue::new(CueId(1), "1", Kind::Video, "Film")
         .file("film.mp4")
         .build();
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])]).apply(loaded(
-        1,
-        "film.mp4",
-        silent(10.0),
-    ));
+    let workspace = fresh(vec![cue]).apply(loaded(1, "film.mp4", silent(10.0)));
     let workspace = if go {
         workspace.apply(Command::Go { list: 0 })
     } else {

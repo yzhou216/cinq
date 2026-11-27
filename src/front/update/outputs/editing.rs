@@ -19,10 +19,6 @@ use crate::{
 /// for
 pub(super) const LIMIT: usize = 64;
 
-/// What the status bar tells when a cut or a delete would take every output
-/// away
-const KEEPS_ONE: &str = "A show keeps at least one output";
-
 impl App {
     /// Adds `count` outputs in a row below the selected one, or above it,
     /// and selects the last of them, as Vim leaves its cursor on the last
@@ -76,7 +72,9 @@ impl App {
         let taken: Vec<Output> = outputs[first..].iter().take(count).cloned().collect();
         if taken.len() == outputs.len() {
             let app = Self {
-                notices: self.notices.with_remark(Some(KEEPS_ONE)),
+                notices: self
+                    .notices
+                    .with_remark(Some("A show keeps at least one output")),
                 ..self
             };
             return (app, Vec::new());

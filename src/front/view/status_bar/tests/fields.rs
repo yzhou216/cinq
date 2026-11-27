@@ -16,10 +16,10 @@ use super::{
         hints_in,
         order::{self, YIELDING_IN_FIELD},
     },
-    GO, added, before, has_hint, held, hinted, opened, opened_with, texts,
+    GO, added, before, has_hint, held, hinted, holding, opened, opened_with, texts,
 };
 use crate::{
-    back::{Cue, CueId, CueList, Kind, Workspace},
+    back::{Cue, CueId, Kind, fresh},
     front::{
         App,
         app::{Held, Keyboard},
@@ -36,7 +36,7 @@ fn holding_file(keymap: Keymap, file: &str, keyboard: Keyboard) -> App {
     App {
         keyboard,
         selected: Some(CueId(1)),
-        workspace: Workspace::new(vec![CueList::new("Main", vec![cue])]),
+        workspace: fresh(vec![cue]),
         ..opened_with(keymap, false, false)
     }
 }

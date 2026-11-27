@@ -7,10 +7,6 @@
 use super::super::{App, Message};
 use crate::back::{Command, OutputEdit, PatchEdit};
 
-/// What the status bar tells when an instrument added would share an address
-/// because the last one holds the last address of the last universe
-const NO_ADDRESS_LEFT: &str = "The light patch has no address left for another instrument";
-
 impl App {
     /// Applies a message that sends a command to the show, or takes the text
     /// of a setting, and passes any other on to [`Self::paneled_by`]
@@ -39,7 +35,9 @@ impl App {
             Message::Patch(PatchEdit::Add) => {
                 let held = self.workspace.patch().len();
                 let app = self.send(Command::Patch(PatchEdit::Add));
-                let remark = (app.workspace.patch().len() == held).then_some(NO_ADDRESS_LEFT);
+                // The last instrument holds the last address of the last universe
+                let remark = (app.workspace.patch().len() == held)
+                    .then_some("The light patch has no address left for another instrument");
                 Self {
                     notices: app.notices.with_remark(remark),
                     ..app

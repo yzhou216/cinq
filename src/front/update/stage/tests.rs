@@ -17,7 +17,7 @@ use iced::{Size, window};
 
 use super::Stage;
 use crate::{
-    back::{Cue, CueId, CueList, Kind, Picture, Workspace, loaded, silent},
+    back::{Cue, CueId, Kind, Picture, fresh, loaded, silent},
     front::{App, MAIN_SIZE, Message, STAGE_SIZE, view},
 };
 
@@ -28,7 +28,7 @@ fn show(kind: Kind) -> App {
         .file("movie.mp4")
         .build();
     let loaded = loaded(1, "movie.mp4", silent(10.0));
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])]).apply(loaded);
+    let workspace = fresh(vec![cue]).apply(loaded);
     App {
         workspace,
         main: Some(window::Id::unique()),

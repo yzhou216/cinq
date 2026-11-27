@@ -13,12 +13,8 @@ mod targets;
 use super::{activity, chain, change, clipped, moving, paused, phase, target};
 use crate::back::{
     Advance, Command, Cue, CueId, CueList, Edit, InstrumentId, Kind, OutputId, PatchEdit, Place,
-    Sends, Workspace, loaded, sound,
+    Sends, Workspace, fresh, loaded, memo, sound,
 };
-
-fn memo(id: u32) -> Cue {
-    Cue::new(CueId(id), id.to_string(), Kind::Memo, "Note").build()
-}
 
 /// Returns what the latest change to `workspace` says of itself
 fn told(workspace: &Workspace) -> String {

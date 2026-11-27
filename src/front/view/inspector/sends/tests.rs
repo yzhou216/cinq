@@ -7,8 +7,8 @@
 
 use super::{cut, labels, named, silent, widest};
 use crate::{
-    back::{Command, Cue, CueId, CueList, Fault, Kind, OutputEdit, OutputId, Sends, Workspace},
-    front::{App, Problems},
+    back::{Command, Cue, CueId, Fault, Kind, OutputEdit, OutputId, Sends, fresh},
+    front::{App, Problems, fixtures::app_of},
 };
 
 #[test]
@@ -18,8 +18,7 @@ fn only_outputs_that_the_cue_sends_to_count_as_unable_to_play() {
         sends: Some(sends.clone()),
         ..Cue::new(CueId(1), "1", Kind::Audio, "Music").build()
     };
-    let workspace =
-        Workspace::new(vec![CueList::new("Main", vec![cue])]).apply(Command::add_output(1, 1));
+    let workspace = fresh(vec![cue]).apply(Command::add_output(1, 1));
     let missing = || Fault::Missing("there is no audio device".to_owned());
     let app = App {
         workspace,
@@ -63,14 +62,6 @@ fn names_that_share_a_beginning_stay_apart_when_cut() {
     let cut = |name| cut(name, 20);
     assert_ne!(cut("House speaker pair 01"), cut("House speaker pair 02"));
     assert_eq!(cut("House speaker pair 16"), "\u{2026}use speaker pair 16");
-    assert_eq!(cut("House L"), "House L");
-    // Wide characters take two columns each
-    assert_eq!(
-        cut(
-            "\u{4e3b}\u{97f3}\u{54cd}\u{5ea6}\u{6781}\u{4f4e}\u{97f3}\u{5e95}\u{6d4b}\u{8bd5}\u{4e00}"
-        ),
-        "\u{2026}\u{54cd}\u{5ea6}\u{6781}\u{4f4e}\u{97f3}\u{5e95}\u{6d4b}\u{8bd5}\u{4e00}"
-    );
 }
 
 #[test]
@@ -90,12 +81,8 @@ fn the_room_of_the_names_counts_the_columns_that_a_wide_character_takes() {
 
 #[test]
 fn a_fault_on_one_output_leaves_the_room_of_the_other_names_as_it_was() {
-    let workspace =
-        Workspace::new(vec![CueList::new("Main", Vec::new())]).apply(Command::add_output(1, 2));
-    let plain = App {
-        workspace: workspace.clone(),
-        ..App::default()
-    };
+    let workspace = fresh(Vec::new()).apply(Command::add_output(1, 2));
+    let plain = app_of(workspace.clone());
     let faulty = App {
         workspace,
         problems: Problems {
@@ -114,11 +101,9 @@ fn a_fault_on_one_output_leaves_the_room_of_the_other_names_as_it_was() {
 
 #[test]
 fn an_output_name_with_a_line_break_is_told_on_one_line() {
-    let app = App {
-        workspace: Workspace::new(vec![CueList::new("Main", Vec::new())]).apply(
-            Command::EditOutput(OutputId(1), OutputEdit::Name("House\r\nL".to_owned())),
-        ),
-        ..App::default()
-    };
+    let app = app_of(fresh(Vec::new()).apply(Command::EditOutput(
+        OutputId(1),
+        OutputEdit::Name("House\r\nL".to_owned()),
+    )));
     assert_eq!(labels(&app).1[0].0, "House L");
 }

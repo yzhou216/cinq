@@ -16,28 +16,30 @@ use super::{
     texts, told, yellows,
 };
 use crate::{
-    back::{Command, Cue, CueId, CueList, Edit, Kind, Workspace},
+    back::{Command, Cue, CueId, Edit, Kind, Workspace, fresh},
     front::view::theme,
 };
+
+fn group(collapsed: bool) -> Cue {
+    Cue::new(CueId(1), "1", Kind::Group, "Group")
+        .collapsed(collapsed)
+        .build()
+}
 
 /// Returns a list of the group 1, collapsed or not, that holds a memo, a
 /// sound with no file, and a fade with no target
 fn troubled(collapsed: bool) -> Workspace {
-    let group = Cue::new(CueId(1), "1", Kind::Group, "Group")
-        .collapsed(collapsed)
-        .build();
     let within = |id: u32, kind, name| {
         Cue::new(CueId(id), id.to_string(), kind, name)
             .depth(1)
             .build()
     };
-    let cues = vec![
-        group,
+    fresh(vec![
+        group(collapsed),
         within(2, Kind::Memo, "Note"),
         within(3, Kind::Audio, "Rain"),
         within(4, Kind::Fade, "Fade"),
-    ];
-    Workspace::new(vec![CueList::new("Main", cues)])
+    ])
 }
 
 fn group_state(workspace: &Workspace) -> (String, bool) {
@@ -59,10 +61,7 @@ fn a_collapsed_group_reads_the_first_problem_of_the_cues_it_hides_as_they_do() {
     let target = Command::Edit(CueId(3), Edit::File("rain.ogg".to_owned()));
     let loaded = troubled(true).apply(target);
     assert_eq!(group_state(&loaded).0, "loading");
-}
-
-#[test]
-fn an_expanded_group_reads_no_problem_of_the_cues_it_holds() {
+    // An expanded group reads no problem of the cues it holds
     assert_eq!(group_state(&troubled(false)), (String::new(), false));
 }
 
@@ -88,7 +87,7 @@ fn a_running_group_gives_its_own_state_before_the_problem_of_a_hidden_cue() {
         .build();
     let workspace = troubled(true);
     let cues = workspace.lists()[0].cues.iter().cloned().chain([hold]);
-    let running = Workspace::new(vec![CueList::new("Main", cues.collect())])
+    let running = fresh(cues.collect())
         .apply(Command::Go { list: 0 })
         .apply(Command::Tick(1.0));
     let (state, _) = group_state(&running);
@@ -122,13 +121,10 @@ fn counted_lines(commands: &[Command]) -> Vec<(String, bool)> {
             .depth(1)
             .build()
     };
-    let group = Cue::new(CueId(1), "1", Kind::Group, "Group")
-        .collapsed(true)
-        .build();
-    let workspace = commands.iter().cloned().fold(
-        Workspace::new(vec![CueList::new("Main", vec![group, wait(2), wait(3)])]),
-        Workspace::apply,
-    );
+    let workspace = commands
+        .iter()
+        .cloned()
+        .fold(fresh(vec![group(true), wait(2), wait(3)]), Workspace::apply);
     let list = &workspace.lists()[0];
     yellows(shown_lines(
         &workspace,
@@ -158,16 +154,8 @@ fn a_collapsed_group_counts_the_cues_it_hides_that_run_and_the_paused_ones_first
 #[test]
 fn a_collapsed_group_tells_each_warning_of_the_cues_it_hides_once() {
     let light = |id: u32| Cue::new(CueId(id), id.to_string(), Kind::Light, "Look").depth(1);
-    let group = |collapsed| {
-        Cue::new(CueId(1), "1", Kind::Group, "Group")
-            .collapsed(collapsed)
-            .build()
-    };
     let read = |collapsed| {
-        let workspace = Workspace::new(vec![CueList::new(
-            "Main",
-            vec![group(collapsed), light(2).build(), light(3).build()],
-        )]);
+        let workspace = fresh(vec![group(collapsed), light(2).build(), light(3).build()]);
         let list = &workspace.lists()[0];
         told(shown_lines(
             &workspace,

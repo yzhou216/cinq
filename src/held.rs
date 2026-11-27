@@ -27,9 +27,10 @@ use std::{fs::File, os::fd::AsFd};
 use std::{
     io::{self, Write},
     mem,
-    sync::{Mutex, MutexGuard, PoisonError},
+    sync::Mutex,
 };
 
+use crate::lock::lock;
 use buffer::Buffer;
 #[cfg(unix)]
 use redirect::Redirect;
@@ -78,7 +79,7 @@ impl Held {
         if let Some(redirect) = self.redirect {
             redirect.stop();
         }
-        (Self::default(), mem::take(&mut *buffer()).written())
+        (Self::default(), mem::take(&mut *lock(&BUFFER)).written())
     }
 }
 
@@ -110,7 +111,7 @@ pub fn release() {
 /// to draw on and to ask about the terminal
 #[cfg(unix)]
 pub fn terminal() -> io::Result<Terminal> {
-    match &locked().redirect {
+    match &lock(&HELD).redirect {
         Some(redirect) => redirect.terminal(),
         None => io::stderr().as_fd().try_clone_to_owned().map(File::from),
     }
@@ -125,25 +126,13 @@ pub fn terminal() -> io::Result<Terminal> {
 /// so that no line comes between a switch of screens and the hold or release
 /// that goes with it
 fn apply(step: impl FnOnce(Held) -> (Held, Vec<u8>)) {
-    let mut held = locked();
+    let mut held = lock(&HELD);
     let (next, bytes) = step(mem::take(&mut *held));
     *held = next;
     let _ = io::stderr().write_all(&bytes);
 }
 
 fn retain(bytes: &[u8]) {
-    let mut buffer = buffer();
+    let mut buffer = lock(&BUFFER);
     *buffer = mem::take(&mut *buffer).pushed(bytes);
-}
-
-/// Locks [`HELD`], which a thread that panicked while it held the lock leaves
-/// as it was
-fn locked() -> MutexGuard<'static, Held> {
-    HELD.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
-/// Locks [`BUFFER`], which a thread that panicked while it held the lock
-/// leaves as it was
-fn buffer() -> MutexGuard<'static, Buffer> {
-    BUFFER.lock().unwrap_or_else(PoisonError::into_inner)
 }

@@ -15,7 +15,7 @@ fn a_chain_with_nothing_to_fire_says_so_and_names_each_cue_with_its_reason() {
     };
 
     let words = |cues: Vec<Cue>| {
-        let workspace = Workspace::new(vec![CueList::new("Main", cues)]);
+        let workspace = fresh(cues);
         let list = &workspace.lists()[0];
         let standby = workspace
             .cue(list.standby.expect("a standby cue"))
@@ -42,13 +42,10 @@ fn a_chain_tells_a_cue_that_plays_in_silence_and_still_fires_it() {
             .advance(Advance::Continue)
             .build()
     };
-    let workspace = Workspace::new(vec![CueList::new(
-        "Main",
-        vec![
-            audio(1, [(OutputId(1), 0.0)].into()),
-            audio(2, [(OutputId(9), 0.0)].into()),
-        ],
-    )]);
+    let workspace = fresh(vec![
+        audio(1, [(OutputId(1), 0.0)].into()),
+        audio(2, [(OutputId(9), 0.0)].into()),
+    ]);
     let workspace = [1, 2]
         .into_iter()
         .map(|id| loaded(id, "sound.ogg", sound(10.0)))
@@ -104,7 +101,7 @@ fn a_chain_tells_a_delay_of_a_minute_or_more_as_a_clock_as_the_moving_standby_do
             .advance(Advance::Continue)
             .build()
     };
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![held, memo(2)])]);
+    let workspace = fresh(vec![held, memo(2)]);
     assert_eq!(
         chained(&workspace, 1, &[]),
         "GO fires 2 cues: 1, 2 (+1:10.0)"

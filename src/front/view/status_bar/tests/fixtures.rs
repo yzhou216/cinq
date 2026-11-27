@@ -8,7 +8,7 @@ use unicode_width::UnicodeWidthStr;
 
 use super::super::{fit::fitted, hints::hints as hinted, order::yielding, status};
 use crate::{
-    back::{Command, Cue, CueId, CueList, Kind, Place, Workspace},
+    back::{Command, CueId, Kind, Place, Workspace, fresh, memo},
     front::{
         App,
         app::{Held, Keyboard, Notices},
@@ -18,11 +18,6 @@ use crate::{
     },
 };
 
-pub(super) fn memo(id: u32) -> Cue {
-    Cue::new(CueId(id), id.to_string(), Kind::Memo, "Note").build()
-}
-
-/// Returns the text of every hint of `app`
 pub(super) fn texts(app: &App) -> Vec<String> {
     hinted(app).into_iter().map(|(_, hint)| hint).collect()
 }
@@ -48,7 +43,7 @@ pub(super) fn added() -> Workspace {
 }
 
 pub(super) fn deleted() -> Workspace {
-    Workspace::new(vec![CueList::new("Main", vec![memo(1)])]).apply(Command::Delete(vec![CueId(1)]))
+    fresh(vec![memo(1)]).apply(Command::Delete(vec![CueId(1)]))
 }
 
 pub(super) fn owned<const N: usize>(
@@ -75,7 +70,14 @@ pub(super) fn opened(menu: bool, help: bool) -> App {
     opened_with(Keymap::default(), menu, help)
 }
 
-/// Returns `app` with its keyboard changed by `change`
+/// Returns a keyboard that a text field or a drop-down list has when `any`
+pub(super) fn holding(any: bool) -> Keyboard {
+    Keyboard::default().with_held(Held {
+        any,
+        ..Held::default()
+    })
+}
+
 pub(super) fn keyed(app: App, change: impl FnOnce(Keyboard) -> Keyboard) -> App {
     App {
         keyboard: change(app.keyboard),
@@ -109,12 +111,10 @@ pub(super) fn hints_fitted(app: &App, room: usize) -> String {
 /// or the outputs view has the keys
 pub(super) fn covered(make: impl Fn() -> App) -> [App; 4] {
     [
-        keyed(make(), |keyboard| {
-            keyboard.with_held(Held {
-                any: true,
-                ..Held::default()
-            })
-        }),
+        App {
+            keyboard: holding(true),
+            ..make()
+        },
         App {
             help: true,
             ..make()

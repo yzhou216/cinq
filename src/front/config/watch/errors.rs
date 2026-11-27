@@ -26,7 +26,7 @@ use std::{
     io::{self, IsTerminal, Write},
     iter, panic, process,
     sync::{
-        Mutex, MutexGuard, PoisonError, TryLockError,
+        Mutex, TryLockError,
         mpsc::{self, RecvTimeoutError},
     },
     thread,
@@ -35,7 +35,7 @@ use std::{
 
 use terminal_size::terminal_size_of;
 
-use crate::{front::config::Config, held};
+use crate::{front::config::Config, held, lock::lock};
 
 /// Escape sequence that switches a terminal to its alternate screen
 const ENTER: &str = "\x1b[?1049h";
@@ -103,7 +103,7 @@ pub fn guard() {
 /// Switches standard error back from the problems screen, if it shows, and
 /// writes out the problems left once
 pub fn restore() {
-    restored(&mut shown());
+    restored(&mut lock(&SHOWN));
 }
 
 /// Starts the thread of a watch that writes out to `errors` the problems of
@@ -132,7 +132,7 @@ fn screen(configs: &mpsc::Receiver<Config>) {
     };
     // Readings, and while the problems show, a pause now and then without one
     let readings = iter::from_fn(|| {
-        let reading = if shown().is_some() {
+        let reading = if lock(&SHOWN).is_some() {
             configs.recv_timeout(RESIZE)
         } else {
             configs.recv().map_err(|_| RecvTimeoutError::Disconnected)
@@ -144,7 +144,7 @@ fn screen(configs: &mpsc::Receiver<Config>) {
     });
     readings.fold(size(), |seen, reading| {
         let now = size();
-        let mut shown = shown();
+        let mut shown = lock(&SHOWN);
         let resized = shown.as_ref().filter(|_| now != seen).cloned();
         if let Some(config) = reading.or(resized) {
             let problems = !config.problems.is_empty();
@@ -202,10 +202,4 @@ fn switchable() -> bool {
     let escapes = anstyle_query::windows::enable_ansi_colors() == Some(true)
         || env::var_os("TERM").is_some_and(|term| term != "dumb");
     held::terminal().is_ok_and(|terminal| terminal.is_terminal()) && escapes
-}
-
-/// Locks [`SHOWN`], which a thread that panicked while it held the lock
-/// leaves as it was
-fn shown() -> MutexGuard<'static, Option<Config>> {
-    SHOWN.lock().unwrap_or_else(PoisonError::into_inner)
 }

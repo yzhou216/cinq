@@ -25,9 +25,6 @@ use crate::{
 /// Path of the tutorial under a data directory, as packages install it
 const TUTORIAL: &str = "doc/cinq/tutorial.pdf";
 
-/// What the help page tells when no data directory holds the tutorial
-const NOT_INSTALLED: &str = "The tutorial is not installed";
-
 impl App {
     /// Returns the state without the last failure to open a link, along
     /// with the task that runs `open` on a thread of its own, since an
@@ -93,7 +90,7 @@ pub(super) fn open_tutorial() -> Result<(), String> {
         .find(|tutorial| tutorial.is_file())
         .ok_or_else(|| not_found(name, &directories))
         .inspect_err(|searched| warn::once(searched))
-        .map_err(|_| NOT_INSTALLED.to_owned())
+        .map_err(|_| "The tutorial is not installed".to_owned())
         .and_then(|tutorial| open_link(tutorial.as_os_str()))
 }
 

@@ -15,7 +15,7 @@ fn target_goes_by_its_number_or_else_by_its_quoted_name() {
     };
     let numbered = Cue::new(CueId(1), "1", Kind::Audio, "Rain").build();
     let unnumbered = Cue::new(CueId(2), "", Kind::Audio, "Thunder").build();
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![numbered, unnumbered])]);
+    let workspace = fresh(vec![numbered, unnumbered]);
     let groups = &workspace.lists()[0].groups();
     assert_eq!(target(&workspace, groups, &fade(1)), "1");
     assert_eq!(target(&workspace, groups, &fade(2)), "\"Thunder\"");
@@ -53,7 +53,7 @@ fn a_light_cue_counts_every_instrument_it_names_even_one_the_patch_lacks() {
             .lights(ids.iter().map(|&id| (InstrumentId(id), 50.0)).collect())
             .build()
     };
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![])]);
+    let workspace = fresh(vec![]);
     let groups = &workspace.lists()[0].groups();
     assert_eq!(target(&workspace, groups, &light(&[99])), "1 instrument");
     assert_eq!(

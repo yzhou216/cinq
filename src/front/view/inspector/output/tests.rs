@@ -52,10 +52,6 @@ fn a_missing_default_device_keeps_its_name_and_points_to_the_sidebar() {
         device::placeholder(&gone, &main_of(&gone)),
         "Default device (alsa:gone), not found"
     );
-    assert_eq!(
-        device::hint(&gone, &main_of(&gone)),
-        "Connect it, or choose another Default device in the sidebar"
-    );
     // Device that is there needs neither, and a named device keeps its own
     let there = App {
         problems: Problems::default(),

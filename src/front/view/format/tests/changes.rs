@@ -14,7 +14,7 @@ fn copied_and_cut_cues_are_told_by_the_number_of_the_cue_or_else_by_how_many() {
 
 #[test]
 fn changed_cues_are_told_by_the_number_of_the_one_or_else_by_how_many() {
-    let shown = Workspace::new(vec![CueList::new("Main", vec![memo(1), memo(2), memo(3)])]);
+    let shown = fresh(vec![memo(1), memo(2), memo(3)]);
     let after = |command| told(&shown.clone().apply(command));
     let add = |count| Command::Add {
         list: 0,
@@ -43,7 +43,7 @@ fn loop_edits_are_told_by_the_part_of_the_loop_they_change() {
     let rain = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
         .looping(true)
         .build();
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![rain])]);
+    let workspace = fresh(vec![rain]);
     let after = |edit| told(&workspace.clone().apply(Command::Edit(CueId(1), edit)));
     assert_eq!(
         after(Edit::LoopStart(2.0.into())),
@@ -57,7 +57,7 @@ fn loop_edits_are_told_by_the_part_of_the_loop_they_change() {
 
 #[test]
 fn a_file_typed_into_an_unnamed_cue_is_told_by_a_short_notice() {
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![memo(1)])]).apply(Command::Edit(
+    let workspace = fresh(vec![memo(1)]).apply(Command::Edit(
         CueId(1),
         Edit::FileAndName {
             file: "knock.ogg".into(),
@@ -71,10 +71,13 @@ fn a_file_typed_into_an_unnamed_cue_is_told_by_a_short_notice() {
 fn a_move_is_told_to_enter_or_leave_a_group_only_where_the_depth_changes() {
     let within = |cue: Cue| Cue { depth: 1, ..cue };
     let group = Cue::new(CueId(2), "2", Kind::Group, "Group").build();
-    let shown = Workspace::new(vec![CueList::new(
-        "Main",
-        vec![memo(1), group, within(memo(3)), within(memo(4)), memo(5)],
-    )]);
+    let shown = fresh(vec![
+        memo(1),
+        group,
+        within(memo(3)),
+        within(memo(4)),
+        memo(5),
+    ]);
     let moved = |workspace: &Workspace, cue: u32, by: isize| {
         workspace.clone().apply(Command::Move {
             cue: CueId(cue),
@@ -93,7 +96,7 @@ fn a_move_is_told_to_enter_or_leave_a_group_only_where_the_depth_changes() {
 #[test]
 fn clearing_the_last_send_of_a_cue_is_told_as_playing_nowhere() {
     let rain = Cue::new(CueId(1), "1", Kind::Audio, "Rain").build();
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![rain])]);
+    let workspace = fresh(vec![rain]);
     let after = |sends| {
         told(
             &workspace
@@ -113,14 +116,12 @@ fn a_cue_added_below_a_group_or_one_of_its_cues_is_told_to_be_in_a_group() {
     let group = Cue::new(CueId(1), "1", Kind::Group, "Group").build();
     let held = Cue::new(CueId(2), "2", Kind::Memo, "Note").depth(1).build();
     let after = |cues: Vec<Cue>, at: CueId, count| {
-        told(
-            &Workspace::new(vec![CueList::new("Main", cues)]).apply(Command::Add {
-                list: 0,
-                kind: Kind::Memo,
-                at: Place::After(at),
-                count,
-            }),
-        )
+        told(&fresh(cues).apply(Command::Add {
+            list: 0,
+            kind: Kind::Memo,
+            at: Place::After(at),
+            count,
+        }))
     };
     assert_eq!(
         after(vec![group.clone()], CueId(1), 1),
@@ -139,10 +140,14 @@ fn a_cue_added_below_a_group_or_one_of_its_cues_is_told_to_be_in_a_group() {
 #[test]
 fn an_edit_of_the_light_patch_is_told_by_the_instrument_it_changed() {
     let patched = |edits: &[PatchEdit]| {
-        told(&edits.iter().cloned().fold(
-            Workspace::new(vec![CueList::new("Main", vec![memo(1)])]),
-            |shown, edit| shown.apply(Command::Patch(edit)),
-        ))
+        told(
+            &edits
+                .iter()
+                .cloned()
+                .fold(fresh(vec![memo(1)]), |shown, edit| {
+                    shown.apply(Command::Patch(edit))
+                }),
+        )
     };
     let id = InstrumentId(1);
     assert_eq!(patched(&[PatchEdit::Add]), "added instrument 1");

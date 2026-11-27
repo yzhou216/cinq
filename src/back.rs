@@ -51,7 +51,7 @@ pub use workspace::{Active, Change, Command, Phase, Place, Turn, Unlit, Workspac
 /// Cues and workspaces that the tests of the front end build as those of
 /// the back end do
 #[cfg(test)]
-pub(crate) use workspace::tests::{audio, loaded, silent, sound};
+pub(crate) use workspace::tests::{audio, fresh, group, loaded, memo, silent, sound, video};
 
 /// Interval of the playback clock while any cue is running, which the front
 /// end keeps and the sound output glides by

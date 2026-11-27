@@ -28,7 +28,7 @@ use std::{
     io::{self, ErrorKind},
     net::TcpStream,
     sync::{
-        Arc, Mutex, MutexGuard, PoisonError,
+        Arc, Mutex,
         atomic::{AtomicUsize, Ordering},
         mpsc::{self, RecvTimeoutError},
     },
@@ -37,7 +37,7 @@ use std::{
 };
 
 use super::osc::{self, Destination, Outgoing};
-use crate::warn;
+use crate::{lock::lock, warn};
 use address::{ipv4_address, udp_socket};
 
 /// Longest that a message may wait to go out, and longest quiet that a TCP
@@ -52,13 +52,6 @@ struct Shared {
     /// [`warn::words`], until one gets there
     problems: Mutex<BTreeMap<String, String>>,
     pending: AtomicUsize,
-}
-
-impl Shared {
-    /// Ignores poisoning, since a panic leaves the problems as they were
-    fn problems(&self) -> MutexGuard<'_, BTreeMap<String, String>> {
-        self.problems.lock().unwrap_or_else(PoisonError::into_inner)
-    }
 }
 
 pub struct Network {
@@ -101,7 +94,7 @@ impl Network {
     /// more is forgotten, since fixing a typo in a cue would otherwise leave
     /// the warning of the old one.
     pub fn problems<T: Copy>(&self, named: &BTreeMap<String, T>) -> Vec<(T, String)> {
-        let mut problems = self.shared.problems();
+        let mut problems = lock(&self.shared.problems);
         problems.retain(|destination, _| named.contains_key(destination));
         problems
             .iter()
@@ -116,8 +109,7 @@ impl Network {
     /// Returns the `named` destinations that messages last failed to reach,
     /// so that each cue that names one can tell so on its own row
     pub fn failed<T>(&self, named: &BTreeMap<String, T>) -> BTreeSet<String> {
-        self.shared
-            .problems()
+        lock(&self.shared.problems)
             .keys()
             .filter(|destination| named.contains_key(*destination))
             .cloned()
@@ -181,14 +173,12 @@ fn work(destination: &str, messages: &mpsc::Receiver<(Instant, Outgoing)>, share
         let fresh = kept.filter(|(used, _): &Connection| used.elapsed() <= PATIENCE);
         let connection = match deliver(fresh, outgoing, handed) {
             Ok(connection) => {
-                drop(shared.problems().remove(destination));
+                drop(lock(&shared.problems).remove(destination));
                 connection
             }
             Err(error) => {
                 warn::once(&format!("network cue to {destination}: {error}"));
-                shared
-                    .problems()
-                    .insert(destination.to_owned(), warn::words(&error));
+                lock(&shared.problems).insert(destination.to_owned(), warn::words(&error));
                 None
             }
         };

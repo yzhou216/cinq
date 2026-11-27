@@ -17,7 +17,7 @@ use super::{
     opened,
 };
 use crate::{
-    back::{Command, Cue, CueId, CueList, Edit, Kind, OutputEdit, OutputId, Sends, Workspace},
+    back::{Command, Cue, CueId, Edit, Kind, OutputEdit, OutputId, Sends, Workspace, fresh},
     front::{App, app::Notices, update::Clipped, view::format},
 };
 
@@ -26,7 +26,7 @@ fn rain() -> Workspace {
     let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
         .file("rain.ogg")
         .build();
-    Workspace::new(vec![CueList::new("Main", vec![cue])]).apply(Command::add_output(1, 1))
+    fresh(vec![cue]).apply(Command::add_output(1, 1))
 }
 
 fn rename(id: u32, name: &str) -> Command {

@@ -19,7 +19,7 @@ pub(super) fn picture(id: u32) -> Cue {
         .build()
 }
 
-pub(in crate::back) fn video(id: u32) -> Cue {
+pub(crate) fn video(id: u32) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Video, "Movie")
         .file("movie.mp4")
         .build()
@@ -43,7 +43,11 @@ pub(in crate::back) fn continuing_after(id: u32, post_wait: f32) -> Cue {
     }
 }
 
-pub(super) fn group(id: u32) -> Cue {
+pub(crate) fn memo(id: u32) -> Cue {
+    Cue::new(CueId(id), id.to_string(), Kind::Memo, "Note").build()
+}
+
+pub(crate) fn group(id: u32) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Group, "Group").build()
 }
 

@@ -17,13 +17,9 @@
 #[cfg(test)]
 mod tests;
 
-use std::{
-    collections::BTreeSet,
-    io, mem,
-    sync::{Mutex, MutexGuard, PoisonError},
-};
+use std::{collections::BTreeSet, io, mem, sync::Mutex};
 
-use crate::held;
+use crate::{held, lock::lock};
 
 /// Text of the kind that a system error without a kind of its own has
 const UNCATEGORIZED: &str = "uncategorized error";
@@ -73,16 +69,10 @@ impl Warnings {
 /// Writes a line on standard error that says `warning` after `cinq: `,
 /// unless it did before
 pub fn once(warning: &str) {
-    let mut warnings = locked();
+    let mut warnings = lock(&WARNINGS);
     let (next, line) = mem::take(&mut *warnings).warned(warning);
     *warnings = next;
     held::write(line.as_bytes());
-}
-
-/// Locks [`WARNINGS`], which a thread that panicked while it held the lock
-/// leaves as it was
-fn locked() -> MutexGuard<'static, Warnings> {
-    WARNINGS.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Returns the words of `error` for the screen: the text of its kind, as

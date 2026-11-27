@@ -6,8 +6,8 @@
 
 use super::{Column, DEVICE_ROOM, device_room, fitting};
 use crate::{
-    back::{Command, CueList, Device, Fault, OutputEdit, OutputId, Workspace},
-    front::{App, Problems, view::char_width},
+    back::{Command, Device, Fault, OutputEdit, OutputId, fresh},
+    front::{App, Problems, fixtures::app_of, view::char_width},
 };
 
 /// Returns an app whose Main has a long name and a state that tells that
@@ -15,7 +15,7 @@ use crate::{
 fn app() -> App {
     let name = "Far away speakers of the balcony".to_owned();
     App {
-        workspace: Workspace::new(vec![CueList::new("Main", Vec::new())])
+        workspace: fresh(Vec::new())
             .apply(Command::EditOutput(OutputId(1), OutputEdit::Name(name))),
         problems: Problems {
             audio: vec![(OutputId(1), Fault::Channels(64))],
@@ -31,11 +31,7 @@ fn on_device(name: &str) -> App {
         id: name.to_owned(),
         name: name.to_owned(),
     };
-    App {
-        workspace: Workspace::new(vec![CueList::new("Main", Vec::new())])
-            .apply(Command::EditOutput(OutputId(1), OutputEdit::Device(device))),
-        ..App::default()
-    }
+    app_of(fresh(Vec::new()).apply(Command::EditOutput(OutputId(1), OutputEdit::Device(device))))
 }
 
 /// Returns the pixels of `columns` columns of text.  The tests size the
@@ -135,12 +131,10 @@ fn the_device_keeps_a_name_of_two_words_whole_in_a_window_of_512_pixels() {
 
 #[test]
 fn a_name_with_a_line_break_shows_on_one_line() {
-    let app = App {
-        workspace: Workspace::new(vec![CueList::new("Main", Vec::new())]).apply(
-            Command::EditOutput(OutputId(1), OutputEdit::Name("House\n\tLeft".to_owned())),
-        ),
-        ..App::default()
-    };
+    let app = app_of(fresh(Vec::new()).apply(Command::EditOutput(
+        OutputId(1),
+        OutputEdit::Name("House\n\tLeft".to_owned()),
+    )));
     let output = &app.workspace.outputs()[0];
     assert_eq!(Column::Name.text(&app, 0, output), "House Left");
 }

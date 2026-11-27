@@ -55,7 +55,7 @@ use iced::{
 };
 
 use crate::{
-    back::{Cue, CueId, CueList, Place, Workspace, audio, loaded, sound},
+    back::{Cue, CueId, CueList, Place, Workspace, audio, fresh, loaded, sound},
     front::{
         App, Message, Setting, Tab,
         app::Held,
@@ -147,7 +147,7 @@ fn on_levels(selected: Option<CueId>) -> App {
 /// Returns the state of a show of one list of `cues` with `selected` selected
 fn one_list(cues: Vec<Cue>, selected: Option<CueId>) -> App {
     App {
-        workspace: Workspace::new(vec![CueList::new("Main", cues)]),
+        workspace: fresh(cues),
         selected,
         ..App::default()
     }

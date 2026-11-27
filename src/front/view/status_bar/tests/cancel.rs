@@ -5,11 +5,12 @@
 //! Tests of the hint of the key that cancels what is typed
 
 use super::{
-    super::order::yielding, YIELDING, fitted, has_hint, hinted, opened, opened_with, taken, texts,
+    super::order::yielding, YIELDING, fitted, has_hint, hinted, holding, opened, opened_with,
+    taken, texts,
 };
 use crate::front::{
     App,
-    app::{Held, Keyboard, Notices},
+    app::Notices,
     keymap::{Action, Keymap, Press, desk},
 };
 use iced::keyboard::{Key, Modifiers};
@@ -68,10 +69,7 @@ fn the_key_of_cancel_stays_in_a_bar_of_1024_pixels_while_go_and_panic_give_way()
 
 fn leaving(keymap: Keymap, held: bool) -> Vec<String> {
     let app = App {
-        keyboard: Keyboard::default().with_held(Held {
-            any: held,
-            ..Held::default()
-        }),
+        keyboard: holding(held),
         ..opened_with(keymap, false, false)
     };
     hinted(&app)
@@ -96,12 +94,7 @@ fn the_bar_hints_how_to_leave_a_field_that_has_the_keyboard() {
 fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
     let told = |menu, help| {
         let app = App {
-            keyboard: Keyboard::default()
-                .with_held(Held {
-                    any: true,
-                    ..Held::default()
-                })
-                .with_menu(menu),
+            keyboard: holding(true).with_menu(menu),
             ..opened(menu, help)
         };
         texts(&app).iter().any(|hint| hint.contains("leave"))
@@ -114,10 +107,7 @@ fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
 #[test]
 fn the_hints_of_a_field_give_way_in_turn_with_go_and_panic_before_the_key_that_leaves() {
     let app = App {
-        keyboard: Keyboard::default().with_held(Held {
-            any: true,
-            ..Held::default()
-        }),
+        keyboard: holding(true),
         ..opened(false, false)
     };
     // No help hint here: a field or a list that has the keyboard keeps the

@@ -7,7 +7,7 @@
 
 use super::*;
 use crate::{
-    back::{Cue, CueList, Workspace},
+    back::{Cue, fresh},
     front::{Message, message::Fold},
 };
 
@@ -19,15 +19,12 @@ fn closed() -> String {
         collapsed: kind == Kind::Group,
         ..Cue::new(CueId(id), id.to_string(), kind, name).build()
     };
-    Workspace::new(vec![CueList::new(
-        "Main",
-        vec![
-            cue(1, 0, Kind::Group, "Storm"),
-            cue(2, 1, Kind::Memo, "Thunder"),
-            cue(3, 1, Kind::Memo, "Rain"),
-            cue(4, 0, Kind::Memo, "Dawn"),
-        ],
-    )])
+    fresh(vec![
+        cue(1, 0, Kind::Group, "Storm"),
+        cue(2, 1, Kind::Memo, "Thunder"),
+        cue(3, 1, Kind::Memo, "Rain"),
+        cue(4, 0, Kind::Memo, "Dawn"),
+    ])
     .show(Some(Path::new("/shows")))
 }
 

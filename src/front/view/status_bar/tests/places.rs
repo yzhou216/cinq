@@ -8,7 +8,7 @@ use unicode_width::UnicodeWidthStr;
 
 use super::{super::hints::keyboard::place, memo, opened};
 use crate::{
-    back::{Cue, CueId, CueList, Kind, OutputId, Workspace},
+    back::{Cue, CueId, CueList, Kind, OutputId, Workspace, fresh},
     front::{App, Spot},
 };
 
@@ -44,7 +44,7 @@ fn a_cue_of_the_list_on_show_is_named_by_its_number_and_any_other_by_its_list() 
 fn a_long_number_or_name_of_a_cue_is_cut_as_that_of_a_list_is() {
     let long = Cue::new(CueId(9), "", Kind::Memo, "A cue with a very long name").build();
     let app = App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![long])]),
+        workspace: fresh(vec![long]),
         ..opened(false, false)
     };
     assert!(place(&app, Spot::Cue(CueId(9))).width() <= "cue ".len() + 16);

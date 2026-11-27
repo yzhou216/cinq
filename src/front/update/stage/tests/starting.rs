@@ -9,18 +9,14 @@ use iced::window;
 
 use super::closing;
 use crate::{
-    back::{Advance, Cue, CueId, CueList, Kind, Workspace, loaded, silent},
+    back::{Advance, Cue, CueId, Kind, fresh, loaded, memo, silent, video},
     front::{App, Message},
 };
 
 /// Returns the state of the interface with `cues`, the video cue among them
 /// loaded, and standby on the first
 fn show(cues: Vec<Cue>) -> App {
-    let workspace = Workspace::new(vec![CueList::new("Main", cues)]).apply(loaded(
-        3,
-        "movie.mp4",
-        silent(10.0),
-    ));
+    let workspace = fresh(cues).apply(loaded(3, "movie.mp4", silent(10.0)));
     App {
         workspace,
         main: Some(window::Id::unique()),
@@ -34,15 +30,9 @@ fn start(id: u32, target: u32) -> Cue {
         .build()
 }
 
-fn video() -> Cue {
-    Cue::new(CueId(3), "3", Kind::Video, "Movie")
-        .file("movie.mp4")
-        .build()
-}
-
 #[test]
 fn closed_stage_window_opens_again_as_a_start_cue_fires_a_video_cue() {
-    let (open, _) = show(vec![start(1, 3), video()]).staged();
+    let (open, _) = show(vec![start(1, 3), video(3)]).staged();
     let (gone, _) = closing(open).handled(Message::Go);
     let (reopened, opening) = gone.staged();
     assert!(reopened.stage.window().is_some());
@@ -55,7 +45,7 @@ fn start_cues_that_start_each_other_still_find_the_video_cue_they_fire() {
         advance: Advance::Continue,
         ..start(2, 1)
     };
-    let (open, _) = show(vec![start(1, 2), second, video()]).staged();
+    let (open, _) = show(vec![start(1, 2), second, video(3)]).staged();
     let (gone, _) = open.handled(Message::Go);
     let (_, raising) = gone.staged();
     assert_eq!(raising.units(), 2);
@@ -63,8 +53,7 @@ fn start_cues_that_start_each_other_still_find_the_video_cue_they_fire() {
 
 #[test]
 fn stage_window_stays_as_it_is_when_a_start_cue_fires_no_picture_or_video_cue() {
-    let memo = Cue::new(CueId(2), "2", Kind::Memo, "Note").build();
-    let (open, _) = show(vec![start(1, 2), memo, video()]).staged();
+    let (open, _) = show(vec![start(1, 2), memo(2), video(3)]).staged();
     let (gone, _) = open.handled(Message::Go);
     let (_, raising) = gone.staged();
     assert_eq!(raising.units(), 0);
@@ -72,7 +61,7 @@ fn stage_window_stays_as_it_is_when_a_start_cue_fires_no_picture_or_video_cue() 
 
 #[test]
 fn stage_window_stays_as_it_is_when_a_start_cue_only_resumes_a_video_cue() {
-    let (open, _) = show(vec![video(), start(1, 3)]).staged();
+    let (open, _) = show(vec![video(3), start(1, 3)]).staged();
     let (gone, _) = open.handled(Message::Go);
     let (shown, _) = gone.staged();
     let (paused, _) = shown.handled(Message::PauseAll);

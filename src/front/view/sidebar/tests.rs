@@ -16,7 +16,7 @@ use super::{
     width,
 };
 use crate::{
-    back::{Command, Cue, CueId, CueList, Fault, Kind, OutputId, Workspace, loaded, sound},
+    back::{Command, Cue, CueId, Fault, Kind, OutputId, Workspace, fresh, loaded, sound},
     front::{App, Problems},
 };
 
@@ -33,7 +33,7 @@ fn raining() -> Workspace {
         .file("rain.ogg")
         .looping(true)
         .build();
-    Workspace::new(vec![CueList::new("Main", vec![cue])])
+    fresh(vec![cue])
         .apply(loaded(1, "rain.ogg", sound(10.0)))
         .apply(Command::Go { list: 0 })
         .apply(Command::Tick(1.0))
@@ -110,8 +110,8 @@ fn a_device_that_is_not_found_reads_so_in_words_before_its_id() {
     assert_eq!(placeholder("alsa:front", false), "alsa:front");
 }
 
-#[test]
-fn a_running_fade_names_its_target_where_the_name_fits_whole() {
+/// Returns the sound Rain and a fade of five seconds that targets it
+fn rain_and_fade() -> (Cue, Cue) {
     let rain = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
         .file("rain.ogg")
         .build();
@@ -119,7 +119,13 @@ fn a_running_fade_names_its_target_where_the_name_fits_whole() {
         .target(CueId(1))
         .duration(5.0)
         .build();
-    let running = Workspace::new(vec![CueList::new("Main", vec![rain.clone(), fade])])
+    (rain, fade)
+}
+
+#[test]
+fn a_running_fade_names_its_target_where_the_name_fits_whole() {
+    let (rain, fade) = rain_and_fade();
+    let running = fresh(vec![rain.clone(), fade])
         .apply(Command::Go { list: 0 })
         .apply(Command::Go { list: 0 })
         .apply(Command::Tick(1.0));
@@ -133,14 +139,8 @@ fn a_running_fade_names_its_target_where_the_name_fits_whole() {
 
 #[test]
 fn a_fade_of_a_target_that_is_not_playing_says_so() {
-    let rain = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
-        .file("rain.ogg")
-        .build();
-    let fade = Cue::new(CueId(2), "2", Kind::Fade, "Duck")
-        .target(CueId(1))
-        .duration(5.0)
-        .build();
-    let alone = Workspace::new(vec![CueList::new("Main", vec![rain.clone(), fade.clone()])])
+    let (rain, fade) = rain_and_fade();
+    let alone = fresh(vec![rain.clone(), fade])
         .apply(Command::Standby {
             list: 0,
             cue: Some(CueId(2)),

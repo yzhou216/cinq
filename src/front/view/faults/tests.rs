@@ -6,25 +6,26 @@
 
 use super::{Warning, failing, warnings};
 use crate::{
-    back::{Channels, Command, CueList, Device, Fault, OutputEdit, OutputId, Workspace},
+    back::{Channels, Command, Device, Fault, OutputEdit, OutputId, fresh},
     front::{App, Problems},
 };
 
 /// Returns an app whose show has an output on each of `devices`, the first
 /// of them Main, which cannot play for `faults`
 fn app(devices: &[Device], faults: Vec<(OutputId, Fault)>) -> App {
-    let workspace = devices.iter().enumerate().fold(
-        Workspace::new(vec![CueList::new("Main", Vec::new())]),
-        |workspace, (index, device)| {
-            let added = if index == 0 {
-                workspace
-            } else {
-                workspace.apply(Command::add_output(index, 1))
-            };
-            let id = added.outputs()[index].id;
-            added.apply(Command::EditOutput(id, OutputEdit::Device(device.clone())))
-        },
-    );
+    let workspace =
+        devices
+            .iter()
+            .enumerate()
+            .fold(fresh(Vec::new()), |workspace, (index, device)| {
+                let added = if index == 0 {
+                    workspace
+                } else {
+                    workspace.apply(Command::add_output(index, 1))
+                };
+                let id = added.outputs()[index].id;
+                added.apply(Command::EditOutput(id, OutputEdit::Device(device.clone())))
+            });
     App {
         workspace,
         problems: Problems {

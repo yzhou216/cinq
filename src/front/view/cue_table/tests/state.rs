@@ -11,7 +11,7 @@ use super::{
     show, told, yellow,
 };
 use crate::{
-    back::{Command, Cue, CueId, CueList, InstrumentId, Kind, OutputId, Sends, Workspace},
+    back::{Command, Cue, CueId, InstrumentId, Kind, OutputId, Sends, Workspace, fresh},
     front::view::theme,
 };
 
@@ -23,13 +23,10 @@ fn shown(workspace: &Workspace) -> (String, bool) {
 }
 
 #[test]
-fn a_cue_that_sends_to_no_output_left_reads_in_yellow_that_it_does() {
+fn a_cue_that_sends_to_no_output_left_reads_in_yellow_but_one_that_sends_somewhere_does_not() {
     let sends = [(OutputId(2), 0.0)].into();
     assert_eq!(shown(&show(Some(sends))), ("NO OUTPUT".to_owned(), true));
-}
-
-#[test]
-fn a_cue_that_sends_somewhere_or_names_no_sends_reads_as_any_other() {
+    // Somewhere, or with no sends named, reads as any other cue
     let both: Sends = [(OutputId(1), 0.0), (OutputId(2), 0.0)].into();
     assert_eq!(shown(&show(Some(both))).0, "");
     assert_eq!(shown(&show(None)).0, "");
@@ -42,22 +39,15 @@ fn standby_lines(workspace: &Workspace) -> Vec<String> {
 }
 
 #[test]
-fn a_standby_cue_with_a_problem_reads_next_and_then_the_problem() {
-    let stranded = show(Some([(OutputId(2), 0.0)].into()));
-    assert_eq!(standby_lines(&stranded), ["NEXT", "NO OUTPUT"]);
-    let unloaded = Workspace::new(vec![CueList::new(
-        "Main",
-        vec![Cue::new(CueId(1), "1", Kind::Audio, "Rain").build()],
-    )]);
-    assert_eq!(standby_lines(&unloaded), ["NEXT", "NO FILE"]);
-}
-
-#[test]
-fn the_state_of_a_row_that_stands_for_the_standby_cue_reads_next() {
+fn a_standby_cue_reads_next_and_then_its_problem_if_it_has_one() {
     let workspace = show(None);
     let cue = &workspace.lists()[0].cues[0];
     assert_eq!(standby_lines(&workspace), ["NEXT"]);
     assert!(lines(&workspace, cue, Look::default()).is_empty());
+    let stranded = show(Some([(OutputId(2), 0.0)].into()));
+    assert_eq!(standby_lines(&stranded), ["NEXT", "NO OUTPUT"]);
+    let unloaded = fresh(vec![Cue::new(CueId(1), "1", Kind::Audio, "Rain").build()]);
+    assert_eq!(standby_lines(&unloaded), ["NEXT", "NO FILE"]);
 }
 
 #[test]
@@ -84,7 +74,7 @@ fn a_light_cue_that_sets_no_instrument_or_names_one_the_patch_lacks_reads_it_in_
         let cue = Cue::new(CueId(1), "1", Kind::Light, "Light")
             .lights(lights)
             .build();
-        Workspace::new(vec![CueList::new("Main", vec![cue])])
+        fresh(vec![cue])
     };
     assert_eq!(shown(&light(&[])), ("NO LEVELS".to_owned(), true));
     assert_eq!(shown(&light(&[(99, 50.0)])), ("UNPATCHED".to_owned(), true));
