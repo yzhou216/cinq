@@ -24,7 +24,10 @@ use super::{
     faults, radio,
     widget::shortened,
 };
-use crate::front::{App, Message};
+use crate::{
+    back::one_line,
+    front::{App, Message},
+};
 
 /// Least width of the sidebar, enough for the name of a short cue list, such
 /// as `Act 1`, with its count beside the radio button, so that a narrow
@@ -79,7 +82,7 @@ fn lists(app: &App, columns: f32) -> Element<'_, Message> {
         .enumerate()
         .map(|(index, list)| {
             let entry = radio(
-                label(&list.name, list.cues.len(), room as usize),
+                label(&one_line(&list.name), list.cues.len(), room as usize),
                 index,
                 (!app.outputs_shown).then_some(app.list),
                 Message::SwitchList,
@@ -110,7 +113,14 @@ fn active(app: &App, columns: f32) -> Option<Element<'_, Message>> {
         .filter_map(|active| {
             workspace.cue(active.id).map(|cue| {
                 let silent = workspace.sends_to_failing(cue, &failing);
-                running::active_cue(active, cue, workspace.target(cue), columns as usize, silent)
+                running::active_cue(
+                    active,
+                    cue,
+                    workspace.target(cue),
+                    columns as usize,
+                    silent,
+                    running::idle(workspace, active, cue),
+                )
             })
         })
         .collect::<Vec<_>>();

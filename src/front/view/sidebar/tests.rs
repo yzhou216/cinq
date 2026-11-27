@@ -7,7 +7,14 @@
 
 use unicode_width::UnicodeWidthStr;
 
-use super::{LEAST, SIDEBAR, devices::missing, label, problems::limited, running::entry, width};
+use super::{
+    LEAST, SIDEBAR,
+    devices::{missing, placeholder},
+    label,
+    problems::limited,
+    running::{entry, idle},
+    width,
+};
 use crate::{
     back::{Command, Cue, CueId, CueList, Fault, Kind, OutputId, Workspace, loaded, sound},
     front::{App, Problems},
@@ -33,16 +40,22 @@ fn raining() -> Workspace {
 }
 
 #[test]
-fn a_running_cue_keeps_three_lines_and_loses_its_phase_words_before_its_level() {
+fn a_running_cue_keeps_three_lines_and_drops_whole_parts_from_the_end() {
     let running = raining().apply(Command::Panic).apply(Command::Tick(0.1));
     let active = &running.active()[0];
     let cue = running.cue(CueId(1)).expect("the cue is there");
-    assert_eq!(entry(active, cue, None, 40, false).0, "1 Rain");
-    let (_, whole) = entry(active, cue, None, 60, false);
+    assert_eq!(entry(active, cue, None, 40, false, false).0, "1 Rain");
+    let (_, whole) = entry(active, cue, None, 60, false, false);
     assert!(whole.starts_with("looping, ") && whole.ends_with(" dB, fading"));
-    let (_, how) = entry(active, cue, None, 20, false);
-    assert!(how.width() <= 20 && how.ends_with('\u{2026}'));
-    assert!(how.starts_with("looping, ") && how.contains(" dB"));
+    let (_, how) = entry(active, cue, None, 20, false, false);
+    assert!(
+        how.starts_with("looping, ") && how.ends_with(" dB"),
+        "{how}"
+    );
+    let (_, how) = entry(active, cue, None, 14, false, false);
+    assert_eq!(how, "looping");
+    let (_, how) = entry(active, cue, None, 5, false, false);
+    assert!(how.width() <= 5 && how.ends_with('\u{2026}'));
 }
 
 #[test]
@@ -71,10 +84,10 @@ fn a_running_cue_whose_outputs_all_failed_says_so_in_place_of_how_it_runs() {
     let active = &running.active()[0];
     let cue = running.cue(CueId(1)).expect("the cue is there");
     assert_eq!(
-        entry(active, cue, None, 40, true).1,
+        entry(active, cue, None, 40, true, false).1,
         "silent: output failed"
     );
-    assert_eq!(entry(active, cue, None, 12, true).1.width(), 12);
+    assert_eq!(entry(active, cue, None, 12, true, false).1.width(), 12);
 }
 
 #[test]
@@ -92,6 +105,12 @@ fn the_default_device_list_is_lost_while_an_output_on_the_default_fails() {
 }
 
 #[test]
+fn a_device_that_is_not_found_reads_so_in_words_before_its_id() {
+    assert_eq!(placeholder("alsa:front", true), "Not found: alsa:front");
+    assert_eq!(placeholder("alsa:front", false), "alsa:front");
+}
+
+#[test]
 fn a_running_fade_names_its_target_where_the_name_fits_whole() {
     let rain = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
         .file("rain.ogg")
@@ -106,8 +125,33 @@ fn a_running_fade_names_its_target_where_the_name_fits_whole() {
         .apply(Command::Tick(1.0));
     let active = running.active_of(CueId(2)).expect("the fade runs");
     let cue = running.cue(CueId(2)).expect("the cue is there");
-    let how = |target, columns| entry(active, cue, target, columns, false).1;
+    let how = |target, columns| entry(active, cue, target, columns, false, false).1;
     assert_eq!(how(Some(&rain), 40), "0:04.0 left, fades 1");
     assert_eq!(how(Some(&rain), 12), "0:04.0 left");
     assert_eq!(how(None, 40), "0:04.0 left");
+}
+
+#[test]
+fn a_fade_of_a_target_that_is_not_playing_says_so() {
+    let rain = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
+        .file("rain.ogg")
+        .build();
+    let fade = Cue::new(CueId(2), "2", Kind::Fade, "Duck")
+        .target(CueId(1))
+        .duration(5.0)
+        .build();
+    let alone = Workspace::new(vec![CueList::new("Main", vec![rain.clone(), fade.clone()])])
+        .apply(Command::Standby {
+            list: 0,
+            cue: Some(CueId(2)),
+        })
+        .apply(Command::Go { list: 0 })
+        .apply(Command::Tick(1.0));
+    let active = alone.active_of(CueId(2)).expect("the fade runs");
+    let cue = alone.cue(CueId(2)).expect("the cue is there");
+    assert!(idle(&alone, active, cue));
+    assert_eq!(
+        entry(active, cue, Some(&rain), 40, false, true).1,
+        "target not playing"
+    );
 }

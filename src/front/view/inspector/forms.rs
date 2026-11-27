@@ -19,7 +19,7 @@ use crate::{
     back::Cue,
     front::{
         App, Message,
-        view::{FORMS, SPACING, char_width, cue_table::CELL_SPACE, dropdown_width},
+        view::{FORMS, SPACING, char_width, cue_table::CELL_SPACE, dropdown_width, widest},
     },
 };
 
@@ -50,9 +50,7 @@ fn form<'a>(app: &'a App, cue: &'a Cue, fields: &[Field]) -> Element<'a, Message
 /// header, and a value of [`VALUE_ROOM`] columns, which a drop-down list takes
 /// more room for than a text field
 fn least(cue: &Cue, fields: &[Field]) -> f32 {
-    let label = rows(cue, fields)
-        .map(|field| field.label(cue).width())
-        .fold("Setting".width(), usize::max);
+    let label = widest(rows(cue, fields).map(|field| field.label(cue))).max("Setting".width());
     label as f32 * char_width() + CELL_SPACE + dropdown_width(VALUE_ROOM as f32) + CELL_SPACE
 }
 

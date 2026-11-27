@@ -53,14 +53,12 @@ fn a_chain_tells_a_cue_that_plays_in_silence_and_still_fires_it() {
         .into_iter()
         .map(|id| loaded(id, "sound.ogg", sound(10.0)))
         .fold(workspace, Workspace::apply);
-    let list = &workspace.lists()[0];
-    let standby = workspace.cue(CueId(1)).expect("it exists");
     assert_eq!(
-        chain(&workspace, list, standby, &[]),
+        chained(&workspace, 1, &[]),
         "GO fires 2 cues: 1, 2 (+0.0s, silent: no output)"
     );
     assert_eq!(
-        chain(&workspace, list, standby, &[OutputId(1)]),
+        chained(&workspace, 1, &[OutputId(1)]),
         "GO fires 2 cues: 1 (silent: output failed), 2 (+0.0s, silent: no output)"
     );
 }
@@ -91,10 +89,8 @@ fn a_chain_tells_what_each_control_cue_does_and_names_a_list_only_when_it_is_ano
         list: 0,
         cue: Some(CueId(12)),
     });
-    let list = &workspace.lists()[0];
-    let standby = workspace.cue(CueId(12)).expect("it exists");
     assert_eq!(
-        chain(&workspace, list, standby, &[]),
+        chained(&workspace, 12, &[]),
         "GO fires 4 cues: 12 (pause 1), 13 (+0.0s, stop 1), \
          15 (+0.0s, start E1 in Effects), 16 (+0.0s, GoTo 1)"
     );
@@ -109,10 +105,8 @@ fn a_chain_tells_a_delay_of_a_minute_or_more_as_a_clock_as_the_moving_standby_do
             .build()
     };
     let workspace = Workspace::new(vec![CueList::new("Main", vec![held, memo(2)])]);
-    let list = &workspace.lists()[0];
-    let standby = workspace.cue(CueId(1)).expect("it exists");
     assert_eq!(
-        chain(&workspace, list, standby, &[]),
+        chained(&workspace, 1, &[]),
         "GO fires 2 cues: 1, 2 (+1:10.0)"
     );
 }

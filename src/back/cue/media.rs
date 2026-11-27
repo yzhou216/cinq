@@ -75,6 +75,10 @@ pub enum Problem<'a> {
     /// group for a fade or a devamp
     #[strum(to_string = "cannot act on its target cue")]
     WrongTarget,
+    /// Devamp cue targets a cue that is no audio or video cue, such as a
+    /// group, which has no loop to leave
+    #[strum(to_string = "target is not audio or video")]
+    NotAudioOrVideo,
     /// Start cue lies in the group that it starts, which would fire it
     /// again and so never end
     #[strum(to_string = "lies in the group that it starts")]

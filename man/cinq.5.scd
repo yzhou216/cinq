@@ -133,7 +133,7 @@ _tutorial.pdf_
 	again every two seconds, as *cinq-show*(5) describes.
 	The warning about the default device names its ID, as in *Default device
 	(alsa:front:CARD=PCH,DEV=0)*, and the *Default device* list shows that ID in
-	yellow while the device is not found.
+	yellow after the words *Not found:* while the device is not found.
 ; if xdg
 	On ALSA, *cinq* plays samples in 32-bit floating point, or in integers of
 	32, 24, or 16 bits, as the _alsa:hw:_, _alsa:front:_, and _alsa:hdmi:_
@@ -315,6 +315,10 @@ help page.
 :  Enter
 |  cancel
 :  Control+c, Control+[
+|  pick
+:  Control+y
+|  close_menu
+:  Control+e
 |  next
 :  j, g j, ArrowDown, Control+n, +
 |  previous
@@ -389,10 +393,6 @@ help page.
 :  Shift+Tab
 |  hint
 :  f
-|  pick
-:  Control+y
-|  close_menu
-:  Control+e
 |  add_below
 :  o
 |  add_above
@@ -727,6 +727,8 @@ A text field of the inspector, a drop-down list, or a checkbox
 	One of the sends of a cue, which scroll on the *Levels* tab, and a list of the
 	sidebar, which scrolls in a low window, scroll into view as these keys reach
 	it, with the title of the list above it.
+	So does a field or a *Remove* button in a row of the *Light Patch* tab, or of
+	the *Levels* tab of a light cue, which scroll as well.
 	Enter in the empty File field of a cue opens the dialog that chooses the
 	file, as the *Choose* button does, and the status bar hints it.
 	Anywhere else Enter leaves a text field, opens the menu of a drop-down list,
@@ -736,8 +738,10 @@ A text field of the inspector, a drop-down list, or a checkbox
 	the field is left, by Enter, Tab, a click, GO, or anything else the
 	operator does, so that a cue that plays does not follow each key, as the
 	*2* of *-25* would make it.
-	A level field takes *-inf* as -60, silence, and a send field or the field of
-	new cues takes *off* as it takes an empty field.
+	A level field takes *-inf* as -60, silence, and shows -60 as *-inf*, so
+	that silence reads as it is typed in every field of a level.
+	A send field or the field of new cues takes *off* as it takes an empty
+	field.
 	GO then fires the cue at the level typed.
 	A path typed into the File field of a cue applies the same way, as one
 	change, so that a cue that plays does not stop at the first key and no
@@ -939,6 +943,8 @@ page.
 	While a GoTo cue that has fired waits to put another cue on standby of the
 	list, the line leads with *Standby moves to 5 in 2.9s*, until the GoTo cue
 	acts or stops.
+	While any cue is paused, the line leads with how many, as *2 paused*,
+	before *Standby moves to* when both apply.
 
 *panic*
 	Panic: fade every playing cue out over one second, and stop the rest.
@@ -990,6 +996,20 @@ page.
 	While the stage window has the keyboard, it hints none of the keys that it
 	leaves to the main window, as listed under the stage window above, and
 	neither does the notice of a change name *undo*.
+
+*pick*
+	Pick the highlighted option of an open menu, as Enter does and as Control+y
+	does in Vim's popup menu.
+	It does nothing while no menu is open.
+	While a menu is open, the status bar hints the keys of *pick* and
+	*close_menu* and tells no notice, so that no notice takes their room.
+
+*close_menu*
+	Close an open menu without picking an option, as Control+e does in Vim's
+	popup menu.
+	Unlike Escape, which closes the menu and also acts as Panic, it does not
+	panic.
+	It does nothing while no menu is open.
 
 *next*
 	Select the next cue, move the highlight of an open menu down, or scroll
@@ -1289,7 +1309,8 @@ page.
 	nor the circle or box that shows a choice.
 	Where that would leave the window, it lies right of the place instead, with its
 	left edge at the right edge of the place, so that what lies at the left edge of
-	the window stays in view.
+	the window stays in view, unless another label lies there, when it lies at the
+	left edge of the window, so that no label hides another.
 	A label typed whole acts as the click would: a button is pressed, a checkbox
 	is flipped, a tab or a list is shown, a drop-down list or a text field takes
 	the keyboard, so that Enter opens the menu of the list, and a link opens.
@@ -1315,20 +1336,6 @@ page.
 	typing, or while the stage window has it.
 	A closed drop-down list, a checkbox, or a button that has the keyboard gives
 	it up when the mode begins.
-
-*pick*
-	Pick the highlighted option of an open menu, as Enter does and as Control+y
-	does in Vim's popup menu.
-	It does nothing while no menu is open.
-	While a menu is open, the status bar hints the keys of *pick* and
-	*close_menu* and tells no notice, so that no notice takes their room.
-
-*close_menu*
-	Close an open menu without picking an option, as Control+e does in Vim's
-	popup menu.
-	Unlike Escape, which closes the menu and also acts as Panic, it does not
-	panic.
-	It does nothing while no menu is open.
 
 *add_below*
 	Add a cue of the kind chosen in the toolbar below the selection, or at the

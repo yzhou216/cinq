@@ -14,9 +14,12 @@ use crate::{
     back::{Cue, Instrument},
     front::{
         App, Message, Setting, Tab,
-        view::inspector::{
-            SPACING,
-            output::{help, refusal},
+        view::{
+            FORMS,
+            inspector::{
+                SPACING,
+                output::{help, refusal},
+            },
         },
     },
 };
@@ -97,7 +100,7 @@ fn levels_page<'a>(app: &'a App, cue: &'a Cue, width: f32) -> Element<'a, Messag
         app,
         |setting| matches!(setting, Setting::Light(id, _) if *id == cue.id),
     );
-    column![scrollable(instruments).width(Fill).height(Fill)]
+    column![scrollable(instruments).id(FORMS).width(Fill).height(Fill)]
         .extend(reason.map(|reason| help("", Some(reason))))
         .spacing(SPACING)
         .into()

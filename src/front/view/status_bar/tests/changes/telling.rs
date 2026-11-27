@@ -114,3 +114,12 @@ fn the_notice_of_a_time_that_reads_as_no_time_tells_that_it_counts_as_zero() {
         Some("Changed the pre-wait of cue 1 | u: undo")
     );
 }
+
+#[test]
+fn an_output_name_with_a_line_break_is_told_on_one_line() {
+    let app = App {
+        workspace: rain().apply(rename(1, "Side\nfill")),
+        ..opened(false, false)
+    };
+    assert!(notice(&app).is_some_and(|told| told.contains("Side fill")));
+}

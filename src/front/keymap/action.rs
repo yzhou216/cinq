@@ -84,6 +84,24 @@ pub enum Action {
 }
 
 impl Action {
+    /// Returns every action in the order of the help page and of the table
+    /// of cinq(5), which is that of [`Action::VARIANTS`] except that the
+    /// menu actions follow `Cancel`, where the keys that act in a menu sit
+    /// together.  The variants keep them late, since the earlier of two
+    /// actions that clash keeps the key, and a menu key must not take it
+    /// from a move.
+    pub fn listed() -> impl Iterator<Item = Action> {
+        const MENU: [Action; 2] = [Action::Pick, Action::CloseMenu];
+        Self::VARIANTS
+            .iter()
+            .copied()
+            .filter(|action| !MENU.contains(action))
+            .flat_map(|action| {
+                let after: &[Action] = if action == Action::Cancel { &MENU } else { &[] };
+                std::iter::once(action).chain(after.iter().copied())
+            })
+    }
+
     pub fn name(self) -> &'static str {
         self.into()
     }

@@ -21,19 +21,19 @@ use iced::{
     Center, Element, Fill, Length,
     widget::{column, row, scrollable, text, text::Wrapping},
 };
-use unicode_width::UnicodeWidthStr;
 
 use super::{
     LEVEL_ROOM,
     output::{refusal, refused, styled, typing},
 };
 use crate::{
-    back::{Cue, Fault, OutputId, Sends},
+    back::{Cue, Fault, OutputId, Sends, one_line},
     front::{
         App, Message, Setting,
         message::reasons::rejection,
         view::{
-            SENDS, SPACING, button, char_width, faults, format, widget::shortened_start as cut,
+            SENDS, SPACING, button, char_width, faults, format, widest,
+            widget::shortened_start as cut,
         },
     },
 };
@@ -72,33 +72,24 @@ fn named(name: &str, columns: usize, fault: Option<&Fault>) -> String {
     }
 }
 
-/// Returns the columns of the widest of `names`, as the font shows them, in
-/// which a wide character such as a Chinese one takes two
-fn widest(names: &[String]) -> usize {
-    names.iter().map(|name| name.width()).max().unwrap_or(0)
-}
-
 /// Returns the columns that the names of the outputs of `app` take in the
 /// sends, from their plain names, and each name as told, with its fault in
 /// words where it has one.  A fault does not widen the room, so that one
 /// output that fails leaves the other entries as narrow as they were.
 fn labels(app: &App) -> (usize, Vec<(String, Option<&Fault>)>) {
     let outputs = app.workspace.outputs();
-    let columns = outputs
+    let shown: Vec<String> = outputs
         .iter()
-        .map(|output| output.name.width())
-        .max()
-        .unwrap_or(0)
-        .min(NAME_MOST);
-    let plain: Vec<String> = outputs
-        .iter()
-        .map(|output| cut(&output.name, columns))
+        .map(|output| one_line(&output.name))
         .collect();
+    let columns = widest(&shown).min(NAME_MOST);
+    let plain: Vec<String> = shown.iter().map(|name| cut(name, columns)).collect();
     let names = outputs
         .iter()
-        .map(|output| {
+        .zip(&shown)
+        .map(|(output, name)| {
             let fault = faults::fault(app, output.id);
-            (named(&output.name, columns, fault), fault)
+            (named(name, columns, fault), fault)
         })
         .collect();
     (widest(&plain), names)

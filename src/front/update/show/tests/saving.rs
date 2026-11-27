@@ -135,3 +135,11 @@ fn saving_ends_the_failure_to_open_whether_it_succeeds_or_fails() {
     let failed = broken().saved(failed);
     assert!(!failed.problems.open_failed && failed.problems.file.is_some());
 }
+
+#[test]
+fn saving_in_a_file_named_with_a_line_break_tells_on_one_line() {
+    let app = renamed(storm(), "Cue");
+    let save = saving(&app, "/shows/two\nlines.cinq.toml");
+    let told = app.saved(save).notices.told;
+    assert_eq!(told.as_deref(), Some("Saved two lines.cinq.toml"));
+}

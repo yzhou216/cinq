@@ -13,7 +13,10 @@
 use unicode_width::UnicodeWidthStr;
 
 use super::{hints_in, status};
-use crate::front::{App, view::widget::shortened};
+use crate::{
+    back::one_line,
+    front::{App, view::widget::shortened},
+};
 
 /// Fewest columns of the name that stay, its ellipsis among them, before a
 /// hint gives way to it
@@ -23,7 +26,7 @@ const KEPT: usize = 16;
 /// the hints beside it.  The hints fit beside the name at its least, and the
 /// name takes the room that they leave.
 pub(super) fn shown(app: &App, room: usize) -> (String, String) {
-    let name = app.show.name();
+    let name = one_line(&app.show.name());
     let rest = status(app, String::new())
         .iter()
         .map(|part| part.text.width())

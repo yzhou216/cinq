@@ -6,7 +6,7 @@
 //! operator does something else
 
 use crate::{
-    back::CueId,
+    back::{CueId, one_line},
     front::{keymap::Action, update::Clipped},
 };
 
@@ -35,9 +35,12 @@ pub(in crate::front) struct Notices {
 
 impl Notices {
     /// Returns the notices with `told` as what the latest opening or saving
-    /// told
+    /// told, on one line, since the name of a file in it can hold a line break
     pub(in crate::front) fn with_told(self, told: Option<String>) -> Self {
-        Self { told, ..self }
+        Self {
+            told: told.as_deref().map(one_line),
+            ..self
+        }
     }
 
     pub(in crate::front) fn with_clipped(self, clipped: Option<Clipped>) -> Self {

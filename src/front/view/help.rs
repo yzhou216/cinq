@@ -20,14 +20,13 @@ use iced::{
         text::{IntoFragment, Span},
     },
 };
-use strum::VariantArray;
 use texts::{counts, first_steps, operators};
 use unicode_width::UnicodeWidthStr;
 
 use super::{
     HELP, SPACING, button, char_width,
     cue_table::{CELL_SPACE, SCROLL_BAR},
-    hinted, theme,
+    hinted, theme, widest,
 };
 use crate::front::{
     App, Message,
@@ -91,10 +90,7 @@ fn bindings(keymap: &Keymap, names: bool) -> Element<'_, Message> {
 /// names for any window that is too narrow
 fn names_fit(keymap: &Keymap, room: f32) -> bool {
     let widest = |title: &str, text: &dyn Fn(Action) -> String| {
-        bound(keymap)
-            .into_iter()
-            .map(|action| text(action).width())
-            .fold(title.width(), usize::max)
+        widest(bound(keymap).into_iter().map(text)).max(title.width())
     };
     let columns = widest("Keys", &|action| keymap.listed(action))
         + widest("Name in config.toml", &|action| action.name().to_owned());
@@ -172,9 +168,7 @@ fn prose<'a>(part: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
 /// Returns the actions that the keymap binds to a key, in the order of the
 /// page, since a row with no key would only crowd the page
 fn bound(keymap: &Keymap) -> Vec<Action> {
-    Action::VARIANTS
-        .iter()
-        .copied()
+    Action::listed()
         .filter(|&action| keymap.key(action).is_some())
         .collect()
 }

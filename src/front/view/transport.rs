@@ -14,7 +14,7 @@ use super::{
     widget::{Button, shortened},
 };
 use crate::{
-    back::Cue,
+    back::{Cue, one_line},
     front::{App, Message},
 };
 
@@ -34,10 +34,23 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
     let list = app.current();
     let standby = list.standby.and_then(|id| app.workspace.cue(id));
     let [title, notes, chain] = lines(app, standby);
-    let chain = match app.workspace.moving(app.list) {
-        Some((target, seconds)) => format!("{}; {chain}", format::moving(target, seconds)),
-        None => chain,
-    };
+    let held = app
+        .workspace
+        .active()
+        .iter()
+        .filter(|active| active.paused)
+        .count();
+    let chain = [
+        format::paused(held),
+        app.workspace
+            .moving(app.list)
+            .map(|(target, seconds)| format::moving(target, seconds)),
+    ]
+    .into_iter()
+    .flatten()
+    .chain([chain])
+    .collect::<Vec<_>>()
+    .join("; ");
     let buttons = buttons(app);
     // The notes and the chain take the width under the title and the buttons,
     // which a narrow window puts under the title, so that it reads
@@ -67,7 +80,7 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
 fn lines(app: &App, standby: Option<&Cue>) -> [String; 3] {
     match standby {
         Some(cue) => {
-            let notes = Some(Cue::one_line(&cue.notes))
+            let notes = Some(one_line(&cue.notes))
                 .filter(|notes| !notes.is_empty())
                 .unwrap_or_else(|| "none".to_owned());
             [

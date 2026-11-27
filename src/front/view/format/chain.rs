@@ -64,6 +64,12 @@ pub fn moving(target: &Cue, seconds: f64) -> String {
     format!("Standby moves to {} in {}", number(target), span(seconds))
 }
 
+/// Tells how many cues are paused, for the chain to lead with, since a GO
+/// fires beside them
+pub fn paused(count: usize) -> Option<String> {
+    (count > 0).then(|| format!("{count} paused"))
+}
+
 /// Tells what the control cue `cue` does, as `GoTo 2` or
 /// `start E3 in Effects`, which is none for any other cue and for one that has
 /// no target

@@ -132,9 +132,16 @@ pub struct Cue {
     pub message: String,
 }
 
+/// Returns `text` on one line, with every run of white space, line breaks
+/// and tabs included, as one space, so that a name or a note from a show
+/// file never takes a second line of a display that has room for one
+pub fn one_line(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 impl fmt::Display for Cue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = Self::one_line(&self.name);
+        let name = one_line(&self.name);
         if self.number.trim().is_empty() {
             f.write_str(&name)
         } else {
@@ -144,13 +151,6 @@ impl fmt::Display for Cue {
 }
 
 impl Cue {
-    /// Returns `text` on one line, with every run of white space, line breaks
-    /// and tabs included, as one space, so that a name or a note from a show
-    /// file never takes a second line of a display that has room for one
-    pub fn one_line(text: &str) -> String {
-        text.split_whitespace().collect::<Vec<_>>().join(" ")
-    }
-
     fn new_name(kind: Kind) -> String {
         format!("New {kind} cue")
     }

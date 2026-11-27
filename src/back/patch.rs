@@ -9,7 +9,7 @@ use std::{fmt, ops::RangeInclusive};
 
 use serde::{Deserialize, Serialize};
 
-use super::items::replaced_where;
+use super::{cue::one_line, items::replaced_where};
 
 /// Universes as sACN numbers them, from 1, which Art-Net sends as
 /// Port-Addresses from 0
@@ -52,10 +52,10 @@ pub enum PatchEdit {
 
 impl fmt::Display for Instrument {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.name.trim().is_empty() {
+        if one_line(&self.name).is_empty() {
             write!(f, "{}", self.id.0)
         } else {
-            f.write_str(&self.name)
+            f.write_str(&one_line(&self.name))
         }
     }
 }

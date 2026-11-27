@@ -40,6 +40,7 @@ use iced::{
     },
 };
 use itertools::Itertools;
+use unicode_width::UnicodeWidthStr;
 
 use super::{
     App, Message,
@@ -172,7 +173,16 @@ fn char_width() -> f32 {
     *WIDTH
 }
 
-/// Counts the warnings that the sidebar lists
+/// Returns the columns of the font that the widest of `texts` takes, two for
+/// a wide character such as a Chinese one
+fn widest<S: AsRef<str>>(texts: impl IntoIterator<Item = S>) -> usize {
+    texts
+        .into_iter()
+        .map(|text| text.as_ref().width())
+        .max()
+        .unwrap_or(0)
+}
+
 pub(super) fn warnings(app: &App) -> usize {
     app.workspace.problems().count()
         + app.workspace.stranded().count()

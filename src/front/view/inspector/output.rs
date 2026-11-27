@@ -22,7 +22,7 @@ use iced::{
 
 use super::{lock, locked::locked};
 use crate::{
-    back::Output,
+    back::{Output, one_line},
     front::{
         App, Message, Setting,
         message::reasons::rejection,
@@ -118,11 +118,15 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     // Scrolls, so that no field is cut to a sliver in a low or narrow window
     // and Tab can reach one below the part in view
     scrollable(
-        column![text(format!("Output: {}{}", output.name, lock(app)))]
-            .extend(settings::of(app, output).into_iter().map(setting))
-            .push(sending(app, output))
-            .spacing(SPACING)
-            .width(Fill),
+        column![text(format!(
+            "Output: {}{}",
+            one_line(&output.name),
+            lock(app)
+        ))]
+        .extend(settings::of(app, output).into_iter().map(setting))
+        .push(sending(app, output))
+        .spacing(SPACING)
+        .width(Fill),
     )
     .spacing(SPACING)
     .id(FORMS)

@@ -12,10 +12,9 @@ pub const SELECTED: &str = "selected";
 pub const OUTPUTS: &str = "outputs";
 /// Sends of a cue, which the field that Tab reached scrolls into view
 pub const SENDS: &str = "sends";
-
-/// Identity of the forms of a tab that lie one above the other in a narrow
-/// window, and of the settings of an output, through which the field that Tab
-/// reached scrolls into view
+/// Forms of a tab that lie one above the other in a narrow window, the
+/// settings of an output, and the tables of the light patch and of the levels
+/// of a light cue, which the field that Tab reached scrolls into view
 pub const FORMS: &str = "forms";
 /// Sidebar, which the list that Tab reached scrolls into view
 pub const SIDEBAR_SCROLL: &str = "sidebar";

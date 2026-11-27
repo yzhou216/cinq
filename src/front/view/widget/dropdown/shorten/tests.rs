@@ -46,3 +46,23 @@ fn name_cut_at_its_start_keeps_the_end_within_its_columns() {
         );
     });
 }
+
+#[test]
+fn name_cut_at_its_start_never_begins_with_a_mark_that_lost_its_letter() {
+    // Accent after its letter takes no column, so the cut that drops the
+    // letter must drop the accent too
+    assert_eq!(shortened_start("abe\u{301}f", 2), "\u{2026}f");
+    assert_eq!(shortened_start("abe\u{301}f", 3), "\u{2026}e\u{301}f");
+}
+
+#[test]
+fn name_with_control_characters_never_outgrows_its_columns() {
+    use unicode_width::UnicodeWidthStr;
+    // A tab takes a column in the width of a string, as the check that a
+    // name needs no cut counts it
+    let tabs = "\t".repeat(10);
+    let cut = shortened(&format!("{tabs}abcdef"), 5);
+    assert!(cut.width() <= 5, "{cut:?}");
+    let cut = shortened_start(&format!("abcdef{tabs}"), 5);
+    assert!(cut.width() <= 5, "{cut:?}");
+}

@@ -180,3 +180,12 @@ fn the_target_menu_does_not_invite_a_choice_where_there_is_none() {
     assert_eq!(super::target::target_placeholder(false), "choose a cue");
     assert_eq!(super::target::target_placeholder(true), "no cue to choose");
 }
+
+#[test]
+fn the_then_box_of_a_cue_in_a_group_gives_only_the_reason() {
+    assert_eq!(super::then_text(&following(), true), "");
+    assert_eq!(
+        super::then_text(&following(), false),
+        Advance::Follow.to_string()
+    );
+}

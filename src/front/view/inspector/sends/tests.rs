@@ -7,7 +7,7 @@
 
 use super::{cut, labels, named, silent, widest};
 use crate::{
-    back::{Command, Cue, CueId, CueList, Fault, Kind, OutputId, Sends, Workspace},
+    back::{Command, Cue, CueId, CueList, Fault, Kind, OutputEdit, OutputId, Sends, Workspace},
     front::{App, Problems},
 };
 
@@ -77,7 +77,7 @@ fn names_that_share_a_beginning_stay_apart_when_cut() {
 fn the_room_of_the_names_counts_the_columns_that_a_wide_character_takes() {
     let names = |names: &[&str]| {
         widest(
-            &names
+            names
                 .iter()
                 .map(|name| (*name).to_owned())
                 .collect::<Vec<_>>(),
@@ -110,4 +110,15 @@ fn a_fault_on_one_output_leaves_the_room_of_the_other_names_as_it_was() {
     let (_, told) = labels(&faulty);
     assert_eq!(told[1].0, "Output 1 (not found)");
     assert!(told[1].1.is_some() && told[0].1.is_none() && told[2].1.is_none());
+}
+
+#[test]
+fn an_output_name_with_a_line_break_is_told_on_one_line() {
+    let app = App {
+        workspace: Workspace::new(vec![CueList::new("Main", Vec::new())]).apply(
+            Command::EditOutput(OutputId(1), OutputEdit::Name("House\r\nL".to_owned())),
+        ),
+        ..App::default()
+    };
+    assert_eq!(labels(&app).1[0].0, "House L");
 }

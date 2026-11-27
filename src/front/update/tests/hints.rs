@@ -30,8 +30,8 @@ fn place(act: Act, x: f32) -> Site {
 fn labelled() -> App {
     let places = vec![
         place(Act::Send(Message::SwitchList(1)), 0.0),
-        place(Act::Send(Message::ShowOutputs), 30.0),
-        place(Act::Reach, 60.0),
+        place(Act::Send(Message::ShowOutputs), 60.0),
+        place(Act::Reach, 120.0),
     ];
     let (app, _) = show(Some(CueId(2))).hinting();
     app.hinted(places)

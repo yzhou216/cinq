@@ -14,8 +14,8 @@ mod tests;
 
 use std::path::Path;
 
-use crate::back::{Active, Advance, Cue, Groups, Kind, Media, Phase, SILENCE, Workspace};
-pub use chain::{chain, moving};
+use crate::back::{Active, Advance, Cue, Groups, Kind, Media, Phase, SILENCE, Workspace, one_line};
+pub use chain::{chain, moving, paused};
 pub use change::change;
 use consequences::short;
 pub use consequences::{consequences, consequences_of, leading};
@@ -24,12 +24,11 @@ use notices::{of_cues, the_output};
 
 /// Formats seconds as `m:ss.s`
 fn clock(seconds: f64) -> String {
-    let tenths = (seconds.max(0.0) * 10.0).round() as u32;
+    let tenths = (seconds.max(0.0) * 10.0).round() as u64;
     format!("{}:{:02}.{}", tenths / 600, tenths / 10 % 60, tenths % 10)
 }
 
-/// Formats a time ahead as `4.5s`, or as a clock from a minute on, so that it
-/// reads as the time left of a running cue does
+/// Formats a time ahead as `4.5s`, or as a clock from a minute on
 fn span(seconds: f64) -> String {
     if seconds < 59.95 {
         format!("{seconds:.1}s")
@@ -118,7 +117,7 @@ pub fn target(workspace: &Workspace, groups: &Groups, cue: &Cue) -> String {
         // Counts every instrument that the cue names, patched or not, as the
         // Levels tab lists them
         Kind::Light => count(cue.lights.len(), "instrument"),
-        Kind::Network => cue.message.trim().to_owned(),
+        Kind::Network => one_line(&cue.message),
         Kind::Group => count(groups.members(cue.id).len(), "cue"),
         Kind::Wait | Kind::Memo => String::new(),
     }
@@ -132,13 +131,18 @@ fn elsewhere(workspace: &Workspace, cue: &Cue, target: &Cue) -> String {
     workspace
         .list_of(target.id)
         .filter(|other| own.is_some_and(|own| own != *other))
-        .map(|other| format!(" in {}", workspace.lists()[other].name))
+        .map(|other| format!(" in {}", one_line(&workspace.lists()[other].name)))
         .unwrap_or_default()
 }
 
-/// Formats a level in dB without the unit, as the level field holds it
+/// Formats a level in dB without the unit, as the level field holds it.
+/// Silence reads `-inf`, which every level field also takes as typed.
 pub fn decibels(db: f32) -> String {
-    format!("{db:+.1}")
+    if db <= SILENCE {
+        "-inf".to_owned()
+    } else {
+        format!("{db:+.1}")
+    }
 }
 
 /// Counts things by name, as in `1 cue` and `2 cues`
@@ -150,7 +154,7 @@ pub fn count(number: usize, noun: &str) -> String {
 pub fn phase(active: &Active) -> String {
     match active.phase() {
         Phase::Scheduled { starts_in: wait } | Phase::PreWait { remaining: wait } => {
-            format!("in {}", span(wait))
+            format!("in {}", clock(wait))
         }
         Phase::Running { remaining } => format!("{} left", clock(remaining)),
         Phase::Looping => "looping".to_owned(),
@@ -160,8 +164,9 @@ pub fn phase(active: &Active) -> String {
 }
 
 /// Describes an active cue in full for the list of running cues, with the
-/// time left and the level first, which an operator watches during a fade,
-/// so that a cut at the end takes the words that say why first
+/// time left, a pause, and the level first, in the order that the list drops
+/// them from the end when they do not fit, so that a fade loses its word
+/// before the level that shows it
 pub fn activity(active: &Active, cue: &Cue) -> String {
     let paused = if active.paused { ", paused" } else { "" };
     let fading = active.fade.map_or("", |_| ", fading");
@@ -170,12 +175,12 @@ pub fn activity(active: &Active, cue: &Cue) -> String {
     } else {
         String::new()
     };
-    format!("{}{level}{paused}{fading}", phase(active))
+    format!("{}{paused}{level}{fading}", phase(active))
 }
 
 pub(super) fn number(cue: &Cue) -> String {
     if cue.number.trim().is_empty() {
-        format!("\"{}\"", Cue::one_line(&cue.name))
+        format!("\"{}\"", one_line(&cue.name))
     } else {
         cue.number.clone()
     }

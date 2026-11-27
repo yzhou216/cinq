@@ -260,6 +260,17 @@ Each cue is a table in the array *cue* of its list:
 *pre_wait*
 	Seconds between the cue firing and its action, which are none by
 	default.
+	A time typed in the inspector, here and in the other settings of seconds,
+	reads as seconds, as _90_ or _1.5_, as minutes and seconds, as _1:30_, or as
+	hours, minutes, and seconds.
+	Text that reads as no time, as _5s_ does, counts as zero, and the header of
+	the inspector says so in red.
+	For *end*, *loop_start*, and *loop_end* it is empty instead, which leaves
+	the end at the end of the file and the loop at the bounds of the cue, and the
+	header says that.
+	A setting that the cue ignores, as the loop times of a cue that does not
+	loop, or the *post_wait* of a cue that follows automatically or lies in a
+	group, never brings the sentence.
 
 *duration*
 	Seconds that the action of a light, fade, or wait cue takes, which are
@@ -299,6 +310,8 @@ Each cue is a table in the array *cue* of its list:
 *stop_target*
 	Whether a fade cue stops its target once the fade is over, which it does
 	by default.
+	A picture has no level, so a fade cue that targets a picture and does
+	not stop it changes nothing, as the Levels tab of the inspector says.
 
 *sends*
 	Table of the levels in dB at which an audio or video cue sends to
@@ -629,6 +642,7 @@ The cues that act on other cues act on a group as follows:
 - A fade or devamp cue cannot name a group, as in QLab, and reads BAD TARGET,
   since a fade needs a sound, video, or picture, and a devamp cue an audio or
   video cue.
+  The warning of a devamp cue says that its target is not audio or video.
 
 *Panic* and *Pause all* act on every run, those of groups and of the cues in
 them alike.

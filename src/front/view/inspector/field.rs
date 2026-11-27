@@ -97,7 +97,7 @@ impl Field {
                 &app.config.keymap,
             )
             .into(),
-            Field::Then => locked(&cue.advance.to_string(), "", ignored, Fill),
+            Field::Then => locked(&then_text(cue, inside), "", ignored, Fill),
             Field::Start => field(cue.start.text(), |text| Edit::Start(text.into())),
             Field::End => field(cue.end.text(), |text| Edit::End(text.into())),
             Field::LoopStart => field(cue.loop_start.text(), |text| Edit::LoopStart(text.into())),
@@ -181,6 +181,17 @@ pub(super) fn unread(cue: &Cue, inside: bool, columns: &[&[Field]]) -> Option<St
                 field.label(cue)
             )
         })
+}
+
+/// Returns the Then value that a locked box shows.  A cue in a group goes on
+/// to no cue, so the box gives only the reason, which the narrow column
+/// would otherwise cut after a long value such as `auto-continue`.
+fn then_text(cue: &Cue, inside: bool) -> String {
+    if inside {
+        String::new()
+    } else {
+        cue.advance.to_string()
+    }
 }
 
 /// Shows a value in a box that the keyboard skips, so it lines up with

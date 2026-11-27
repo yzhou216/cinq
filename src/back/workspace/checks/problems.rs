@@ -29,7 +29,13 @@ impl Workspace {
             },
             Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo => {
                 match self.target(cue) {
-                    Some(target) if !cue.can_target(target) => Some(Problem::WrongTarget),
+                    Some(target) if !cue.can_target(target) => {
+                        Some(if cue.kind == Kind::Devamp && target.id != cue.id {
+                            Problem::NotAudioOrVideo
+                        } else {
+                            Problem::WrongTarget
+                        })
+                    }
                     Some(target) if cue.kind == Kind::Start && self.within(cue, target) => {
                         Some(Problem::InTarget)
                     }

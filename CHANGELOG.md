@@ -33,6 +33,78 @@ Major changes and improvements in each release of cinq, newest first.
 - The window no longer wakes every two seconds to look at the files of the
   show: a thread looks at their stamps and wakes it only for a file that
   changed, so that a large show idles near zero.
+- A name that cinq cuts short no longer runs past its room when it holds a tab
+  or another control character, as a file name can, nor begins with an accent
+  whose letter was cut, as an output in the sends of the inspector could.
+- A time of more than 13 years, such as `1e10` seconds typed in a time field,
+  shows in the cue list as the minutes and seconds that it is, where every
+  time beyond that limit showed as `7158278:49.5`.
+- A search takes the Greek final and other sigma, the Turkish dotted and
+  dotless `i` and the plain `i`, and the German `ß` and `ss` for the same
+  letters, in any case.  Before, a search for `ΟΔΥΣ` missed a cue named
+  `ΟΔΥΣΣΕΥΣ`, and one for `STRASSE` missed `Straße`.
+- A cue, cue list, output, light instrument, or show file whose name holds a
+  line break or a tab, as a hand-edited show file can give it, shows on one
+  line, with each run of white space in it as one space, in the cue list, the
+  outputs table, the sends, the headings of the inspector, the sidebar, the
+  hints of keys, the notices of the status bar, and the name of the show.
+  Before, the name took a second line or counted a column too many.
+- The message of a network cue that a show file holds with a line break or a
+  tab, as in `message = "/scene\n\"Act 1\""`, shows on one line in the Target
+  column of the cue list, as a name does.  Before, it took a second line.
+- Tab onto a field or a button of the Light Patch tab, or of the Levels tab of a
+  light cue, scrolls the table to show it, as it does on the sends.  Before,
+  the keyboard moved to a row below the part in view and typing edited a field
+  that nobody could see.
+- Hint mode no longer lets two labels cover each other where a button at the
+  left edge of the window is close to the next control, as Standby selected is
+  to Show mode in a window 800 pixels wide.  Before, the label of the button
+  lay on the label of the check box and neither could be read.  Now it lies at
+  the left edge of the window.
+- Hint mode no longer lets labels cover each other where several controls lie
+  near the left edge of the window.  Before, two labels that both moved to the
+  edge lay on each other, and one could cover a label that lay left of its
+  control nearer to the edge than its own width.  Now each takes the room that
+  the labels before it left.
+- Undo and redo of an edit of the light patch tell which instrument they
+  changed, as in `Undid: added instrument 4`, `Undid: renamed instrument
+  Front to Key`, and `Undid: changed the address of instrument Back to 2/12`.
+  Before, they said only `changed the light patch`.
+- A level of -60 dB reads `-inf` in the level field of a cue, a send, the new
+  cues of an output, and the list of running cues, as `-inf` is typed.
+  Before, it read `-60.0`, so that silence read two ways.
+- The Levels tab of a fade cue that targets a picture cue and does not stop it
+  says `A picture has no level, so this fade changes nothing`.  Before, the
+  fade ran and the tab said nothing.
+- While any cue is paused, the chain line of the transport leads with how many,
+  as `2 paused; GO fires 1 cue: 6`.  Before, only the cue table and Active said
+  so, and the transport read as if all were playing.
+- A cue that waits before it starts reads `in 0:16.1` in Active and in the
+  State column, in the figures of `0:04.0 left`.  Before, it read `in 16.1s`.
+- An open drop-down list, such as the list of the kind of cue to add, no longer
+  hints `cc: rename` after a cue was added.  Before, the hint stayed although
+  the list took the keys, so that `cc` did nothing.
+- The help page lists the keys of `pick` and `close_menu` right after that of
+  `cancel`, with the keys that act in a menu, and no longer between those of
+  `hint` and `add_below`.  The table of cinq(5) has the same order.
+- The `Default device` list in the sidebar reads `Not found:` before the ID of
+  a device that is not there.  Before, only the yellow of the ID told it.
+- A devamp cue whose target is a group, a picture, or any cue but an audio or
+  video cue tells `target is not audio or video` in the warnings and the
+  inspector, where it said `cannot act on its target cue`, which did not say
+  what to change.
+- The Then box of a cue in a group shows only `(in a group)`.  Before, it
+  showed the value in front of the reason, and at 1024x768 the reason was cut
+  to `wait for GO (in a gro`.
+- A running fade or devamp cue whose target is not playing says `target not
+  playing` in yellow in Active, where it read the time left and `fades 5` in
+  green for its whole length, though it changed nothing.
+- A running cue in the Active list of the sidebar drops the parts of its line
+  that do not fit whole, from the end.  A fading film at 1024x768 read
+  `0:05.6 left, -14.9 dB,…`, cut within its last part, and now reads
+  `0:05.6 left, -14.9 dB`.  A pause now comes before the level, so that a
+  narrow sidebar keeps it.
+- The help line for hint mode says "check box" where it said "checkbox".
 
 ## v0.1.7
 

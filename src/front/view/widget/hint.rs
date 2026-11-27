@@ -27,7 +27,7 @@ use iced::{
 
 use super::wrap::{Intercept, wrap};
 use crate::front::Message;
-pub use layer::{corner, layer, width};
+pub use layer::{corners, layer, width};
 pub use visit::{places, reach};
 
 /// What choosing a place by its label does

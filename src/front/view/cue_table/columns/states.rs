@@ -73,7 +73,7 @@ pub(in crate::front::view::cue_table) fn state(
             Problem::NotLoaded => return ("loading".to_owned(), text::default),
             Problem::NoFile => "NO FILE",
             Problem::NoTarget => "NO TARGET",
-            Problem::WrongTarget => "BAD TARGET",
+            Problem::WrongTarget | Problem::NotAudioOrVideo => "BAD TARGET",
             Problem::InTarget => "IN TARGET",
             Problem::NotLooping => "NO LOOP",
             Problem::NoDestination => "NO DESTINATION",

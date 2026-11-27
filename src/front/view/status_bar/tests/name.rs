@@ -48,3 +48,9 @@ fn hints_give_way_once_the_name_is_down_to_its_least() {
     let (name, hints) = shown(&app, rest + 16 + help - 1);
     assert_eq!((name.width(), hints.as_str()), (16 + help - 1, ""));
 }
+
+#[test]
+fn a_name_with_a_line_break_shows_on_one_line() {
+    let (name, _) = shown(&named("a\nb\t.toml"), COLUMNS);
+    assert_eq!(name, "a b .toml");
+}

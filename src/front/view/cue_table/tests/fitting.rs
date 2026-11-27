@@ -151,3 +151,24 @@ fn a_wider_list_never_gives_a_name_less_room_than_it_needs() {
         .map(|room| (room, name_room(room).0, name_room(room + 1.0).0));
     assert_eq!(worse.next(), None);
 }
+
+#[test]
+fn a_name_or_a_message_with_line_breaks_takes_the_room_of_its_one_line() {
+    let message = Cue::new(CueId(1), "1", Kind::Network, "Send")
+        .message("/scene\n\t\"Act 1\"\r\n2")
+        .build();
+    [
+        (
+            Cue::new(CueId(1), "1", Kind::Memo, "two\nlines").build(),
+            Column::Name,
+            "two lines",
+        ),
+        (message, Column::Target, "/scene \"Act 1\" 2"),
+    ]
+    .into_iter()
+    .for_each(|(cue, column, text)| {
+        let list = CueList::new("Main", vec![cue.clone()]);
+        let groups = Layout::of(&list).groups;
+        assert_eq!(column.text(&Workspace::default(), &groups, &cue), text);
+    });
+}

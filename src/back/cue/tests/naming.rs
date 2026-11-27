@@ -33,5 +33,5 @@ fn chosen_sound_file_names_a_cue_until_the_operator_names_it() {
 fn a_name_with_line_breaks_reads_on_one_line() {
     let cue = Cue::new(CueId(1), "4", Kind::Audio, "Two\nlines\t name").build();
     assert_eq!(cue.to_string(), "4 Two lines name");
-    assert_eq!(Cue::one_line("a\n\n  \nb\r\n"), "a b");
+    assert_eq!(one_line("a\n\n  \nb\r\n"), "a b");
 }

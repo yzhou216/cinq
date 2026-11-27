@@ -24,26 +24,26 @@ use crate::front::{
 
 /// Returns `value` in a box as wide as `width` and as high as a field, so
 /// that the inspector keeps its height as the selection moves, with the dim
-/// `placeholder` where the value is empty, as a field shows it, and then
-/// `reason` in dim text where something tells why the value is ignored
+/// `placeholder` where the value is empty, and then `reason` in dim text
+/// where something tells why the value is ignored
 pub(super) fn locked<'a>(
     value: &str,
     placeholder: &str,
     reason: Option<&'static str>,
     width: Length,
 ) -> Element<'a, Message> {
-    let value = if value.is_empty() {
-        text(placeholder.to_owned()).style(text::secondary)
-    } else {
-        text(value.to_owned())
+    let value = match (value.is_empty(), placeholder.is_empty()) {
+        (false, _) => Some(text(value.to_owned())),
+        (true, false) => Some(text(placeholder.to_owned()).style(text::secondary)),
+        (true, true) => None,
     }
-    .wrapping(Wrapping::None);
+    .map(|value| value.wrapping(Wrapping::None));
     let reason = reason.map(|reason| {
         text(format!("({reason})"))
             .style(text::secondary)
             .wrapping(Wrapping::None)
     });
-    container(row![value].push(reason).spacing(SPACING))
+    container(row![].push(value).push(reason).spacing(SPACING))
         .padding(text_input::DEFAULT_PADDING)
         .height(height())
         .width(width)

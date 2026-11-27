@@ -5,6 +5,10 @@
 //! Tests of how a cue that plays is told by its time and level
 
 use super::*;
+use crate::{
+    back::{SILENCE, parse_level},
+    front::view::format::decibels,
+};
 
 #[test]
 fn a_run_moved_below_silence_is_told_at_silence() {
@@ -30,7 +34,16 @@ fn a_run_moved_below_silence_is_told_at_silence() {
     let active = ducked.active_of(CueId(1)).expect("the cue plays");
     assert_eq!(active.level, -90.0);
     let cue = ducked.cue(CueId(1)).expect("the cue is there");
-    assert_eq!(activity(active, cue), "0:08.0 left, -60.0 dB");
+    assert_eq!(activity(active, cue), "0:08.0 left, -inf dB");
+}
+
+#[test]
+fn silence_reads_as_it_is_typed() {
+    assert_eq!(
+        [SILENCE, -59.9, 0.0, 12.0].map(decibels),
+        ["-inf", "-59.9", "+0.0", "+12.0"]
+    );
+    assert_eq!(parse_level(&decibels(SILENCE)), Some(SILENCE));
 }
 
 #[test]
@@ -63,4 +76,19 @@ fn a_devamped_run_is_told_by_the_time_it_has_left_instead_of_looping() {
         .into_iter()
         .fold(workspace, Workspace::apply);
     assert_eq!(told(&devamped), "0:08.0 left, +0.0 dB");
+}
+
+#[test]
+fn a_wait_ahead_is_told_in_the_figures_of_the_time_left() {
+    let waiting = [
+        Command::Edit(CueId(1), Edit::PreWait(16.1.into())),
+        Command::Go { list: 0 },
+    ]
+    .into_iter()
+    .fold(
+        Workspace::new(vec![CueList::new("Main", vec![memo(1)])]),
+        Workspace::apply,
+    );
+    let active = waiting.active_of(CueId(1)).expect("the cue waits");
+    assert_eq!(phase(active), "in 0:16.1");
 }

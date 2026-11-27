@@ -96,3 +96,12 @@ fn go_panic_save_and_help_give_way_before_the_rename_of_a_cue_just_added() {
     let with_save = "Added cue 1 | u: undo | cc: rename | Control+s: save | ?: help";
     assert_eq!(fitted(&hints, with_save.width(), &YIELDING), with_save);
 }
+
+#[test]
+fn an_open_menu_hints_no_rename_since_its_keys_never_reach_the_name() {
+    let app = App {
+        workspace: added(),
+        ..opened(true, false)
+    };
+    assert!(texts(&app).iter().all(|hint| !hint.contains("rename")));
+}

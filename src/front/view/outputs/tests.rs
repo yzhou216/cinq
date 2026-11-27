@@ -132,3 +132,15 @@ fn the_device_keeps_a_name_of_two_words_whole_in_a_window_of_512_pixels() {
     let columns = fitting(&app, wide(room));
     assert!(device_room(&columns, wide(room)) >= 14.0 * char_width());
 }
+
+#[test]
+fn a_name_with_a_line_break_shows_on_one_line() {
+    let app = App {
+        workspace: Workspace::new(vec![CueList::new("Main", Vec::new())]).apply(
+            Command::EditOutput(OutputId(1), OutputEdit::Name("House\n\tLeft".to_owned())),
+        ),
+        ..App::default()
+    };
+    let output = &app.workspace.outputs()[0];
+    assert_eq!(Column::Name.text(&app, 0, output), "House Left");
+}

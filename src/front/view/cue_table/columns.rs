@@ -12,8 +12,8 @@ use unicode_width::UnicodeWidthStr;
 
 use super::{RADIO, STATE_ROOM, TARGET_MOST};
 use crate::{
-    back::{Cue, Groups, Workspace},
-    front::view::{char_width, format},
+    back::{Cue, Groups, Workspace, one_line},
+    front::view::{char_width, format, widest},
 };
 pub(super) use states::{Look, counted, shown_lines};
 
@@ -53,7 +53,7 @@ impl Column {
         match self {
             Column::Number => cue.number.clone(),
             Column::Type => cue.kind.to_string(),
-            Column::Name => cue.name.clone(),
+            Column::Name => one_line(&cue.name),
             Column::Target => format::target(workspace, groups, cue),
             Column::Pre => format::wait(cue.pre_wait.value().into()),
             Column::Action => format::action(groups, cue),
@@ -91,12 +91,7 @@ impl Column {
             .list()
             .cues
             .iter()
-            .flat_map(|cue| {
-                self.text(workspace, groups, cue)
-                    .lines()
-                    .map(UnicodeWidthStr::width)
-                    .collect::<Vec<_>>()
-            })
+            .map(|cue| widest(self.text(workspace, groups, cue).lines()))
             .fold(self.title().width(), usize::max)
     }
 

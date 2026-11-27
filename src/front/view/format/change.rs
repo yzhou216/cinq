@@ -7,6 +7,7 @@
 use std::cmp::Ordering;
 
 mod edit;
+mod patch;
 
 use super::{consequences, number, of_cues, short, the_output};
 use crate::back::{Change, CueId, Output, OutputId, Workspace, output_moved_between};
@@ -48,7 +49,11 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
             Some(cue) => format!("moved standby to cue {}", number(cue)),
             None => "moved standby past the end".to_owned(),
         },
-        Change::Patched { .. } => "changed the light patch".to_owned(),
+        Change::Patched {
+            edit,
+            before,
+            after,
+        } => patch::patched(edit, before, after),
         Change::Restored { .. } => "brought back the unsaved changes".to_owned(),
         Change::Outputs {
             before,

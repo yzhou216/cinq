@@ -19,12 +19,12 @@ use super::{
     output::{help, refusal, styled, typing},
 };
 use crate::{
-    back::{Instrument, PatchEdit},
+    back::{Instrument, PatchEdit, one_line},
     front::{
         App, Message, Setting,
         message::reasons::{address_help, rejection},
         view::{
-            ADDRESS, button, char_width,
+            ADDRESS, FORMS, button, char_width,
             cue_table::{CELL_SPACE, SCROLL_BAR},
             reached, theme,
             widget::hint,
@@ -126,7 +126,7 @@ fn body(app: &App, width: f32) -> Element<'_, Message> {
         // Left of the names, room for the labels of hint mode, which the
         // Setting column gives in the other tabs, so that they do not meet
         // the labels of the tabs beside them
-        container(scrollable(instruments).height(Fill))
+        container(scrollable(instruments).id(FORMS).height(Fill))
             .padding(Padding::ZERO.left(hint::width(2)))
             .into()
     }
@@ -143,7 +143,7 @@ fn name_column(app: &App) -> Column<'_> {
                     .on_input(move |name| Message::Patch(PatchEdit::Name(id, name))),
             )
         } else {
-            locked(&instrument.name, "", None, Fill)
+            locked(&one_line(&instrument.name), "", None, Fill)
         }
     })
     .width(Fill)

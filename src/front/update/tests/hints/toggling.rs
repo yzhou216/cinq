@@ -33,17 +33,17 @@ fn each_label_shows_left_of_its_place_at_its_height() {
     let app = labelled();
     let corners: Vec<_> = app.hints.iter().flat_map(|hints| hints.labels()).collect();
     let left_of = |x| {
-        hint::corner(
+        hint::corners(&[(
             Rectangle::new(Point::new(x, 10.0), Size::new(20.0, 20.0)),
             1,
-        )
+        )])[0]
     };
     assert_eq!(
         corners,
         [
             ("s", left_of(0.0)),
-            ("a", left_of(30.0)),
-            ("d", left_of(60.0)),
+            ("a", left_of(60.0)),
+            ("d", left_of(120.0)),
         ]
     );
     assert_eq!(
@@ -51,7 +51,7 @@ fn each_label_shows_left_of_its_place_at_its_height() {
         Point::new(20.0, 10.0),
         "right of the place that lies at the window edge"
     );
-    assert!(corners[1].1.x < 30.0 && corners[2].1.x < 60.0);
+    assert!(corners[1].1.x < 60.0 && corners[2].1.x < 120.0);
 }
 
 #[test]

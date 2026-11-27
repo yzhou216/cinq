@@ -3,8 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Tests of the manual page of the configuration file, whose table lists
-//! the keys that the keymap binds to every action in the order of the help
-//! page, since a key bound to two actions goes to the one listed first
+//! the keys of every action in the order of the help page
 
 use std::iter;
 
@@ -58,9 +57,8 @@ fn notated(keymap: &Keymap, action: Action) -> String {
 fn manual_lists_the_keys_of_the_keymap_in_order() {
     let keymap = Keymap::default();
     let header = vec!["Action".to_owned(), keymap.name().to_owned()];
-    let actions = Action::VARIANTS
-        .iter()
-        .map(|&action| vec![action.name().to_owned(), notated(&keymap, action)]);
+    let actions =
+        Action::listed().map(|action| vec![action.name().to_owned(), notated(&keymap, action)]);
     // Fails on the first row of man/cinq.5.scd that differs
     itertools::assert_equal(table(), iter::chain([header], actions));
 }

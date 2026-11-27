@@ -80,7 +80,7 @@ impl Action {
             Action::NextField => "Move to the next field",
             Action::PreviousField => "Move to the previous field",
             Action::Hint => {
-                "Label the buttons, checkboxes, tabs, drop-down lists, fields, and links, to act on one by typing its label"
+                "Label the buttons, check boxes, tabs, drop-down lists, fields, and links, to act on one by typing its label"
             }
             Action::Pick => "Pick the highlighted option of an open menu",
             Action::CloseMenu => "Close an open menu without picking an option",

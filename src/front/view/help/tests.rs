@@ -74,3 +74,12 @@ fn the_names_in_the_configuration_file_give_way_in_a_window_too_narrow_for_them(
         assert!(kept.windows(2).all(|pair| pair[1] == pair[0] + 1.0));
     });
 }
+
+#[test]
+fn the_keys_of_a_menu_follow_cancel_and_precede_the_moves_that_act_there_too() {
+    let vi = bound(&Keymap::default());
+    let at = |action| vi.iter().position(|&listed| listed == action).unwrap();
+    assert_eq!(at(Action::Pick), at(Action::Cancel) + 1);
+    assert_eq!(at(Action::CloseMenu), at(Action::Pick) + 1);
+    assert_eq!(at(Action::Next), at(Action::CloseMenu) + 1);
+}

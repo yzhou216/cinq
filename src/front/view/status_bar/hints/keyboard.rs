@@ -13,7 +13,7 @@ use super::{
     menu_open,
 };
 use crate::{
-    back::{Change, Turn},
+    back::{Change, Turn, one_line},
     front::{
         App,
         keymap::{Action, Press},
@@ -50,7 +50,7 @@ pub(in crate::front::view::status_bar) fn place(app: &App, spot: Spot) -> String
         app.workspace
             .lists()
             .get(index)
-            .map_or_else(String::new, |list| shortened(&list.name, PLACE))
+            .map_or_else(String::new, |list| shortened(&one_line(&list.name), PLACE))
     };
     match spot {
         Spot::Outputs | Spot::Output(_) => "the outputs".to_owned(),
@@ -107,10 +107,12 @@ pub(in crate::front::view::status_bar) fn acts_here(app: &App, action: Action) -
 }
 
 /// Returns whether the latest change added a cue, whose default name the key
-/// of renaming selects whole, while the cue list is in view
+/// of renaming selects whole, while the cue list is in view and no menu takes
+/// the keys
 pub(super) fn renaming(app: &App) -> bool {
     app.editable()
         && !app.outputs_shown
+        && !menu_open(app)
         && matches!(
             app.workspace.latest_change(),
             Some((Turn::Done, Change::Added { .. }))

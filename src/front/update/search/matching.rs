@@ -7,6 +7,9 @@
 //! A row is the texts that a search matches: those that its columns show, but
 //! for the state.
 
+#[cfg(test)]
+mod tests;
+
 /// Returns the `count` rows that follow `row` down the list, wrapping around
 /// and ending on `row`, or up the list when `backward`.  Without a row they
 /// begin at the top, or at the bottom going up.
@@ -29,13 +32,27 @@ pub(super) fn wrapped(from: Option<usize>, to: Option<usize>, backward: bool) ->
         .is_some_and(|(from, to)| if backward { to >= from } else { to <= from })
 }
 
+/// Returns `text` in lowercase, with the letters that a search takes for
+/// each other written alike: the Greek sigma that ends a word, the dotted and
+/// dotless Turkish `i`, and the German sharp `s`.  Each character is folded
+/// alone, since the lowercase of a whole string turns a capital sigma at the
+/// end of the text into the final sigma, which a search for the first part of
+/// a word then misses.
+fn folded(text: &str) -> String {
+    text.chars()
+        .map(|character| match character {
+            '\u{3c2}' => "\u{3c3}".to_owned(),
+            '\u{131}' | '\u{130}' => "i".to_owned(),
+            '\u{df}' | '\u{1e9e}' => "ss".to_owned(),
+            other => other.to_lowercase().collect(),
+        })
+        .collect()
+}
+
 /// Returns whether one of the texts of a row holds `needle`, which is
-/// lowercase, in any case
+/// [`folded`], in any case
 fn matches(texts: &[String], needle: &str) -> bool {
-    !needle.is_empty()
-        && texts
-            .iter()
-            .any(|text| text.to_lowercase().contains(needle))
+    !needle.is_empty() && texts.iter().any(|text| folded(text).contains(needle))
 }
 
 /// Returns the first row after `row` that matches `text`, wrapping around,
@@ -46,13 +63,13 @@ pub(super) fn found(
     row: Option<usize>,
     backward: bool,
 ) -> Option<usize> {
-    let needle = text.to_lowercase();
+    let needle = folded(text);
     rows_after(row, rows.len(), backward).find(|&row| matches(&rows[row], &needle))
 }
 
 /// Returns how many rows hold `text`
 pub(super) fn matching(rows: &[Vec<String>], text: &str) -> usize {
-    let needle = text.to_lowercase();
+    let needle = folded(text);
     rows.iter().filter(|texts| matches(texts, &needle)).count()
 }
 

@@ -69,10 +69,23 @@ impl Hints {
     /// those typed, with the point of the window that its box begins at, which
     /// leaves its place in view
     pub fn labels(&self) -> impl Iterator<Item = (&str, Point)> {
-        self.places.iter().filter_map(|(label, place)| {
-            let letters = label.strip_prefix(self.typed.as_str())?;
-            Some((letters, hint::corner(place.shown, letters.chars().count())))
-        })
+        let shown: Vec<_> = self
+            .places
+            .iter()
+            .filter_map(|(label, place)| {
+                Some((label.strip_prefix(self.typed.as_str())?, place.shown))
+            })
+            .collect();
+        let corners = hint::corners(
+            &shown
+                .iter()
+                .map(|(letters, place)| (*place, letters.chars().count()))
+                .collect::<Vec<_>>(),
+        );
+        shown
+            .into_iter()
+            .zip(corners)
+            .map(|((letters, _), at)| (letters, at))
     }
 
     fn begun(&self, typed: &str) -> bool {

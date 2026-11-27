@@ -135,3 +135,27 @@ fn a_cue_added_below_a_group_or_one_of_its_cues_is_told_to_be_in_a_group() {
         "added cue 4"
     );
 }
+
+#[test]
+fn an_edit_of_the_light_patch_is_told_by_the_instrument_it_changed() {
+    let patched = |edits: &[PatchEdit]| {
+        told(&edits.iter().cloned().fold(
+            Workspace::new(vec![CueList::new("Main", vec![memo(1)])]),
+            |shown, edit| shown.apply(Command::Patch(edit)),
+        ))
+    };
+    let id = InstrumentId(1);
+    assert_eq!(patched(&[PatchEdit::Add]), "added instrument 1");
+    assert_eq!(
+        patched(&[PatchEdit::Add, PatchEdit::Remove(id)]),
+        "removed instrument 1"
+    );
+    assert_eq!(
+        patched(&[PatchEdit::Add, PatchEdit::Name(id, "Front".to_owned())]),
+        "renamed instrument 1 to Front"
+    );
+    assert_eq!(
+        patched(&[PatchEdit::Add, PatchEdit::Address(id, 2, 12)]),
+        "changed the address of instrument 1 to 2/12"
+    );
+}

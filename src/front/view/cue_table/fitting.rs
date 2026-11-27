@@ -11,9 +11,12 @@ use super::{
     CELL_SPACE, Column, FAILED_ROOM, INDENT, NAME_LEAST, NAME_MOST, STATE_LEAST, TARGET_GROWN,
     TARGET_ROOM, columns::counted, faults, layout::Layout,
 };
-use crate::front::{
-    App,
-    view::{char_width, giving_way},
+use crate::{
+    back::one_line,
+    front::{
+        App,
+        view::{char_width, giving_way},
+    },
 };
 
 /// What gives way when the room is short, in turn
@@ -121,7 +124,7 @@ fn widest_name(app: &App, layout: &Layout) -> usize {
         .iter()
         .map(|cue| {
             let count = counted(&app.workspace, groups, cue).map_or(0, |count| count.width());
-            cue.name.width() + count + usize::from(layout.depth(cue)) * INDENT
+            one_line(&cue.name).width() + count + usize::from(layout.depth(cue)) * INDENT
         })
         .max()
         .unwrap_or(0)

@@ -16,7 +16,10 @@ use super::super::{
     faults::{self, Warning},
     format, warnings,
 };
-use crate::front::{App, Message};
+use crate::{
+    back::one_line,
+    front::{App, Message},
+};
 
 /// Most warnings that the sidebar lists, so that the Default device list
 /// below them stays in view, the rest being counted in a line of their own
@@ -68,7 +71,11 @@ fn outputs_failing(app: &App) -> impl Iterator<Item = Element<'_, Message>> {
                 format!("{}: {state} ({count}){reason}", named(app, device))
             }
             Warning::Channels { output, fault } => {
-                format!("{}: {}", output.name, fault.state().to_lowercase())
+                format!(
+                    "{}: {}",
+                    one_line(&output.name),
+                    fault.state().to_lowercase()
+                )
             }
         };
         pressing(told, Message::InspectOutput(warning.output()))

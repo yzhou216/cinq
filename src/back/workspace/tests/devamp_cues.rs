@@ -24,7 +24,7 @@ fn devamp_cue_needs_a_target_that_loops() {
         problems(&show),
         [
             (3, Problem::NotLooping),
-            (6, Problem::WrongTarget),
+            (6, Problem::NotAudioOrVideo),
             (7, Problem::WrongTarget),
             (8, Problem::NoTarget),
         ]

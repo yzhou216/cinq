@@ -11,10 +11,14 @@ use iced::{
 
 use super::{
     Act, Hidden, Site, Target, Window,
-    layer::{PADDING, corner},
+    layer::{PADDING, corners, width},
     visit::walk,
 };
-use crate::front::{Message, fixtures::Scrolled, view::char_width};
+use crate::front::{
+    Message,
+    fixtures::Scrolled,
+    view::{char_width, line_height},
+};
 
 fn rectangle(x: f32, y: f32, width: f32, height: f32) -> Rectangle {
     Rectangle::new(Point::new(x, y), Size::new(width, height))
@@ -151,6 +155,11 @@ fn a_place_keeps_its_layout_bounds_and_the_bounds_that_it_shows_at() {
     assert_eq!(places[0].shown, rectangle(5.0, 10.0, 50.0, 20.0));
 }
 
+/// Returns the point that the label of a place that stands alone begins at
+fn corner(place: Rectangle, letters: usize) -> Point {
+    corners(&[(place, letters)])[0]
+}
+
 #[test]
 fn a_label_lies_left_of_its_place_with_its_right_edge_at_the_left_edge_of_the_place() {
     let place = rectangle(300.0, 50.0, 40.0, 20.0);
@@ -177,4 +186,69 @@ fn a_label_that_would_leave_the_window_lies_right_of_its_place() {
         corner(rectangle(0.0, 5.0, 40.0, 20.0), 1),
         Point::new(40.0, 5.0)
     );
+}
+
+#[test]
+fn a_label_right_of_its_place_gives_way_to_a_label_there_by_lying_at_the_window_edge() {
+    // A wide button at the window edge, and a check box 11 pixels right of it
+    let button = rectangle(10.0, 100.0, 174.0, 30.0);
+    let check_box = rectangle(195.0, 104.0, 15.0, 15.0);
+    let at = corners(&[(button, 1), (check_box, 1)]);
+    assert_eq!(at[0], Point::new(0.0, 100.0));
+    assert_eq!(at[1], corner(check_box, 1));
+    let boxes: Vec<_> = at
+        .iter()
+        .map(|at| rectangle(at.x, at.y, width(1), line_height()))
+        .collect();
+    assert!(!boxes[0].intersects(&boxes[1]));
+}
+
+#[test]
+fn a_label_right_of_its_place_stays_there_where_no_label_lies_there() {
+    let button = rectangle(10.0, 100.0, 174.0, 30.0);
+    let check_box = rectangle(435.0, 104.0, 15.0, 15.0);
+    assert_eq!(
+        corners(&[(button, 1), (check_box, 1)])[0],
+        Point::new(184.0, 100.0)
+    );
+}
+
+/// Returns whether any two of the labels at `at`, each of `letters` letters,
+/// lie on each other
+fn overlap(at: &[Point], letters: &[usize]) -> bool {
+    let boxes: Vec<_> = at
+        .iter()
+        .zip(letters)
+        .map(|(at, &letters)| rectangle(at.x, at.y, width(letters), line_height()))
+        .collect();
+    boxes
+        .iter()
+        .enumerate()
+        .any(|(index, one)| boxes[index + 1..].iter().any(|other| one.intersects(other)))
+}
+
+#[test]
+fn labels_that_both_fall_back_to_the_window_edge_on_one_row_lie_apart() {
+    // Two places near the window edge, whose right sides a long label that
+    // lies left of its place on the same row covers, so both fall back
+    let letters = (300.0 / char_width()).ceil() as usize;
+    let wall = rectangle(400.0, 100.0, 40.0, 20.0);
+    let labels = [
+        (rectangle(2.0, 100.0, 100.0, 20.0), 1),
+        (rectangle(3.0, 100.0, 100.0, 20.0), 1),
+        (wall, letters),
+    ];
+    let at = corners(&labels);
+    assert!(!overlap(&at, &[1, 1, letters]), "{at:?}");
+}
+
+#[test]
+fn a_label_at_the_window_edge_leaves_a_label_left_of_its_place_in_view() {
+    // The first label lies left of its place and starts 5 pixels from the
+    // window edge, and the second, which has more letters, cannot lie right
+    // of its place, so it falls back to the edge
+    let near = rectangle(5.0 + width(1), 100.0, 10.0, 20.0);
+    let crowded = rectangle(3.0, 100.0, 10.0, 20.0);
+    let at = corners(&[(near, 1), (crowded, 3)]);
+    assert!(!overlap(&at, &[1, 3]), "{at:?}");
 }

@@ -21,10 +21,10 @@ use unicode_width::UnicodeWidthStr;
 use super::{
     char_width,
     cue_table::{CELL_SPACE, RADIO, SCROLL_BAR},
-    giving_way,
+    giving_way, widest,
 };
 use crate::{
-    back::{Device, Fault, Output},
+    back::{Device, Fault, Output, one_line},
     front::{
         App, Message,
         view::{faults, format},
@@ -95,7 +95,7 @@ impl Column {
     fn text(self, app: &App, row: usize, output: &Output) -> String {
         match self {
             Column::Number => (row + 1).to_string(),
-            Column::Name => output.name.clone(),
+            Column::Name => one_line(&output.name),
             Column::Device => device(&output.device).to_owned(),
             Column::Channels => output.channels.to_string(),
             Column::NewCues => output.new_cues.map_or_else(
@@ -108,13 +108,13 @@ impl Column {
 
     /// Returns the width of the widest text of the column, its title included
     fn widest(self, app: &App) -> f32 {
-        app.workspace
+        let texts = app
+            .workspace
             .outputs()
             .iter()
             .enumerate()
-            .map(|(row, output)| self.text(app, row, output).width())
-            .fold(<&str>::from(self).width(), usize::max) as f32
-            * char_width()
+            .map(|(row, output)| self.text(app, row, output));
+        widest(texts).max(<&str>::from(self).width()) as f32 * char_width()
     }
 
     /// Returns the width of the column: Device takes what the others leave,

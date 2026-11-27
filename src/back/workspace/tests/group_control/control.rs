@@ -73,6 +73,6 @@ fn fade_and_devamp_cues_cannot_target_a_group() {
     ]);
     assert_eq!(
         problems(&workspace),
-        [(3, Problem::WrongTarget), (4, Problem::WrongTarget)]
+        [(3, Problem::WrongTarget), (4, Problem::NotAudioOrVideo)]
     );
 }

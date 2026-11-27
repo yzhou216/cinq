@@ -14,7 +14,7 @@ use itertools::Itertools;
 
 use super::count;
 use crate::{
-    back::{Change, Output, Workspace},
+    back::{Change, Output, Workspace, one_line},
     front::view::widget::shortened,
 };
 
@@ -57,7 +57,7 @@ pub fn leading(facts: Option<String>, told: &str) -> String {
 
 /// Cuts the name of an output to the room that a notice keeps for it
 pub(super) fn short(name: &str) -> String {
-    shortened(name, NAME_ROOM)
+    shortened(&one_line(name), NAME_ROOM)
 }
 
 /// Returns the outputs that the change from `before` to `after` started

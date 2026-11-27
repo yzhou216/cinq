@@ -10,10 +10,10 @@ mod playing;
 mod standby;
 mod targets;
 
-use super::{activity, chain, change, clipped, moving, target};
+use super::{activity, chain, change, clipped, moving, paused, phase, target};
 use crate::back::{
-    Advance, Command, Cue, CueId, CueList, Edit, InstrumentId, Kind, OutputId, Place, Sends,
-    Workspace, loaded, sound,
+    Advance, Command, Cue, CueId, CueList, Edit, InstrumentId, Kind, OutputId, PatchEdit, Place,
+    Sends, Workspace, loaded, sound,
 };
 
 fn memo(id: u32) -> Cue {
@@ -24,4 +24,11 @@ fn memo(id: u32) -> Cue {
 fn told(workspace: &Workspace) -> String {
     let (_, latest) = workspace.latest_change().expect("a command is a change");
     change(workspace, latest)
+}
+
+/// Returns the chain that GO fires from the cue `standby` of the first list,
+/// while the outputs `failing` have failed
+fn chained(workspace: &Workspace, standby: u32, failing: &[OutputId]) -> String {
+    let cue = workspace.cue(CueId(standby)).expect("it exists");
+    chain(workspace, &workspace.lists()[0], cue, failing)
 }

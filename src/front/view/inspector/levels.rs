@@ -61,14 +61,24 @@ pub(super) fn view<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
             .spacing(SPACING)
             .align_y(Center),
         stop_target(app, cue),
+        cue.target
+            .and_then(|target| app.workspace.cue(target))
+            .filter(|target| fades_nothing(cue, target))
+            .map(|_| text("A picture has no level, so this fade changes nothing")),
         cue.kind.plays_file().then(|| sends::view(app, cue)),
     ]
     .spacing(SPACING)
     .into()
 }
 
-/// Returns the slider of the level of `cue`, or a bar that shows it where
-/// show mode locks editing
+/// Returns whether the fade cue `cue` leaves `target` as it is: a picture has
+/// no level to fade, and only a fade that stops it fades its picture out
+fn fades_nothing(cue: &Cue, target: &Cue) -> bool {
+    cue.kind == Kind::Fade && target.kind == Kind::Picture && !cue.stop_target
+}
+
+/// Returns the slider of the level of `cue`, or a bar where show mode locks
+/// editing
 fn slider_of<'a>(app: &App, cue: &Cue) -> Element<'a, Message> {
     let id = cue.id;
     if app.editable() {
@@ -93,4 +103,28 @@ fn stop_target<'a>(app: &'a App, cue: &Cue) -> Option<Element<'a, Message>> {
             &app.config.keymap,
         )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fades_nothing;
+    use crate::back::{Cue, CueId, Kind};
+
+    fn cue(kind: Kind, stop_target: bool) -> Cue {
+        Cue {
+            stop_target,
+            ..Cue::new(CueId(1), "1", kind, "Cue").build()
+        }
+    }
+
+    #[test]
+    fn a_fade_that_keeps_a_picture_has_nothing_to_fade() {
+        let picture = cue(Kind::Picture, true);
+        assert!(fades_nothing(&cue(Kind::Fade, false), &picture));
+        assert!(!fades_nothing(&cue(Kind::Fade, true), &picture));
+        assert!(!fades_nothing(
+            &cue(Kind::Fade, false),
+            &cue(Kind::Video, true)
+        ));
+    }
 }

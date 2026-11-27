@@ -40,9 +40,12 @@ mod state;
 mod widget;
 
 use iced::{Color, Element, Padding, widget::button};
-use unicode_width::UnicodeWidthStr;
 
-use crate::front::{Message, keymap::Keymap, view::char_width};
+use crate::front::{
+    Message,
+    keymap::Keymap,
+    view::{char_width, widest},
+};
 pub(in crate::front::view) use shorten::{ELLIPSIS, shortened, shortened_start};
 
 /// Padding of the list and of each option of its menu, as iced's pick list
@@ -132,15 +135,12 @@ impl<'a> Dropdown<'a> {
     /// Returns the width of the longest name, the placeholder among them,
     /// by the columns of the font, which is monospace
     fn widest(&self) -> f32 {
-        let columns = self
+        let texts = self
             .names
             .iter()
             .map(String::as_str)
-            .chain(self.placeholder.as_deref())
-            .map(UnicodeWidthStr::width)
-            .max()
-            .unwrap_or(0);
-        columns as f32 * char_width()
+            .chain(self.placeholder.as_deref());
+        widest(texts) as f32 * char_width()
     }
 }
 
