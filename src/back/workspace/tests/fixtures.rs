@@ -51,6 +51,7 @@ pub(crate) fn sound(seconds: f32) -> Media {
     Media::Loaded {
         duration: seconds,
         sound: Some(seconds),
+        ahead: 0.0,
     }
 }
 
@@ -59,6 +60,7 @@ pub(crate) fn silent(seconds: f32) -> Media {
     Media::Loaded {
         duration: seconds,
         sound: None,
+        ahead: 0.0,
     }
 }
 

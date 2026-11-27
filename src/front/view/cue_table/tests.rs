@@ -15,7 +15,7 @@ use iced::{Theme, widget::text};
 
 use super::Column;
 use crate::{
-    back::{Command, Cue, CueId, CueList, Edit, Kind, Media, OutputId, Sends, Workspace},
+    back::{Command, Cue, CueId, CueList, Edit, Kind, OutputId, Sends, Workspace, loaded, sound},
     front::view::theme,
 };
 
@@ -24,15 +24,7 @@ fn show(sends: Option<Sends>) -> Workspace {
         .file("rain.ogg")
         .build();
     Workspace::new(vec![CueList::new("Main", vec![cue])])
-        .apply(Command::Loaded {
-            cue: CueId(1),
-            file: "rain.ogg".to_owned(),
-            media: Media::Loaded {
-                duration: 10.0,
-                sound: Some(10.0),
-            },
-            seen: None,
-        })
+        .apply(loaded(1, "rain.ogg", sound(10.0)))
         .apply(Command::add_output(1, 1))
         .apply(Command::Edit(CueId(1), Edit::Sends(sends)))
         .apply(Command::DeleteOutputs(vec![OutputId(2)]))

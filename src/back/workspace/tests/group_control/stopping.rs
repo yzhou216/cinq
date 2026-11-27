@@ -64,10 +64,7 @@ fn stop_cue_before_a_group_cancels_the_group_that_waits_for_it() {
 
 #[test]
 fn stopping_a_group_that_began_cancels_its_waiting_cues_and_the_cue_after_it() {
-    let late = Cue {
-        pre_wait: 3.0.into(),
-        ..within(1, audio(3))
-    };
+    let late = pre_waiting(3.0, within(1, audio(3)));
     let begun = workspace(vec![
         Cue {
             advance: Advance::Continue,

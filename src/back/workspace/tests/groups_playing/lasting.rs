@@ -9,10 +9,7 @@ use super::*;
 
 #[test]
 fn group_with_its_cues_runs_while_any_of_them_does() {
-    let late = Cue {
-        pre_wait: 2.0.into(),
-        ..within(1, audio(3))
-    };
+    let late = pre_waiting(2.0, within(1, audio(3)));
     let fired = workspace(vec![
         then(1, Advance::Manual, 1.0, 0.0),
         within(1, audio(2)),
@@ -46,10 +43,7 @@ fn group_ends_once_the_cues_it_holds_have_been_stopped() {
 #[test]
 fn group_with_no_cue_that_plays_ends_as_its_action_begins() {
     let unplayable = Cue::new(CueId(2), "2", Kind::Audio, "Sound").build();
-    let waiting = Cue {
-        pre_wait: 3.0.into(),
-        ..group(1)
-    };
+    let waiting = pre_waiting(3.0, group(1));
     let fired = workspace(vec![waiting, within(1, unplayable)]).apply(GO);
     assert_eq!(running(&fired), [1]);
     assert!(running(&fired.apply(Command::Tick(3.0))).is_empty());
@@ -79,10 +73,7 @@ fn group_with_a_loop_runs_without_end_and_is_shown_so() {
 
 #[test]
 fn group_in_a_group_runs_until_every_cue_at_any_depth_has_ended() {
-    let inner = Cue {
-        pre_wait: 2.0.into(),
-        ..within(1, group(2))
-    };
+    let inner = pre_waiting(2.0, within(1, group(2)));
     let fired = workspace(vec![
         then(1, Advance::Manual, 1.0, 0.0),
         inner,

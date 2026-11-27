@@ -102,16 +102,28 @@ impl Workspace {
     }
 
     pub(in crate::back::workspace) fn tick(self, seconds: f64) -> Self {
-        self.with_each_active(|active| active.advanced(seconds))
+        let held = self.active_where(|active| active.paused);
+        self.with_each_active(|active| active.advanced_unless_held(seconds, &held))
             .started()
             .dimmed()
             .without_finished()
     }
 
+    /// Moves the clock of the run `run` of a cue toward the time its sound
+    /// has reached, and those of the runs that it would start by as much,
+    /// so that its chain stays with what is heard.
     pub(in crate::back::workspace) fn heard(self, cue: CueId, run: u32, played: f64) -> Self {
-        self.with_active(cue, |active| {
-            if active.run == run {
-                active.heard(played)
+        let Some(by) = self
+            .active_of(cue)
+            .filter(|active| active.run == run)
+            .map(|active| active.drift(played))
+        else {
+            return self;
+        };
+        let following = self.followers(run);
+        self.with_each_active(|active| {
+            if active.run == run || following.contains(&active.run) {
+                active.shifted(by)
             } else {
                 active
             }
@@ -131,8 +143,10 @@ impl Workspace {
             then_stop: true,
             opacity: 1.0,
         };
+        // A group that has begun lasts while the cues it holds fade out, and
+        // one that waits out its pre-wait goes as any waiting cue does
         self.without_active_where(|active| {
-            fading || active.paused || (!active.holds() && !active.playing())
+            fading || active.paused || !(active.playing() || (active.holds() && active.started))
         })
         .with_each_active(|active| {
             if active.holds() {

@@ -19,10 +19,9 @@ fn go_fires_the_chain_and_moves_standby_past_it() {
 
 #[test]
 fn stop_cue_stops_its_target() {
-    let stop = Cue::new(CueId(2), "2", Kind::Stop, "Stop")
-        .target(CueId(1))
-        .build();
-    let workspace = workspace(vec![audio(1), stop]).apply(GO).apply(GO);
+    let workspace = workspace(vec![audio(1), stop_cue(2, 1)])
+        .apply(GO)
+        .apply(GO);
     assert!(workspace.active().is_empty());
 }
 

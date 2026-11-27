@@ -223,8 +223,8 @@ Each cue is a table in the array *cue* of its list:
 	The loop lies within the cue: a loop start before the *start* counts as the
 	*start*, and a loop end after the *end* counts as the *end*, which the
 	header of the inspector tells as the loop that plays.
-	A cue whose loop then starts at or after its end cannot play, and shows
-	among the warnings.
+	A cue whose loop then starts at or after its end, or lasts less than a
+	millisecond, cannot play, and shows among the warnings.
 	Saving writes both for a cue that sets them, whether it loops or not, so
 	that turning the loop off and on keeps them.
 
@@ -572,6 +572,9 @@ chain holds where it is.
 A target that does not run, or no longer does, is left alone, even where cues
 that it fired still wait out its post-wait.
 Pausing holds the fades of a cue, as *Pause all* does.
+A pause cue whose target is a fade cue holds the fade that the cue is making at
+the level it has reached, and the fade goes on from there when the fade cue
+resumes.
 A start cue that targets the paused cue, or *Resume all*, resumes it.
 
 A devamp cue lets its target leave its loop, as the devamp cue of QLab does.

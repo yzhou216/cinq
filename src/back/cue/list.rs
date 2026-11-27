@@ -9,6 +9,8 @@ mod placing;
 
 pub use groups::Groups;
 
+use std::collections::HashSet;
+
 use crate::back::{Cue, CueId, Edit, Kind, Media, Place, Stamp, items::replaced_where};
 
 #[derive(Debug, Clone)]
@@ -94,17 +96,25 @@ impl CueList {
         }
     }
 
-    /// Removes a cue.  Standby on that cue moves on to the next cue, or
-    /// past the end after the last cue, so that GO never goes back to a cue
-    /// that has played.
-    pub(in crate::back) fn without(self, id: CueId) -> Self {
-        let standby = if self.standby == Some(id) {
-            self.after(id)
-        } else {
-            self.standby
+    /// Removes cues in one pass.  Standby on a removed cue moves on to the
+    /// next cue that stays, or past the end after the last cue, so that GO
+    /// never goes back to a cue that has played.
+    pub(in crate::back) fn without(self, gone: &HashSet<CueId>) -> Self {
+        let standby = match self.standby {
+            Some(id) if gone.contains(&id) => self.position(id).and_then(|row| {
+                self.cues[row..]
+                    .iter()
+                    .find(|cue| !gone.contains(&cue.id))
+                    .map(|cue| cue.id)
+            }),
+            standby => standby,
         };
         Self {
-            cues: self.cues.into_iter().filter(|cue| cue.id != id).collect(),
+            cues: self
+                .cues
+                .into_iter()
+                .filter(|cue| !gone.contains(&cue.id))
+                .collect(),
             standby,
             ..self
         }

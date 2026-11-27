@@ -25,7 +25,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use super::Workspace;
+use super::{Workspace, files};
 use crate::back::{Cue, CueList, Instrument, Output};
 use cue::CueFile;
 use outputs::OutputFile;
@@ -109,11 +109,11 @@ impl Workspace {
             return name.to_owned();
         }
         let absolute = self.directory.join(name);
-        directory
-            .and_then(|directory| pathdiff::diff_paths(&absolute, directory))
-            .unwrap_or(absolute)
-            .to_string_lossy()
-            .into_owned()
+        files::written(
+            &directory
+                .and_then(|directory| pathdiff::diff_paths(&absolute, directory))
+                .unwrap_or(absolute),
+        )
     }
 }
 

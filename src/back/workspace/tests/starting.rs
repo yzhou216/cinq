@@ -124,10 +124,7 @@ fn start_cues_that_start_each_other_go_round_once_a_tick() {
 
 #[test]
 fn start_cue_fires_its_target_as_far_along_as_the_tick_passed_its_pre_wait() {
-    let waiting = Cue {
-        pre_wait: 0.5.into(),
-        ..start_cue(1, 2)
-    };
+    let waiting = pre_waiting(0.5, start_cue(1, 2));
     let workspace = workspace(vec![waiting, continuing_after(2, 2.0), audio(3)])
         .apply(GO)
         .apply(Command::Tick(2.0));
@@ -145,10 +142,7 @@ fn start_cue_fires_nothing_where_its_target_cannot_play() {
 
 #[test]
 fn cues_ahead_take_in_what_start_cues_fire_with_their_delays() {
-    let waiting = Cue {
-        pre_wait: 1.0.into(),
-        ..start_cue(1, 3)
-    };
+    let waiting = pre_waiting(1.0, start_cue(1, 3));
     let workspace = lists_of(vec![
         vec![waiting, audio(2)],
         vec![continuing_after(3, 2.0), audio(4)],
@@ -169,4 +163,55 @@ fn cues_ahead_leave_out_what_a_start_cue_only_resumes() {
         .apply(GO)
         .apply(Command::Pause(true));
     assert_eq!(ahead(&workspace), [(2, 0.0)]);
+}
+
+#[test]
+fn cues_reached_list_what_two_start_cues_fire_together_once() {
+    let workspace = lists_of(vec![
+        vec![following(start_cue(1, 3)), start_cue(2, 3)],
+        vec![audio(3), audio(4)],
+    ]);
+    let fired = [1, 2].map(|id| (workspace.cue(CueId(id)).unwrap(), 0.0));
+    let reached: Vec<u32> = workspace
+        .reached(fired.to_vec())
+        .into_iter()
+        .map(|(cue, _)| cue.id.0)
+        .collect();
+    assert_eq!(reached, [1, 2, 3]);
+}
+
+#[test]
+fn cues_reached_keep_the_smallest_delay_of_the_start_cues_that_fire_them() {
+    let workspace = lists_of(vec![
+        vec![
+            pre_waiting(5.0, start_cue(1, 3)),
+            pre_waiting(1.0, start_cue(2, 3)),
+        ],
+        vec![audio(3), audio(4)],
+    ]);
+    let fired = [1, 2].map(|id| (workspace.cue(CueId(id)).unwrap(), 0.0));
+    let reached: Vec<(u32, f32)> = workspace
+        .reached(fired.to_vec())
+        .into_iter()
+        .map(|(cue, delay)| (cue.id.0, delay))
+        .collect();
+    assert_eq!(reached, [(1, 0.0), (2, 0.0), (3, 1.0)]);
+}
+
+#[test]
+fn cues_reached_take_the_smaller_delay_that_a_later_round_gives_them() {
+    // Cue 1 reaches cue 5 after its pre-wait of 5, and cue 2 reaches the
+    // start cue 3, which reaches cue 5 at once, a round later
+    let workspace = lists_of(vec![
+        vec![pre_waiting(5.0, start_cue(1, 5)), start_cue(2, 3)],
+        vec![start_cue(3, 5)],
+        vec![audio(5)],
+    ]);
+    let fired = [1, 2].map(|id| (workspace.cue(CueId(id)).unwrap(), 0.0));
+    let reached: Vec<(u32, f32)> = workspace
+        .reached(fired.to_vec())
+        .into_iter()
+        .map(|(cue, delay)| (cue.id.0, delay))
+        .collect();
+    assert_eq!(reached, [(1, 0.0), (2, 0.0), (5, 0.0), (3, 0.0)]);
 }

@@ -6,6 +6,7 @@
 //! their settings, and of what a copy keeps of its file and its target
 
 use super::*;
+use std::path::{Path, PathBuf};
 
 /// Returns copies of the cues of `from` with the identities `ids`
 fn copies(from: &Workspace, ids: &[u32]) -> Vec<Cue> {
@@ -113,20 +114,24 @@ fn pasting_nothing_or_in_show_mode_changes_nothing() {
 
 #[test]
 fn copy_holds_its_file_by_absolute_path_and_paste_makes_it_relative_where_it_lands() {
+    // Windows takes a drive for the root of an absolute path
+    let shows = Path::new(if cfg!(windows) { r"C:\shows" } else { "/shows" });
+    let storm = shows.join("storm");
     let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
         .file("sounds/rain.ogg")
         .build();
-    let from = fresh(vec![cue]).directory("/shows/storm");
-    let cues = copies(&from, &[1]);
-    assert_eq!(cues[0].file, "/shows/storm/sounds/rain.ogg");
-    let file_after = |directory: &str| {
+    let cues = copies(&fresh(vec![cue]).directory(&storm), &[1]);
+    // Separator of the platform throughout, though the name has a slash
+    let absolute = storm.join("sounds").join("rain.ogg");
+    assert_eq!(cues[0].file, absolute.to_string_lossy());
+    let file_after = |directory: PathBuf| {
         let into = Workspace::new(Vec::new()).directory(directory);
         let pasted = into.apply(paste(cues.clone(), Place::End));
         pasted.lists()[0].cues[0].file.clone()
     };
-    assert_eq!(file_after("/shows/storm"), "sounds/rain.ogg");
-    assert_eq!(file_after("/shows/storm/sounds"), "rain.ogg");
-    assert_eq!(file_after("/shows/calm"), "/shows/storm/sounds/rain.ogg");
+    assert_eq!(file_after(storm.clone()), "sounds/rain.ogg");
+    assert_eq!(file_after(storm.join("sounds")), "rain.ogg");
+    assert_eq!(file_after(shows.join("calm")), absolute.to_string_lossy());
 }
 
 #[test]
@@ -142,10 +147,7 @@ fn copy_forgets_what_loading_found_and_a_cue_without_a_file_keeps_none() {
 
 #[test]
 fn pasted_cue_keeps_a_target_that_is_a_cue_of_the_show_and_loses_any_other() {
-    let fade = Cue::new(CueId(2), "2", Kind::Fade, "Fade")
-        .target(CueId(1))
-        .build();
-    let shown = workspace(vec![audio(1), fade]);
+    let shown = workspace(vec![audio(1), control(2, Kind::Fade, 1)]);
     let cue = copies(&shown, &[2]);
     let target =
         |workspace: &Workspace| workspace.lists()[0].cues.last().and_then(|cue| cue.target);
@@ -158,11 +160,7 @@ fn pasted_cue_keeps_a_target_that_is_a_cue_of_the_show_and_loses_any_other() {
 
 #[test]
 fn a_target_among_the_cues_pasted_goes_to_their_copy_in_each_round() {
-    let fade = |id, target| {
-        Cue::new(CueId(id), id.to_string(), Kind::Fade, "Fade")
-            .target(CueId(target))
-            .build()
-    };
+    let fade = |id, target| control(id, Kind::Fade, target);
     // First fade targets the cue after it, and the second the cue before
     let shown = workspace(vec![fade(1, 2), audio(2), fade(3, 4), audio(4)]);
     let cues = copies(&shown, &[1, 2]);

@@ -115,8 +115,9 @@ Press \key{Control+l} and open \texttt{my-show.cinq.toml}.
 A start cue whose target is not paused fires the target as GO would, together
 with the cues that chain to it.  A pause cue also holds the cues that wait
 for its target to start them, as cue~4 of the storm show waits out the
-post-wait of cue~3, so that the whole sequence holds where it is.  Neither
-moves the cue on standby.
+post-wait of cue~3, so that the whole sequence holds where it is.  Aimed at a
+fade cue, a pause cue holds the fade where it is, and the fade goes on when a
+start cue resumes the fade cue.  Neither moves the cue on standby.
 
 A GoTo cue does move it.  Its target can be any cue, and when GO fires the
 GoTo cue, the target goes on standby, so that the next GO fires it, and
@@ -167,8 +168,8 @@ A devamp cue never cuts a pass short.  It lets the rain leave at the first
 end of a pass that comes more than half a second after the cue acts, so that a
 GO that comes just before an end waits for the end after it.  A target that
 does not loop cannot be devamped: its devamp cue reads \texttt{NO LOOP}, and GO
-skips it.  A loop that starts at or after its end cannot play either, and its
-cue reads \texttt{BROKEN}\@.
+skips it.  A loop that starts at or after its end, or lasts less than a
+millisecond, cannot play either, and its cue reads \texttt{BROKEN}\@.
 
 \section{Groups}
 

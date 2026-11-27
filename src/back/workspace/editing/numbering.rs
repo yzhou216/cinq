@@ -46,8 +46,11 @@ impl Numbers {
         let mut held = self.held;
         held.insert(number.to_owned());
         Self {
+            // Words such as inf and NaN parse as numbers, but are text to an operator
             highest: number
                 .parse::<f64>()
+                .ok()
+                .filter(|parsed| parsed.is_finite())
                 .map_or(self.highest, |parsed| parsed.max(self.highest)),
             held,
         }

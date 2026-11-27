@@ -8,6 +8,8 @@ use std::{fs, path::Path, time::SystemTime};
 
 use strum::Display;
 
+use super::Cue;
+
 /// Size and modification time of a file, by which a later look tells that it
 /// has changed
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -48,9 +50,13 @@ pub enum Media {
     /// no sound.  The two are the same for a sound file, while the sound
     /// of a video file can end before its picture or after it.  A picture
     /// file, which shows until something stops its cue, plays for none and
-    /// holds no sound.
-    Loaded { duration: f32, sound: Option<f32> },
-    /// File cannot be played, for the given reason
+    /// holds no sound.  The sound is decoded `ahead` seconds ahead of where
+    /// it plays, which is none for a file without one.
+    Loaded {
+        duration: f32,
+        sound: Option<f32>,
+        ahead: f32,
+    },
     Failed(String),
 }
 
@@ -69,6 +75,9 @@ pub enum Problem<'a> {
     /// Loop that starts at or after its end, once both lie within the clip
     #[strum(to_string = "loop starts at or after its end")]
     EmptyLoop,
+    /// Loop that lasts less than a millisecond, which kira cannot play
+    #[strum(to_string = "loop is shorter than a millisecond")]
+    ShortLoop,
     #[strum(to_string = "no target cue")]
     NoTarget,
     /// Control cue names a cue that it cannot act on, such as itself, or a
@@ -93,4 +102,26 @@ pub enum Problem<'a> {
     NoMessage,
     #[strum(to_string = "OSC message leaves a double quote open")]
     OpenQuote,
+}
+
+impl Cue {
+    /// Returns why the file of an audio, video, or picture cue cannot play,
+    /// which no other kind of cue has
+    pub fn file_problem(&self) -> Option<Problem<'_>> {
+        match &self.media {
+            _ if self.file_name().is_none() => Some(Problem::NoFile),
+            Media::Unloaded => Some(Problem::NotLoaded),
+            Media::Failed(reason) => Some(Problem::LoadFailed(reason)),
+            Media::Loaded { .. } if self.loops_nothing() => Some(Problem::EmptyLoop),
+            Media::Loaded { .. } if self.loops_briefly() => Some(Problem::ShortLoop),
+            Media::Loaded { duration, .. } if self.kind.plays_file() && self.clip().is_none() => {
+                Some(if self.start.value() >= *duration {
+                    Problem::PastFile
+                } else {
+                    Problem::EmptyClip
+                })
+            }
+            Media::Loaded { .. } => None,
+        }
+    }
 }

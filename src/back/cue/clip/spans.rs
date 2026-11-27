@@ -20,7 +20,7 @@ impl Cue {
         let (start, end) = self.span()?;
         let looping = self.looping.then(|| self.section(start, end));
         looping
-            .is_none_or(|section| section.start < section.end)
+            .is_none_or(|section| section.plays())
             .then_some(Clip {
                 start,
                 end,
@@ -37,6 +37,16 @@ impl Cue {
                 .is_some_and(|(start, end)| self.section(start, end).length() <= 0.0)
     }
 
+    /// Returns whether the loop of the cue lasts too short a time to play,
+    /// though it lasts some
+    pub(in crate::back) fn loops_briefly(&self) -> bool {
+        self.loops()
+            && self.span().is_some_and(|(start, end)| {
+                let section = self.section(start, end);
+                section.length() > 0.0 && !section.plays()
+            })
+    }
+
     /// Returns the loop that the cue plays, as seconds from its start to its
     /// end in the file, where that differs from the times typed, because a
     /// typed time lies outside the clip, so that the operator can be told
@@ -46,7 +56,7 @@ impl Cue {
         let section = self.section(start, end);
         let cut =
             |typed: Option<f32>, played: f64| typed.is_some_and(|typed| f64::from(typed) != played);
-        (section.length() > 0.0
+        (section.plays()
             && (cut(self.loop_start.time(), section.start)
                 || cut(self.loop_end.time(), section.end)))
         .then_some((section.start, section.end))

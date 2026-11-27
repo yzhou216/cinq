@@ -46,14 +46,8 @@ fn start_cue_resumes_what_a_pause_cue_held() {
 
 #[test]
 fn pause_cue_holds_a_cue_in_its_pre_wait_and_a_cue_that_loops() {
-    let waiting = Cue {
-        pre_wait: 4.0.into(),
-        ..audio(1)
-    };
-    let looping = Cue {
-        looping: true,
-        ..audio(2)
-    };
+    let waiting = pre_waiting(4.0, audio(1));
+    let looping = looped(audio(2));
     let held = workspace(vec![waiting, looping, pause_cue(3, 1), pause_cue(4, 2)])
         .apply(GO)
         .apply(GO)
@@ -100,4 +94,24 @@ fn pause_cue_holds_a_cue_that_a_start_cue_has_fired_before_it_acts() {
         .apply(Command::Pause(false))
         .apply(Command::Tick(0.025));
     assert_eq!(running(&resumed), Vec::<u32>::new());
+}
+
+#[test]
+fn pause_cue_holds_the_fade_that_a_fade_cue_is_making_until_it_resumes() {
+    let fading = workspace(vec![audio(1), fade_out(2), pause_cue(3, 2)])
+        .apply(GO)
+        .apply(GO)
+        .apply(Command::Tick(1.0))
+        .apply(GO);
+    let held = fading.apply(Command::Tick(2.0));
+    assert_eq!(level(&held, 1), Some(-15.0));
+    assert_phase(&held, 2, Phase::Running { remaining: 3.0 });
+    let resumed = held
+        .apply(Command::Resume(CueId(2)))
+        .apply(Command::Tick(1.0));
+    assert_eq!(level(&resumed, 1), Some(-30.0));
+    assert_eq!(
+        running(&resumed.apply(Command::Tick(3.0))),
+        Vec::<u32>::new()
+    );
 }

@@ -89,10 +89,7 @@ fn show_file_names_start_pause_and_goto_cues_by_their_kind() {
 
 #[test]
 fn goto_cue_that_has_yet_to_act_tells_where_it_moves_standby_and_when() {
-    let jump = Cue {
-        pre_wait: 4.0.into(),
-        ..goto_cue(1, 3)
-    };
+    let jump = pre_waiting(4.0, goto_cue(1, 3));
     let waiting = lists_of(vec![vec![jump, audio(2)], vec![audio(3), audio(4)]]).apply(GO);
     let moving = |workspace: &Workspace, list| {
         workspace

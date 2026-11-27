@@ -22,11 +22,7 @@ fn picture_cue_shows_until_something_stops_it() {
 
 #[test]
 fn cue_after_a_picture_cue_that_follows_waits_for_go() {
-    let following = Cue {
-        advance: Advance::Follow,
-        ..picture(1)
-    };
-    let shown = workspace(vec![following, audio(2)])
+    let shown = workspace(vec![following(picture(1)), audio(2)])
         .apply(GO)
         .apply(Command::Tick(60.0));
     assert!(shown.active_of(CueId(2)).is_none());

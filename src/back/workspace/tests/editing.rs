@@ -114,18 +114,54 @@ fn deleting_the_last_cue_on_standby_moves_standby_past_the_end() {
 }
 
 #[test]
-fn new_numbers_read_spaced_and_large_numbers_exactly_and_do_not_overflow() {
-    let after = |number: &str| {
-        let numbered = Cue {
-            number: number.to_owned(),
-            ..audio(1)
-        };
-        let added = workspace(vec![numbered]).apply(add(0, Kind::Memo, Place::End));
-        added.lists()[0].cues[1].number.clone()
+fn deleting_cues_together_moves_standby_to_the_first_cue_that_stays() {
+    let workspace = workspace(vec![audio(1), audio(2), audio(3), audio(4), audio(5)])
+        .apply(move_standby(2))
+        .apply(delete(&[4, 2, 3]));
+    assert_eq!(ids(&workspace), [1, 5]);
+    assert_eq!(standby(&workspace), Some(5));
+    let undone = workspace.apply(Command::Undo);
+    assert_eq!(
+        (ids(&undone), standby(&undone)),
+        (vec![1, 2, 3, 4, 5], Some(2))
+    );
+}
+
+#[test]
+fn deleting_cues_of_two_lists_together_keeps_each_standby_in_its_list() {
+    let workspace = lists_of(vec![
+        vec![audio(1), audio(2)],
+        vec![audio(3), audio(4), audio(5)],
+    ])
+    .apply(delete(&[2, 3, 4]));
+    let standbys: Vec<Option<CueId>> = workspace.lists().iter().map(|list| list.standby).collect();
+    assert_eq!(standbys, [Some(CueId(1)), Some(CueId(5))]);
+}
+
+/// Returns the number of the memo cue that goes to the end after `others`
+/// follow a cue 1 that holds `number`
+fn number_added_after(number: &str, others: Vec<Cue>) -> String {
+    let numbered = Cue {
+        number: number.to_owned(),
+        ..audio(1)
     };
+    let added = workspace([vec![numbered], others].concat()).apply(add(0, Kind::Memo, Place::End));
+    added.cues().last().expect("a cue was added").number.clone()
+}
+
+#[test]
+fn new_numbers_read_spaced_and_large_numbers_exactly_and_do_not_overflow() {
+    let after = |number: &str| number_added_after(number, Vec::new());
     assert_eq!(after(" 12 "), "13");
     assert_eq!(after("16777217"), "16777218");
-    assert_eq!(after("inf"), u64::MAX.to_string());
+    assert_eq!(after("1e300"), u64::MAX.to_string());
+}
+
+#[test]
+fn numbers_that_are_words_for_infinity_or_not_a_number_are_text_and_not_counted() {
+    ["inf", "-inf", "Infinity", "INF", "NaN"]
+        .into_iter()
+        .for_each(|word| assert_eq!(number_added_after(word, vec![audio(2)]), "3", "{word}"));
 }
 
 #[test]

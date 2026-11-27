@@ -10,23 +10,7 @@ use crate::back::{Cue, Destination, Kind, Media, Problem, Workspace, osc};
 impl Workspace {
     pub fn problem<'a>(&self, cue: &'a Cue) -> Option<Problem<'a>> {
         match cue.kind {
-            Kind::Audio | Kind::Video | Kind::Picture => match &cue.media {
-                _ if cue.file_name().is_none() => Some(Problem::NoFile),
-                Media::Unloaded => Some(Problem::NotLoaded),
-                Media::Failed(reason) => Some(Problem::LoadFailed(reason)),
-                Media::Loaded { .. } if cue.loops_nothing() => Some(Problem::EmptyLoop),
-                Media::Loaded { duration, .. }
-                    if cue.kind.plays_file()
-                        && cue.clip().is_none()
-                        && cue.start.value() >= *duration =>
-                {
-                    Some(Problem::PastFile)
-                }
-                Media::Loaded { .. } if cue.kind.plays_file() && cue.clip().is_none() => {
-                    Some(Problem::EmptyClip)
-                }
-                Media::Loaded { .. } => None,
-            },
+            Kind::Audio | Kind::Video | Kind::Picture => cue.file_problem(),
             Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo => {
                 match self.target(cue) {
                     Some(target) if !cue.can_target(target) => {

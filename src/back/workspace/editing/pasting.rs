@@ -16,7 +16,7 @@ use std::{
 use self::rounds::{rounds, shapes};
 use super::{
     super::{
-        Workspace,
+        Workspace, files,
         history::{Change, Placed},
     },
     numbering::Numbers,
@@ -30,7 +30,7 @@ impl Workspace {
     pub fn copied(&self, cue: &Cue) -> Cue {
         let file = self
             .path(cue)
-            .map_or_else(|| cue.file.clone(), |path| path.to_string_lossy().into());
+            .map_or_else(|| cue.file.clone(), |path| files::written(&path));
         Cue {
             file,
             media: Media::Unloaded,

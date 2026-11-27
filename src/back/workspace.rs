@@ -25,7 +25,7 @@ mod show;
 #[cfg(test)]
 pub(super) mod tests;
 
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{collections::BTreeMap, iter, path::PathBuf};
 
 pub use command::{Command, Place};
 pub use history::{Change, Turn};
@@ -73,11 +73,15 @@ impl Default for Workspace {
     }
 }
 
+/// Returns the identity past every identity of a cue and every target of a
+/// cue, since a target whose cue is gone is kept and a show file saves it
+/// as it is, so that a new cue must not take it
 fn next_id(lists: &[CueList]) -> u64 {
     lists
         .iter()
         .flat_map(|list| &list.cues)
-        .map(|cue| u64::from(cue.id.0) + 1)
+        .flat_map(|cue| iter::once(cue.id).chain(cue.target))
+        .map(|id| u64::from(id.0) + 1)
         .max()
         .unwrap_or(1)
 }

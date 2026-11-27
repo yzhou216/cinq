@@ -109,8 +109,11 @@ fn relative_sound_files_go_from_wherever_the_file_is() {
         show.contains(&format!("file = {file}"))
     };
     let elsewhere = workspace.show(Some(&root.join("elsewhere")));
-    let from_elsewhere = Path::new("..").join("show").join(&near);
-    assert!(names(&elsewhere, from_elsewhere), "{elsewhere}");
+    // Relative names join their parts with a slash on every platform
+    assert!(
+        names(&elsewhere, "../show/sounds/near.ogg".into()),
+        "{elsewhere}"
+    );
     assert!(names(&elsewhere, far), "{elsewhere}");
     let nowhere = workspace.show(None);
     assert!(names(&nowhere, root.join("show").join(near)), "{nowhere}");
@@ -183,10 +186,7 @@ fn examples_of_the_manual_page_open_as_shows() {
 
 #[test]
 fn show_file_leaves_out_a_loop_that_a_cue_does_not_set() {
-    let text = shown(&workspace(vec![Cue {
-        looping: true,
-        ..audio(1)
-    }]));
+    let text = shown(&workspace(vec![looped(audio(1))]));
     assert!(text.contains("loop = true\n"), "{text}");
     assert!(!text.contains("loop_"), "{text}");
 }

@@ -9,14 +9,8 @@ use super::*;
 #[test]
 fn start_cue_on_a_group_readies_the_cues_it_holds_ahead() {
     let workspace = workspace(vec![
-        Cue {
-            pre_wait: 1.0.into(),
-            ..start_cue(1, 2)
-        },
-        Cue {
-            pre_wait: 2.0.into(),
-            ..group(2)
-        },
+        pre_waiting(1.0, start_cue(1, 2)),
+        pre_waiting(2.0, group(2)),
         within(1, audio(3)),
         within(1, group(4)),
         within(2, audio(5)),
@@ -30,10 +24,7 @@ fn start_cue_on_a_group_readies_the_cues_it_holds_ahead() {
 #[test]
 fn cues_of_the_next_group_are_readied_ahead_with_their_delays() {
     let workspace = workspace(vec![
-        Cue {
-            pre_wait: 2.0.into(),
-            ..group(1)
-        },
+        pre_waiting(2.0, group(1)),
         within(1, audio(2)),
         within(1, audio(3)),
     ]);

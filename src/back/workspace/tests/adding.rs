@@ -56,3 +56,12 @@ fn no_cues_are_added_to_a_list_that_is_not_there() {
     assert_eq!(ids(&added), [1]);
     assert!(added.latest_change().is_none());
 }
+
+#[test]
+fn a_cue_added_after_reopening_does_not_take_the_id_that_a_target_names() {
+    let deleted =
+        workspace(vec![audio(1), control(2, Kind::Fade, 5), audio(5)]).apply(delete(&[5]));
+    let added = read_back(&shown(&deleted)).apply(add_row(Kind::Memo, Place::End, 1));
+    assert_eq!(ids(&added), [1, 2, 6]);
+    assert_eq!(added.lists()[0].cues[1].target, Some(CueId(5)));
+}

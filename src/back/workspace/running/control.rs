@@ -8,15 +8,21 @@
 
 use std::iter;
 
-use super::active::Effect;
+use itertools::Itertools;
 
-/// Seconds before the end of a pass through its loop that a devamp cue has
-/// to act for its target to leave the loop there, rather than at the end of
-/// the next pass.  The audio output decodes a sound about a third of a
-/// second ahead, and a sound that has decoded the start of its next pass
-/// plays that pass.
+use super::active::Effect;
+use crate::back::{Active, Cue, CueId, Kind, Media, Workspace};
+
+/// Fewest seconds before the end of a pass through its loop that a devamp
+/// cue has to act for its target to leave the loop there, rather than at
+/// the end of the next pass.  A sound that has decoded the start of its next
+/// pass plays that pass, so the notice also has to outlast what the audio
+/// output decodes ahead of the sound, by [`MARGIN`] seconds.
 const RELEASE_NOTICE: f64 = 0.5;
-use crate::back::{Active, Cue, CueId, Kind, Workspace};
+
+/// Seconds that a devamp cue acts before the decoder of its target can have
+/// reached the end of the pass
+const MARGIN: f64 = 0.15;
 
 impl Workspace {
     /// Carries out a start cue.  A target that is paused resumes together
@@ -55,11 +61,18 @@ impl Workspace {
 
     /// Carries out a devamp cue, which lets the run of its target leave its
     /// loop at the end of the first pass that ends more than
-    /// [`RELEASE_NOTICE`] seconds after where the run is, paused or not, and
-    /// play on to the end of its clip.  A run that a devamp cue has let go
-    /// on already keeps the pass that it leaves at.
+    /// [`RELEASE_NOTICE`] seconds after where the run is, or more than the
+    /// seconds that its sound decodes ahead, with a margin, when that is
+    /// longer, paused or not, and play on to the end of its clip.  A run
+    /// that a devamp cue has let go on already keeps the pass that it leaves
+    /// at.
     pub(super) fn devamped(self, target: CueId) -> Self {
-        self.with_active(target, |active| active.released(RELEASE_NOTICE))
+        let ahead = match self.cue(target).map(|cue| &cue.media) {
+            Some(&Media::Loaded { ahead, .. }) => f64::from(ahead),
+            _ => 0.0,
+        };
+        let notice = RELEASE_NOTICE.max(ahead + MARGIN);
+        self.with_active(target, |active| active.released(notice))
     }
 
     /// Carries out a GoTo cue, which moves the standby of the list that
@@ -90,11 +103,12 @@ impl Workspace {
     /// Returns the cues of `fired`, each with the seconds until it fires,
     /// together with those that the start cues among them fire, and those
     /// that the start cues among these fire in turn.  A start cue whose
-    /// target is paused fires nothing, since it resumes the target.  Each
-    /// round adds only cues that are not there yet, so that start cues that
-    /// start each other end the search.
+    /// target is paused fires nothing, since it resumes the target.  A cue
+    /// that a later round reaches sooner than an earlier one did takes the
+    /// sooner delay and keeps its place, so that start cues that start each
+    /// other end the search, as delays only fall.
     pub fn reached<'a>(&'a self, fired: Vec<(&'a Cue, f32)>) -> Vec<(&'a Cue, f32)> {
-        let started: Vec<(&Cue, f32)> = fired
+        let found: Vec<(&Cue, f32)> = fired
             .iter()
             .filter(|(cue, _)| cue.kind == Kind::Start)
             .filter_map(|&(cue, delay)| Some((self.target(cue)?, delay + cue.pre_wait.value())))
@@ -103,13 +117,37 @@ impl Workspace {
                 self.chain_of(target.id)
                     .map(move |(cue, delay)| (cue, acts + delay))
             })
-            .filter(|(cue, _)| !fired.iter().any(|(old, _)| old.id == cue.id))
+            .filter(|(cue, delay)| {
+                fired
+                    .iter()
+                    .all(|(old, sooner)| old.id != cue.id || delay < sooner)
+            })
+            .collect();
+        // A cue that several start cues reach fires at the soonest of them
+        let started: Vec<(&Cue, f32)> = found
+            .iter()
+            .unique_by(|(cue, _)| cue.id)
+            .map(|&(cue, _)| {
+                let soonest = found
+                    .iter()
+                    .filter(|(other, _)| other.id == cue.id)
+                    .map(|&(_, delay)| delay)
+                    .fold(f32::INFINITY, f32::min);
+                (cue, soonest)
+            })
             .collect();
         if started.is_empty() {
-            fired
-        } else {
-            self.reached([fired, started].concat())
+            return fired;
         }
+        let sooner = |cue: &Cue| started.iter().find(|(other, _)| other.id == cue.id);
+        let kept = fired
+            .iter()
+            .map(|&(cue, delay)| (cue, sooner(cue).map_or(delay, |&(_, soonest)| soonest)));
+        let added = started
+            .iter()
+            .filter(|(cue, _)| fired.iter().all(|(old, _)| old.id != cue.id))
+            .copied();
+        self.reached(kept.chain(added).collect())
     }
 
     /// Returns the cues that may fire without the operator, through the

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of Panic on a group that is running or paused
+//! Tests of Panic on a group that is running, paused, or waiting
 
 use super::*;
 
@@ -29,4 +29,28 @@ fn panic_drops_a_paused_group_with_its_cues() {
         .apply(Command::Pause(true))
         .apply(Command::Panic);
     assert!(panicked.active().is_empty());
+}
+
+#[test]
+fn panic_ends_a_group_that_still_waits_out_its_pre_wait() {
+    let panicked = workspace(vec![pre_waiting(30.0, group(1)), within(1, audio(2))])
+        .apply(GO)
+        .apply(Command::Panic)
+        .apply(Command::Tick(PANIC_FADE));
+    assert!(running(&panicked).is_empty());
+}
+
+#[test]
+fn panic_ends_a_nested_group_that_waits_and_the_group_around_it() {
+    let panicked = workspace(vec![
+        group(1),
+        within(1, audio(2)),
+        within(1, pre_waiting(30.0, group(3))),
+        within(2, audio(4)),
+    ])
+    .apply(GO)
+    .apply(Command::Tick(1.0))
+    .apply(Command::Panic)
+    .apply(Command::Tick(PANIC_FADE));
+    assert!(running(&panicked).is_empty());
 }

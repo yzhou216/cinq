@@ -105,3 +105,15 @@ fn loop_played_tells_where_the_loop_that_plays_differs_from_the_one_typed() {
     };
     assert_eq!(whole.loop_played(), None);
 }
+
+#[test]
+fn loop_shorter_than_a_millisecond_plays_nothing_as_kira_would_spin_on_it() {
+    let brief = vamp(2.0, 2.0005);
+    assert_eq!(brief.clip(), None);
+    assert!(brief.loops_briefly());
+    assert!(!brief.loops_nothing());
+    assert_eq!(brief.loop_played(), None);
+    assert!(!vamp(2.0, 2.002).loops_briefly());
+    assert!(vamp(2.0, 2.002).clip().is_some());
+    assert!(!vamp(5.0, 3.0).loops_briefly());
+}

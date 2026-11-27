@@ -48,9 +48,19 @@ pub(in crate::back) enum Shown {
     Still,
 }
 
+/// Seconds of the shortest loop that a clip plays.  kira rounds the ends of
+/// a loop to frames, and a loop whose ends round to one frame never brings
+/// its sound back, so that the thread that decodes the sound spins without
+/// end.  A millisecond holds several frames at any rate that a file has.
+const SHORTEST_LOOP: f64 = 0.001;
+
 impl Loop {
     fn length(&self) -> f64 {
         self.end - self.start
+    }
+
+    fn plays(&self) -> bool {
+        self.length() >= SHORTEST_LOOP
     }
 }
 

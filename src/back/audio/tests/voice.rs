@@ -64,6 +64,7 @@ pub(super) fn fired_promising(cue: Cue, seconds: f32, promised: f32) -> (TempDir
     let media = Media::Loaded {
         duration: 10.0,
         sound: Some(promised),
+        ahead: 0.0,
     };
     let workspace = fresh(vec![cue])
         .directory(directory.path())

@@ -28,7 +28,9 @@ pub(super) fn rounds(cues: &[Cue]) -> Vec<usize> {
 }
 
 /// Returns how deep each cue lies within its own round, where the first of
-/// a round is the top, which is the shape that a paste keeps
+/// a round is the top, which is the shape that a paste keeps.  The depths
+/// count from that of the first, so that a cue beside a group copied from
+/// inside another group stays beside it.
 pub(super) fn shapes(cues: &[Cue], rounds: &[usize]) -> Vec<u8> {
     cues.iter()
         .zip(rounds)
@@ -36,7 +38,15 @@ pub(super) fn shapes(cues: &[Cue], rounds: &[usize]) -> Vec<u8> {
         .into_iter()
         .flat_map(|(_, round)| {
             let round: Vec<Cue> = round.map(|(cue, _)| cue.clone()).collect();
-            CueList::depths_within(&round)
+            let lead = round.first().map_or(0, |cue| cue.depth);
+            let from_lead: Vec<Cue> = round
+                .into_iter()
+                .map(|cue| Cue {
+                    depth: cue.depth.saturating_sub(lead),
+                    ..cue
+                })
+                .collect();
+            CueList::depths_within(&from_lead)
         })
         .collect()
 }

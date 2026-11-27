@@ -8,7 +8,7 @@ use super::{
     super::columns::states::{Look, lines},
     show, told, yellows,
 };
-use crate::back::{Command, CueId, Edit, Media, OutputId, Workspace};
+use crate::back::{Command, CueId, Edit, Media, OutputId, Workspace, loaded};
 
 #[test]
 fn a_cue_whose_outputs_all_failed_reads_in_yellow_that_the_output_failed() {
@@ -60,12 +60,7 @@ fn a_cue_that_is_next_and_a_cue_with_a_problem_share_the_cell_with_the_failure_a
         ["NEXT", "OUTPUT FAILED"]
     );
     // A cue that cannot play tells why alone, and GO skips it
-    let broken = workspace.apply(Command::Loaded {
-        cue: CueId(1),
-        file: "rain.ogg".to_owned(),
-        media: Media::Failed("no".to_owned()),
-        seen: None,
-    });
+    let broken = workspace.apply(loaded(1, "rain.ogg", Media::Failed("no".to_owned())));
     let cue = &broken.lists()[0].cues[0];
     let failing = Look::default().with_failing(&[OutputId(1)]);
     assert_eq!(told(lines(&broken, cue, failing)), ["BROKEN"]);

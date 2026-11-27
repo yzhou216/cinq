@@ -181,6 +181,63 @@ Major changes and improvements in each release of cinq, newest first.
   matrix from the size of the picture and always the limited range, so that a
   stream of full range showed with crushed blacks and clipped whites, and a
   stream of another matrix than its size implies showed with tinted colors.
+- A cue added to a reopened show no longer becomes the target of a cue that
+  targeted a deleted cue.  Before, the new cue could take the identity of the
+  deleted one, so that a cue such as a fade that targeted it acted on the new
+  cue instead.
+- A cue numbered `inf` or `infinity`, in any case, is text, as any other word
+  is, and no longer makes every new cue take the number
+  `18446744073709551615`.
+- A cue that auto-follows or auto-continues an audio or video cue keeps to
+  the clock of that cue as the clock follows its sound, so that a sound that
+  starts late or drifts holds the next cue back with it.  Before, the next
+  cue fired at the time that GO set, and could start while the sound before
+  it still played.
+- On Windows, a file chosen for a cue, or copied with its cue, is named with a
+  slash between the directories, as `sounds/storm.ogg`, so that the show opens
+  on GNU/Linux, the BSDs, and Darwin.  Before, the name held a backslash,
+  which those systems read as part of one file name, and every such cue read
+  `file not found`.
+- When cinq opens a show through a path with `..` in it, as in
+  `cinq ../shows/a.cinq.toml`, a file chosen in the directory of the show is
+  saved by its name from there, so that the show still moves with its files.
+  Before, the file was saved with its whole path.
+- Deleting thousands of cues at once, or undoing the paste of a thousand, takes
+  a few milliseconds where it took a quarter of a second or more, since cinq no
+  longer goes through the whole list again for each cue that it removes.
+- A devamp cue lets a sound whose file has a low sample rate, such as 22050
+  frames a second, leave its loop at the pass end that it plans.  The notice
+  that it needs grows with the time that the decoder reads ahead, which a low
+  rate lengthens.  Before, such a sound went round the loop once more than
+  planned and its run ended while the end of the sound still played.
+- A group that auto-follows no longer waits for a looping or picture cue in it
+  that cannot play, such as one whose file is missing: the next cue fires as it
+  does after a cue that has nothing to play, and the group shows no `hold`.
+  Before, the cue after such a group never fired.
+- A loop shorter than a millisecond, such as `1` to `1.00001`, reads BROKEN
+  with the warning `loop is shorter than a millisecond`, and GO skips its cue.
+  Before, kira rounded its ends to one frame, and the thread that decodes the
+  sound then spun a processor core for as long as the sound lived.
+- Panic ends a group that still waits out its pre-wait, together with the
+  group around it where that holds nothing else.  Before, the group stayed in
+  the cue list and the sidebar until its pre-wait was over, and Panic did not
+  clear it.
+- Pasting cues that were copied from inside a group, as a group and a cue that
+  follows it, puts the cue beside the group, as it was.  Before, the cue went
+  into the pasted group.
+- A pause cue that targets a fade cue holds the fade that the cue is making,
+  and a start cue that targets the fade cue lets it go on.  Before, the fade
+  went on to its end while the fade cue read `paused`.
+- Two start cues that fire the same chain make its video cues ready once, as
+  one start cue does.  Before, each update of the show started another decoder
+  for a picture cue of the chain and dropped the one that was ready.
+- A sound or video that two start cues reach, with different pre-waits, is made
+  ready for the sooner of the two.  Before, it was made ready for the one that
+  the list named first, so a sound that the sooner start cue fired could begin
+  late when the other had the longer wait.
+- On Windows, a cue pasted into a show in another directory names its file
+  with backslashes throughout.  Before, the slashes of its relative name
+  stayed among them, as `C:\shows\storm\sounds/rain.ogg`.
 
 ## v0.1.7
 

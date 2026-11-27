@@ -19,9 +19,9 @@ use kira::{
 };
 use tempfile::TempDir;
 
-use super::silence_at;
+use super::{silence_at, voice::audio};
 use crate::back::{
-    Command, Cue, CueId, Kind, Workspace,
+    Command, Cue, CueId, Workspace,
     audio::sound::voice::{Voice, clipped},
     workspace::tests::{GO, devamp_cue, fresh, loaded, sound},
 };
@@ -58,9 +58,7 @@ pub(super) fn vamp(
         looping: true,
         loop_start: from.into(),
         loop_end: to.into(),
-        ..Cue::new(CueId(1), "1", Kind::Audio, "Vamp")
-            .file("silence.wav")
-            .build()
+        ..audio()
     };
     let workspace = fresh(vec![cue, devamp_cue(2, 1)])
         .directory(directory.path())
@@ -169,8 +167,18 @@ impl Rig {
     }
 }
 
-/// Returns how many times the sound went back, as it does at the end of a
-/// pass of a loop
+/// Returns an action that fires GO before step `step` only
+fn go_at(step: usize) -> impl Fn(usize, Workspace) -> Workspace {
+    move |index, workspace| {
+        if index == step {
+            workspace.apply(GO)
+        } else {
+            workspace
+        }
+    }
+}
+
+/// Returns how many times the sound went back, as at the end of a loop pass
 fn wraps(seen: &[Seen]) -> usize {
     seen.windows(2)
         .filter(|pair| pair[1].position < pair[0].position - 0.5)

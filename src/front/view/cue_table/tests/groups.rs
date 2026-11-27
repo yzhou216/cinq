@@ -8,7 +8,7 @@ use super::{
     super::{Column, columns::states::state},
     texts,
 };
-use crate::back::{Advance, Command, Cue, CueId, CueList, Edit, Kind, Media, Workspace};
+use crate::back::{Advance, Command, Cue, CueId, CueList, Edit, Kind, Workspace, loaded, sound};
 
 /// Returns a list of a looping audio cue, a group that holds an audio cue of
 /// ten seconds after a pre-wait of one, and a group that holds nothing
@@ -24,15 +24,7 @@ fn grouped(depth: u8) -> Workspace {
     };
     let group = |id: u32| Cue::new(CueId(id), id.to_string(), Kind::Group, "Group").build();
     let workspace = Workspace::new(vec![CueList::new("Main", vec![group(1), ten(2), group(3)])]);
-    workspace.apply(Command::Loaded {
-        cue: CueId(2),
-        file: "rain.ogg".to_owned(),
-        media: Media::Loaded {
-            duration: 10.0,
-            sound: Some(10.0),
-        },
-        seen: None,
-    })
+    workspace.apply(loaded(2, "rain.ogg", sound(10.0)))
 }
 
 #[test]

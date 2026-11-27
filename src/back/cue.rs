@@ -193,8 +193,10 @@ impl Cue {
         }
     }
 
+    /// Returns whether the action of the cue has no end, which a cue that
+    /// cannot play never has, since GO skips it
     fn endless(&self) -> bool {
-        self.kind == Kind::Picture || self.loops()
+        (self.kind == Kind::Picture || self.loops()) && self.file_problem().is_none()
     }
 
     pub fn can_target(&self, other: &Cue) -> bool {

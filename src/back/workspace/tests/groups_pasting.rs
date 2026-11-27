@@ -107,3 +107,17 @@ fn cut_group_keeps_its_numbers_where_it_is_pasted() {
     assert_eq!(numbers, ["1", "2", "3", "4", "5"]);
     assert_eq!(depths(&pasted), [0, 0, 1, 1, 2]);
 }
+
+#[test]
+fn cue_copied_after_a_nested_group_pastes_beside_it_and_not_inside() {
+    let list = workspace(vec![
+        group(1),
+        within(1, group(2)),
+        within(2, audio(3)),
+        within(1, audio(4)),
+    ]);
+    let clipboard = copied(&list, &[2, 4]);
+    assert_eq!(clipboard.len(), 3);
+    let pasted = workspace(vec![audio(9)]).apply(paste(clipboard, Place::End));
+    assert_eq!(depths(&pasted), [0, 0, 1, 0]);
+}

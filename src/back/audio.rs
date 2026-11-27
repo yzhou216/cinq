@@ -186,12 +186,31 @@ fn upcoming(workspace: &Workspace, ahead: f64) -> Vec<Ask> {
     fired.chain(next).unique_by(|ask| ask.cue).collect()
 }
 
-/// Reads how many seconds the sound of a file plays, or why it cannot be
-/// played.  This opens the file and reads its format without decoding the
-/// sound.
-pub(super) fn probe(file: &Path) -> Result<f32, String> {
+/// Frames that the streaming decoder of kira reads ahead of where its sound
+/// plays, which is the size of its buffer of decoded frames
+const READ_AHEAD: f64 = 16_384.0;
+
+/// What a sound file tells without decoding its sound
+#[derive(Debug, Clone, Copy)]
+pub(super) struct Probed {
+    /// Seconds that the sound plays
+    pub duration: f32,
+    /// Seconds of the sound that the decoder reads ahead of where it plays,
+    /// which are more for a file whose rate is lower
+    pub ahead: f32,
+}
+
+/// Reads how long the sound of a file plays, or why it cannot be played.
+/// This opens the file and reads its format without decoding the sound.
+pub(super) fn probe(file: &Path) -> Result<Probed, String> {
     StreamingSoundData::from_file(file)
-        .map(|data| data.duration().as_secs_f32())
+        .map(|data| {
+            let duration = data.duration().as_secs_f64();
+            Probed {
+                duration: duration as f32,
+                ahead: (READ_AHEAD * duration / data.num_frames().max(1) as f64) as f32,
+            }
+        })
         .map_err(reason)
 }
 

@@ -21,10 +21,7 @@ fn grouped() -> Vec<Cue> {
             ..group(1)
         },
         within(1, audio(2)),
-        Cue {
-            pre_wait: 2.0.into(),
-            ..within(1, group(3))
-        },
+        pre_waiting(2.0, within(1, group(3))),
         within(2, audio(4)),
         audio(5),
     ]

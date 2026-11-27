@@ -281,7 +281,8 @@ _tutorial.pdf_
 	that GO has fired and have yet to sound, of what the next GO of each list
 	would fire, and of what the start cues among them would fire, counting
 	each sound from its delay in a chain and its pre-wait, along with the
-	pre-wait of the start cue that fires it.
+	pre-wait of the start cue that fires it, and from the sooner of the two
+	where two start cues reach one sound.
 	The sounds that start together are made ready together, and those that
 	start at the instant of GO always are, even at 0.
 	As time passes the sounds of a long chain follow, so that a chain of any

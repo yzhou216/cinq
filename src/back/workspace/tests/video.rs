@@ -61,3 +61,23 @@ fn clock_of_video_run_moves_a_tenth_of_the_way_to_the_time_its_sound_has_reached
     assert_eq!(heard(&ticked, run + 1, 1.2), 1.0);
     assert_eq!(heard(&ticked.apply(Command::Pause(true)), run, 1.2), 1.0);
 }
+
+#[test]
+fn cues_that_wait_for_a_run_move_with_its_clock_as_it_follows_its_sound() {
+    let ticked = workspace(vec![following(audio(1)), audio(2)])
+        .apply(GO)
+        .apply(Command::Tick(1.0));
+    let run = ticked.active_of(CueId(1)).unwrap().run;
+    // Sound that has yet to start holds the clock back a tenth of a second
+    let heard = ticked.apply(Command::Heard {
+        cue: CueId(1),
+        run,
+        played: 0.0,
+    });
+    let played = heard.active_of(CueId(1)).unwrap().played();
+    assert!((played - 0.9).abs() < 1e-9, "{played} seconds played");
+    let Some(Phase::Scheduled { starts_in }) = phase_of(&heard, 2) else {
+        panic!("the next cue waits");
+    };
+    assert!((starts_in - 9.1).abs() < 1e-9, "starts in {starts_in}");
+}

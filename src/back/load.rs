@@ -110,10 +110,14 @@ fn probe((path, kind): &(PathBuf, Kind)) -> Media {
             Ok((duration, sound))
         }),
         Kind::Picture => video::probe_still(path).map(|()| (0.0, None)),
-        _ => audio::probe(path).map(|duration| (duration, Some(duration))),
+        _ => audio::probe(path).map(|probed| (probed.duration, Some(probed))),
     };
     match loaded {
-        Ok((duration, sound)) => Media::Loaded { duration, sound },
+        Ok((duration, sound)) => Media::Loaded {
+            duration,
+            sound: sound.map(|probed| probed.duration),
+            ahead: sound.map_or(0.0, |probed| probed.ahead),
+        },
         Err(reason) => Media::Failed(reason),
     }
 }

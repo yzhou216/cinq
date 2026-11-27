@@ -9,6 +9,8 @@ mod grouping;
 mod numbering;
 mod pasting;
 
+use std::collections::HashSet;
+
 use itertools::Itertools;
 
 use self::numbering::Numbers;
@@ -178,11 +180,17 @@ impl Workspace {
     /// Removes cues from their lists and stops those that are running,
     /// without recording a change, as undo and redo remove them
     pub(super) fn removed(self, ids: impl IntoIterator<Item = CueId>) -> Self {
-        ids.into_iter().fold(self, |workspace, id| {
-            workspace
-                .with_list_of(id, |cues| cues.without(id))
-                .stopped(id)
-        })
+        let ids: Vec<CueId> = ids.into_iter().collect();
+        let gone: HashSet<CueId> = ids.iter().copied().collect();
+        let workspace = Self {
+            lists: self
+                .lists
+                .into_iter()
+                .map(|list| list.without(&gone))
+                .collect(),
+            ..self
+        };
+        ids.into_iter().fold(workspace, Self::stopped)
     }
 
     fn place_of(&self, id: CueId) -> Option<Placed> {

@@ -27,13 +27,7 @@ fn a_loop_section_goes_round_its_loop_and_never_back_before_its_start() {
 #[test]
 fn a_loop_that_ends_with_its_clip_ends_the_run_at_the_pass_end() {
     let (directory, workspace) = vamp(RATE, 2.5, (0.5, 2.5), 0.0);
-    let (rig, seen) = Rig::start(&directory, workspace).run(140, |index, workspace| {
-        if index == 20 {
-            workspace.apply(GO)
-        } else {
-            workspace
-        }
-    });
+    let (rig, seen) = Rig::start(&directory, workspace).run(140, go_at(20));
     assert_eq!(wraps(&seen), 0, "the first pass is the last");
     assert!(seen.iter().all(|seen| seen.position <= 2.5 + 1e-6));
     assert!(

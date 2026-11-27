@@ -12,26 +12,34 @@ use crate::{
     front::{App, view::char_width},
 };
 
+/// Returns an app whose one list holds `cue` alone
+fn lone(cue: Cue) -> App {
+    App {
+        workspace: Workspace::new(vec![CueList::new("Main", vec![cue])]),
+        ..App::default()
+    }
+}
+
+/// Returns the number of columns that show in `app` and the width in pixels
+/// that they take when none gives way
+fn whole(app: &App, layout: &Layout) -> (usize, f32) {
+    let widths: Vec<f32> = Column::VARIANTS
+        .iter()
+        .filter(|column| column.shown(&app.workspace, &layout.groups))
+        .map(|column| column.width(&app.workspace, &layout.groups).unwrap_or(0.0) + CELL_SPACE)
+        .collect();
+    (widths.len(), widths.iter().sum())
+}
+
 /// Returns the number of columns that a list of one cue of `kind` named `name`
 /// shows and the number that it keeps in a room that leaves its name just
 /// `room` columns when none gives way
 fn columns_named(kind: Kind, name: &str, room: usize) -> (usize, usize) {
-    let cue = Cue::new(CueId(1), "1", kind, name).build();
-    let app = App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![cue])]),
-        ..App::default()
-    };
+    let app = lone(Cue::new(CueId(1), "1", kind, name).build());
     let layout = Layout::of(app.current());
-    let shown: Vec<_> = Column::VARIANTS
-        .iter()
-        .filter(|column| column.shown(&app.workspace, &layout.groups))
-        .collect();
-    let taken: f32 = shown
-        .iter()
-        .map(|column| column.width(&app.workspace, &layout.groups).unwrap_or(0.0) + CELL_SPACE)
-        .sum();
+    let (shown, taken) = whole(&app, &layout);
     let room = taken + room as f32 * char_width();
-    (shown.len(), fitting(&app, &layout, room).len())
+    (shown, fitting(&app, &layout, room).len())
 }
 
 /// Returns the columns of a list of one cue of `kind` whose name needs all of
@@ -68,19 +76,13 @@ fn short_names_keep_the_columns_that_long_names_give_way_to() {
 /// `length` characters in a list `room` wide, given the room that shows every
 /// column whole and leaves a name just [`NAME_MOST`] columns
 fn target_width(length: usize, room: impl Fn(f32) -> f32) -> Option<f32> {
-    let cue = Cue::new(CueId(1), "1", Kind::Audio, "n".repeat(NAME_MOST))
-        .file("x".repeat(length - 4) + ".wav")
-        .build();
-    let app = App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![cue])]),
-        ..App::default()
-    };
+    let app = lone(
+        Cue::new(CueId(1), "1", Kind::Audio, "n".repeat(NAME_MOST))
+            .file("x".repeat(length - 4) + ".wav")
+            .build(),
+    );
     let layout = Layout::of(app.current());
-    let taken: f32 = Column::VARIANTS
-        .iter()
-        .filter(|column| column.shown(&app.workspace, &layout.groups))
-        .map(|column| column.width(&app.workspace, &layout.groups).unwrap_or(0.0) + CELL_SPACE)
-        .sum();
+    let (_, taken) = whole(&app, &layout);
     fitting(&app, &layout, room(taken + NAME_MOST as f32 * char_width()))
         .into_iter()
         .find_map(|(column, width)| (column == Column::Target).then_some(width).flatten())
@@ -112,13 +114,11 @@ fn the_target_column_grows_into_the_room_that_a_name_leaves_over() {
 /// one cue has a name and a file name of 55 and 65 characters, and whether
 /// any column that gives way is still shown
 fn name_room(room: f32) -> (f32, bool) {
-    let cue = Cue::new(CueId(1), "1", Kind::Audio, "n".repeat(55))
-        .file("x".repeat(61) + ".wav")
-        .build();
-    let app = App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![cue])]),
-        ..App::default()
-    };
+    let app = lone(
+        Cue::new(CueId(1), "1", Kind::Audio, "n".repeat(55))
+            .file("x".repeat(61) + ".wav")
+            .build(),
+    );
     let layout = Layout::of(app.current());
     let kept = fitting(&app, &layout, room);
     let taken: f32 = kept

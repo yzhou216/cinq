@@ -124,16 +124,10 @@ fn paused_target_leaves_at_the_end_of_the_pass_after_the_point_where_it_is_pause
 
 #[test]
 fn target_in_its_pre_wait_plays_through_its_loop_once_and_goes_on() {
-    let waiting = workspace(vec![
-        Cue {
-            pre_wait: 4.0.into(),
-            ..vamp(1)
-        },
-        devamp_cue(2, 1),
-    ])
-    .apply(GO)
-    .apply(Command::Tick(1.0))
-    .apply(GO);
+    let waiting = workspace(vec![pre_waiting(4.0, vamp(1)), devamp_cue(2, 1)])
+        .apply(GO)
+        .apply(Command::Tick(1.0))
+        .apply(GO);
     assert_eq!(phase(&waiting), Phase::PreWait { remaining: 3.0 });
     assert_eq!(released(&waiting), Some(6.0));
     let playing = waiting.apply(Command::Tick(3.0));
@@ -200,18 +194,11 @@ fn firing_the_target_again_starts_a_run_that_loops_again() {
 
 #[test]
 fn cue_that_loops_starts_no_cue_by_auto_follow_devamped_or_not() {
-    let followed = workspace(vec![
-        Cue {
-            advance: Advance::Follow,
-            ..vamp(1)
-        },
-        audio(2),
-        devamp_cue(3, 1),
-    ])
-    .apply(GO)
-    .apply(move_standby(3))
-    .apply(Command::Tick(3.0))
-    .apply(GO);
+    let followed = workspace(vec![following(vamp(1)), audio(2), devamp_cue(3, 1)])
+        .apply(GO)
+        .apply(move_standby(3))
+        .apply(Command::Tick(3.0))
+        .apply(GO);
     assert_eq!(running(&followed), [1]);
     let ended = followed.apply(Command::Tick(10.0));
     assert!(ended.active().is_empty());

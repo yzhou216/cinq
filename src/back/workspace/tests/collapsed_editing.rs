@@ -13,15 +13,7 @@ use crate::back::Change;
 
 /// Returns a collapsed group of two levels, with a cue above and below it
 fn closed() -> Workspace {
-    workspace(vec![
-        audio(1),
-        group(2),
-        within(1, audio(3)),
-        within(1, group(4)),
-        within(2, audio(5)),
-        audio(6),
-    ])
-    .apply(collapse(&[2], true))
+    nested().apply(collapse(&[2], true))
 }
 
 /// Asserts that undo and redo bring back the lists of `before`

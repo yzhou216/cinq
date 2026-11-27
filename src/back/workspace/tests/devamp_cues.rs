@@ -82,10 +82,7 @@ fn devamp_cue_in_a_chain_lets_go_after_its_pre_wait_from_where_the_target_is_the
     let chain = |pre_wait: f32| {
         workspace(vec![
             continued(vamp(1)),
-            Cue {
-                pre_wait: pre_wait.into(),
-                ..devamp_cue(2, 1)
-            },
+            pre_waiting(pre_wait, devamp_cue(2, 1)),
         ])
         .apply(GO)
     };
@@ -140,4 +137,23 @@ fn undo_takes_back_a_change_to_the_loop_start_or_the_loop_end() {
     let once = edited.apply(Command::Undo);
     assert_eq!(loop_of(&once), (Some(3.0), Some(6.0)));
     assert_eq!(loop_of(&once.apply(Command::Undo)), (Some(2.0), Some(6.0)));
+}
+
+#[test]
+fn loop_shorter_than_a_millisecond_is_a_problem_and_go_skips_the_cue() {
+    let brief = Cue {
+        loop_start: 2.0.into(),
+        loop_end: "2.0005".to_owned().into(),
+        ..vamp(1)
+    };
+    let show = workspace(vec![brief, audio(2)]);
+    let cue = show.cue(CueId(1)).expect("the cue is there");
+    let problem = show.problem(cue).map(|problem| problem.to_string());
+    assert_eq!(
+        problem.as_deref(),
+        Some("loop is shorter than a millisecond")
+    );
+    let skipped = show.apply(GO);
+    assert!(skipped.active().is_empty());
+    assert_eq!(standby(&skipped), Some(2));
 }

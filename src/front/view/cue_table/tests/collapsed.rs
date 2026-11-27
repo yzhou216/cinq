@@ -20,24 +20,22 @@ use crate::{
     front::view::theme,
 };
 
-fn group(collapsed: bool) -> Cue {
-    Cue::new(CueId(1), "1", Kind::Group, "Group")
-        .collapsed(collapsed)
-        .build()
-}
-
 /// Returns a list of the group 1, collapsed or not, that holds a memo, a
 /// sound with no file, and a fade with no target
 fn troubled(collapsed: bool) -> Workspace {
     let group = Cue::new(CueId(1), "1", Kind::Group, "Group")
         .collapsed(collapsed)
         .build();
-    let within = |cue: Cue| Cue { depth: 1, ..cue };
+    let within = |id: u32, kind, name| {
+        Cue::new(CueId(id), id.to_string(), kind, name)
+            .depth(1)
+            .build()
+    };
     let cues = vec![
         group,
-        within(Cue::new(CueId(2), "2", Kind::Memo, "Note").build()),
-        within(Cue::new(CueId(3), "3", Kind::Audio, "Rain").build()),
-        within(Cue::new(CueId(4), "4", Kind::Fade, "Fade").build()),
+        within(2, Kind::Memo, "Note"),
+        within(3, Kind::Audio, "Rain"),
+        within(4, Kind::Fade, "Fade"),
     ];
     Workspace::new(vec![CueList::new("Main", cues)])
 }
@@ -160,6 +158,11 @@ fn a_collapsed_group_counts_the_cues_it_hides_that_run_and_the_paused_ones_first
 #[test]
 fn a_collapsed_group_tells_each_warning_of_the_cues_it_hides_once() {
     let light = |id: u32| Cue::new(CueId(id), id.to_string(), Kind::Light, "Look").depth(1);
+    let group = |collapsed| {
+        Cue::new(CueId(1), "1", Kind::Group, "Group")
+            .collapsed(collapsed)
+            .build()
+    };
     let read = |collapsed| {
         let workspace = Workspace::new(vec![CueList::new(
             "Main",

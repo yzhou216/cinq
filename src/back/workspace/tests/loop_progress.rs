@@ -40,11 +40,7 @@ fn progress_goes_on_to_the_end_without_going_back_once_a_devamp_cue_lets_go() {
 
 #[test]
 fn progress_of_a_clip_that_loops_whole_goes_round_as_it_did() {
-    let show = workspace(vec![Cue {
-        looping: true,
-        ..audio(1)
-    }])
-    .apply(GO);
+    let show = workspace(vec![looped(audio(1))]).apply(GO);
     assert_eq!(percent(show, 0.0, &[2.5, 10.0, 12.5]), [25, 0, 25]);
 }
 

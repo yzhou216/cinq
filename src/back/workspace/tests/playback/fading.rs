@@ -33,20 +33,14 @@ fn fade_cue_leaves_a_cue_that_a_panic_is_stopping() {
 
 #[test]
 fn fade_cue_stopped_in_the_same_tick_does_not_fade() {
-    let stop = Cue::new(CueId(2), "2", Kind::Stop, "Stop the fade")
-        .target(CueId(3))
-        .advance(Advance::Continue)
-        .build();
-    let workspace = workspace(vec![continuing(1), stop, fade_out(3)]).apply(GO);
+    let cues = vec![continuing(1), continued(stop_cue(2, 3)), fade_out(3)];
+    let workspace = workspace(cues).apply(GO);
     assert_eq!(workspace.active_of(CueId(1)).unwrap().fade, None);
 }
 
 #[test]
 fn fade_leaves_a_target_that_has_yet_to_sound() {
-    let waiting = Cue {
-        pre_wait: 5.0.into(),
-        ..audio(1)
-    };
+    let waiting = pre_waiting(5.0, audio(1));
     let workspace = workspace(vec![waiting, fade_out(2)])
         .apply(GO)
         .apply(Command::Tick(1.0))
@@ -79,10 +73,7 @@ fn cue_faded_out_cancels_the_rest_of_its_chain_that_it_has_yet_to_start() {
 
 #[test]
 fn fade_that_stops_its_target_ends_a_loop() {
-    let looping = Cue {
-        looping: true,
-        ..continuing(1)
-    };
+    let looping = looped(continuing(1));
     let workspace = workspace(vec![looping, fade_out(2)])
         .apply(GO)
         .apply(Command::Tick(4.0));

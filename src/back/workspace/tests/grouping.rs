@@ -64,10 +64,7 @@ fn go_on_a_group_fires_every_cue_in_it_and_moves_standby_past_it() {
 
 #[test]
 fn pre_waits_of_the_groups_around_a_cue_hold_it_back() {
-    let held = |id, wait: f32| Cue {
-        pre_wait: wait.into(),
-        ..group(id)
-    };
+    let held = |id, wait: f32| pre_waiting(wait, group(id));
     let workspace = workspace(vec![
         held(1, 1.0),
         within(1, held(2, 2.0)),
@@ -82,16 +79,13 @@ fn pre_waits_of_the_groups_around_a_cue_hold_it_back() {
 
 #[test]
 fn group_goes_on_by_its_own_setting_once_its_cues_have_played() {
-    let following = Cue {
-        advance: Advance::Follow,
-        pre_wait: 1.0.into(),
-        ..group(1)
-    };
-    let late = Cue {
-        pre_wait: 2.0.into(),
-        ..within(1, audio(3))
-    };
-    let workspace = workspace(vec![following, within(1, audio(2)), late, audio(4)]);
+    let late = pre_waiting(2.0, within(1, audio(3)));
+    let workspace = workspace(vec![
+        following(pre_waiting(1.0, group(1))),
+        within(1, audio(2)),
+        late,
+        audio(4),
+    ]);
     // Ten seconds of sound, the later one two seconds into the group
     assert_eq!(
         chain(&workspace, 1),

@@ -8,18 +8,6 @@
 use super::*;
 use crate::back::Change;
 
-/// Returns a list with a group that holds a sound and a group of its own
-fn nested() -> Workspace {
-    workspace(vec![
-        audio(1),
-        group(2),
-        within(1, audio(3)),
-        within(1, group(4)),
-        within(2, audio(5)),
-        audio(6),
-    ])
-}
-
 #[test]
 fn deleting_a_group_takes_every_cue_that_it_holds() {
     let deleted = nested().apply(delete(&[2]));

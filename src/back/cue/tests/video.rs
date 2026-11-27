@@ -28,7 +28,9 @@ fn picture_cue_shows_its_file_whole_and_follows_on_to_nothing() {
     let picture = Cue {
         media: silent(0.0),
         advance: Advance::Follow,
-        ..Cue::new(CueId(1), "1", Kind::Picture, "New Picture cue").build()
+        ..Cue::new(CueId(1), "1", Kind::Picture, "New Picture cue")
+            .file("slide.png")
+            .build()
     };
     assert_eq!(
         (picture.clip(), picture.shown()),

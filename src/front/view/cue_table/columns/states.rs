@@ -82,7 +82,8 @@ pub(in crate::front::view::cue_table) fn state(
             Problem::LoadFailed(_)
             | Problem::EmptyClip
             | Problem::PastFile
-            | Problem::EmptyLoop => "BROKEN",
+            | Problem::EmptyLoop
+            | Problem::ShortLoop => "BROKEN",
         };
         (words.to_owned(), theme::danger(selected))
     };

@@ -2,9 +2,10 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Builders of the cues that play, group, and chain
+//! Builders of the cues that play, group, and chain, and of a list of groups
 
-use crate::back::{Advance, Cue, CueId, Kind};
+use super::fixtures::workspace;
+use crate::back::{Advance, Cue, CueId, Kind, Workspace};
 
 pub(crate) fn audio(id: u32) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Audio, "Sound")
@@ -61,4 +62,41 @@ pub(super) fn vamp(id: u32) -> Cue {
         loop_end: 6.0.into(),
         ..audio(id)
     }
+}
+
+/// Returns the cue that waits `seconds` before it starts
+pub(in crate::back) fn pre_waiting(seconds: f32, cue: Cue) -> Cue {
+    Cue {
+        pre_wait: seconds.into(),
+        ..cue
+    }
+}
+
+/// Returns the cue that loops the whole of its clip
+pub(in crate::back) fn looped(cue: Cue) -> Cue {
+    Cue {
+        looping: true,
+        ..cue
+    }
+}
+
+/// Returns the cue that starts the next cue as it starts
+pub(super) fn following(cue: Cue) -> Cue {
+    Cue {
+        advance: Advance::Follow,
+        ..cue
+    }
+}
+
+/// Returns a list with a group that holds a sound and a group of its own,
+/// which holds a sound, followed by a sound outside them
+pub(super) fn nested() -> Workspace {
+    workspace(vec![
+        audio(1),
+        group(2),
+        within(1, audio(3)),
+        within(1, group(4)),
+        within(2, audio(5)),
+        audio(6),
+    ])
 }

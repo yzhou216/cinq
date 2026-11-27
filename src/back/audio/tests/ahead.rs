@@ -8,8 +8,10 @@ use std::path::PathBuf;
 
 use super::{READY_AHEAD, cues_within, upcoming, upcoming_cues};
 use crate::back::{
-    Advance, Command, Cue,
-    workspace::tests::{GO, audio, continued, continuing_after, loaded, silent, video, workspace},
+    Command,
+    workspace::tests::{
+        GO, audio, continued, continuing_after, loaded, pre_waiting, silent, video, workspace,
+    },
 };
 
 #[test]
@@ -35,17 +37,11 @@ fn sound_of_a_video_cue_is_made_ready_unless_its_file_holds_none() {
 fn sounds_are_made_ready_only_when_they_start_within_the_window() {
     // Cues 2 and 3 start together, 4 moves on past its pre-wait, so the
     // five start 0, 4, 4, 11, and 16 seconds after GO
-    let continuing = |id: u32, pre_wait: f32, post_wait: f32| Cue {
-        advance: Advance::Continue,
-        pre_wait: pre_wait.into(),
-        post_wait: post_wait.into(),
-        ..audio(id)
-    };
     let chain = workspace(vec![
-        continuing(1, 0.0, 4.0),
-        continuing(2, 0.0, 0.0),
-        continuing(3, 0.0, 6.0),
-        continuing(4, 1.0, 5.0),
+        continuing_after(1, 4.0),
+        continuing_after(2, 0.0),
+        continuing_after(3, 6.0),
+        pre_waiting(1.0, continuing_after(4, 5.0)),
         audio(5),
     ]);
     let fired = chain.clone().apply(GO);

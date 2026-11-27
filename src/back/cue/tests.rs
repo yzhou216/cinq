@@ -38,6 +38,7 @@ fn video(start: f32, looping: bool) -> Cue {
         media: Media::Loaded {
             duration: 10.0,
             sound: Some(9.5),
+            ahead: 0.0,
         },
         ..Cue::new(CueId(1), "1", Kind::Video, "Movie")
             .file("movie.mp4")

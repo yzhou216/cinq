@@ -44,12 +44,9 @@ fn audio_cue_that_starts_past_the_end_of_its_file_cannot_play() {
 
 #[test]
 fn audio_cue_that_loops_plays_until_something_stops_it() {
-    let workspace = workspace(vec![Cue {
-        looping: true,
-        ..audio(1)
-    }])
-    .apply(GO)
-    .apply(Command::Tick(25.0));
+    let workspace = workspace(vec![looped(audio(1))])
+        .apply(GO)
+        .apply(Command::Tick(25.0));
     let active = workspace.active_of(CueId(1)).expect("the loop plays on");
     assert_eq!(active.phase(), Phase::Looping);
     assert!((active.progress() - 0.5).abs() < 1e-6);
@@ -58,23 +55,14 @@ fn audio_cue_that_loops_plays_until_something_stops_it() {
 
 #[test]
 fn audio_cue_that_loops_leaves_the_cue_it_would_follow_to_go() {
-    let following = Cue {
-        looping: true,
-        advance: Advance::Follow,
-        ..audio(1)
-    };
-    let workspace = workspace(vec![following, audio(2)]).apply(GO);
+    let workspace = workspace(vec![looped(following(audio(1))), audio(2)]).apply(GO);
     assert_eq!(running(&workspace), [1]);
     assert_eq!(standby(&workspace), Some(2));
 }
 
 #[test]
 fn progress_waits_out_the_pre_wait_and_then_counts_the_clip_played() {
-    let waiting = workspace(vec![Cue {
-        pre_wait: 4.0.into(),
-        ..audio(1)
-    }])
-    .apply(GO);
+    let waiting = workspace(vec![pre_waiting(4.0, audio(1))]).apply(GO);
     let progress = |workspace: &Workspace| workspace.active_of(CueId(1)).map(|a| a.progress());
     assert_eq!(progress(&waiting), Some(0.0));
     let in_wait = waiting.clone().apply(Command::Tick(2.0));

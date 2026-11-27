@@ -61,10 +61,7 @@ fn editing_a_running_cue_leaves_the_run_under_way() {
 
 #[test]
 fn editing_a_fade_cue_in_its_pre_wait_leaves_the_fade_it_will_make() {
-    let fade = Cue {
-        pre_wait: 2.0.into(),
-        ..fade_out(2)
-    };
+    let fade = pre_waiting(2.0, fade_out(2));
     let workspace = workspace(vec![continuing(1), fade])
         .apply(GO)
         .apply(Command::Tick(1.0))
@@ -77,13 +74,10 @@ fn editing_a_fade_cue_in_its_pre_wait_leaves_the_fade_it_will_make() {
 
 #[test]
 fn editing_the_clip_of_a_running_cue_waits_for_its_next_run() {
-    let workspace = workspace(vec![Cue {
-        looping: true,
-        ..audio(1)
-    }])
-    .apply(GO)
-    .apply(edit(1, Edit::Loop(false)))
-    .apply(Command::Tick(30.0));
+    let workspace = workspace(vec![looped(audio(1))])
+        .apply(GO)
+        .apply(edit(1, Edit::Loop(false)))
+        .apply(Command::Tick(30.0));
     let active = workspace.active_of(CueId(1)).expect("the loop plays on");
     assert_eq!(active.phase(), Phase::Looping);
 }

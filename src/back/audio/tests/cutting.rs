@@ -17,6 +17,7 @@ use crate::back::{
         patch::Key,
         sound::{mixer::Mixer, voice::Voice},
     },
+    workspace::tests::looped,
 };
 
 /// Plays `buffers` buffers of the sound of `cue` from a file that holds
@@ -40,38 +41,24 @@ fn cut(cue: Cue, seconds: f32, promised: f32, buffers: usize) -> bool {
 }
 
 #[test]
-fn sound_that_stops_with_more_than_a_second_of_its_file_ahead_is_cut_short() {
-    assert!(cut(audio(), 0.5, 2.0, 80));
-}
-
-#[test]
-fn sound_that_stops_within_a_second_of_its_end_is_not() {
-    assert!(!cut(audio(), 0.2, 0.8, 80));
-}
-
-#[test]
-fn sound_that_plays_on_is_not() {
-    assert!(!cut(audio(), 5.0, 5.0, 20));
-}
-
-#[test]
-fn sound_that_plays_to_the_end_of_its_file_is_not() {
-    assert!(!cut(audio(), 0.5, 0.5, 80));
-}
-
-#[test]
-fn a_loop_that_stops_is_cut_short_however_little_lies_ahead() {
-    let looping = Cue {
-        looping: true,
-        ..audio()
-    };
-    assert!(cut(looping, 0.2, 0.5, 80));
-}
-
-#[test]
-fn sound_track_that_ends_before_the_picture_is_not() {
-    // Picture plays for ten seconds, which the sound track need not
-    assert!(!cut(video(), 0.5, 0.5, 80));
+fn sound_is_cut_short_only_when_it_stops_with_more_than_a_second_of_its_file_ahead() {
+    // Rows: cue, seconds in the file, seconds that its header promises, and
+    // buffers played
+    let cases = [
+        ("over a second ahead", audio(), 0.5, 2.0, 80, true),
+        ("within a second of its end", audio(), 0.2, 0.8, 80, false),
+        ("plays on", audio(), 5.0, 5.0, 20, false),
+        ("plays to the end of its file", audio(), 0.5, 0.5, 80, false),
+        // However little lies ahead
+        ("loop that stops", looped(audio()), 0.2, 0.5, 80, true),
+        // Picture plays for ten seconds, which the sound track need not
+        ("sound track ends first", video(), 0.5, 0.5, 80, false),
+    ];
+    cases
+        .into_iter()
+        .for_each(|(name, cue, seconds, promised, buffers, early)| {
+            assert_eq!(cut(cue, seconds, promised, buffers), early, "{name}");
+        });
 }
 
 #[test]

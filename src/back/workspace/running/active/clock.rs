@@ -6,6 +6,7 @@
 //! of its clock
 
 use super::{Active, Effect, Phase};
+use crate::back::CueId;
 
 /// Share of the way to the time that its sound has reached that a run
 /// moves its clock, once for each sync of the sound output
@@ -92,25 +93,47 @@ impl Active {
         if self.paused {
             self
         } else {
-            Self {
-                elapsed: self.elapsed + seconds,
-                ..self
-            }
-            .faded(seconds)
+            self.shifted(seconds).faded(seconds)
         }
     }
 
-    /// Returns the run with its clock moved a share of the way to the time
-    /// its sound has reached.  The position of a sound is up to a buffer of
-    /// the audio device old, by a different amount each time, so a share
-    /// keeps the picture from jittering while the clock still follows the
-    /// drift of the audio device.  A paused run keeps its clock.
-    pub(in crate::back::workspace::running) fn heard(self, played: f64) -> Self {
+    /// Returns the run advanced as [`Active::advanced`] does, except that a
+    /// fade that one of the fade cues `held` is making stays where it is,
+    /// since the cue that makes it is paused
+    pub(in crate::back::workspace::running) fn advanced_unless_held(
+        self,
+        seconds: f64,
+        held: &[CueId],
+    ) -> Self {
+        match self.fade.and_then(|fade| fade.by) {
+            Some(by) if held.contains(&by) => self.shifted(seconds),
+            _ => self.advanced(seconds),
+        }
+    }
+
+    /// Returns how many seconds the clock moves toward the time its sound
+    /// has reached, which is a share of the way there.  The position of a
+    /// sound is up to a buffer of the audio device old, by a different
+    /// amount each time, so a share keeps the picture from jittering while
+    /// the clock still follows the drift of the audio device.  A paused run
+    /// keeps its clock.
+    pub(in crate::back::workspace::running) fn drift(&self, played: f64) -> f64 {
+        if self.paused {
+            0.0
+        } else {
+            (played - self.played()) * HEARING
+        }
+    }
+
+    /// Returns the run with its clock moved by `seconds`, which a cue that
+    /// waits for another to start it takes from that cue, since it keeps
+    /// to the clock of the cue.  A paused run keeps its clock.
+    pub(in crate::back::workspace::running) fn shifted(self, seconds: f64) -> Self {
         if self.paused {
             self
         } else {
             Self {
-                elapsed: self.elapsed + (played - self.played()) * HEARING,
+                elapsed: self.elapsed + seconds,
                 ..self
             }
         }

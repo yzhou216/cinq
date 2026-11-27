@@ -65,12 +65,9 @@ fn level_edit_stops_at_the_loudest_level() {
 
 #[test]
 fn level_edit_of_a_run_that_waits_moves_it_too() {
-    let waiting = workspace(vec![Cue {
-        pre_wait: 5.0.into(),
-        ..audio(1)
-    }])
-    .apply(GO)
-    .apply(Command::Tick(1.0));
+    let waiting = workspace(vec![pre_waiting(5.0, audio(1))])
+        .apply(GO)
+        .apply(Command::Tick(1.0));
     assert_eq!(level(&set(waiting, -6.0), 1), Some(-6.0));
 }
 
