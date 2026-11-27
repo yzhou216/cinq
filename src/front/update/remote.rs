@@ -121,11 +121,14 @@ impl App {
     /// Fires a cue as a start cue does, and cues the stage window as GO does
     /// when a cue that it fires shows on stage
     fn started(self, id: CueId) -> (Self, Task<Message>) {
-        let staged = self
-            .workspace
-            .firing(id)
-            .iter()
-            .any(|(cue, _)| cue.kind.on_stage());
+        // A paused cue only resumes, which fires nothing
+        let resuming = self.workspace.active_of(id).is_some_and(|run| run.paused);
+        let staged = !resuming
+            && self
+                .workspace
+                .firing(id)
+                .iter()
+                .any(|(cue, _)| cue.kind.on_stage());
         let app = self.send(Command::Start(id));
         let stage = if staged { app.stage.cued() } else { app.stage };
         (Self { stage, ..app }, Task::none())

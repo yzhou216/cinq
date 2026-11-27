@@ -508,9 +508,15 @@ The host is an IPv4 address, or a name that *cinq* reaches at its first IPv4
 address.
 It holds no colon, bracket, or slash, so that an IPv6 address and a URL read as
 no destination.
+A host whose last part is a number or begins with _0x_ must be an IPv4 address
+of four decimal numbers without a leading zero, so that _010.0.0.1_,
+_0x7f.0.0.1_, and _127.1_ read as no destination, where the system would take
+them for other addresses.
 A port that is not a number from 1 to 65535 reads *BAD PORT*.
 An address avoids waiting for a name to resolve, which holds up the messages
 behind it for as long as the name server takes.
+A UDP destination that holds a name is resolved once for each run of messages
+that follow each other within a second, as a TCP connection is kept.
 *cinq* keeps a TCP connection to a destination open while messages to it
 follow each other within a second, and makes a new one for the first message
 after that, so that a message never waits in a connection whose cable is

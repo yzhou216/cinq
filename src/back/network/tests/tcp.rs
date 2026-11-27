@@ -112,3 +112,54 @@ fn tcp_destination_that_does_not_answer_does_not_delay_messages_to_others() {
         "the datagram was dropped as late"
     );
 }
+
+#[test]
+#[cfg_attr(
+    windows,
+    ignore = "Windows takes in 64 MiB for a peer that never reads"
+)]
+fn write_that_times_out_is_told_as_timed_out() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap().to_string();
+    // The peer accepts and never reads, so the buffers fill and the write waits
+    let error =
+        connection::written(None, &address, &vec![0; 64 << 20], Instant::now()).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::TimedOut);
+    drop(listener);
+}
+
+#[test]
+fn check_of_a_connection_reads_a_bounded_amount_of_what_the_peer_sent() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap().to_string();
+    let kept = TcpStream::connect(&address).unwrap();
+    let kept_at = kept.local_addr().unwrap();
+    let peer = accepted(&listener);
+    // Fills every buffer on the way, as a peer that sends without pause does.
+    // A write can find its buffer full before what it holds has moved on to
+    // the other end, as on FreeBSD, so the peer writes again after a pause
+    // until nothing more goes in.
+    peer.set_nonblocking(true).unwrap();
+    let sent = || {
+        thread::sleep(Duration::from_millis(50));
+        iter::repeat(&[0; 1 << 16])
+            .map_while(|chunk| (&peer).write(chunk).ok())
+            .sum::<usize>()
+    };
+    iter::repeat_with(sent)
+        .take_while(|&sent| sent > 0)
+        .for_each(drop);
+    let stream = connection::written(Some(kept), &address, &[1; 4], Instant::now()).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::from_millis(200)))
+        .unwrap();
+    assert!(
+        stream.peek(&mut [0; 1]).is_ok(),
+        "the check read everything, and would read on while the peer sends"
+    );
+    assert_eq!(
+        stream.local_addr().unwrap(),
+        kept_at,
+        "a peer that is still open keeps its connection"
+    );
+}

@@ -278,6 +278,41 @@ Major changes and improvements in each release of cinq, newest first.
   device stops or opens again, an output needs more of its channels, or the
   cue stops sending to it or begins to again.  Only the sound on that device
   stops or starts, where the sound on both devices was cut and began again.
+- A button of a remote that sends its release as a 64-bit integer or a double
+  zero, as `oscsend` does with the types `h` and `d`, no longer acts a second
+  time as it is released, as one that sends an integer or a float zero does
+  not.  Before, the release of such a button fired GO again.
+- A network cue whose destination is an IPv4 address written with a zero before
+  an octet, as `010.101.100.020:3037`, in hexadecimal, as `0x7f.0.0.1:9000`, or
+  with fewer than four octets, as `127.1:9000`, reads `NO DESTINATION`.
+  Before, the system took a zero for octal and `0x` for hexadecimal, so that
+  the message of `010.0.0.1` went to 8.0.0.1.
+- A burst of network cues to a UDP destination given by a host name, as
+  `console.local:8000`, looks the name up once and sends every message, even
+  when the name is slow to resolve.  Before, each message looked it up again,
+  one after another, so that the later messages of a GO went out more than a
+  second late and were dropped.
+- `/cue/{number}/start` over OSC on a video cue that is paused resumes it and
+  leaves the stage window as it is, as a start cue that resumes it does.
+  Before, it made the stage window fullscreen and brought it before the other
+  windows, or opened it again where the operator had closed it.
+- A network cue fired just before the window closes is sent, where cinq
+  exited before its message went out when the connection or the lookup of the
+  host name took a moment.  Closing now waits for such messages, for a second
+  at most.
+- An `osc_listen` with a space around an address that is fine otherwise, as
+  `" 127.0.0.1:53000"`, now says that the space is the problem.  Before, it
+  said that the setting was a host name.
+- A destination whose host holds a null byte, as a hand-edited show file can
+  give it, reads as no destination.  Before, the interface showed it as a
+  valid one, and the message failed with `data provided contains a nul byte`.
+- A message to a TCP destination that cannot be written within its second
+  shows the problem `message not sent: timed out` on GNU/Linux, the BSDs, and
+  Darwin, as it does on Windows.  Before, those systems said `operation would
+  block`.
+- A TCP destination that sends data back without pause no longer holds its
+  messages.  Before, cinq read what the destination had sent for as long as
+  more arrived, so that a message to it waited behind that reading for good.
 
 ## v0.1.7
 

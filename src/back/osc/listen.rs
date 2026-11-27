@@ -59,7 +59,7 @@ pub enum Heard {
     Ignored(String),
     /// Why the address could not be listened on, as the sidebar tells it
     Failed(String),
-    /// Address that failed is listened on now
+    /// Address that failed, and was told to fail, is listened on now
     Listening,
 }
 

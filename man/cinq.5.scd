@@ -229,8 +229,10 @@ _tutorial.pdf_
 	_/go_ is GO on the cue list in view, as the key does, and _/panic_ is
 	Panic.
 	_/pause_ and _/resume_ pause and resume every running cue.
-	_/cue/{number}/start_ fires the cue with its chain, as a start cue does, or
-	resumes it where it is paused, and _/cue/{number}/stop_ stops it.
+	_/cue/{number}/start_ fires the cue with its chain, as a start cue does, and
+	cues the stage window as GO does for a picture or video cue, or resumes it
+	where it is paused and leaves the window as it is, and
+	_/cue/{number}/stop_ stops it.
 	_/cue/{number}/pause_ holds the cue, as a pause cue does, and
 	_/cue/{number}/resume_ resumes it.
 	_/playhead/{number}_ moves standby to the cue, in the list that holds it, as
@@ -240,11 +242,12 @@ _tutorial.pdf_
 	after the spaces around it are taken off.
 	Where several cues have the same number, the first of them is meant, in
 	the order of the cue lists and then of their rows.
-	An address may begin with _/workspace/{id}_, whatever the ID.
+	An address may begin with _/workspace/{id}_ once, whatever the ID.
 	There are no wildcards and no replies.
-	A message whose only argument is the number 0 or false does nothing, as
-	the button of a remote sends 1 when it is pressed and 0 when it is
-	released, and the release must not fire GO again.
+	A message whose only argument is the number 0, whether an integer or a
+	float of either width, or false does nothing, as the button of a remote
+	sends 1 when it is pressed and 0 when it is released, and the release must
+	not fire GO again.
 	Any other arguments are ignored.
 	The commands act in show mode, while a field has the keyboard, and over the
 	help page, as GO and Panic do, and each leaves hint mode as a click does,
@@ -270,6 +273,9 @@ _tutorial.pdf_
 	port, the warnings in the sidebar say so, naming *osc_listen*, and *cinq*
 	tries again every two seconds, so that the port comes into use, and the
 	warning goes, once the other program lets it go.
+	The first failure is tried again after half a second and is not told, as
+	the setting before may still hold the port when the file moves *osc_listen*
+	between two addresses of one port.
 	Anyone who can reach the address can fire and stop cues, so give the
 	address of the interface of the network that the show runs on, or
 	_127.0.0.1_ for programs on the same computer, and keep the port from

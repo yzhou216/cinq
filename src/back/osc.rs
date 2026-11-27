@@ -21,14 +21,15 @@ mod remote;
 #[cfg(test)]
 mod tests;
 
-use std::fmt;
+use std::{fmt, net::Ipv4Addr};
 
 pub use listen::{Heard, listen};
 pub use remote::Remote;
 
 /// Characters that no host holds, of the names and IPv4 addresses that are
-/// taken: those of an IPv6 literal, of a URL, and of a second port
-const NOT_IN_HOST: [char; 4] = [':', '[', ']', '/'];
+/// taken: those of an IPv6 literal, of a URL, and of a second port, and the
+/// null that the resolver rejects
+const NOT_IN_HOST: [char; 5] = [':', '[', ']', '/', '\0'];
 
 /// Ends a SLIP frame and starts one too, so that a receiver drops any noise
 /// before it
@@ -93,8 +94,15 @@ impl Destination {
         }
     }
 
+    /// Holds a name or an IPv4 address.  A host of digits and dots must read
+    /// as an address in full, since the system resolver also takes a zero
+    /// before an octet for octal and fewer than four octets for a short
+    /// form, and would send to a machine other than the one that is written.
     fn host_is_valid(host: &str) -> bool {
-        !host.is_empty() && !host.contains(char::is_whitespace) && !host.contains(NOT_IN_HOST)
+        !host.is_empty()
+            && !host.contains(char::is_whitespace)
+            && !host.contains(NOT_IN_HOST)
+            && (!reads_as_number(host) || host.parse::<Ipv4Addr>().is_ok())
     }
 
     pub fn port_is_valid(port: &str) -> bool {
@@ -177,4 +185,17 @@ fn words(text: &str) -> Vec<Word> {
             })
         })
         .collect()
+}
+
+/// Returns whether the system resolver reads `host` as an address, as it
+/// does a host of digits and dots, one whose last label is a number, or one
+/// whose last label starts with `0x`, reading a leading zero as octal and
+/// `0x` as hexadecimal
+fn reads_as_number(host: &str) -> bool {
+    let last = host.rsplit('.').next().unwrap_or(host);
+    host.chars().all(|c| c.is_ascii_digit() || c == '.')
+        || (!last.is_empty() && last.chars().all(|c| c.is_ascii_digit()))
+        || last
+            .get(..2)
+            .is_some_and(|start| start.eq_ignore_ascii_case("0x"))
 }

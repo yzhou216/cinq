@@ -9,8 +9,9 @@ mod tcp;
 mod udp;
 
 use std::{
+    cell::Cell,
     collections::BTreeMap,
-    io::{ErrorKind, Read},
+    io::{ErrorKind, Read, Write},
     iter,
     net::{TcpListener, TcpStream, UdpSocket},
     sync::atomic::Ordering,
@@ -18,7 +19,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use super::{Network, ipv4_address, udp_socket};
+use super::{Network, connection, deliver, ipv4_address, udp_socket};
 use crate::back::osc::{Destination, Outgoing, framed};
 
 /// Longest that a test waits, which only a broken test reaches

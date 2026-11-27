@@ -63,8 +63,8 @@ fn type_tags_without_data_and_those_with_other_sizes_are_skipped_in_step() {
             Argument::Bool(false),
             Argument::Other,
             Argument::Other,
-            Argument::Other,
-            Argument::Other,
+            Argument::Int(0),
+            Argument::Float(0.0),
             Argument::Other,
             Argument::Other,
         ]

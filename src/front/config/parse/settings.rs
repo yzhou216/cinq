@@ -22,17 +22,18 @@ pub(super) fn osc_listen(table: &DeTable) -> (Option<SocketAddr>, Option<Problem
         return (None, None);
     };
     let address = match value {
-        DeValue::String(text) => text
-            .parse::<SocketAddr>()
-            .ok()
-            .filter(|address| address.port() > 0),
+        DeValue::String(text) => socket_address(text),
         _ => None,
     };
     match address {
         Some(address) => (Some(address), None),
         None => {
             let bad = match value {
-                DeValue::String(text) if is_host_name(text) => {
+                // Settings are read as written, so the space is the problem
+                DeValue::String(text) if socket_address(text.trim()).is_some() => {
+                    "osc_listen must be IP:port, with no space around it"
+                }
+                DeValue::String(text) if is_host_name(text.trim()) => {
                     "osc_listen must be IP:port, not a host name"
                 }
                 _ => "osc_listen must be IP:port, as 127.0.0.1:53000",
@@ -40,6 +41,12 @@ pub(super) fn osc_listen(table: &DeTable) -> (Option<SocketAddr>, Option<Problem
             (None, Some(Problem::at(span, bad)))
         }
     }
+}
+
+fn socket_address(text: &str) -> Option<SocketAddr> {
+    text.parse::<SocketAddr>()
+        .ok()
+        .filter(|address| address.port() > 0)
 }
 
 /// Returns whether `text` is a host name and a port, which `osc_listen` does

@@ -27,11 +27,11 @@ pub struct Message {
 }
 
 /// Argument of a message, of which only the numbers and booleans that can
-/// say off matter
+/// say off matter, of either width
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) enum Argument {
-    Int(i32),
-    Float(f32),
+    Int(i64),
+    Float(f64),
     Bool(bool),
     /// Any other argument, which is skipped over
     Other,
@@ -115,16 +115,24 @@ fn argument(tag: char, data: &[u8]) -> Option<(Argument, &[u8])> {
     match tag {
         'i' => {
             let (number, rest) = data.split_first_chunk::<4>()?;
-            Some((Argument::Int(i32::from_be_bytes(*number)), rest))
+            Some((Argument::Int(i32::from_be_bytes(*number).into()), rest))
         }
         'f' => {
             let (number, rest) = data.split_first_chunk::<4>()?;
-            Some((Argument::Float(f32::from_be_bytes(*number)), rest))
+            Some((Argument::Float(f32::from_be_bytes(*number).into()), rest))
+        }
+        'h' => {
+            let (number, rest) = data.split_first_chunk::<8>()?;
+            Some((Argument::Int(i64::from_be_bytes(*number)), rest))
+        }
+        'd' => {
+            let (number, rest) = data.split_first_chunk::<8>()?;
+            Some((Argument::Float(f64::from_be_bytes(*number)), rest))
         }
         // Character, color, and MIDI
         'c' | 'r' | 'm' => skipped(data, 4),
-        // 64-bit integer, double, and time tag
-        'h' | 'd' | 't' => skipped(data, 8),
+        // Time tag
+        't' => skipped(data, 8),
         's' | 'S' => string(data).map(|(_, rest)| (Argument::Other, rest)),
         'b' => {
             let (size, rest) = sized(data)?;

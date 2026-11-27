@@ -5,11 +5,13 @@
 //! Tests of the stage window as GO fires a picture or video cue through a
 //! start cue
 
+use std::net::{IpAddr, Ipv4Addr};
+
 use iced::window;
 
 use super::closing;
 use crate::{
-    back::{Advance, Cue, CueId, Kind, fresh, loaded, memo, silent, video},
+    back::{Advance, Cue, CueId, Kind, Remote, fresh, loaded, memo, silent, video},
     front::{App, Message},
 };
 
@@ -68,4 +70,32 @@ fn stage_window_stays_as_it_is_when_a_start_cue_only_resumes_a_video_cue() {
     let (resumed, _) = paused.handled(Message::Go);
     let (_, raising) = resumed.staged();
     assert_eq!(raising.units(), 0);
+}
+
+/// Returns the state with a video cue that plays and is paused, and the
+/// stage window open, which the operator may have closed
+fn paused(closed: bool) -> App {
+    let (open, _) = show(vec![video(3)]).staged();
+    let (gone, _) = open.handled(Message::Go);
+    let (shown, _) = gone.staged();
+    let (paused, _) = shown.handled(Message::PauseAll);
+    if closed { closing(paused) } else { paused }
+}
+
+/// Returns the state once OSC starts the video cue
+fn osc_started(app: App) -> App {
+    let from = IpAddr::V4(Ipv4Addr::LOCALHOST);
+    app.handled(Message::Remote(from, Remote::Start("3".to_owned())))
+        .0
+}
+
+#[test]
+fn stage_window_stays_as_it_is_when_osc_only_resumes_a_paused_video_cue() {
+    [false, true].into_iter().for_each(|closed| {
+        let resumed = osc_started(paused(closed));
+        assert!(!resumed.workspace.active()[0].paused);
+        let (resumed, raising) = resumed.staged();
+        let window = resumed.stage.window().is_some();
+        assert_eq!((window, raising.units()), (!closed, 0), "closed: {closed}");
+    });
 }

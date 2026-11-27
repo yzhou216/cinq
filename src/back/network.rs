@@ -7,16 +7,19 @@
 //! [`Network::send`] hands the messages of network cues to a thread of its
 //! own, which passes each to a worker thread of its destination.  A worker
 //! sends its messages in order over a TCP connection that lasts through a
-//! burst, as [`connection`] tells, or as one UDP datagram each.  Messages
-//! to different destinations therefore do not wait for each other, and the
-//! host name of a destination is resolved on its own worker.
+//! burst, as [`connection`] tells, or as one UDP datagram each to the
+//! address that the host name resolved to at the start of the burst.
+//! Messages to different destinations therefore do not wait for each other,
+//! and the host name of a destination is resolved on its own worker.
 //!
 //! A message that cannot go out within [`PATIENCE`] of being handed over,
 //! as one behind a console that does not answer, is dropped rather than
 //! sent late, since a console cue that fires late does more harm than one
-//! that does not fire.  Why a message to a destination last failed stays
-//! for the interface to show until a message gets there or no cue names the
-//! destination any more, and warns once on standard error.
+//! that does not fire.  Dropping the network waits for the messages on their
+//! way, so that a cue fired as the window closes still goes out.  Why a
+//! message to a destination last failed stays for the interface to show until
+//! a message gets there or no cue names the destination any more, and warns
+//! once on standard error.
 
 mod address;
 mod connection;
@@ -26,7 +29,7 @@ mod tests;
 use std::{
     collections::{BTreeMap, BTreeSet},
     io::{self, ErrorKind},
-    net::TcpStream,
+    net::{SocketAddr, TcpStream},
     sync::{
         Arc, Mutex,
         atomic::{AtomicUsize, Ordering},
@@ -41,7 +44,7 @@ use crate::{lock::lock, warn};
 use address::{ipv4_address, udp_socket};
 
 /// Longest that a message may wait to go out, and longest quiet that a TCP
-/// connection outlasts
+/// connection or the resolved address of a UDP host outlasts
 const PATIENCE: Duration = Duration::from_secs(1);
 
 const CHECK: Duration = Duration::from_millis(100);
@@ -123,12 +126,33 @@ impl Network {
     }
 }
 
+impl Drop for Network {
+    /// Waits for the messages that are on their way, for [`PATIENCE`] at
+    /// most, which is as long as any of them may take, so that a network cue
+    /// fired just before the window closes still goes out
+    fn drop(&mut self) {
+        let end = Instant::now() + PATIENCE;
+        while self.shared.pending.load(Ordering::Relaxed) > 0 && Instant::now() < end {
+            thread::sleep(Duration::from_millis(5));
+        }
+    }
+}
+
 /// Queue into the worker of one destination, with each message as handed
 /// over
 type Queue = mpsc::Sender<(Instant, Outgoing)>;
 
-/// Open TCP connection of a destination, with when it last took a message
-type Connection = (Instant, TcpStream);
+/// What a worker keeps of its destination, with when it last took a message
+type Kept = (Instant, Link);
+
+/// Open TCP connection of a destination, or the address that the host name
+/// of a UDP destination resolved to, which a burst of datagrams then looks
+/// up once instead of once each, since a name such as one ending in `.local`
+/// can take longer to resolve than the messages may wait
+enum Link {
+    Tcp(TcpStream),
+    Udp(SocketAddr),
+}
 
 /// Hands each message to the worker of its destination, which it starts at
 /// the first message, so that a destination that does not answer cannot
@@ -170,11 +194,11 @@ fn started(destination: &str, shared: &Arc<Shared>) -> Queue {
 fn work(destination: &str, messages: &mpsc::Receiver<(Instant, Outgoing)>, shared: &Shared) {
     messages.iter().fold(None, |kept, (handed, outgoing)| {
         // Burst ends after a quiet second, whenever the dispatcher notices
-        let fresh = kept.filter(|(used, _): &Connection| used.elapsed() <= PATIENCE);
-        let connection = match deliver(fresh, outgoing, handed) {
-            Ok(connection) => {
+        let fresh = kept.filter(|(used, _): &Kept| used.elapsed() <= PATIENCE);
+        let kept = match deliver(fresh, outgoing, handed, ipv4_address) {
+            Ok(kept) => {
                 drop(lock(&shared.problems).remove(destination));
-                connection
+                kept
             }
             Err(error) => {
                 warn::once(&format!("network cue to {destination}: {error}"));
@@ -183,31 +207,42 @@ fn work(destination: &str, messages: &mpsc::Receiver<(Instant, Outgoing)>, share
             }
         };
         shared.pending.fetch_sub(1, Ordering::Relaxed);
-        connection
+        kept
     });
 }
 
-/// Returns the connection of the destination as it stays open, if any
+/// Returns what the worker keeps of the destination after the message, if
+/// anything, with `resolve` finding the address of a UDP host that it does
+/// not keep
 fn deliver(
-    kept: Option<Connection>,
+    kept: Option<Kept>,
     Outgoing {
         destination,
         packet,
     }: Outgoing,
     handed: Instant,
-) -> io::Result<Option<Connection>> {
+    resolve: impl FnOnce(&str) -> io::Result<SocketAddr>,
+) -> io::Result<Option<Kept>> {
+    let link = kept.map(|(_, link)| link);
     match destination {
         Destination::Udp(address) => {
             time_left(handed)?;
-            let to = ipv4_address(&address)?;
+            let to = match link {
+                Some(Link::Udp(to)) => to,
+                _ => resolve(&address)?,
+            };
             // Finding the host may have taken the rest of the time
             time_left(handed)?;
-            udp_socket()?.send_to(&packet, to).map(|_| None)
+            udp_socket()?.send_to(&packet, to)?;
+            Ok(Some((Instant::now(), Link::Udp(to))))
         }
         Destination::Tcp(address) => {
-            let stream = kept.map(|(_, stream)| stream);
+            let stream = link.and_then(|link| match link {
+                Link::Tcp(stream) => Some(stream),
+                Link::Udp(_) => None,
+            });
             connection::written(stream, &address, &osc::framed(&packet), handed)
-                .map(|stream| Some((Instant::now(), stream)))
+                .map(|stream| Some((Instant::now(), Link::Tcp(stream))))
         }
     }
 }

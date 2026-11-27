@@ -99,3 +99,25 @@ fn message_closes_every_double_quote_that_it_opens() {
     assert_eq!(packet("/scene Act\" 1"), None);
     assert!(packet("/scene \"Act 1\" \"2\"").is_some());
 }
+
+#[test]
+fn numeric_hosts_are_ipv4_addresses_as_the_standard_library_reads_them() {
+    // The system resolver reads a zero in front of an octet as octal and 0x
+    // as hexadecimal, so that 010.0.0.1 would reach 8.0.0.1
+    assert!(Destination::parse("10.101.100.20:3037").is_some());
+    assert_eq!(Destination::parse("010.101.100.020:3037"), None);
+    assert_eq!(Destination::parse("udp://192.168.001.100:9000"), None);
+    assert_eq!(Destination::parse("127.1:9000"), None);
+    assert_eq!(Destination::parse("1.2.3:80"), None);
+    assert_eq!(Destination::parse("0x7f.0.0.1:9000"), None);
+    assert_eq!(Destination::parse("0X7F000001:9000"), None);
+    assert_eq!(Destination::parse("console.1:9000"), None);
+    assert!(Destination::parse("10.0.0.1.example.com:80").is_some());
+}
+
+#[test]
+fn host_with_a_null_is_not_a_destination() {
+    assert_eq!(Destination::parse("con\0sole:3037"), None);
+    assert_eq!(Destination::parse("udp://\0:9000"), None);
+    assert!(!Destination::port_is_bad("con\0sole:0"));
+}

@@ -166,3 +166,13 @@ fn receive_that_fails_at_once_is_waited_out_unless_it_timed_out_or_was_refused()
     assert!(!pauses(&error(io::ErrorKind::WouldBlock)));
     assert!(!pauses(&error(io::ErrorKind::ConnectionRefused)));
 }
+
+#[test]
+fn release_of_a_button_that_sends_a_wide_zero_gives_no_command() {
+    let from = LOOPBACK.into();
+    let wide = |tags: &[u8; 4], number: [u8; 8]| [&b"/go\0"[..], tags, &number].concat();
+    assert_eq!(commands(&wide(b",h\0\0", 0_i64.to_be_bytes()), from), []);
+    assert_eq!(commands(&wide(b",d\0\0", 0_f64.to_be_bytes()), from), []);
+    let pressed = commands(&wide(b",d\0\0", 1_f64.to_be_bytes()), from);
+    assert_eq!(pressed, [Heard::Command(from, Remote::Go)]);
+}

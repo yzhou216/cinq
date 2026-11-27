@@ -38,3 +38,38 @@ fn a_host_that_cannot_be_found_is_told_in_few_words() {
 fn udp_messages_may_go_to_a_broadcast_address() {
     assert!(udp_socket().unwrap().broadcast().unwrap());
 }
+
+#[test]
+fn a_burst_to_a_host_name_resolves_it_once() {
+    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+    socket.set_read_timeout(Some(PATIENCE)).unwrap();
+    let to = socket.local_addr().unwrap();
+    let lookups = Cell::new(0);
+    let resolve = |_: &str| {
+        lookups.set(lookups.get() + 1);
+        Ok(to)
+    };
+    let destination = Destination::Udp("console.local:9000".to_owned());
+    (0..3).fold(None, |kept, byte| {
+        let outgoing = message(destination.clone(), byte).remove(0);
+        let kept = deliver(kept, outgoing, Instant::now(), resolve).unwrap();
+        let mut datagram = [0; 16];
+        let length = socket.recv(&mut datagram).unwrap();
+        assert_eq!(datagram[..length], [byte; 4]);
+        kept
+    });
+    assert_eq!(lookups.get(), 1);
+}
+
+#[test]
+fn a_message_on_its_way_goes_out_before_the_network_is_dropped() {
+    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let network = Network::open();
+    network.send(message(udp_to(&socket), 9));
+    drop(network);
+    // Nothing waits for the datagram now, so it has come or it never will
+    socket.set_nonblocking(true).unwrap();
+    let mut datagram = [0; 16];
+    let length = socket.recv(&mut datagram).unwrap();
+    assert_eq!(datagram[..length], [9; 4]);
+}
