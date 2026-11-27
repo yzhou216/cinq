@@ -36,6 +36,8 @@ inviting cues.
 Saving leaves out the settings that the kind of a cue does not use, and those
 that keep their defaults, apart from *level*, *duration*, and *stop_target*,
 which it writes for every cue whose kind uses them.
+Where the file is a symbolic link, saving writes the file that the link names,
+and creates it where it is not there, and keeps the link.
 A file can leave out any setting but the *name* of a list, the *name* and the
 *channels* of an output, the *id* and the *address* of an instrument, and the
 *id* and the *kind* of a cue.
@@ -723,6 +725,8 @@ in place.
 The next time that the show opens, they come back as one change, which undo
 takes back to the show as saved.
 Saving the show, or taking back each of its changes, removes them.
+Saving the show over another file removes the changes kept for that file as
+well, so that they do not come back as changes to what the save wrote.
 
 # BUGS
 

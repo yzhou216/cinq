@@ -17,7 +17,10 @@ use std::{
 use iced::Task;
 
 use super::on_own_thread;
-use crate::front::{App, Message, config};
+use crate::{
+    front::{App, Message, config},
+    warn,
+};
 
 /// Path of the tutorial under a data directory, as packages install it
 const TUTORIAL: &str = "doc/cinq/tutorial.pdf";
@@ -80,7 +83,8 @@ fn open_in_text_editor(file: &Path) -> Result<(), String> {
 /// Opens the tutorial as [`open_link`] does, from the first of
 /// [`tutorial_places`] that holds it.  A tutorial that is not installed is
 /// told in one line on the help page, and the directories searched go to
-/// standard error, where a long list does not crowd the page.
+/// standard error, where a long list does not crowd the page, once however
+/// often the link is followed.
 pub(super) fn open_tutorial() -> Result<(), String> {
     let (directories, name) = tutorial_places();
     directories
@@ -88,7 +92,7 @@ pub(super) fn open_tutorial() -> Result<(), String> {
         .map(|directory| directory.join(name))
         .find(|tutorial| tutorial.is_file())
         .ok_or_else(|| not_found(name, &directories))
-        .inspect_err(|searched| eprintln!("cinq: {searched}"))
+        .inspect_err(|searched| warn::once(searched))
         .map_err(|_| NOT_INSTALLED.to_owned())
         .and_then(|tutorial| open_link(tutorial.as_os_str()))
 }

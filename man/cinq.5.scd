@@ -61,7 +61,8 @@ Following the link to the tutorial opens the PDF that *FILES* names in the
 program that the desktop opens it with.
 Why a link failed to open shows below the page until the page closes.
 A tutorial that is not installed is told in one line there, and the
-directories searched go to standard error.
+directories searched go to standard error, once however often the link is
+followed.
 
 # FILES
 

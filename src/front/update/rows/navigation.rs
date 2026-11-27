@@ -77,6 +77,10 @@ impl App {
     /// that the outputs took the place of comes back with the cue that was
     /// selected, and any other list with its standby cue.
     pub(in crate::front::update) fn showing_list(self, list: usize) -> Self {
+        // A click from before an undo shrank the lists may name one past them
+        if list >= self.workspace.lists().len() {
+            return self;
+        }
         let back = self.outputs_shown && list == self.list && self.selected_here().is_some();
         let app = self.showing_cues();
         if back { app } else { app.switched_to(list) }

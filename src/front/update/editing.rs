@@ -81,8 +81,10 @@ impl App {
             .add_filter(filter, &endings)
             .add_filter("All files", &["*"])
             .set_directory(self.workspace.file_directory(cue));
-        Task::future(chooser.pick_file())
-            .and_then(move |chosen| Task::done(Message::FileChosen(id, chosen.path().to_owned())))
+        let show = self.show.id();
+        Task::future(chooser.pick_file()).and_then(move |chosen| {
+            Task::done(Message::FileChosen(show, id, chosen.path().to_owned()))
+        })
     }
 
     pub(super) fn with_selected_moved(self, by: isize) -> Self {

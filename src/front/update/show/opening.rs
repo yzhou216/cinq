@@ -82,6 +82,8 @@ impl App {
                 version: self.show.version + 1,
             },
             problems: self.problems.without_files(),
+            // Labels stand for the places of the show that goes
+            hints: None,
             ..self
         };
         // Selection and message once the kept changes are back, since

@@ -55,17 +55,19 @@ impl Keeper {
         }
     }
 
-    /// Keeps the unsaved changes of `show` in its kept file, or removes the
-    /// file once the show has none, as well as the kept file that the show
-    /// had before it moved to another file.  The kept file of another show
-    /// stays, for that show to bring back.  Returns why keeping failed, if
-    /// it did.  A change that fails on the thread is told at a later call,
-    /// once the thread has tried it.
+    /// Keeps the unsaved changes of `show` in its kept file, and removes the
+    /// kept files that no longer apply: that of a show without changes, that
+    /// of the file the show had before it moved, and that of a file the show
+    /// is saved over.  The kept file of another show stays, for that show to
+    /// bring back.  Returns why keeping failed, if it did.  A change that
+    /// fails on the thread is told at a later call, once the thread has
+    /// tried it.
     pub fn keep(&mut self, show: &Show) -> Option<String> {
         let failed = self.failures.try_iter().last();
         if self.seen == Some((show.id, show.version)) {
             return failed;
         }
+        let same_show = self.seen.is_some_and(|(id, _)| id == show.id);
         self.seen = Some((show.id, show.version));
         let wanted = self
             .unsaved_directory
@@ -77,9 +79,18 @@ impl Keeper {
             .take()
             .filter(|(id, kept)| *id == show.id && wanted.as_ref() != Some(kept))
             .map(|(_, kept)| kept);
-        if let Some(gone) = gone {
-            self.send(Change::Remove(gone));
-        }
+        // A show saved over another file leaves that file's own kept changes
+        // behind, which would come back as unsaved changes to what was saved
+        let saved_over = self
+            .unsaved_directory
+            .as_deref()
+            .zip(show.file.as_deref())
+            .filter(|_| same_show && !show.unsaved())
+            .map(|(directory, file)| kept_file(directory, Some(file)));
+        gone.into_iter()
+            .chain(saved_over)
+            .unique()
+            .for_each(|gone| self.send(Change::Remove(gone)));
         if let Some(wanted) = &wanted {
             self.send(Change::Write(wanted.clone(), show.text.clone()));
         }

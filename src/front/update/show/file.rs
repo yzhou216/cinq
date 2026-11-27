@@ -8,6 +8,7 @@
 use std::{
     fs,
     io::{self, Write},
+    iter,
     path::{Component, Path, PathBuf, PrefixComponent},
 };
 
@@ -53,7 +54,7 @@ fn drive(prefix: PrefixComponent<'_>) -> String {
 /// that the program creates.  Waiting for the disk, as saving a show does,
 /// makes the text outlast a power cut as well.
 pub(super) fn write(file: &Path, text: &str, wait_for_disk: bool) -> io::Result<()> {
-    let file = fs::canonicalize(file).unwrap_or_else(|_| file.to_owned());
+    let file = target(file);
     let directory = file.parent().unwrap_or(Path::new("."));
     fs::create_dir_all(directory)?;
     let temporary = created_in(directory)?;
@@ -67,6 +68,22 @@ pub(super) fn write(file: &Path, text: &str, wait_for_disk: bool) -> io::Result<
         temporary.as_file().sync_all()?;
     }
     temporary.persist(file).map(drop).map_err(io::Error::from)
+}
+
+/// Returns the file that `file` names through its links, as far as they go
+/// even where the last names a file that is not there, so that saving
+/// through a dangling link creates that file rather than replacing the link.
+/// A chain of links stops at the forty that a system follows at most.
+fn target(file: &Path) -> PathBuf {
+    fs::canonicalize(file).unwrap_or_else(|_| {
+        iter::successors(Some(file.to_owned()), |link| {
+            let named = fs::read_link(link).ok()?;
+            Some(link.parent().unwrap_or(Path::new(".")).join(named))
+        })
+        .take(40)
+        .last()
+        .unwrap_or_else(|| file.to_owned())
+    })
 }
 
 /// Returns a new, empty file in `directory` that asks for the permissions

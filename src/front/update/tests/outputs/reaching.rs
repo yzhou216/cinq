@@ -168,3 +168,9 @@ fn leaving_the_outputs_for_another_list_selects_its_standby_cue() {
         "switching to the list that shows still selects standby"
     );
 }
+
+#[test]
+fn a_list_past_the_last_is_left_alone() {
+    let app = after(show(Some(CueId(3))), [Message::SwitchList(2)]);
+    assert_eq!((app.list, app.selected), (0, Some(CueId(3))));
+}

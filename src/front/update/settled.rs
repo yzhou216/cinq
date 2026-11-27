@@ -40,7 +40,8 @@ impl App {
             Message::Loaded(show, found) => self.loaded(show, found),
             Message::Rechecked(show, found) => self.rechecked(show, found),
             Message::Saved(saved) => self.saved(saved),
-            Message::FileChosen(id, path) => {
+            Message::FileChosen(show, ..) if show != self.show.id() => self,
+            Message::FileChosen(_, id, path) => {
                 let file = self.workspace.file_name_of(&path);
                 self.with_file(id, file)
             }

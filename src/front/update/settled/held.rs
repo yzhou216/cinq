@@ -24,11 +24,19 @@ impl App {
             // Click on blank space would leave the search line open with no
             // way to close it but Panic, and any click leaves hint mode
             Message::Clicked => self.without_search().without_hints(),
-            // Stage window holds no cue list to keep in view
-            Message::WindowFocused(window) => Self {
-                stage: self.stage.with_keyboard_in(window),
-                ..self
-            },
+            // Stage window holds no cue list to keep in view, nor places that
+            // hint mode could label out of its sight
+            Message::WindowFocused(window) => {
+                let app = if self.stage.is_window(window) {
+                    self.without_hints()
+                } else {
+                    self
+                };
+                Self {
+                    stage: app.stage.with_keyboard_in(window),
+                    ..app
+                }
+            }
             message => self.sent_by(message),
         }
     }

@@ -139,6 +139,29 @@ Major changes and improvements in each release of cinq, newest first.
   now says that the setting belongs above the first table.  Before, these
   showed only on the day that the keymap was chosen, and a value that is not a
   table never did.
+- Opening another show, or the stage window taking the keyboard as it does by
+  Alt+Tab, takes the hint mode labels away.  Before, the labels stayed up, and
+  a label typed then acted on the new show or pressed a button of the main
+  window out of sight.
+- A file chosen for a cue after another show has opened is dropped.  Before,
+  a cue of the new show could take the file.
+- A click on a cue list that an undo took away in the same moment leaves cinq
+  as it is, where it stopped with an error.
+- Saving a show over a file that has unsaved changes kept for it, as Save As
+  does when the chosen file is another show with changes that were never saved,
+  removes those changes.  Before, opening the saved file brought them back as
+  unsaved changes that replaced what was saved.
+- Following the tutorial link of the help page, where the tutorial is not
+  installed, reads `The tutorial is not installed` even when standard error is
+  a closed pipe or a full disk, and the directories searched no longer land on
+  the problems screen of `config.toml`.  Before, the page told nothing.
+- Saving a show whose file is a symbolic link to a file that is not there, as
+  one that a dotfiles directory has yet to hold, creates the file that the link
+  names and keeps the link.  Before, the save put a plain file in place of the
+  link.
+- A click or a turn of the wheel in the stage window no longer acts as one in
+  the main window.  Before, it closed the search line and hint mode, dropped a
+  command typed halfway, and made the cue list measure its rows anew.
 
 ## v0.1.7
 

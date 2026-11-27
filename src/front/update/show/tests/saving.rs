@@ -120,6 +120,22 @@ fn saving_keeps_the_permissions_of_the_show_and_the_link_to_it() {
     assert_eq!(mode.ok(), Some(0o640));
 }
 
+#[cfg(unix)]
+#[test]
+fn saving_through_a_link_to_a_file_that_is_not_there_creates_that_file() {
+    use std::os::unix::fs::symlink;
+
+    let directory = temporary();
+    let show = directory.path().join("storm.cinq.toml");
+    let middle = directory.path().join("middle.cinq.toml");
+    let link = directory.path().join("link.cinq.toml");
+    symlink("storm.cinq.toml", &middle).expect("the link can be made");
+    symlink("middle.cinq.toml", &link).expect("the link can be made");
+    write(&link, "changed", true).expect("the show can be saved");
+    assert_eq!(fs::read_to_string(&show).ok().as_deref(), Some("changed"));
+    assert!(fs::symlink_metadata(&link).is_ok_and(|metadata| metadata.file_type().is_symlink()));
+}
+
 #[test]
 fn saving_ends_the_failure_to_open_whether_it_succeeds_or_fails() {
     let broken =

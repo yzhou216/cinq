@@ -217,3 +217,11 @@ fn directory_in_place_of_a_show_is_told_without_an_error_number() {
     let reason = crate::front::files::read(directory.path()).expect_err("a directory is no show");
     assert!(!reason.contains("os error"), "{reason}");
 }
+
+#[test]
+fn opening_a_show_leaves_hint_mode_since_its_labels_stand_for_the_old_show() {
+    let (hinting, _) = storm().hinting();
+    assert!(hinting.hints.is_some());
+    let opened = hinting.opened(found(Some(CALM), Some(SHOW), None));
+    assert!(opened.hints.is_none());
+}

@@ -53,6 +53,23 @@ fn kept_changes_move_along_with_their_show() {
 }
 
 #[test]
+fn saving_over_another_show_takes_away_the_changes_kept_for_that_show() {
+    let (mut keeper, directory) = keeper();
+    let kept = kept_file(directory.path(), Some(Path::new(STORM)));
+    keeper.keep(&renamed(storm(), "Cue").show);
+    let calm = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
+    let changed = renamed(calm, "Later");
+    keeper.keep(&changed.show);
+    keeper.settled();
+    assert!(kept.exists());
+    let save = saving(&changed, STORM);
+    let saved = changed.saved(save);
+    assert_eq!(keeper.keep(&saved.show), None);
+    keeper.settled();
+    assert!(!kept.exists());
+}
+
+#[test]
 fn show_named_through_a_parent_directory_keeps_its_changes_as_by_its_plain_path() {
     let kept = |file: &str| kept_file(Path::new("/unsaved"), Some(Path::new(file)));
     assert_eq!(kept("/shows/old/../storm.cinq.toml"), kept(STORM));

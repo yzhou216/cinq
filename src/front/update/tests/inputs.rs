@@ -18,13 +18,26 @@ fn sound_file_chosen_for_a_new_cue_names_it_by_its_path_from_the_show() {
     };
     let (added, _) = app.handled(Message::Add(Place::After, 1));
     let id = added.selected.expect("a new cue is selected");
-    let chosen = Message::FileChosen(id, "/show/sounds/storm.ogg".into());
+    let chosen = Message::FileChosen(added.show.id(), id, "/show/sounds/storm.ogg".into());
     let (chosen, _) = added.handled(chosen);
     let cue = chosen.workspace.cue(id).unwrap();
     assert_eq!(
         (cue.file.as_str(), cue.name.as_str()),
         ("sounds/storm.ogg", "storm")
     );
+}
+
+#[test]
+fn file_chosen_while_another_show_opened_changes_no_cue_of_it() {
+    let app = App {
+        workspace: Workspace::new(Vec::new()).directory("/show"),
+        ..App::default()
+    };
+    let (added, _) = app.handled(Message::Add(Place::After, 1));
+    let id = added.selected.expect("a new cue is selected");
+    let other = added.show.id().wrapping_add(1);
+    let (chosen, _) = added.handled(Message::FileChosen(other, id, "/show/storm.ogg".into()));
+    assert_eq!(chosen.workspace.cue(id).unwrap().file, "");
 }
 
 #[test]

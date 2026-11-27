@@ -150,7 +150,9 @@ pub enum Message {
     Patch(PatchEdit),
     /// Asks which file an audio, video, or picture cue plays or shows
     ChooseFile(CueId),
-    FileChosen(CueId, PathBuf),
+    /// Answers [`Self::ChooseFile`] with the file for the cue of the show
+    /// with that serial number, which a show opened since does not take
+    FileChosen(u64, CueId, PathBuf),
     /// Undoes a number of changes, stopping at the oldest
     Undo(usize),
     /// Redoes a number of changes, stopping at the newest

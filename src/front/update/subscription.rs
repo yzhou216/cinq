@@ -62,7 +62,9 @@ impl App {
             .map(|every| time::every(every).map(|_| Message::NetworkChecked));
         let always = [
             keyboard::listen().filter_map(keys::key_press),
-            event::listen_with(clicked),
+            event::listen_with(clicked)
+                .with(self.main)
+                .filter_map(|(main, (window, message))| in_window(main, window, message)),
             event::listen_with(side_pressed),
             event::listen_with(focused),
             window::resize_events().map(|(window, size)| Message::Resized(window, size)),
@@ -152,14 +154,25 @@ impl App {
 /// that a click drops a command typed halfway, and the end of a press or a
 /// turn of the wheel, after which the cue list may have scrolled and the labels
 /// of hint mode no longer lie on their places
-fn clicked(event: Event, _status: event::Status, _window: window::Id) -> Option<Message> {
+fn clicked(
+    event: Event,
+    _status: event::Status,
+    window: window::Id,
+) -> Option<(window::Id, Message)> {
     match event {
-        Event::Mouse(mouse::Event::ButtonPressed(_)) => Some(Message::Clicked),
+        Event::Mouse(mouse::Event::ButtonPressed(_)) => Some((window, Message::Clicked)),
         Event::Mouse(mouse::Event::ButtonReleased(_) | mouse::Event::WheelScrolled { .. }) => {
-            Some(Message::Remeasure)
+            Some((window, Message::Remeasure))
         }
         _ => None,
     }
+}
+
+/// Keeps `message` only for an event in the main window, since a click or a
+/// turn of the wheel in the stage window touches neither the search line, nor
+/// hint mode, nor the rows
+fn in_window(main: Option<window::Id>, window: window::Id, message: Message) -> Option<Message> {
+    (main == Some(window)).then_some(message)
 }
 
 fn drawn(event: Event, _status: event::Status, window: window::Id) -> Option<Message> {

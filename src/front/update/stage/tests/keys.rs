@@ -108,3 +108,11 @@ fn keys_of_search_help_and_hints_answer_from_the_stage_window_that_the_main_wind
     let (searched, _) = focusing(opened(), true).searching(false);
     assert_eq!(searched.notices.remark, words);
 }
+
+#[test]
+fn stage_window_taking_the_keyboard_leaves_hint_mode() {
+    let hinting = || opened().hinting().0;
+    assert!(hinting().hints.is_some());
+    assert!(focusing(hinting(), true).hints.is_none());
+    assert!(focusing(hinting(), false).hints.is_some());
+}
