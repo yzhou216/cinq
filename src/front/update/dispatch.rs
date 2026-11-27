@@ -16,7 +16,8 @@ use crate::{
 
 /// Returns whether `message` reports something that happened without the
 /// operator, which changes nothing that the operator was in the middle of,
-/// and moves no keyboard
+/// and moves no keyboard but for a window taking it, which drops the keys
+/// typed halfway
 pub(super) fn passive(message: &Message) -> bool {
     matches!(
         message,
@@ -127,8 +128,11 @@ impl App {
         } else {
             this.settled()
         };
+        // A key sequence waits through nothing that moves the keyboard to
+        // another window, as one that another program took and gave back
+        let waiting = typing && !matches!(message, Message::WindowFocused(_));
         let app = Self {
-            keys: if typing { app.keys } else { Vec::new() },
+            keys: if waiting { app.keys } else { Vec::new() },
             notices: app.notices.while_typing(typing),
             typed: app.typed.filter(|_| kept),
             ..app

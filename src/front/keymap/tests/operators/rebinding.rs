@@ -53,3 +53,15 @@ fn a_keymap_of_single_keys_has_no_operator() {
     assert_eq!(outcome.across(), None);
     assert_eq!(outcome.action, Some((Action::Next, None)));
 }
+
+#[test]
+fn box_leaves_out_a_motion_that_an_own_binding_takes() {
+    let keymap = Keymap::default().with(Action::Standby, vec![keys("d j")]);
+    let next = following(&keymap, "d");
+    assert!(next.contains(&("j".to_owned(), Action::Standby, None)));
+    assert!(!next.contains(&("j".to_owned(), Action::Next, Some(Action::Cut))));
+    // Another key of the motion, and the same key after a count, still reach it
+    assert!(next.contains(&("ArrowDown".to_owned(), Action::Next, Some(Action::Cut))));
+    let counted = following(&keymap, "d 3");
+    assert!(counted.contains(&("j".to_owned(), Action::Next, Some(Action::Cut))));
+}

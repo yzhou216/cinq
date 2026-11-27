@@ -95,3 +95,13 @@ fn the_key_of_standby_opens_the_tutorial_once_from_the_help_page_and_leaves_it_o
     let (_, repeat) = page(true).typed(enter, true);
     assert_eq!(repeat.units(), 0);
 }
+
+#[test]
+fn holding_the_key_of_help_leaves_the_page_as_it_is() {
+    [Key::Named(Named::F1), Key::Character("?".into())]
+        .into_iter()
+        .for_each(|key| {
+            assert!(!App::default().typed(press(key.clone()), true).0.help);
+            assert!(helping(App::default()).typed(press(key), true).0.help);
+        });
+}

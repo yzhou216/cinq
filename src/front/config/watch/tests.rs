@@ -130,7 +130,7 @@ fn changes_by_the_real_path_of_a_linked_directory_touch_the_file() -> io::Result
     let event = Event::new(EventKind::Create(CreateKind::File))
         .add_path(real.canonicalize()?.join("config.toml"));
     let burst = Ok(vec![DebouncedEvent::new(event, Instant::now())]);
-    assert!(touches(&burst, &names(&file, Some(&link))));
+    assert!(touches(&burst, &names(&file, std::slice::from_ref(&link))));
     Ok(())
 }
 
@@ -191,5 +191,27 @@ fn a_directory_that_refuses_the_watch_but_is_there_is_an_error() -> io::Result<(
         |directory: &Path| Err(notify::Error::generic("refused").add_path(directory.into()));
     let error = watch_nearest(&file, refuse).expect_err("the nearest directory refuses the watch");
     assert_eq!(error.paths, [home.path()]);
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn keys_follow_the_target_of_a_linked_file() -> io::Result<()> {
+    use std::os::unix::fs::symlink;
+
+    let home = TempDir::new()?;
+    let dotfiles = home.path().join("dotfiles");
+    let directory = home.path().join("config").join("cinq");
+    fs::create_dir_all(&dotfiles)?;
+    fs::create_dir_all(&directory)?;
+    let target = dotfiles.join("config.toml");
+    fs::write(&target, "keymap = \"vi\"\n")?;
+    let file = directory.join("config.toml");
+    symlink(&target, &file)?;
+    let configs = watched(file, Errors::Log(Box::new(io::sink())));
+    until(&configs, from_file("vi"));
+    // Edit that reaches neither the link nor its directory
+    fs::write(&target, BOOTH)?;
+    until(&configs, from_file("booth"));
     Ok(())
 }

@@ -70,7 +70,10 @@ impl Press {
             return None;
         }
         let (key, shift) = match key {
-            Key::Character(text) => (Name::Char(text.chars().exactly_one().ok()?), false),
+            Key::Character(text) => (
+                Name::Char(chord_letter(text.chars().exactly_one().ok()?, modifiers)),
+                false,
+            ),
             // iced names its keys after the specification, and the space bar
             // as the configuration file does, so the name of each variant is
             // the name of its key.  Its `Super` is the legacy name of Meta,
@@ -138,6 +141,18 @@ impl Press {
     }
 }
 
+/// Returns the character of a key, with the case of a letter held with
+/// Control or Alt left to Shift alone, since Caps Lock makes the capital that
+/// the system reports for `Control+s`, which would read as `Control+S`
+fn chord_letter(c: char, modifiers: Modifiers) -> char {
+    let held = modifiers.control() || modifiers.alt();
+    match (held, modifiers.shift()) {
+        (true, true) => c.to_ascii_uppercase(),
+        (true, false) => c.to_ascii_lowercase(),
+        (false, _) => c,
+    }
+}
+
 /// Key pressed, with the [`Press`] that the key bindings know it by
 pub struct KeyPress<'a> {
     pub key: &'a Key,
@@ -159,9 +174,24 @@ impl<'a> KeyPress<'a> {
         else {
             return None;
         };
+        // Alt makes another character of a letter on Darwin, where Option+j
+        // types `∆`, which no binding names, so that the key itself stands.
+        // Control with Alt is left alone, since Windows reports AltGr so,
+        // which is how a layout types its own letters.
+        let named = match (key, modified_key) {
+            (Key::Character(plain), Key::Character(typed))
+                if modifiers.alt()
+                    && !modifiers.control()
+                    && plain.is_ascii()
+                    && !typed.is_ascii() =>
+            {
+                key
+            }
+            _ => modified_key,
+        };
         Some(Self {
             key,
-            press: Press::from_key(modified_key, *modifiers),
+            press: Press::from_key(named, *modifiers),
             repeat: *repeat,
         })
     }

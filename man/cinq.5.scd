@@ -449,6 +449,10 @@ in *Control+d*, *Alt+ArrowUp*, or *Control+Shift+Tab*.
 A *+* with nothing after it is the plus key itself, as in *Control++*.
 Shift with one of the letters *a* to *z* is the capital that it types, so that
 *Shift+g* is *G* and *Control+Shift+n* is *Control+N*.
+Caps Lock changes the case of no letter held with Control or Alt, so that
+*Control+s* is the same with it on.
+On Darwin, *Alt* with a letter is that letter, although Option makes another
+character of it.
 Any other key that types a character is written as the character it types
 with Shift held, as in *?* rather than *Shift+/*, and Shift cannot be added to
 it.
@@ -477,8 +481,10 @@ The help page, which lists each action once, names both.
 A key that completes or continues no sequence is dropped together with the
 keys typed so far, as Vim beeps and drops them, so that a key mistyped halfway,
 such as the *x* of *d x*, never starts a sequence of its own.
-Anything done other than typing, such as a click, drops a sequence typed
-halfway, and so does a change to the file.
+Anything done other than typing, such as a click in the main window, drops a
+sequence typed halfway, and so does a window taking the keyboard, as when
+another window or program gives it back, and a change to the file.
+A click or a turn of the wheel in the stage window does not.
 The key of *cancel* drops it as well, without any other effect.
 
 Digits typed before a sequence count it, as in *3 j* with the vi keymap.
@@ -532,8 +538,13 @@ A count before the operator, before the motion, or both counts the motion, and
 the two multiply, so that *2 d 3 j* cuts the selected cue and the next six.
 The count and the motion count rows, so that a collapsed group is one row of
 them and goes with every cue that it holds.
-A motion that cannot move, such as *d k* on the first cue, does nothing, and a
-count past the end stops at the last cue.
+A motion that cannot move, such as *d k* on the first cue, does nothing, and
+leaves the status bar as it was, so that the hint to paste stays, and a count
+past the end stops at the last cue.
+A binding of your own to the keys of an operator and a motion, as *d j* for
+another action, acts in place of the operator, unless a count comes between the
+keys, and the box of the keys that can come next leaves that key out as a
+motion.
 The keys of *top_row*, *middle_row*, and *bottom_row* are no motions, since
 the rows in view are known only once the window has drawn the list.
 The cues of a cut leave the selection on the cue that takes their place, a
@@ -563,8 +574,9 @@ are held with it, unless the other of the two is bound to the key with those
 very modifiers.
 Holding either key down acts only once, so that holding the key of Panic does
 not cut a panic short.
-So does holding a key of *fullscreen*, which would otherwise toggle the stage
-window back and forth, while every other key repeats as it is held.
+So does holding a key of *fullscreen*, *hint*, or *help*, which would otherwise
+toggle the stage window, the labels, or the help page back and forth, while
+every other key repeats as it is held.
 
 # SEARCHING
 
@@ -1548,6 +1560,9 @@ terminal that cannot switch screens, such as one whose *TERM* is _dumb_.
   A keymap of the file's own whose *from* names no keymap starts from no keys,
   as does the one whose *from* closes a loop of *from*s followed from the
   keymap in use, and one named after a shipped keymap goes unused.
+  A keymap that no setting chooses is checked as well, for entries that name no
+  action and for keys that cannot be read, and a value under *keymaps* that is
+  not a table is a problem.
 - A *ready_ahead* that is not a number, or is below 0, such as a negative
   number or a string, leaves the default of 10 seconds.
 - An *osc_listen* that is not a string, or is not an IP address and a port

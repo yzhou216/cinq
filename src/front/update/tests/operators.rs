@@ -232,3 +232,12 @@ fn cutting_or_deleting_the_standby_cue_moves_standby_to_the_cue_that_takes_its_p
         .0;
     assert_eq!(standby(&last), None);
 }
+
+#[test]
+fn an_operator_typed_halfway_is_dropped_when_the_keyboard_goes_to_another_window_and_back() {
+    let waiting = typing(show(Some(CueId(4))), "d");
+    assert_eq!(waiting.keys.len(), 1);
+    let (back, _) = waiting.next(Message::WindowFocused(iced::window::Id::unique()));
+    assert!(back.keys.is_empty());
+    assert_eq!(rows(&typing(back, "j")).len(), 12);
+}

@@ -105,6 +105,40 @@ Major changes and improvements in each release of cinq, newest first.
   `0:05.6 left, -14.9 dB`.  A pause now comes before the level, so that a
   narrow sidebar keeps it.
 - The help line for hint mode says "check box" where it said "checkbox".
+- A `config.toml` that is a symbolic link, as one kept in a directory of
+  dotfiles is, applies each change to the file that it links to while cinq
+  runs.  Before, such a change applied only once cinq started again.
+- Keys held with Control or Alt mean the same with Caps Lock on, where
+  Control+s saved the show as another file, as Control+Shift+s does, and
+  Control+c, Control+d, Control+w, and Alt+j did nothing.  Only Shift makes
+  the capital of such a key now.
+- Holding the key of help down shows the help page once, where each repeat of
+  the key closed and opened it again, so that the page flickered and stayed
+  open or shut by chance.
+- On Darwin, keys bound to Alt with a letter, such as Alt+j and Alt+k, which
+  move the selected cue down and up, now act.  Before, Option made another
+  character of the letter, as `∆`, which no binding names.
+- A key that acts at once, such as one bound to `go`, tells once in the
+  problems of `config.toml` that it cuts a sequence short, when two actions
+  hold that sequence by default.  Before, the problem showed twice.
+- The box of the keys that can follow an operator leaves out a motion key that
+  a binding of your own takes, such as `j` after `d` when `d j` is bound to
+  another action, since that binding acts there.  Before, the box listed the
+  key twice, once for the binding and once for the cut of the next cue.
+- An operator over a motion that finds no rows, as `d k` on the first cue,
+  leaves the status bar as it was, so that the hint to paste what a copy or
+  cut took stays.  Before, the key dropped the hint although nothing happened.
+- A key sequence typed halfway, as the `d` that waits for its motion, is
+  dropped when another window or program takes the keyboard from the main
+  window, as a click drops it.  Before, a `j` typed after the keyboard came
+  back completed the `d` and cut two cues.
+- A keymap of your own that no setting chooses is checked for problems as the
+  one in use is: an action it names that does not exist, a key that cannot be
+  read, or a `from` that names no keymap.  A value under `[keymaps]` that is
+  not a table is a problem too, as `ready_ahead = 5` written below it, which
+  now says that the setting belongs above the first table.  Before, these
+  showed only on the day that the keymap was chosen, and a value that is not a
+  table never did.
 
 ## v0.1.7
 

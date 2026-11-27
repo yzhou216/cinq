@@ -27,7 +27,7 @@ mod format;
 mod tests;
 
 use std::{
-    iter,
+    fs, iter,
     path::{Path, PathBuf},
     thread,
     time::Duration,
@@ -97,12 +97,12 @@ async fn follow(file: &Path, output: &mut mpsc::Sender<Config>) -> notify::Resul
         // Channel closes only once the stream has gone
         let _ = sender.unbounded_send(result);
     })?;
-    let mut watched = None;
+    let mut watched = Vec::new();
     // First reading follows the start, which leaves the file as it was
     let mut changed = false;
     loop {
-        watched = rewatch(&mut watcher, watched.as_deref(), file)?;
-        let names = names(file, watched.as_deref());
+        watched = rewatch(&mut watcher, &watched, file)?;
+        let names = names(file, &watched);
         if let Some(config) = loaded(file, changed).await {
             let _ = output.send(config).await;
         }
@@ -116,15 +116,19 @@ async fn follow(file: &Path, output: &mut mpsc::Sender<Config>) -> notify::Resul
     }
 }
 
-/// Returns the paths that changes to `file` can come by: its own, and the
-/// one past every symbolic link of `watched`, the directory on the way to it
-/// that is watched, which is how FSEvents on Darwin reports them
-fn names(file: &Path, watched: Option<&Path>) -> Vec<PathBuf> {
-    let real = watched.and_then(|directory| {
+/// Returns the paths that changes to `file` can come by: its own, the
+/// one past every symbolic link of the first of `watched`, the directory on
+/// the way to it, which is how FSEvents on Darwin reports them, and the
+/// file that it links to, which an edit changes without touching the link
+fn names(file: &Path, watched: &[PathBuf]) -> Vec<PathBuf> {
+    let real = watched.first().and_then(|directory| {
         let rest = file.strip_prefix(directory).ok()?;
         directory.canonicalize().ok().map(|real| real.join(rest))
     });
-    iter::once(file.to_owned()).chain(real).collect()
+    iter::once(file.to_owned())
+        .chain(real)
+        .chain(file.canonicalize().ok())
+        .collect()
 }
 
 /// Returns whether a burst of changes touches the file that goes by
@@ -143,20 +147,22 @@ fn touches(result: &DebounceEventResult, names: &[PathBuf]) -> bool {
 }
 
 /// Watches the nearest directory on the way to `file` in place of the
-/// directory `watched`, and with kqueue the file itself as well, which an
-/// editor may write in place, and returns the directory now watched, or why
-/// no directory can be watched.  The watch goes in anew even when the
-/// directory is the same, since a directory that was deleted and made again
-/// takes its old watch with it.
+/// directories `watched`, and with kqueue the file itself as well, which an
+/// editor may write in place, and returns the directories now watched, the
+/// nearest first, or why no directory can be watched.  A file that is a
+/// symbolic link has the directory of its target watched too, where its
+/// edits show up.  The watch goes in anew even when the directory is the
+/// same, since a directory that was deleted and made again takes its old
+/// watch with it.
 fn rewatch(
     watcher: &mut Watcher,
-    watched: Option<&Path>,
+    watched: &[PathBuf],
     file: &Path,
-) -> notify::Result<Option<PathBuf>> {
+) -> notify::Result<Vec<PathBuf>> {
     // Directory that has gone took its watch with it, so a failure is moot
-    if let Some(watched) = watched {
-        let _ = watcher.unwatch(watched);
-    }
+    watched.iter().for_each(|directory| {
+        let _ = watcher.unwatch(directory);
+    });
     let directory = watch_nearest(file, |directory| {
         watcher.watch(directory, RecursiveMode::NonRecursive)
     })?;
@@ -168,7 +174,23 @@ fn rewatch(
         let _ = watcher.unwatch(file);
         let _ = watcher.watch(file, RecursiveMode::NonRecursive);
     }
-    Ok(directory)
+    let target = link_directory(file)
+        .filter(|target| watcher.watch(target, RecursiveMode::NonRecursive).is_ok());
+    Ok(directory.into_iter().chain(target).collect())
+}
+
+/// Returns the directory of the file that `file` links to, or none when
+/// `file` is not a symbolic link to a file that may be written.  A target
+/// that no one may write, as one in the Nix store, changes only as its link
+/// does, and its directory can be one that changes all the time.
+fn link_directory(file: &Path) -> Option<PathBuf> {
+    let is_link = fs::symlink_metadata(file).ok()?.is_symlink();
+    let target = file.canonicalize().ok()?;
+    let writable = !fs::metadata(&target).ok()?.permissions().readonly();
+    target
+        .parent()
+        .filter(|_| is_link && writable)
+        .map(Path::to_owned)
 }
 
 /// Calls `add` on the nearest directory on the way to `file` that exists,

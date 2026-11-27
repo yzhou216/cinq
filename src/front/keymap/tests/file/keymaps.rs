@@ -117,3 +117,46 @@ fn file_reports_what_is_wrong_with_its_keymaps() {
         ]
     );
 }
+
+#[test]
+fn keymap_that_no_setting_uses_is_checked_as_the_one_in_use_is() {
+    let text = "[keymaps.booth]\nfrom = \"emacs\"\nfly = \"f\"\n[keymaps.mine]\nfrom = 3\ngo = \"Spacebar\"\n";
+    let (keymap, problems) = parsed(text);
+    assert_eq!(
+        messages(&problems),
+        [
+            "no keymap is named `emacs`",
+            "keymaps.booth: no action is named `fly`",
+            "keymaps.mine.from should be the name of a keymap",
+            "keymaps.mine: go: `Spacebar` names no key",
+        ]
+    );
+    assert_eq!(keymap.name(), "vi");
+    // A problem that the keymap in use shares with another is told once
+    let (_, problems) = parsed("keymap = \"booth\"\n[keymaps.booth]\nfly = \"f\"\n");
+    assert_eq!(
+        messages(&problems),
+        ["keymaps.booth: no action is named `fly`"]
+    );
+}
+
+#[test]
+fn value_under_keymaps_that_is_not_a_table_is_told_with_its_line() {
+    let text = "[keymaps]\nready_ahead = 5\nbooth = 2\n";
+    let (_, problems) = parsed(text);
+    assert_eq!(
+        messages(&problems),
+        [
+            "`ready_ahead` is a setting, which belongs above the first table",
+            "keymaps.booth should be a table",
+        ]
+    );
+    assert_eq!(
+        problems
+            .iter()
+            .filter_map(|problem| problem.span.clone())
+            .map(|span| &text[span])
+            .collect::<Vec<_>>(),
+        ["ready_ahead", "2"]
+    );
+}

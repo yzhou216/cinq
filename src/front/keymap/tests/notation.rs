@@ -4,9 +4,10 @@
 
 //! Tests of how keys are written, and of how iced reports them
 
-use iced::keyboard::{Key, Modifiers, key::Named};
+use iced::keyboard::{self, Key, Modifiers, key::Named};
 
 use super::*;
+use crate::front::keymap::KeyPress;
 
 #[test]
 fn notation_writes_keys_the_way_it_reads_them() {
@@ -78,4 +79,50 @@ fn the_screen_joins_the_keys_of_a_sequence_and_the_file_keeps_their_spaces() {
     );
     assert_eq!(keymap.listed(Action::RowToTop), "zt, z Enter");
     assert_eq!(written(&keys("g g")), "g g");
+}
+
+#[test]
+fn caps_lock_leaves_the_letter_of_a_key_held_with_control_or_alt_to_shift() {
+    // Caps Lock makes the capital that xkb reports for Control+s, so that
+    // without Shift the key is still the lowercase one
+    let chord = |text: &str, modifiers| Press::from_key(&Key::Character(text.into()), modifiers);
+    let (control_shift, alt_shift) = (
+        Modifiers::CTRL | Modifiers::SHIFT,
+        Modifiers::ALT | Modifiers::SHIFT,
+    );
+    assert_eq!(chord("S", Modifiers::CTRL), one("Control+s"));
+    assert_eq!(chord("J", Modifiers::ALT), one("Alt+j"));
+    assert_eq!(chord("s", control_shift), one("Control+S"));
+    assert_eq!(chord("S", control_shift), one("Control+S"));
+    assert_eq!(chord("j", alt_shift), one("Alt+J"));
+    assert_eq!(chord("G", Modifiers::empty()), one("G"));
+    assert_eq!(chord("/", Modifiers::CTRL), one("Control+/"));
+}
+
+#[test]
+fn alt_with_a_letter_is_that_letter_where_the_system_makes_another_character_of_it() {
+    // Option+j arrives on Darwin as the character that it types, `∆`
+    let event = |key: &str, typed: &str, modifiers| keyboard::Event::KeyPressed {
+        key: Key::Character(key.into()),
+        modified_key: Key::Character(typed.into()),
+        physical_key: keyboard::key::Physical::Unidentified(
+            keyboard::key::NativeCode::Unidentified,
+        ),
+        location: keyboard::Location::Standard,
+        modifiers,
+        text: None,
+        repeat: false,
+    };
+    let pressed = |event| KeyPress::of(&event).and_then(|key| key.press);
+    assert_eq!(pressed(event("j", "∆", Modifiers::ALT)), one("Alt+j"));
+    assert_eq!(
+        pressed(event("j", "Ô", Modifiers::ALT | Modifiers::SHIFT)),
+        one("Alt+J")
+    );
+    assert_eq!(pressed(event("j", "j", Modifiers::ALT)), one("Alt+j"));
+    assert_eq!(pressed(event("j", "∆", Modifiers::empty())), one("∆"));
+    assert_ne!(
+        pressed(event("a", "ą", Modifiers::CTRL | Modifiers::ALT)),
+        one("Control+Alt+a")
+    );
 }

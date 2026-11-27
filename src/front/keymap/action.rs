@@ -159,11 +159,11 @@ impl Action {
 
     /// Returns whether a key of the action that is held down acts only
     /// once: those of [`Action::AT_ONCE`], so that holding the key of Panic
-    /// does not cut a panic short, and those of fullscreen and hint mode,
-    /// which would otherwise toggle the stage window or the labels back and
-    /// forth
+    /// does not cut a panic short, and those of fullscreen, hint mode, and
+    /// help, which would otherwise toggle the stage window, the labels, or
+    /// the page back and forth
     pub fn acts_once_a_press(self) -> bool {
-        self.acts_at_once() || matches!(self, Action::Fullscreen | Action::Hint)
+        self.acts_at_once() || matches!(self, Action::Fullscreen | Action::Hint | Action::Help)
     }
 
     /// Returns whether a key of the action only moves the selection or the

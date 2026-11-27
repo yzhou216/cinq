@@ -20,16 +20,28 @@ impl App {
         // Help page has no cues to operate on, and the stage window leaves
         // the cues to the main window
         let remark = self.refusal(operator);
-        if self.help || self.stage.has_keyboard() {
+        let withheld = !self.help
+            && !self.stage.has_keyboard()
+            && remark.is_none()
+            && self.reached(operator, motion, count).is_none();
+        let app = Self {
+            notices: if withheld {
+                self.notices
+            } else {
+                self.notices.after_key(Some(operator))
+            },
+            ..self
+        };
+        if app.help || app.stage.has_keyboard() {
             (
                 Self {
-                    notices: self.notices.with_remark(remark),
-                    ..self
+                    notices: app.notices.with_remark(remark),
+                    ..app
                 },
                 Task::none(),
             )
         } else {
-            let (app, task) = self.handled(Message::Across(operator, motion, count));
+            let (app, task) = app.handled(Message::Across(operator, motion, count));
             (
                 Self {
                     notices: app.notices.preferring_remark(remark),

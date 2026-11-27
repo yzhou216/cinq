@@ -7,9 +7,12 @@
 
 use std::ops::{ControlFlow, Range};
 
-use toml::de::{DeTable, DeValue};
+use toml::{
+    Spanned,
+    de::{DeString, DeTable, DeValue},
+};
 
-use super::{Problem, bind, spanned};
+use super::{Problem, below_a_table, bind, spanned};
 use crate::front::keymap::{Keymap, vi};
 
 /// Keys that a keymap starts from, or the problem that leaves it none
@@ -56,13 +59,61 @@ fn line<'a, 'de>(
         line.push((name, entries));
         next = match entries.get("from").map(spanned) {
             Some((DeValue::String(from), span)) => (from.as_ref(), Some(span)),
-            Some((_, span)) => {
-                let unnamed = format!("keymaps.{name}.from should be the name of a keymap");
-                return (line, Err(Problem::at(span, unnamed)));
-            }
+            Some((_, span)) => return (line, Err(unnamed(name, span))),
             None => return (line, Ok((Keymap::empty(name), Vec::new()))),
         };
     }
+}
+
+fn unnamed(name: &str, span: Range<usize>) -> Problem {
+    let said = format!("keymaps.{name}.from should be the name of a keymap");
+    Problem::at(span, said)
+}
+
+/// Returns the problems of every table under `[keymaps]`, so that a keymap
+/// that no setting uses shows them now and not on the day that it is chosen.
+/// Each table is bound over no keys, so the keys that an entry would keep and
+/// the problems of the keys beneath it are left to the keymap in use, and a
+/// problem that the keymap in use also finds comes twice, which the caller
+/// drops.
+pub(super) fn audit(keymaps: &DeTable) -> Vec<Problem> {
+    keymaps
+        .iter()
+        .filter(|(name, _)| name.get_ref() != vi::NAME)
+        .flat_map(|(key, value)| {
+            let name: &str = key.get_ref().as_ref();
+            match spanned(value) {
+                (DeValue::Table(entries), _) => audit_table(name, entries, keymaps),
+                (_, span) => vec![misplaced(key, name, span)],
+            }
+        })
+        .collect()
+}
+
+fn audit_table(name: &str, entries: &DeTable, keymaps: &DeTable) -> Vec<Problem> {
+    let bindings = entries.iter().filter(|(key, _)| key.get_ref() != "from");
+    let (_, unbound) = bind(Keymap::empty(name), bindings, &format!("keymaps.{name}: "));
+    let from = match entries.get("from").map(spanned) {
+        Some((DeValue::String(from), span)) => match declared(from, Some(span), keymaps) {
+            ControlFlow::Break(start) => {
+                start.map_or_else(|problem| vec![problem], |(_, said)| said)
+            }
+            ControlFlow::Continue(_) => Vec::new(),
+        },
+        Some((_, span)) => vec![unnamed(name, span)],
+        None => Vec::new(),
+    };
+    [from, unbound].concat()
+}
+
+/// Returns the problem of a value under `[keymaps]` that is not a table,
+/// which is told as a setting written below a table when it has a setting's
+/// name
+fn misplaced(key: &Spanned<DeString>, name: &str, span: Range<usize>) -> Problem {
+    below_a_table(name).map_or_else(
+        || Problem::at(span, format!("keymaps.{name} should be a table")),
+        |said| Problem::at(key.span(), said),
+    )
 }
 
 /// Returns the table of the keymap of the file's own that `name` names, or

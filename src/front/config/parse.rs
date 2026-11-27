@@ -19,7 +19,7 @@ use toml::{
 
 use super::{Problem, Sound};
 use crate::front::keymap::{Action, Keymap, binding, vi};
-use line::build;
+use line::{audit, build};
 use settings::{audio_device, osc_listen, ready_ahead};
 
 const SETTINGS: [&str; 6] = [
@@ -61,11 +61,14 @@ pub(in crate::front) fn parse(text: &str) -> (Keymap, Sound, Option<SocketAddr>,
         .chain(shadowed)
         .chain(unnamed)
         .chain(built)
+        .chain(audit(keymaps))
         .chain(unbound)
         .chain(unrouted)
         .chain(unready)
         .chain(unlistened)
-        .chain(clashing);
+        .chain(clashing)
+        // The audit repeats the problems that the keymap in use found
+        .unique_by(|problem| (problem.span.clone(), problem.message.clone()));
     (
         keymap,
         Sound {
@@ -131,6 +134,9 @@ fn clashes(keymap: &Keymap, keys_table: Option<&DeTable>) -> Vec<Problem> {
                 .and_then(|keys| keys.keys().find(|name| name.get_ref() == action.name()));
             Problem::at(entry.map(|name| name.span()), said)
         })
+        // Actions of different places may hold one sequence, which a key
+        // that acts at once cuts short for each of them
+        .unique_by(|problem| (problem.span.clone(), problem.message.clone()))
         .collect()
 }
 
@@ -165,18 +171,22 @@ fn bind<'a>(
         })
 }
 
+/// Returns what to say of a setting added below a table, which lands in it,
+/// where only the cause helps
+fn below_a_table(name: &str) -> Option<String> {
+    SETTINGS
+        .contains(&name)
+        .then(|| format!("`{name}` is a setting, which belongs above the first table"))
+}
+
 fn entry(
     keymap: Keymap,
     name: &Spanned<DeString>,
     value: &Spanned<DeValue>,
 ) -> (Keymap, Vec<Problem>) {
     let Ok(action) = name.get_ref().parse::<Action>() else {
-        // A setting added below a table lands in it, where only the cause helps
-        let unknown = if SETTINGS.contains(&name.get_ref().as_ref()) {
-            format!("`{name}` is a setting, which belongs above the first table")
-        } else {
-            format!("no action is named `{name}`")
-        };
+        let unknown =
+            below_a_table(name.get_ref()).unwrap_or_else(|| format!("no action is named `{name}`"));
         return (keymap, vec![Problem::at(name.span(), unknown)]);
     };
     let values = match value.get_ref() {

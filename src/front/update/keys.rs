@@ -71,7 +71,8 @@ impl App {
         let outcome = self.config.keymap.parse(&self.keys, press);
         let across = outcome.across();
         let action = outcome.action;
-        let app = self.parsed(outcome.pending, action);
+        // An operator over a motion drops the notices once it finds rows to act on
+        let app = self.parsed(outcome.pending, action.filter(|_| across.is_none()));
         match across {
             Some((operator, motion, count)) => app.operated(operator, motion, count),
             None => app.acted(action, repeat),

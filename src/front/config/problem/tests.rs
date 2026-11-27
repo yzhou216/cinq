@@ -84,6 +84,11 @@ fn settings_of_the_wrong_kind_lie_in_their_values() {
         [
             ("keymap should be the name of a keymap", Some("1")),
             ("keys should be a table", Some("\"j\"")),
+            ("keymaps.booth should be a table", Some("2")),
+            (
+                "keymaps.mine.from should be the name of a keymap",
+                Some("3")
+            ),
         ]
     );
     let config = read("keymap = \"booth\"\nkeymaps = { booth = 2 }\n");
@@ -181,4 +186,15 @@ fn problems_come_in_the_order_of_the_file() {
         .map(|warning| warning.split(':').nth(1).unwrap_or_default().to_owned())
         .collect::<Vec<_>>();
     assert_eq!(lines, ["3", "5"]);
+}
+
+#[test]
+fn a_key_that_cuts_two_default_sequences_short_tells_it_once() {
+    // Control+y scrolls the cue list up and picks in a menu
+    let config = read("keymap = \"vi\"\n[keys]\ngo = [\"y\"]\n");
+    let said = config.warnings().filter(|said| said.contains("Control+y"));
+    assert_eq!(
+        said.collect::<Vec<_>>(),
+        ["config.toml: `y` acts at once as go, so `Control+y` can never be typed"]
+    );
 }

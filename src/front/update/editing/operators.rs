@@ -30,13 +30,7 @@ impl App {
         motion: Action,
         count: Option<usize>,
     ) -> Self {
-        let grouping = matches!(operator, Action::Indent | Action::Outdent);
-        let span = self
-            .row()
-            .filter(|_| self.editable() || operator == Action::Copy)
-            .filter(|_| !(grouping && self.outputs_shown))
-            .and_then(|row| rows(motion, count, row, self.row_count()));
-        let Some(span) = span else {
+        let Some(span) = self.reached(operator, motion, count) else {
             return self;
         };
         let rows = span.end() - span.start() + 1;
@@ -51,6 +45,23 @@ impl App {
             (true, Action::Delete) => app.without_outputs(rows),
             (true, _) => app.cut_outputs(rows),
         }
+    }
+}
+
+impl App {
+    /// Returns the rows that `operator` acts on over `motion`, counted from
+    /// zero, or nothing where [`App::across`] changes nothing
+    pub(in crate::front::update) fn reached(
+        &self,
+        operator: Action,
+        motion: Action,
+        count: Option<usize>,
+    ) -> Option<RangeInclusive<usize>> {
+        let grouping = matches!(operator, Action::Indent | Action::Outdent);
+        self.row()
+            .filter(|_| self.editable() || operator == Action::Copy)
+            .filter(|_| !(grouping && self.outputs_shown))
+            .and_then(|row| rows(motion, count, row, self.row_count()))
     }
 }
 

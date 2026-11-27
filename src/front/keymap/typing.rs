@@ -183,14 +183,25 @@ impl Keymap {
                     .map(|rest| (rest, action, None))
             })
             .collect();
+        // Binding of the very keys wins over the operator, unless a count
+        // after the operator comes between them
+        let taken = |keys: &[Press]| {
+            typed
+                .get(1..)
+                .is_some_and(|after| split_count(after).0.is_empty())
+                && self.find(&[&typed[..1], keys].concat()).is_some()
+        };
         let motions: Vec<_> = operator
             .into_iter()
             .flat_map(|operator| {
-                self.motions().filter_map(move |(action, keys)| {
-                    keys.strip_prefix(motion)
-                        .filter(|rest| !rest.is_empty())
-                        .map(|rest| (rest, action, Some(operator)))
-                })
+                let taken = &taken;
+                self.motions()
+                    .filter(move |&(_, keys)| !taken(keys))
+                    .filter_map(move |(action, keys)| {
+                        keys.strip_prefix(motion)
+                            .filter(|rest| !rest.is_empty())
+                            .map(|rest| (rest, action, Some(operator)))
+                    })
             })
             .collect();
         plain.into_iter().chain(motions)

@@ -75,3 +75,13 @@ fn a_cut_is_told_as_a_cut_by_the_change_it_records_and_a_delete_as_a_delete() {
     let undone = done(Message::Cut(1)).handled(Message::Undo(1)).0;
     assert_eq!(told(&undone), "cut cue 4");
 }
+
+#[test]
+fn an_operator_over_a_motion_that_finds_no_rows_leaves_what_a_copy_told() {
+    let copied = typing(show(Some(CueId(1))), "y y");
+    // Nothing lies above the first cue, nor below the last
+    let up = typing(copied, "d k");
+    assert_eq!(on_clipboard(&up), Some(("Copied cue 1", false)));
+    let last = typing(up.handled(Message::Select(CueId(12))).0, "y j");
+    assert_eq!(on_clipboard(&last), Some(("Copied cue 1", false)));
+}
