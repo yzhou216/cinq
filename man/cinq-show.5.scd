@@ -345,13 +345,26 @@ does not have, cannot be opened.
 A video cue plays H.264 video of the Baseline, Main, or High profile in MP4, as
 files ending in _.mp4_, _.m4v_, or _.mov_ hold it, along with the sound of its
 AAC track, in mono or stereo.
+A picture that the header of its track turns by a quarter, half, or three
+quarters of a turn, as a phone that films on its side writes it, shows upright.
 A file without a sound track plays its picture alone.
+The colors of a picture follow what its file declares: the colr box of the
+track, else the parameter sets of the H.264 stream, give the matrix, as BT.601
+or BT.709, and whether the range is the full range of a byte.
+A file that declares no matrix gets BT.709 where the picture is at least 1280
+pixels wide or 720 lines high and BT.601 where it is smaller, and one that
+declares no range has the limited range.
 A file that holds no index of its tracks, as a copy that stopped before its
 end does, or a file that is not MP4, reads _is cut short, or is not an MP4
 file_, and one that holds an index but no H.264 track reads _holds no H.264
 video_.
 One in another profile reads _holds H.264 video of a profile other than
 Baseline, Main, or High_.
+A track whose parameter sets may lie in its samples, as one of the kind _avc3_
+allows, plays as one whose description holds them.
+A file whose pictures are larger than any level of H.264 allows, as a damaged
+file can declare, reads _holds H.264 video larger than any level of H.264
+allows_, as it loads or, where only its samples declare the size, as it plays.
 The picture of a video cue follows the clock of the cue, so that it stays with
 the sound over a long video.
 cinq reads no tags or cover art, and skips a track other than the picture's
@@ -363,6 +376,8 @@ A video cue takes as long as the picture of its file, and its *start*, *end*,
 A picture cue shows a picture in PNG or JPEG, as files ending in _.png_,
 _.jpg_, or _.jpeg_ hold it, turned upright as the file tells, and laid on
 black where it is not wholly opaque.
+A picture of more than 134 million pixels, as a damaged file can declare, reads
+_holds a picture too large to show_.
 It shows until something stops it, such as a fade cue that stops it, a stop
 cue, or a panic, so that a cue that follows it waits for GO.
 

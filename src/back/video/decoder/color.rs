@@ -2,11 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Pictures that the decoder hands out, turned into RGBA with the colors of
-//! the standard that their size implies
+//! Pictures that the decoder hands out, turned into RGBA with the colors that
+//! their stream declares, or else those of the standard that their size
+//! implies
 //!
-//! High-definition video takes the matrix of BT.709, and smaller video that
-//! of BT.601, both in their limited range.
+//! A stream declares a matrix and a range in its sequence parameter set or in
+//! its file.  Without a matrix, high-definition video takes that of BT.709,
+//! and smaller video that of BT.601.  Without a range, both are limited.
 
 #[cfg(test)]
 mod tests;
@@ -26,14 +28,26 @@ pub struct Picture {
     pub pixels: Vec<u8>,
 }
 
+/// What the stream of a picture declares of its colors, where it does
+#[derive(Clone, Copy, Default)]
+pub(in crate::back::video) struct Declared {
+    pub matrix: Option<YuvStandardMatrix>,
+    pub full_range: bool,
+}
+
 /// Returns a decoded picture in RGBA, which holds its colors in eight bits
 /// and shares them among four pixels
-pub(super) fn rgba(picture: &Frame) -> Picture {
+pub(super) fn rgba(picture: &Frame, declared: Declared) -> Picture {
     let (width, height) = (picture.width, picture.height);
-    let matrix = if high_definition(picture) {
+    let matrix = declared.matrix.unwrap_or(if high_definition(picture) {
         YuvStandardMatrix::Bt709
     } else {
         YuvStandardMatrix::Bt601
+    });
+    let range = if declared.full_range {
+        YuvRange::Full
+    } else {
+        YuvRange::Limited
     };
     // yuv converts whole squares of four pixels, so a picture of an odd
     // size, which only monochrome video has, leaves its last row or column
@@ -53,7 +67,7 @@ pub(super) fn rgba(picture: &Frame) -> Picture {
     // convert.  The decoder sizes the planes to the picture, which leaves
     // the conversion no other way to fail.
     if planes.width > 0 && planes.height > 0 {
-        let _ = yuv::yuv420_to_rgba(&planes, &mut pixels, width * 4, YuvRange::Limited, matrix);
+        let _ = yuv::yuv420_to_rgba(&planes, &mut pixels, width * 4, range, matrix);
     }
     Picture {
         width,

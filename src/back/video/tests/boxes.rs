@@ -102,7 +102,7 @@ pub(super) fn ilst_udta() -> Vec<u8> {
 /// Returns `bytes`, the boxes of a test video, with the tables of the track
 /// in its moov box replaced by `revise` of them
 pub(super) fn revised(bytes: &[u8], revise: &impl Fn(Stbl) -> Stbl) -> Vec<u8> {
-    let track = |trak: Trak| Trak {
+    retracked(bytes, &|trak| Trak {
         mdia: Mdia {
             minf: Minf {
                 stbl: revise(trak.mdia.minf.stbl),
@@ -111,13 +111,18 @@ pub(super) fn revised(bytes: &[u8], revise: &impl Fn(Stbl) -> Stbl) -> Vec<u8> {
             ..trak.mdia
         },
         ..trak
-    };
+    })
+}
+
+/// Returns `bytes`, the boxes of a test video, with its track replaced by
+/// `revise` of it
+pub(super) fn retracked(bytes: &[u8], revise: &impl Fn(Trak) -> Trak) -> Vec<u8> {
     reworked(bytes, &[b"moov"], &|body| {
         let bytes = narrow(&(*b"moov", body));
         let moov = Moov::decode(&mut bytes.as_slice()).expect("the movie decodes");
         let mut encoded = Vec::new();
         Moov {
-            trak: moov.trak.into_iter().map(track).collect(),
+            trak: moov.trak.into_iter().map(revise).collect(),
             ..moov
         }
         .encode(&mut encoded)

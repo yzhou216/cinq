@@ -5,15 +5,19 @@
 //! Tests that video files whose boxes lie in the other ways that the
 //! format allows play as they do in the way that the tests write them
 
-use std::path::Path;
+use std::{cell::RefCell, iter, path::Path};
 
-use mp4_atom::{Ctts, CttsEntry, Stbl};
+use mp4_atom::{
+    Avc3, Avcc, Codec, Ctts, CttsEntry, Stbl, Stco, Stsc, StscEntry, Stsd, Stsz, StszSamples,
+};
 
 use super::{
+    assert_pictures,
     boxes::{Part, ilst_udta, narrow, revised, shifted, split, wide},
+    clip, decoded, from_at,
     movie::{movie_bytes, saved},
 };
-use crate::back::video::track::Track;
+use crate::back::video::track::{Track, probe};
 
 /// Returns the bytes of each sample of the video at `path`, or why it
 /// cannot play
@@ -136,4 +140,81 @@ fn track_without_a_list_of_sync_samples_starts_decoding_at_every_sample() {
         ..stbl
     }));
     assert!(unlisted.len() == 12 && unlisted.iter().all(|(_, sync)| *sync));
+}
+
+#[test]
+fn avc3_track_whose_first_sample_holds_the_parameter_sets_plays() {
+    let bytes = movie_bytes(5, 5, &[]);
+    let samples = written(&bytes).expect("the video plays");
+    let sets = RefCell::new(Vec::new());
+    let tabled = revised(&bytes, &|stbl| {
+        if let Some(Codec::Avc1(avc)) = stbl.stsd.codecs.first() {
+            let (sps, pps) = (
+                &avc.avcc.sequence_parameter_sets,
+                &avc.avcc.picture_parameter_sets,
+            );
+            *sets.borrow_mut() = sps.iter().chain(pps).cloned().collect();
+        }
+        stbl
+    });
+    // Each set after its length, as a sample holds a NAL unit
+    let in_band = sets
+        .into_inner()
+        .iter()
+        .flat_map(|set| [(set.len() as u32).to_be_bytes().to_vec(), set.clone()].concat())
+        .collect::<Vec<u8>>();
+    let [ftyp, mdat, (moov, body)] = split(&tabled).try_into().expect("the boxes are three");
+    // The samples lie in a box of their own before the moov box, the first
+    // after the parameter sets, which the avcC box leaves out
+    let kept = [in_band.clone(), samples[0].clone()].concat();
+    let moved = [kept.clone(), samples[1..].concat()].concat();
+    let at = (narrow(&ftyp).len() + narrow(&mdat).len() + 8) as u32;
+    let file = [
+        narrow(&ftyp),
+        narrow(&mdat),
+        narrow(&(*b"free", moved)),
+        narrow(&(moov, body)),
+    ]
+    .concat();
+    let with_avc3 = revised(&file, &|stbl| {
+        let codecs = stbl.stsd.codecs.iter().map(|codec| match codec {
+            Codec::Avc1(avc) => Codec::Avc3(Avc3 {
+                visual: avc.visual.clone(),
+                avcc: Avcc {
+                    sequence_parameter_sets: Vec::new(),
+                    picture_parameter_sets: Vec::new(),
+                    ..avc.avcc.clone()
+                },
+                ..Avc3::default()
+            }),
+            other => other.clone(),
+        });
+        let sizes = iter::once(kept.len())
+            .chain(samples[1..].iter().map(Vec::len))
+            .map(|size| size as u32)
+            .collect();
+        Stbl {
+            stsd: Stsd {
+                codecs: codecs.collect(),
+            },
+            stsz: Stsz {
+                samples: StszSamples::Different { sizes },
+            },
+            stco: Some(Stco { entries: vec![at] }),
+            stsc: Stsc {
+                entries: vec![StscEntry {
+                    first_chunk: 1,
+                    samples_per_chunk: 5,
+                    sample_description_index: 1,
+                }],
+            },
+            ..stbl
+        }
+    });
+    let (_directory, path) = saved(&with_avc3);
+    assert_eq!(probe(&path), Ok((5.0 / 30.0, false)));
+    assert_pictures(
+        &decoded(&path, clip(0.0, 5.0 / 30.0, false), 0),
+        &from_at(0..=4, 0.0),
+    );
 }

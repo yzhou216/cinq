@@ -16,6 +16,7 @@ use std::{fs, path::PathBuf};
 
 use tempfile::TempDir;
 
+pub(super) use stream::sized_sequence_parameter_set;
 use stream::{MACROBLOCKS, STEP, picture};
 
 /// Width and height of a test video, in pixels

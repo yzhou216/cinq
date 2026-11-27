@@ -16,7 +16,7 @@ use crate::back::{
     video::{
         decoder::Sent,
         probe_still,
-        still::{self, NO_PICTURE},
+        still::{self, NO_PICTURE, TOO_LARGE},
     },
 };
 
@@ -87,4 +87,36 @@ fn picture_that_the_next_go_shows_is_made_ready_ahead() {
     let (_, picture) = synced(&mut video, workspace.apply(GO));
     assert!(picture.is_some());
     assert!(video.ready.is_empty());
+}
+
+/// Returns the PNG `png` with its header declaring a picture of `width` by
+/// `height` pixels, and the checksum of the header made right
+fn declared(png: &[u8], width: u32, height: u32) -> Vec<u8> {
+    let header = [
+        &png[12..16],
+        &width.to_be_bytes(),
+        &height.to_be_bytes(),
+        &png[24..29],
+    ]
+    .concat();
+    let checksum = !header.iter().fold(!0_u32, |crc, &byte| {
+        (0..8).fold(crc ^ u32::from(byte), |crc, _| {
+            (crc >> 1) ^ (0xEDB8_8320 * (crc & 1))
+        })
+    });
+    [&png[..12], &header, &checksum.to_be_bytes(), &png[33..]].concat()
+}
+
+#[test]
+fn picture_whose_header_declares_more_pixels_than_memory_holds_cannot_show() {
+    let (_directory, path) = slide(Rgba([0, 0, 0, 255]));
+    let png = fs::read(&path).expect("the picture can be read");
+    fs::write(&path, declared(&png, 65535, 65535)).expect("the picture can be written");
+    assert_eq!(probe_still(&path), Err(TOO_LARGE.to_owned()));
+    // Decoding it asked the allocator for 16 GB, which ended cinq
+    let sent: Vec<Sent> = still::start(path).iter().collect();
+    assert!(
+        matches!(sent.as_slice(), [Sent::Failed(reason)] if reason == TOO_LARGE),
+        "the pass fails without a picture"
+    );
 }

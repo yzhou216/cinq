@@ -24,10 +24,19 @@ use crate::back::failure::unreadable;
 
 pub(super) const NO_PICTURE: &str = "holds no PNG or JPEG picture";
 
+pub(super) const TOO_LARGE: &str = "holds a picture too large to show";
+
+/// Pixels of the largest picture, which take 512 MiB in RGBA, as many bytes
+/// as the image crate lets a decoder hold by default.  Reading a decoder
+/// out of a file skips that limit, so that a file whose header names 65535
+/// pixels each way would make the thread ask for 16 GB, and the allocator
+/// would end cinq when it fails.
+const LARGEST: u64 = 128 << 20;
+
 /// Reads the header of the picture file at `path`, without decoding its
 /// picture, or tells why the picture cannot show
 pub(in crate::back) fn probe(path: &Path) -> Result<(), String> {
-    opened(path)?.into_dimensions().map(|_| ()).map_err(reason)
+    header(path).map(drop)
 }
 
 pub(super) fn start(path: PathBuf) -> Receiver<Sent> {
@@ -45,7 +54,7 @@ pub(super) fn start(path: PathBuf) -> Receiver<Sent> {
 }
 
 fn decoded(path: &Path) -> Result<Picture, String> {
-    let mut decoder = opened(path)?.into_decoder().map_err(reason)?;
+    let mut decoder = header(path)?;
     let orientation = decoder.orientation().map_err(reason)?;
     let mut image = DynamicImage::from_decoder(decoder).map_err(reason)?;
     image.apply_orientation(orientation);
@@ -58,6 +67,16 @@ fn decoded(path: &Path) -> Result<Picture, String> {
         height,
         pixels: if opaque { pixels } else { on_black(&pixels) },
     })
+}
+
+/// Reads the header of the picture file at `path`, and returns its decoder
+/// unless the picture is too large to hold in RGBA
+fn header(path: &Path) -> Result<impl ImageDecoder, String> {
+    let decoder = opened(path)?.into_decoder().map_err(reason)?;
+    let (width, height) = decoder.dimensions();
+    (u64::from(width) * u64::from(height) <= LARGEST)
+        .then_some(decoder)
+        .ok_or_else(|| TOO_LARGE.to_owned())
 }
 
 /// Opens the picture file at `path`, in the format that its first bytes

@@ -17,15 +17,16 @@
 //! otherwise take the picture before it along.  The pictures go out in the
 //! order they show, which [`order`] keeps, each at the time of its own
 //! sample, and those before the start of the stretch are let go without
-//! turning them into RGBA, which [`color`] turns the rest into.  A pass ends
-//! by telling its player that it has sent every picture, or why its picture
-//! cannot play, as a pass that decodes no picture cannot, and it stops
-//! decoding as soon as its player has gone.  Each pass opens its file and
-//! reads the index of its track anew, which takes a long file a moment,
-//! hidden for a clip that loops by the pass that decodes ahead.
+//! turning them into RGBA, which [`color`] turns the rest into, upright as
+//! [`turn`] tells.  A pass ends by telling its player that it has sent every
+//! picture, or why its picture cannot play, as a pass that decodes no picture
+//! cannot, and it stops decoding as soon as its player has gone.  Each pass
+//! opens its file and reads the index of its track anew, which takes a long
+//! file a moment, hidden for a clip that loops by the pass that decodes ahead.
 
 mod color;
 mod order;
+mod turn;
 
 use std::{
     path::{Path, PathBuf},
@@ -41,11 +42,13 @@ use rust_h264::{
     nal::NalUnit,
 };
 
-use super::track::Track;
+use super::track::{TOO_LARGE, Track, oversized};
 use crate::back::Pass;
+pub(super) use color::Declared;
 pub use color::Picture;
 use color::rgba;
 use order::Order;
+pub(super) use turn::Turn;
 
 /// Pictures that the thread of a pass decodes ahead of the clock of its
 /// run, besides the one it holds as it waits to send it: enough to ride out
@@ -108,6 +111,7 @@ fn decoded(
     let Some((from, to, first)) = track.span(pass.from, pass.to) else {
         return Ok(0);
     };
+    let (turn, colors) = (track.turn, track.colors);
     let send = |pictures: Vec<(f64, Decoded)>, sent: usize| {
         pictures
             .iter()
@@ -115,7 +119,7 @@ fn decoded(
             .try_fold(sent, |sent, (shows, picture)| {
                 let frame = Frame {
                     at: pass.at + (shows - pass.from).max(0.0),
-                    picture: rgba(picture),
+                    picture: rgba(picture, colors).turned(turn),
                 };
                 sender
                     .send(Sent::Picture(frame))
@@ -135,7 +139,13 @@ fn decoded(
                 return Err(Stop::Gone);
             }
             let sample = track.sample(index).map_err(Stop::Failed)?;
-            let picture = picture(&mut decoder, &track.units(&sample));
+            let units = track.units(&sample);
+            // Parameter set in a sample, as avc3 allows, which the check of the
+            // description at load cannot see
+            if oversized(&units) {
+                return Err(Stop::Failed(TOO_LARGE.to_owned()));
+            }
+            let picture = picture(&mut decoder, &units);
             let (due, order) = order.decoded(index - from, picture);
             Ok((order, send(due, sent)?))
         })

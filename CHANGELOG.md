@@ -162,6 +162,25 @@ Major changes and improvements in each release of cinq, newest first.
 - A click or a turn of the wheel in the stage window no longer acts as one in
   the main window.  Before, it closed the search line and hint mode, dropped a
   command typed halfway, and made the cue list measure its rows anew.
+- A picture file whose header declares more than 134 million pixels, or a video
+  file that declares pictures larger than any level of H.264 allows, as a
+  damaged file can, is marked `holds a picture too large to show` or `holds
+  H.264 video larger than any level of H.264 allows` as it loads, or as it
+  plays for a size that only its samples declare.  Before, firing its cue asked
+  for gigabytes of memory, which could end cinq.
+- A video file whose track is marked `avc3`, as some cameras and streaming
+  tools write it, plays as one marked `avc1` does, where it read `holds no
+  H.264 video`.
+- A video that a phone filmed on its side, whose track header turns its
+  picture by a quarter, half, or three quarters of a turn, shows upright on
+  the stage, as a picture file turned by its orientation does, where it showed
+  lying on its side.
+- Video cues show the colors that their file declares, in its colr box or in
+  the sequence parameter set of its H.264 stream: the matrix, BT.601 or
+  BT.709, and the full range of a byte for each color.  Before, cinq took the
+  matrix from the size of the picture and always the limited range, so that a
+  stream of full range showed with crushed blacks and clipped whites, and a
+  stream of another matrix than its size implies showed with tinted colors.
 
 ## v0.1.7
 

@@ -55,7 +55,8 @@ pub(super) fn read<R: Read + Seek>(file: &mut R, length: u64) -> Option<Movie> {
 }
 
 /// Returns the configuration of H.264 that the description of `trak` holds,
-/// which makes the track one of H.264
+/// which makes the track one of H.264, whether its samples carry the
+/// parameter sets in their own bytes, as `avc3` allows, or not
 fn avcc(trak: &Trak) -> Option<&Avcc> {
     trak.mdia
         .minf
@@ -65,6 +66,7 @@ fn avcc(trak: &Trak) -> Option<&Avcc> {
         .iter()
         .find_map(|codec| match codec {
             Codec::Avc1(avc) => Some(&avc.avcc),
+            Codec::Avc3(avc) => Some(&avc.avcc),
             _ => None,
         })
 }

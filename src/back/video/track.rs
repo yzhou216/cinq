@@ -13,10 +13,11 @@
 //! as the edit lists that encoders write for B-frames shift it.  Each
 //! sample holds NAL units after their lengths, as the decoder reads them,
 //! and the parameter sets that decoding needs are in the description of the
-//! track rather than in its samples.  The file is read by the tracks of its
-//! [`moov`] box alone, whose tables [`locate`] turns into the places of the
-//! samples.
+//! track, and in the samples as well where the track is one of `avc3`.  Only
+//! the [`moov`] box is read, whose tables [`locate`] turns into the places
+//! of the samples.
 
+mod colors;
 mod locate;
 mod moov;
 mod tables;
@@ -31,8 +32,9 @@ use std::{
     path::Path,
 };
 
-use rust_h264::nal::{NalUnit, parse_avcc};
+use rust_h264::nal::{NalUnit, NalUnitType, parse_avcc, parse_sps_info};
 
+use super::decoder::{Declared, Turn};
 use crate::{back::failure::unreadable, warn};
 use locate::{Place, places};
 use tables::{parameters, timed};
@@ -57,6 +59,12 @@ const PROFILES: [u8; 3] = [66, 77, 100];
 /// Bytes before each parameter set of a track that give its length
 const PARAMETER_LENGTH: usize = 4;
 
+pub(super) const TOO_LARGE: &str = "holds H.264 video larger than any level of H.264 allows";
+
+/// Pixels of the largest picture that a level of H.264 allows, which level
+/// 6.2 sets, as 139264 macroblocks of 16 by 16 fill
+const LARGEST: u64 = 139_264 * 256;
+
 pub(super) struct Track {
     file: BufReader<File>,
     /// Bytes that the file held when it opened
@@ -72,8 +80,8 @@ pub(super) struct Track {
     /// Seconds that the picture lasts
     duration: f64,
     sound: bool,
-    /// What the file left out because it cannot be read, as the words that
-    /// say so
+    pub(super) turn: Turn,
+    pub(super) colors: Declared,
     skipped: BTreeSet<String>,
 }
 
@@ -107,16 +115,24 @@ impl Track {
                 "holds H.264 video of a profile other than Baseline, Main, or High".to_owned(),
             );
         }
+        let parameters = parameters(avc);
+        let sets = parse_avcc(&parameters, PARAMETER_LENGTH);
+        if oversized(&sets) {
+            return Err(TOO_LARGE.to_owned());
+        }
         let stbl = &trak.mdia.minf.stbl;
         let places = places(stbl, length).ok_or(DAMAGED)?;
+        let colors = colors::declared(trak, &sets);
         let (samples, duration) = timed(stbl, places.len(), trak.mdia.mdhd.timescale);
         if samples.is_empty() || duration <= 0.0 {
             return Err(NO_VIDEO.to_owned());
         }
         Ok(Self {
             length_size: usize::from(avc.length_size),
-            parameters: parameters(avc),
+            parameters,
             sound: movie.sound,
+            turn: Turn::of(&trak.tkhd.matrix),
+            colors,
             skipped: movie.skipped,
             samples,
             places,
@@ -160,4 +176,16 @@ impl Track {
     pub(super) fn span(&self, start: f64, end: f64) -> Option<(usize, usize, f64)> {
         timing::span(&self.samples, start, end)
     }
+}
+
+/// Returns whether a sequence parameter set among `units` declares a picture
+/// larger than any level allows, as one with a damaged size does.  The
+/// decoder makes the picture as large as the set says, up to 16384 pixels
+/// each way, which takes gigabytes, before it reads a sample.
+pub(super) fn oversized(units: &[NalUnit<'_>]) -> bool {
+    units
+        .iter()
+        .filter(|unit| unit.nal_unit_type == NalUnitType::Sps)
+        .filter_map(|unit| parse_sps_info(unit).ok())
+        .any(|sps| u64::from(sps.coded_width) * u64::from(sps.coded_height) > LARGEST)
 }

@@ -6,13 +6,20 @@
 
 use std::sync::Arc;
 
+use mp4_atom::{Matrix, Tkhd, Trak};
+
 use super::{
-    assert_pictures, clip, decoded,
+    assert_pictures,
+    boxes::retracked,
+    clip, decoded,
     decoder::{self, Sent, UNDECODABLE},
     from_at,
-    movie::{RATE, broken_movie, movie},
+    movie::{RATE, broken_movie, movie, movie_bytes, saved},
     sent,
 };
+
+/// One whole turn in the fixed-point numbers of a matrix
+const ONE: i32 = 1 << 16;
 
 #[test]
 fn pictures_come_in_the_order_they_show_each_due_at_its_time() {
@@ -77,4 +84,38 @@ fn pass_stops_decoding_once_its_player_has_gone() {
     let sent: Vec<Sent> = pictures.iter().collect();
     assert!(sent.len() < 25, "{} sent", sent.len());
     assert!(sent.iter().all(|sent| matches!(sent, Sent::Picture(_))));
+}
+
+#[test]
+fn pictures_of_a_track_whose_matrix_turns_it_come_upright() {
+    let matrix = |a, b, c, d| Matrix {
+        a,
+        b,
+        c,
+        d,
+        ..Matrix::default()
+    };
+    let turns = [
+        (matrix(0, ONE, -ONE, 0), (48, 64)),
+        (matrix(-ONE, 0, 0, -ONE), (64, 48)),
+        (matrix(0, -ONE, ONE, 0), (48, 64)),
+    ];
+    turns.into_iter().for_each(|(matrix, size)| {
+        let bytes = retracked(&movie_bytes(3, 3, &[]), &|trak| Trak {
+            tkhd: Tkhd {
+                matrix: matrix.clone(),
+                ..trak.tkhd
+            },
+            ..trak
+        });
+        let (_directory, path) = saved(&bytes);
+        let sizes: Vec<(u32, u32)> = sent(&path, clip(0.0, 0.1, false), 0)
+            .iter()
+            .filter_map(|sent| match sent {
+                Sent::Picture(frame) => Some((frame.picture.width, frame.picture.height)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(sizes, [size; 3]);
+    });
 }

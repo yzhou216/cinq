@@ -6,8 +6,11 @@
 
 use std::path::Path;
 
+use mp4_atom::{Avc1, Avcc, Codec, Stbl, Stsd};
+
 use super::{
-    movie::{movie, movie_bytes, saved},
+    boxes::revised,
+    movie::{movie, movie_bytes, saved, sized_sequence_parameter_set},
     probe, tabled,
 };
 
@@ -49,5 +52,35 @@ fn track_that_counts_more_samples_than_its_file_holds_bytes_cannot_play() {
     assert_eq!(
         probe(&damaged),
         Err("holds a damaged H.264 track".to_owned())
+    );
+}
+
+#[test]
+fn video_whose_parameter_set_declares_a_picture_larger_than_any_level_allows_cannot_play() {
+    // Pictures of 16384 pixels each way, as a damaged size makes, which the
+    // decoder would make in memory before it read a sample
+    let huge = revised(&movie_bytes(5, 5, &[]), &|stbl| {
+        let codecs = stbl.stsd.codecs.into_iter().map(|codec| match codec {
+            Codec::Avc1(avc) => Codec::Avc1(Avc1 {
+                avcc: Avcc::new(
+                    &sized_sequence_parameter_set((1024, 1024)),
+                    &avc.avcc.picture_parameter_sets[0],
+                )
+                .expect("the parameter sets are long enough"),
+                ..avc
+            }),
+            other => other,
+        });
+        Stbl {
+            stsd: Stsd {
+                codecs: codecs.collect(),
+            },
+            ..stbl
+        }
+    });
+    let (_directory, path) = saved(&huge);
+    assert_eq!(
+        probe(&path),
+        Err("holds H.264 video larger than any level of H.264 allows".to_owned())
     );
 }

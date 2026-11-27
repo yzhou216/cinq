@@ -86,7 +86,13 @@ impl Bits {
 }
 
 pub(super) fn sequence_parameter_set() -> Vec<u8> {
-    let (width, height) = MACROBLOCKS;
+    sized_sequence_parameter_set(MACROBLOCKS)
+}
+
+/// Returns the sequence parameter set of pictures of `size` macroblocks
+/// across and down
+pub(in crate::back::video) fn sized_sequence_parameter_set(size: (usize, usize)) -> Vec<u8> {
+    let (width, height) = size;
     Bits::default()
         .u(8, 66) // profile_idc of Baseline
         .u(8, 0b1100_0000) // constraint_set0_flag and constraint_set1_flag of Constrained Baseline
