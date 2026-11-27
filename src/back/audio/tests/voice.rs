@@ -16,12 +16,12 @@ use tempfile::TempDir;
 
 use super::silence;
 use crate::back::{
-    Command, Cue, CueId, CueList, Kind, Media, Workspace,
-    audio::{
+    Command, Cue, CueId, Kind, Media, Workspace,
+    audio::sound::{
         mixer::Mixer,
         voice::{Target, Voice, clipped},
     },
-    workspace::tests::{GO, loaded},
+    workspace::tests::{GO, fresh, loaded},
 };
 
 /// Longest that a test lets the thread of a sound decode it, which takes
@@ -53,7 +53,7 @@ fn fired(cue: Cue, seconds: f32) -> (TempDir, Workspace) {
 /// seconds of sound where it holds `seconds`, as a file cut short does
 pub(super) fn fired_promising(cue: Cue, seconds: f32, promised: f32) -> (TempDir, Workspace) {
     let directory = TempDir::new().expect("a temporary directory can be made");
-    // A header and 16 bits of sound a frame, as silence makes them
+    // Header and 16 bits of sound a frame, as silence makes them
     let kept = 44 + (seconds * 8000.0) as usize * 2;
     let whole = silence(promised);
     fs::write(
@@ -65,7 +65,7 @@ pub(super) fn fired_promising(cue: Cue, seconds: f32, promised: f32) -> (TempDir
         duration: 10.0,
         sound: Some(promised),
     };
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![cue])])
+    let workspace = fresh(vec![cue])
         .directory(directory.path())
         .apply(loaded(1, "silence.wav", media))
         .apply(GO);
@@ -137,13 +137,17 @@ fn played_while(
 }
 
 #[test]
-fn clock_of_run_goes_to_where_its_sound_is_and_stays() {
+fn clock_of_run_goes_to_where_its_sound_is_and_stays_as_a_video_or_audio_cue_plays() {
     // The sound is a buffer behind the clock, which holds from the second
     // sync on, since the position of the sound is where it was as the last
     // buffer began
-    let played = played(video(), 2.0, &[BUFFER; 60]);
-    let (last, _) = played[59];
-    assert!((last - 0.59).abs() < 1e-3, "{last}");
+    [("video", video()), ("audio", audio())]
+        .into_iter()
+        .for_each(|(kind, cue)| {
+            let (last, heard) = played(cue, 2.0, &[BUFFER; 60])[59];
+            assert!(heard, "{kind}");
+            assert!((last - 0.59).abs() < 1e-3, "{kind}: {last}");
+        });
 }
 
 #[test]
@@ -167,14 +171,6 @@ fn clock_of_run_keeps_going_once_its_sound_has_ended() {
 }
 
 #[test]
-fn clock_of_an_audio_cue_follows_its_sound_as_that_of_a_video_cue_does() {
-    let played = played(audio(), 2.0, &[BUFFER; 60]);
-    let (last, heard) = played[59];
-    assert!(heard);
-    assert!((last - 0.59).abs() < 1e-3, "{last}");
-}
-
-#[test]
 fn clock_of_run_waits_while_its_sound_stalls() {
     // Half a second in which the device takes no sound, as one that has
     // just opened can, which the clock waits through instead of running
@@ -186,6 +182,16 @@ fn clock_of_run_waits_while_its_sound_stalls() {
     assert!((last - 0.49).abs() < 0.02, "{last}");
 }
 
+/// Returns a target on the mixer of the device `key`, with its left sent to
+/// the first channel
+pub(super) fn target<'a>(key: &str, mixer: &'a mut Mixer) -> Target<'a> {
+    Target {
+        key: Some(key.to_owned()),
+        mixer,
+        gains: Box::new([[1.0, 0.0]; 2]),
+    }
+}
+
 /// Opens the sound of the audio cue on the mixers of `devices`, by their
 /// keys, as [`Voice::open`] does, from a file of two seconds of sound
 pub(super) fn opened(devices: Vec<(&str, &mut Mixer)>) -> Result<Voice, String> {
@@ -195,11 +201,7 @@ pub(super) fn opened(devices: Vec<(&str, &mut Mixer)>) -> Result<Voice, String> 
     let clip = active.sound().expect("the cue has sound");
     let targets = devices
         .into_iter()
-        .map(|(key, mixer)| Target {
-            key: Some(key.to_owned()),
-            mixer,
-            gains: Box::new([[1.0, 0.0]; 2]),
-        })
+        .map(|(key, mixer)| target(key, mixer))
         .collect();
     Voice::open(targets, &file, active, clip)
 }

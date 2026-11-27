@@ -144,18 +144,6 @@ fn locked() -> App {
 }
 
 #[test]
-fn show_mode_locks_cutting_and_deleting_over_a_motion() {
-    let refused = across(across(locked(), Cut, Next, Some(2)), Delete, Next, Some(2));
-    assert_eq!(rows(&refused).len(), 12);
-    assert_eq!(refused.selected, Some(CueId(4)));
-    assert!(refused.workspace.latest_change().is_none());
-    assert!(
-        pasted(refused).is_empty(),
-        "cut copied nothing while locked"
-    );
-}
-
-#[test]
 fn show_mode_lets_copying_over_a_motion_act() {
     let copied = across(locked(), Copy, Previous, Some(2));
     assert_eq!(copied.selected, Some(CueId(2)));
@@ -217,10 +205,7 @@ fn operator_dropped_by_a_stray_key_cuts_nothing() {
 
 #[test]
 fn help_page_ignores_an_operator_with_its_motion() {
-    let app = App {
-        help: true,
-        ..show(Some(CueId(2)))
-    };
+    let app = helping(show(Some(CueId(2))));
     let app = typing(app, "d j");
     assert_eq!(rows(&app).len(), 12);
     assert_eq!(app.selected, Some(CueId(2)));

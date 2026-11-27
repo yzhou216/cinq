@@ -5,34 +5,7 @@
 //! Tests of telling a text field from a drop-down list that has the keyboard
 
 use super::*;
-
-struct Widget(bool);
-
-impl Focusable for Widget {
-    fn is_focused(&self) -> bool {
-        self.0
-    }
-
-    fn focus(&mut self) {}
-
-    fn unfocus(&mut self) {}
-}
-
-impl TextInput for Widget {
-    fn text(&self) -> &str {
-        ""
-    }
-
-    fn move_cursor_to_front(&mut self) {}
-
-    fn move_cursor_to_end(&mut self) {}
-
-    fn move_cursor_to(&mut self, _position: usize) {}
-
-    fn select_all(&mut self) {}
-
-    fn select_range(&mut self, _start: usize, _end: usize) {}
-}
+use crate::front::fixtures::Field;
 
 /// Visits widgets as iced does, a text field reporting as a text input
 /// before it reports as focusable and a list only as focusable, and returns
@@ -41,9 +14,9 @@ fn holding(widgets: &[(bool, bool)]) -> (bool, bool) {
     let mut focus = HasFocus::default();
     widgets.iter().for_each(|&(text, focused)| {
         if text {
-            focus.text_input(None, Rectangle::default(), &mut Widget(focused));
+            focus.text_input(None, Rectangle::default(), &mut Field::new(focused));
         }
-        focus.focusable(None, Rectangle::default(), &mut Widget(focused));
+        focus.focusable(None, Rectangle::default(), &mut Field::new(focused));
     });
     (focus.text, focus.list)
 }

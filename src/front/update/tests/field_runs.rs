@@ -6,26 +6,31 @@
 //! keys typed in a row make one change, until the keyboard leaves the field or
 //! enters it again
 
-use super::{after, history::cue, output_editing::on, show, typing};
+use super::{after, history::cue, output_editing::on, show, typed_into, typing};
 use crate::{
     back::{CueId, Edit},
-    front::{App, Caret, Focus, Message, Setting},
+    front::{App, Caret, Focus, Message, Setting, app::Held},
 };
 
 /// Types `text` into the name of the selected output, one key at a time, with
 /// the reports of the widgets that the keyboard stays in the field
 fn into_output(app: App, text: &str) -> App {
     let id = app.output.expect("an output is selected");
-    (1..=text.len()).fold(app, |app, end| {
-        let typed = Setting::OutputName(id);
-        after(
-            app,
-            [
-                Message::SettingTyped(typed, text[..end].to_owned()),
-                Message::Held(true),
-            ],
-        )
+    typed_into(app, text, |prefix| {
+        Message::SettingTyped(Setting::OutputName(id), prefix)
     })
+}
+
+/// Types `text` into the name of cue 3, one key at a time, with the reports of
+/// the widgets that the keyboard stays in the field
+fn into_cue(app: App, text: &str) -> App {
+    typed_into(app, text, |prefix| {
+        Message::Edit(CueId(3), Edit::Name(prefix))
+    })
+}
+
+fn cue_name(app: &App) -> Option<&str> {
+    app.workspace.cue(CueId(3)).map(|cue| cue.name.as_str())
 }
 
 fn output_name(app: &App) -> &str {
@@ -35,7 +40,7 @@ fn output_name(app: &App) -> &str {
 /// Messages that tell that the keyboard left the field, or came into it
 fn between() -> [Message; 4] {
     [
-        Message::Held(false),
+        Message::Held(Held::default()),
         Message::Focus(Focus::Name(Caret::End)),
         Message::Focus(Focus::Next),
         Message::Clicked,
@@ -55,33 +60,22 @@ fn two_visits_to_the_name_of_an_output_undo_as_two_steps() {
 
 #[test]
 fn two_visits_to_the_name_of_a_cue_undo_as_two_steps() {
-    let name = |app: &App| app.workspace.cue(CueId(3)).map(|cue| cue.name.clone());
-    let type_into = |app: App, text: &str| {
-        (1..=text.len()).fold(app, |app, end| {
-            let edit = Edit::Name(text[..end].to_owned());
-            after(app, [Message::Edit(CueId(3), edit), Message::Held(true)])
-        })
-    };
-    let first = type_into(show(cue(3)), "Rain");
-    let second = type_into(after(first, [Message::Held(false)]), "Rain on the roof");
+    let first = into_cue(show(cue(3)), "Rain");
+    let second = into_cue(
+        after(first, [Message::Held(Held::default())]),
+        "Rain on the roof",
+    );
     let once = after(second, [Message::Undo(1)]);
-    assert_eq!(name(&once).as_deref(), Some("Rain"));
+    assert_eq!(cue_name(&once), Some("Rain"));
     let twice = after(once, [Message::Undo(1)]);
-    assert_eq!(name(&twice).as_deref(), Some("Sound"));
+    assert_eq!(cue_name(&twice), Some("Sound"));
 }
 
 #[test]
 fn two_visits_to_the_name_of_a_cue_by_tab_undo_as_two_steps() {
-    let name = |app: &App| app.workspace.cue(CueId(3)).map(|cue| cue.name.clone());
-    let type_into = |app: App, text: &str| {
-        (1..=text.len()).fold(app, |app, end| {
-            let edit = Edit::Name(text[..end].to_owned());
-            after(app, [Message::Edit(CueId(3), edit), Message::Held(true)])
-        })
-    };
-    let first = type_into(show(cue(3)), "Rain");
+    let first = into_cue(show(cue(3)), "Rain");
     let away = typing(typing(first, "Tab"), "Shift+Tab");
-    let second = type_into(away, "Rain on the roof");
+    let second = into_cue(away, "Rain on the roof");
     let once = after(second, [Message::Undo(1)]);
-    assert_eq!(name(&once).as_deref(), Some("Rain"));
+    assert_eq!(cue_name(&once), Some("Rain"));
 }

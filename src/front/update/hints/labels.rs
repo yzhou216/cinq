@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The labels that hint mode gives out
+//! Labels that hint mode gives out
 
 /// Letters that labels are made of, Vimium's default, which lie on or near
 /// the home row

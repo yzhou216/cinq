@@ -104,7 +104,6 @@ impl Press {
         }
     }
 
-    /// Returns whether the key is pressed with no modifier held
     pub fn is_bare(self) -> bool {
         self == self.bare()
     }

@@ -26,8 +26,6 @@ use crate::front::{
     },
 };
 
-/// Returns the rows of the menu, each name cut short to `columns` columns of
-/// the font, with an ellipsis, where it is longer
 pub(super) fn rows<'b>(choice: Choice<'b>, columns: usize) -> Element<'b, Message> {
     let highlight = choice.highlighted();
     let rows = choice.dropdown.names.iter().enumerate().map(|(row, name)| {

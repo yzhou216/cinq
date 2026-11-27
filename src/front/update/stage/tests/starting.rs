@@ -7,6 +7,7 @@
 
 use iced::window;
 
+use super::closing;
 use crate::{
     back::{Advance, Cue, CueId, CueList, Kind, Workspace, loaded, silent},
     front::{App, Message},
@@ -42,9 +43,7 @@ fn video() -> Cue {
 #[test]
 fn closed_stage_window_opens_again_as_a_start_cue_fires_a_video_cue() {
     let (open, _) = show(vec![start(1, 3), video()]).staged();
-    let stage = open.stage.window().expect("the stage window opens");
-    let (closed, _) = open.closed(stage);
-    let (gone, _) = closed.handled(Message::Go);
+    let (gone, _) = closing(open).handled(Message::Go);
     let (reopened, opening) = gone.staged();
     assert!(reopened.stage.window().is_some());
     assert_eq!(opening.units(), 1);

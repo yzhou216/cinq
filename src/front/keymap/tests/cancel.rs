@@ -7,25 +7,23 @@
 use super::*;
 
 #[test]
-fn control_c_cancels_in_the_vi_keymap_and_acts_in_fields() {
+fn control_c_and_control_left_bracket_cancel_in_the_vi_keymap_and_act_in_fields() {
     let keymap = Keymap::default();
-    let control_c = press("Control+c");
-    assert_eq!(action("Control+c"), Some((Action::Cancel, None)));
-    assert!(keymap.acts_in_fields(control_c));
-    assert!(keymap.cancels(control_c));
-    assert_eq!(keymap.in_menu(control_c), Some(Action::Cancel));
-    assert!(!keymap.acts_at_once(control_c));
+    ["Control+c", "Control+["].into_iter().for_each(|text| {
+        let key = press(text);
+        assert_eq!(action(text), Some((Action::Cancel, None)), "{text}");
+        assert!(keymap.acts_in_fields(key), "{text}");
+        assert!(keymap.cancels(key), "{text}");
+        assert_eq!(keymap.in_menu(key), Some(Action::Cancel), "{text}");
+        assert!(!keymap.acts_at_once(key), "{text}");
+        assert_eq!(typed(&format!("d {text}")).pending, [], "{text}");
+    });
 }
 
 #[test]
 fn control_left_bracket_cancels_beside_control_c_which_the_bar_names_first() {
     let keymap = Keymap::default();
     let bracket = press("Control+[");
-    assert_eq!(action("Control+["), Some((Action::Cancel, None)));
-    assert!(keymap.acts_in_fields(bracket));
-    assert!(keymap.cancels(bracket));
-    assert_eq!(keymap.in_menu(bracket), Some(Action::Cancel));
-    assert_eq!(typed("d Control+[").pending, []);
     assert_eq!(
         keymap.keys(Action::Cancel).first(),
         Some(&keys("Control+c"))
@@ -48,7 +46,6 @@ fn control_c_stays_the_copy_of_a_keymap_that_binds_nothing_to_cancel() {
 
 #[test]
 fn cancel_drops_the_keys_typed_so_far_as_any_complete_command_does() {
-    assert_eq!(typed("d Control+c").pending, []);
     assert_eq!(action("3 Control+c"), Some((Action::Cancel, Some(3))));
     assert_eq!(typed("g Control+c").pending, []);
 }

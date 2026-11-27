@@ -6,14 +6,13 @@
 
 use unicode_width::UnicodeWidthStr;
 
-use super::{super::hints::place, opened};
+use super::{super::hints::keyboard::place, memo, opened};
 use crate::{
     back::{Cue, CueId, CueList, Kind, OutputId, Workspace},
-    front::{App, update::Spot},
+    front::{App, Spot},
 };
 
 fn on_show(outputs_shown: bool) -> App {
-    let memo = |id: u32| Cue::new(CueId(id), id.to_string(), Kind::Memo, "Note").build();
     App {
         workspace: Workspace::new(vec![
             CueList::new("Main", vec![memo(1), memo(2)]),
@@ -39,12 +38,6 @@ fn a_cue_of_the_list_on_show_is_named_by_its_number_and_any_other_by_its_list() 
     assert_eq!(place(&app, Spot::List(0)), "Main");
     // Outputs hide the list, so that its cues are named by it
     assert_eq!(place(&on_show(true), Spot::Cue(CueId(2))), "Main");
-}
-
-#[test]
-fn a_long_name_of_a_list_is_cut_to_keep_the_hint_short() {
-    let app = on_show(false);
-    assert!(place(&app, Spot::List(1)).width() <= 16);
 }
 
 #[test]

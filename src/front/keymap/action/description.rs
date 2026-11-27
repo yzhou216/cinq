@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The sentence that the help page gives for each action
+//! Sentence that the help page gives for each action
 
 use super::Action;
 
@@ -163,17 +163,11 @@ impl Action {
     /// Returns the sentence of the help page for the rows that show, so that
     /// the box of the keys that can follow names outputs where the outputs
     /// show and cues where a cue list does, instead of both
-    pub fn description_in(self, rows: Rows) -> String {
+    pub(in crate::front::keymap) fn description_in(self, rows: Rows) -> String {
         BOTH.iter().fold(
             self.description().to_owned(),
             |text, &(both, cues, outputs)| {
-                text.replace(
-                    both,
-                    match rows {
-                        Rows::Cues => cues,
-                        Rows::Outputs => outputs,
-                    },
-                )
+                text.replace(both, if rows == Rows::Cues { cues } else { outputs })
             },
         )
     }

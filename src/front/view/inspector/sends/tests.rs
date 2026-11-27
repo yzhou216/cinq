@@ -8,7 +8,7 @@
 use super::{cut, labels, named, silent, widest};
 use crate::{
     back::{Command, Cue, CueId, CueList, Fault, Kind, OutputId, Sends, Workspace},
-    front::App,
+    front::{App, Problems},
 };
 
 #[test]
@@ -23,7 +23,10 @@ fn only_outputs_that_the_cue_sends_to_count_as_unable_to_play() {
     let missing = || Fault::Missing("there is no audio device".to_owned());
     let app = App {
         workspace,
-        audio_problems: vec![(OutputId(1), missing()), (OutputId(2), missing())],
+        problems: Problems {
+            audio: vec![(OutputId(1), missing()), (OutputId(2), missing())],
+            ..Problems::default()
+        },
         ..App::default()
     };
     assert_eq!(silent(&app, &sends), [&missing()]);
@@ -95,7 +98,10 @@ fn a_fault_on_one_output_leaves_the_room_of_the_other_names_as_it_was() {
     };
     let faulty = App {
         workspace,
-        audio_problems: vec![(OutputId(2), Fault::Missing("gone".to_owned()))],
+        problems: Problems {
+            audio: vec![(OutputId(2), Fault::Missing("gone".to_owned()))],
+            ..Problems::default()
+        },
         ..App::default()
     };
     let (room, names) = labels(&plain);

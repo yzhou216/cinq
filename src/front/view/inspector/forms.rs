@@ -27,8 +27,7 @@ use crate::{
 /// read a time or the first words of a name
 const VALUE_ROOM: usize = 10;
 
-/// Returns the fields of `fields` that the cue has a row for, as the cue
-/// shows them
+/// Returns the fields of `fields` that the cue has a row for
 fn rows<'a>(cue: &'a Cue, fields: &'a [Field]) -> impl Iterator<Item = Field> + 'a {
     fields
         .iter()
@@ -36,7 +35,6 @@ fn rows<'a>(cue: &'a Cue, fields: &'a [Field]) -> impl Iterator<Item = Field> + 
         .filter(|field| field.has_row(cue))
 }
 
-/// Returns the form of the `fields` that the cue has a row for
 fn form<'a>(app: &'a App, cue: &'a Cue, fields: &[Field]) -> Element<'a, Message> {
     table::table(
         [

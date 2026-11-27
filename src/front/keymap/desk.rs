@@ -5,7 +5,8 @@
 //! Keymaps of a configuration file's own for the tests, which need one that
 //! binds no key to cancel, since the vi keymap that cinq ships binds two
 
-use super::{Keymap, config};
+use super::Keymap;
+use crate::front::config;
 
 /// Returns the keymap that a file declares as `desk` with `body` as its
 /// entries, which must raise no problem

@@ -2,18 +2,16 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What surrounds the handling of a message: handing commands to the back
-//! end, deciding what a message of any kind does to a command typed halfway,
-//! and running blocking work off the interface thread
+//! Entry of a message into the update, [`App::next`], and what surrounds the
+//! handling of it: deciding what a message of any kind does to a command
+//! typed halfway, and handing commands to the back end
 
-use std::thread;
+use iced::Task;
 
-use iced::{Task, futures::channel::oneshot};
-
-use super::{reveal_list::reveal_current_list, stopping::Stopping};
+use super::{editing::Stopping, focus::reveal_current_list};
 use crate::{
     back::Command,
-    front::{App, Message},
+    front::{App, Message, Notices, app::Held},
 };
 
 /// Returns whether `message` reports something that happened without the
@@ -27,6 +25,7 @@ pub(super) fn passive(message: &Message) -> bool {
             | Message::Recheck
             | Message::Rechecked(..)
             | Message::NetworkChecked
+            | Message::LightTold(_)
             | Message::OscFailed(_)
             | Message::OscIgnored(_)
             | Message::OscListening
@@ -38,11 +37,6 @@ pub(super) fn passive(message: &Message) -> bool {
             | Message::Resized(..)
             | Message::WindowFocused(_)
             | Message::Held(_)
-            | Message::FileHeld(_)
-            | Message::CheckHeld(_)
-            | Message::ButtonHeld(_)
-            | Message::AddressHeld(_)
-            | Message::TextHeld(_)
             | Message::Landed { .. }
             | Message::Measured(_)
             | Message::Remeasure
@@ -78,13 +72,17 @@ impl App {
                 command,
                 Command::Undo | Command::Redo | Command::Collapse { .. }
             );
-        let turns = self.turns + usize::from(matches!(command, Command::Undo | Command::Redo));
+        let turns =
+            self.notices.turns + usize::from(matches!(command, Command::Undo | Command::Redo));
         let stopping = Stopping::of(&command, &self.workspace);
         let workspace = self.workspace.apply(command);
         let app = Self {
             list: self.list.min(workspace.lists().len().saturating_sub(1)),
-            stopped: stopping.stopped(&self.stopped, &workspace),
-            turns,
+            notices: Notices {
+                stopped: stopping.stopped(&self.notices.stopped, &workspace),
+                turns,
+                ..self.notices
+            },
             workspace,
             ..self
         };
@@ -114,7 +112,8 @@ impl App {
         // text, so that each visit makes a change of its own to undo, as each
         // stay in insert mode does in Vim
         let ends = matches!(message, Message::Focus(_) | Message::Clicked)
-            || (matches!(message, Message::Held(false)) && self.held);
+            || (matches!(message, Message::Held(Held { any: false, .. }))
+                && self.keyboard.held.any);
         let this = if ends {
             self.send(Command::EndRun)
         } else {
@@ -130,9 +129,7 @@ impl App {
         };
         let app = Self {
             keys: if typing { app.keys } else { Vec::new() },
-            clipped: app.clipped.filter(|_| typing),
-            remark: app.remark.filter(|_| typing),
-            unapplied: app.unapplied.filter(|_| typing),
+            notices: app.notices.while_typing(typing),
             typed: app.typed.filter(|_| kept),
             ..app
         };
@@ -144,28 +141,10 @@ impl App {
             task.chain(reveal_current_list())
         };
         let app = Self {
-            link_problem: app.link_problem.filter(|_| app.help),
-            unapplied: unapplied.or(app.unapplied),
+            problems: app.problems.with_link_while(app.help),
+            notices: app.notices.preferring_unapplied(unapplied),
             ..app
         };
         (app, task)
     }
-}
-
-/// Runs blocking `work` on a thread of its own once iced runs the task: off
-/// the interface thread, where GO and Panic must never wait, and off the
-/// workers of iced's executor, which keep the clock ticking.  The task gives
-/// what the work returns, or nothing when the program closes first.
-pub(super) fn on_own_thread<T: Send + 'static>(
-    work: impl FnOnce() -> T + Send + 'static,
-) -> Task<T> {
-    Task::future(async move {
-        let (sender, receiver) = oneshot::channel();
-        thread::spawn(move || {
-            // Receiver has gone only when the program is closing
-            let _ = sender.send(work());
-        });
-        receiver.await.ok()
-    })
-    .and_then(Task::done)
 }

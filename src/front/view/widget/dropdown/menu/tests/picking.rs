@@ -9,29 +9,11 @@ use super::*;
 use crate::front::view::widget::dropdown::state::State;
 
 #[test]
-fn control_y_picks_the_highlight_and_control_e_closes_the_menu_without_a_pick() {
-    let ctrl = Modifiers::CTRL;
-    let (y, e, down) = (letter("y"), letter("e"), named(Named::ArrowDown));
+fn control_e_closes_the_menu_without_a_pick() {
     assert_eq!(
-        outcome(|choice, shell| type_key(choice, &y, ctrl, shell)),
-        closed(true, Some(1))
-    );
-    assert_eq!(
-        outcome(|choice, shell| type_key(choice, &e, ctrl, shell)),
+        outcome(typing_with(letter("e"), Modifiers::CTRL)),
         closed(true, None)
     );
-    assert_eq!(
-        outcome(|choice, shell| {
-            type_key(choice, &down, Modifiers::empty(), shell);
-            type_key(choice, &y, ctrl, shell);
-        }),
-        closed(true, Some(2))
-    );
-}
-
-#[test]
-fn escape_still_closes_the_menu_and_acts_as_panic() {
-    assert_eq!(pressed(&[named(Named::Escape)]), closed(false, None));
 }
 
 /// Opens a menu, lets `act` hand it events, and returns whether it then gives

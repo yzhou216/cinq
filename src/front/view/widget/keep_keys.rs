@@ -65,7 +65,7 @@ impl Intercept for Keep<'_> {
         layout: Layout<'_>,
         renderer: &Renderer,
     ) -> Option<Vec<Event>> {
-        // A user who binds either key to an action that acts in fields keeps it
+        // User who binds either key to an action that acts in fields keeps it
         let taken = key_pressed(event)
             .and_then(|KeyPress { press, .. }| press)
             .is_some_and(|press| self.0.acts_in_fields(press));

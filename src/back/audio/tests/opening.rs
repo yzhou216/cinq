@@ -18,7 +18,10 @@ use super::{
 };
 use crate::back::{
     Audio, Channels, Command, Fault, OutputEdit, READY_AHEAD, Workspace,
-    audio::{mixer::Mixer, opener::Opener, opening::RETRY},
+    audio::{
+        devices::fault::RETRY,
+        sound::{mixer::Mixer, opener::Opener},
+    },
 };
 
 #[test]
@@ -182,9 +185,7 @@ fn pasting_an_output_on_a_device_that_cannot_play_does_not_try_it_again() {
     let (a, _) = Mixer::bench(2, 2, 8000, 16);
     audio.mixers.insert(Some("a".to_owned()), Ok(a));
     let fault = Fault::Unplayable("no samples that cinq plays".to_owned());
-    audio
-        .mixers
-        .insert(Some("b".to_owned()), Err(fault.clone()));
+    audio.mixers.insert(Some("b".to_owned()), Err(fault));
     let sub = workspace.output(SUB).cloned().expect("the show has Sub");
     let copied = workspace.apply(Command::PasteOutputs {
         at: 2,

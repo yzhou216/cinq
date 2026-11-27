@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The message that an action sends, with the count typed before its keys
+//! Message that an action sends, with the count typed before its keys
 
 use super::Action;
 use crate::{
@@ -86,7 +86,7 @@ impl Action {
     /// which the stage window leaves to the main window: the operator cannot
     /// see the cue list from there, so a key held down by mistake would change
     /// cues out of sight
-    pub fn edits_the_show(self) -> bool {
+    fn edits_the_show(self) -> bool {
         matches!(
             self,
             Action::AddBelow

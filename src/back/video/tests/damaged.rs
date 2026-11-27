@@ -9,7 +9,7 @@ use std::{fs, path::Path, sync::mpsc, thread};
 
 use super::{
     PATIENCE,
-    boxes::{narrow, reworked, shifted},
+    boxes::{position_of, reworked, shifted},
     movie::{movie_bytes, saved},
     tabled,
 };
@@ -21,14 +21,6 @@ pub(super) const DAMAGED_INDEX: &str = "holds a damaged index";
 /// Returns the bytes of a test video of five pictures
 pub(super) fn bytes() -> Vec<u8> {
     movie_bytes(5, 5, &[])
-}
-
-/// Returns `bytes` with a udta box holding `udta` after the tables of the
-/// movie
-pub(super) fn with_udta(bytes: &[u8], udta: &[u8]) -> Vec<u8> {
-    reworked(bytes, &[b"moov"], &|body| {
-        [body, narrow(&(*b"udta", udta.to_vec()))].concat()
-    })
 }
 
 /// Returns whether playing the video at `path`, which opens it and reads
@@ -50,10 +42,7 @@ fn ends(path: &Path) -> bool {
 fn video_with_a_field_of_its_tables_damaged_or_cut_short_ends_in_time() {
     let bytes = bytes();
     let (_directory, path) = saved(&[]);
-    let moov = bytes
-        .windows(4)
-        .position(|window| window == b"moov")
-        .expect("the box is there");
+    let moov = position_of(&bytes, b"moov");
     // The four bytes at each place in the tables made zero, one, large, and
     // larger, as sizes and counts go wrong, and the file cut short there
     let damaged = |at: usize, value: u32| {

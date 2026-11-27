@@ -9,43 +9,37 @@
 //! start, or that stops before its file ends, goes back to it as a file that
 //! cannot be played.  A thread of its own makes ready the sounds that runs
 //! may start next, so that GO waits on no file.  A thread for each audio
-//! device opens it and tries again if it fails, so that a device that is
-//! slow to answer never stops the window.  The sound of a video file plays
-//! from the file's sound track, along with the silence that AAC encoders put
-//! around the sound, since the decoder reads no edit list, which marks that
-//! silence for players to skip.  Each cue plays on the outputs that it sends
-//! to, which play on channels of audio devices, as [`patch`] tells, and a
-//! [`mixer`] of cinq's own plays each device, since kira mixes in stereo
-//! alone.
+//! device opens it and tries again if it fails, so that a slow device never
+//! stops the window.  The sound of a video file plays from the file's sound
+//! track, along with the silence that AAC encoders put around the sound,
+//! since the decoder reads no edit list, which marks that silence for
+//! players to skip.  Each cue plays on the outputs that it sends to, which
+//! play on channels of audio devices, as [`patch`] tells, and a
+//! [`mixer`](sound::mixer) of cinq's own plays each device, since kira mixes
+//! in stereo alone.
 
-mod device;
-mod fault;
-mod feed;
-mod mixer;
-mod opener;
+mod devices;
 mod opening;
 mod patch;
-mod play;
-mod preload;
-mod probes;
+mod sound;
 #[cfg(test)]
 pub(super) mod tests;
-mod voice;
 
 use std::{collections::HashMap, path::Path, time::Instant};
 
 use itertools::Itertools;
 use kira::sound::{FromFileError, streaming::StreamingSoundData};
 
-use super::{CueId, OutputId, Workspace, load::unreadable};
-pub use device::devices;
-pub use fault::Fault;
-use mixer::Mixer;
-use opener::Opener;
+use super::{CueId, OutputId, Workspace, failure::unreadable};
+use devices::probes::Probes;
+pub use devices::{device::devices, fault::Fault};
 use patch::Patch;
-use preload::{Ask, Preloader, Wanted};
-use probes::Probes;
-use voice::{Mixers, Voice};
+use sound::{
+    mixer::{Mixer, Mixers},
+    opener::Opener,
+    preload::{Ask, Preloader, Wanted},
+    voice::Voice,
+};
 
 /// Endings of the names of the sound files that the sound output plays,
 /// which the features of kira in `Cargo.toml` decide
@@ -59,7 +53,6 @@ pub struct Audio {
     /// ID of the device that outputs on the default device play on, or none
     /// for the default device of the system
     default: Option<String>,
-    /// Where the outputs play, as the mixers opened for them
     patch: Patch,
     mixers: Mixers,
     /// Thread that opens the devices, which answers once each is open

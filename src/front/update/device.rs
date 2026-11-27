@@ -14,12 +14,12 @@ use iced::Task;
 use super::on_own_thread;
 use crate::{
     back::audio_devices,
-    front::{App, Message, keymap::config},
+    front::{App, Message, config},
 };
 
 /// Lists the audio devices on a thread of its own, since a sound server
 /// can keep the listing waiting
-pub(in crate::front) fn listing() -> Task<Message> {
+pub(super) fn listing() -> Task<Message> {
     on_own_thread(audio_devices).map(Message::AudioDevicesListed)
 }
 
@@ -33,7 +33,7 @@ impl App {
         }
     }
 
-    /// Without a configuration directory, the choice lasts until cinq ends.
+    /// Without a configuration directory, the choice lasts until cinq ends
     pub(super) fn chose_audio_device(self, device: Option<String>) -> (Self, Task<Message>) {
         let keeping = self.config.source.file().map(|file| {
             let (file, device) = (file.to_owned(), device.clone());
@@ -42,7 +42,7 @@ impl App {
         });
         let app = Self {
             config: self.config.with_audio_device(device),
-            device_problem: None,
+            problems: self.problems.with_device(None),
             ..self
         };
         (app, keeping.unwrap_or_else(Task::none))

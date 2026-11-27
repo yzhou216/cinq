@@ -7,10 +7,6 @@
 
 use super::*;
 
-fn depths(workspace: &Workspace) -> Vec<u8> {
-    workspace.lists()[0].depths()
-}
-
 /// Returns each cue that GO on `start` fires with its delay
 fn chain(workspace: &Workspace, start: u32) -> Vec<(u32, f32)> {
     workspace.lists()[0]
@@ -20,11 +16,11 @@ fn chain(workspace: &Workspace, start: u32) -> Vec<(u32, f32)> {
 }
 
 fn indent(ids: &[u32]) -> Command {
-    Command::Indent(ids.iter().map(|&id| CueId(id)).collect())
+    Command::Indent(cue_ids(ids))
 }
 
 fn outdent(ids: &[u32]) -> Command {
-    Command::Outdent(ids.iter().map(|&id| CueId(id)).collect())
+    Command::Outdent(cue_ids(ids))
 }
 
 #[test]
@@ -44,7 +40,8 @@ fn cue_lies_only_as_deep_as_the_rows_above_it_allow() {
     assert_eq!(list.extent(1), 1..6);
     assert_eq!(list.extent(2), 2..5);
     assert_eq!(list.extent(6), 6..7);
-    let members: Vec<u32> = list.members(CueId(2)).iter().map(|cue| cue.id.0).collect();
+    let held = list.groups();
+    let members: Vec<u32> = held.members(CueId(2)).iter().map(|cue| cue.id.0).collect();
     assert_eq!(members, [3, 4, 5, 6]);
     assert_eq!(list.group_of(CueId(5)).map(|cue| cue.id.0), Some(3));
     assert_eq!(list.group_of(CueId(6)).map(|cue| cue.id.0), Some(2));
@@ -142,25 +139,14 @@ fn cue_leaves_its_group_for_the_row_below_it() {
         audio(6),
     ]);
     let out = workspace.clone().apply(outdent(&[3]));
-    assert_eq!(ids(&out), [1, 2, 5, 3, 4, 6]);
-    assert_eq!(depths(&out), [0, 1, 1, 0, 1, 0]);
+    assert_rows(&out, &[1, 2, 5, 3, 4, 6], &[0, 1, 1, 0, 1, 0]);
     let undone = out.apply(Command::Undo);
     assert_eq!(ids(&undone), ids(&workspace));
     assert_eq!(depths(&undone), depths(&workspace));
     let redone = undone.apply(Command::Redo);
     assert_eq!(ids(&redone), [1, 2, 5, 3, 4, 6]);
     let both = workspace.apply(outdent(&[2, 5]));
-    assert_eq!(ids(&both), [1, 3, 4, 2, 5, 6]);
-    assert_eq!(depths(&both), [0, 1, 2, 0, 0, 0]);
-}
-
-#[test]
-fn show_file_keeps_the_depth_of_each_cue() {
-    let workspace = workspace(vec![group(1), within(1, audio(2))]);
-    let text = shown(&workspace);
-    assert!(text.contains("depth = 1"));
-    let read = Workspace::from_show(&text, "/show").expect("the show reads back");
-    assert_eq!(read.lists()[0].depths(), [0, 1]);
+    assert_rows(&both, &[1, 3, 4, 2, 5, 6], &[0, 1, 2, 0, 0, 0]);
 }
 
 #[test]

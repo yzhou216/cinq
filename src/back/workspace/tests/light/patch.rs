@@ -101,22 +101,14 @@ fn instrument_added_after_a_removal_does_not_take_the_level_of_the_removed() {
 
 #[test]
 fn instrument_is_not_added_after_the_last_address_of_the_last_universe() {
-    let last = lit(Vec::new())
-        .apply(Command::Patch(PatchEdit::Address(
-            InstrumentId(2),
-            32_768,
-            512,
-        )))
-        .apply(Command::Patch(PatchEdit::Add));
-    assert_eq!(names(&last), ["1", "2"]);
-    let before = lit(Vec::new())
-        .apply(Command::Patch(PatchEdit::Address(
-            InstrumentId(2),
-            32_768,
-            511,
-        )))
-        .apply(Command::Patch(PatchEdit::Add));
-    assert_eq!(before.patch()[2].address_text(), "32768/512");
+    let added = |address| {
+        let edit = PatchEdit::Address(InstrumentId(2), 32_768, address);
+        lit(Vec::new())
+            .apply(Command::Patch(edit))
+            .apply(Command::Patch(PatchEdit::Add))
+    };
+    assert_eq!(names(&added(512)), ["1", "2"]);
+    assert_eq!(added(511).patch()[2].address_text(), "32768/512");
 }
 
 #[test]

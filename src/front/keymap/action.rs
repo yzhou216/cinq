@@ -6,6 +6,7 @@
 
 mod description;
 mod message;
+mod places;
 
 use strum::{EnumString, IntoStaticStr, VariantArray};
 
@@ -112,39 +113,6 @@ impl Action {
         Self::AT_ONCE.contains(&self)
     }
 
-    /// Returns whether a key of the action acts on the cue list, which the
-    /// keys of an open menu do not
-    pub(super) fn acts_in_cue_list(self) -> bool {
-        !matches!(self, Action::Pick | Action::CloseMenu)
-    }
-
-    /// Returns whether a key of the action acts while a menu is open, where
-    /// every other key is kept from acting
-    pub(super) fn acts_in_menu(self) -> bool {
-        self.acts_at_once()
-            || matches!(
-                self,
-                Action::Cancel
-                    | Action::Next
-                    | Action::Previous
-                    | Action::PageDown
-                    | Action::PageUp
-                    | Action::First
-                    | Action::Last
-                    | Action::Help
-                    | Action::Pick
-                    | Action::CloseMenu
-            )
-    }
-
-    /// Returns whether keys of the two actions act in the same place, the
-    /// cue list or an open menu.  Only keys that do can hide each other, so
-    /// that a key may pick in a menu and scroll the list.
-    pub(super) fn shares_place(self, other: Action) -> bool {
-        (self.acts_in_cue_list() && other.acts_in_cue_list())
-            || (self.acts_in_menu() && other.acts_in_menu())
-    }
-
     /// Describes the operator `self` applied over the rows that `motion`
     /// reaches, which are `rows`.  A `count` typed so far moves the motion
     /// by that many rows, or to that row for `First` and `Last`, as the
@@ -158,16 +126,13 @@ impl Action {
             _ => "Delete",
         };
         let (one, many) = rows.nouns();
+        let by = count.map_or(String::new(), |count| format!(" {count}"));
         let reached = match (motion, count) {
-            (Action::Next, Some(count)) => format!("the selected {one} and the next {count}"),
-            (Action::Previous, Some(count)) => {
-                format!("the selected {one} and the previous {count}")
-            }
+            (Action::Next, _) => format!("the selected {one} and the next{by}"),
+            (Action::Previous, _) => format!("the selected {one} and the previous{by}"),
             (Action::First | Action::Last, Some(count)) => {
                 format!("the {many} from the selection to row {count}")
             }
-            (Action::Next, _) => format!("the selected {one} and the next"),
-            (Action::Previous, _) => format!("the selected {one} and the previous"),
             (Action::First, _) => format!("the {many} from the selection up to the first"),
             _ => format!("the {many} from the selection down to the last"),
         };
@@ -209,44 +174,6 @@ impl Action {
                 | Action::Back
                 | Action::Forward
         )
-    }
-
-    /// Returns whether a key of the action acts while a closed drop-down
-    /// list has the keyboard, beside those that act in every field.  The
-    /// list has no text of its own, so that the keys of undo and redo act
-    /// there, and so do those of [`Action::leaves_lists`].
-    pub fn acts_in_lists(self) -> bool {
-        self.acts_in_fields() || matches!(self, Action::Undo | Action::Redo) || self.leaves_lists()
-    }
-
-    /// Returns whether the action takes the keyboard out of a closed list, a
-    /// checkbox, or a button that has it, so that the keys of hint mode, whose
-    /// labels the list would swallow, and of the cue list, which a new cue
-    /// selects, act next
-    pub fn leaves_lists(self) -> bool {
-        matches!(self, Action::Hint | Action::AddBelow | Action::AddAbove)
-    }
-
-    pub fn acts_in_fields(self) -> bool {
-        self.acts_at_once()
-            || matches!(
-                self,
-                Action::Cancel
-                    | Action::NextField
-                    | Action::PreviousField
-                    | Action::Back
-                    | Action::Forward
-                    | Action::Open
-                    | Action::Save
-                    | Action::SaveAs
-            )
-    }
-
-    /// Returns whether a key of the action acts while the help page is
-    /// open.  The keys that scroll the page are the page's own, which
-    /// `typed` handles before it asks.  The links of the page take labels.
-    pub fn acts_over_help(self) -> bool {
-        self.acts_at_once() || matches!(self, Action::Help | Action::CloseHelp | Action::Hint)
     }
 
     /// Returns the page that the action moves by, if it is one of the four

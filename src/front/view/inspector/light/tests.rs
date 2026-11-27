@@ -6,11 +6,12 @@
 
 use iced::advanced::widget::{Tree, tree};
 
-use super::{NAME_ROOM, levels_now_fits, now_fits, page, shows_help};
+use super::{NAME_ROOM, levels::levels_now_fits, now_fits, page, shows_help};
 use crate::{
     back::{Command, Cue, CueId, InstrumentId, Kind, PatchEdit, Workspace},
     front::{
         App,
+        app::{Held, Keyboard},
         view::{char_width, widget::focus::State},
     },
 };
@@ -18,7 +19,13 @@ use crate::{
 #[test]
 fn the_help_on_addresses_shows_only_while_an_address_has_the_keyboard_or_is_refused() {
     let app = |address_held| App {
-        address_held,
+        keyboard: Keyboard {
+            held: Held {
+                address: address_held,
+                ..Held::default()
+            },
+            ..Keyboard::default()
+        },
         ..App::default()
     };
     let refused = Some("1 to 512".to_owned());
@@ -73,35 +80,31 @@ fn the_keyboard_stays_at_the_place_of_a_removed_button_for_the_row_that_slides_i
     assert_eq!(held(&mut tree), [false, true, false]);
 }
 
-#[test]
-fn the_now_column_gives_way_to_a_name_that_would_keep_too_little_room() {
+/// Returns the rooms from 0 to 2000 pixels where `fits` holds, which are one
+/// run, so that the column does not come and go as the window grows
+fn in_one_run(fits: impl Fn(f32) -> bool) -> Vec<f32> {
     let kept: Vec<f32> = (0..2000)
         .map(|room| room as f32)
-        .filter(|&room| now_fits(room))
+        .filter(|&room| fits(room))
         .collect();
-    assert!(!now_fits(0.0) && now_fits(WIDE));
-    // The column does not come and go as the window grows
     assert!(kept.windows(2).all(|pair| pair[1] == pair[0] + 1.0));
+    kept
+}
+
+#[test]
+fn the_now_column_gives_way_to_a_name_that_would_keep_too_little_room() {
+    let kept = in_one_run(now_fits);
+    assert!(!now_fits(0.0) && now_fits(WIDE));
     // The name keeps its room beside the column, with nothing else to give
     assert!(kept[0] > NAME_ROOM * char_width());
 }
 
 #[test]
 fn the_now_column_of_the_levels_gives_way_where_the_patch_keeps_it_and_no_sooner() {
-    let kept: Vec<f32> = (0..2000)
-        .map(|room| room as f32)
-        .filter(|&room| levels_now_fits(room))
-        .collect();
+    let kept = in_one_run(levels_now_fits);
     assert!(!levels_now_fits(0.0) && levels_now_fits(WIDE));
-    assert!(kept.windows(2).all(|pair| pair[1] == pair[0] + 1.0));
     // One column fewer than the patch, which has the Remove button too
-    assert!(
-        kept[0]
-            < (0..2000)
-                .map(|room| room as f32)
-                .find(|&room| now_fits(room))
-                .unwrap_or(0.0)
-    );
+    assert!(kept[0] < in_one_run(now_fits)[0]);
 }
 
 #[test]
@@ -114,7 +117,7 @@ fn the_levels_list_an_instrument_that_the_patch_lacks_after_those_it_has() {
                 .collect(),
         )
         .build();
-    let names = super::rows(&patch, &cue)
+    let names = super::levels::rows(&patch, &cue)
         .iter()
         .map(ToString::to_string)
         .collect::<Vec<_>>();
@@ -123,5 +126,5 @@ fn the_levels_list_an_instrument_that_the_patch_lacks_after_those_it_has() {
 
 #[test]
 fn empty_levels_tell_which_tab_adds_an_instrument() {
-    assert!(super::no_instruments().ends_with("on the Light Patch tab"));
+    assert!(super::levels::no_instruments().ends_with("on the Light Patch tab"));
 }

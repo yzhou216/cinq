@@ -44,7 +44,6 @@ const RETRY: Duration = Duration::from_secs(2);
 /// closed
 const RELEASE: Duration = Duration::from_millis(500);
 
-/// Largest UDP datagram
 const DATAGRAM: usize = 65535;
 
 /// Most messages that one datagram gives commands for.  A real remote sends
@@ -54,14 +53,13 @@ const MESSAGES: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Heard {
-    /// Command from the host at the address
     Command(IpAddr, Remote),
     /// Packet or message from the host at the address that is no command,
     /// as the warnings tell it
     Ignored(String),
     /// Why the address could not be listened on, as the sidebar tells it
     Failed(String),
-    /// The address that failed is listened on now
+    /// Address that failed is listened on now
     Listening,
 }
 
@@ -144,7 +142,7 @@ fn receive(socket: &UdpSocket, sender: &mpsc::UnboundedSender<Heard>) {
                         let _ = sender.unbounded_send(heard);
                     })
             }
-            // An error that returns at once would spin the loop
+            // Error that returns at once would spin the loop
             Err(error) if pauses(&error) => thread::sleep(LOOK),
             // Read timeout, which ends each wait of the socket so that the
             // loop sees a closed stream, means no datagram

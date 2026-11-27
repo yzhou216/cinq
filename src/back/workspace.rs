@@ -11,55 +11,36 @@
 //! [`super::Video`] into pictures, the light output in [`super::Lights`]
 //! into DMX, and the network output in [`super::Network`] into messages.
 //! A [`Command`] asks for each change, and an [`Active`] records each cue
-//! that GO has fired.  The rules of playback live in [`playback`] and
-//! [`stopping`], those of group runs in [`group_runs`], those of control cues
-//! in [`control`], those of lights in [`lighting`], those of network cues in
-//! [`networking`], those that change the cue lists in [`editing`] and
-//! [`pasting`], those of outputs in [`outputs`], undo and redo in
-//! [`history`], show files in [`show`], the places of the files of cues in
-//! [`files`], why cues cannot play in
-//! [`problems`], the cues that send to no output in [`stranded`], and the
-//! light cues that light too little in [`unlit`].
+//! that GO has fired.
 
-mod active;
+mod checks;
 mod command;
-mod control;
 mod editing;
 mod files;
-mod group_runs;
-mod grouping;
 mod history;
-mod lighting;
-mod networking;
-mod numbering;
+mod lookup;
 mod outputs;
-mod pasting;
-mod playback;
-mod problems;
+mod running;
 mod show;
-mod stopping;
-mod stranded;
 #[cfg(test)]
 pub(super) mod tests;
-mod unlit;
 
 use std::{collections::BTreeMap, path::PathBuf};
 
-pub use active::{Active, Phase};
 pub use command::{Command, Place};
 pub use history::{Change, Turn};
+pub use running::active::{Active, Phase};
 
 use crate::back::{
-    Cue, CueId, CueList, Instrument, InstrumentId, Outgoing, Output, OutputId,
+    CueId, CueList, Instrument, InstrumentId, Outgoing, Output, OutputId,
     items::{replaced, replaced_where},
 };
+pub use checks::Unlit;
 use history::{History, Kept};
-use lighting::Dimmer;
-pub use lighting::Universe;
-pub use unlit::Unlit;
+use running::lighting::Dimmer;
+pub use running::lighting::Universe;
 
-/// Show as a whole, with its cue lists, outputs, light patch, running cues,
-/// and editing lock
+/// Show as a whole
 ///
 /// A show always holds at least one cue list, which the front end shows,
 /// and at least one output.
@@ -67,7 +48,6 @@ pub use unlit::Unlit;
 pub struct Workspace {
     lists: Vec<CueList>,
     outputs: Vec<Output>,
-    /// Identity that the next added output receives
     next_output: u32,
     patch: Vec<Instrument>,
     /// Level of each instrument that a light cue has set
@@ -83,7 +63,6 @@ pub struct Workspace {
     /// rather than one that shares an identity
     next_id: u64,
     next_run: u32,
-    /// Directory that relative file paths start from
     directory: PathBuf,
     history: History,
 }
@@ -128,58 +107,6 @@ impl Workspace {
             directory: PathBuf::new(),
             history: History::default(),
         }
-    }
-
-    pub fn lists(&self) -> &[CueList] {
-        &self.lists
-    }
-
-    /// Returns the cues that GO has fired and that have not finished yet,
-    /// in the order that GO fired them, the latest last
-    pub fn active(&self) -> &[Active] {
-        &self.active
-    }
-
-    pub fn show_mode(&self) -> bool {
-        self.show_mode
-    }
-
-    /// Returns the identity the next added cue will receive, or none once
-    /// the identities have run out
-    pub fn next_cue_id(&self) -> Option<CueId> {
-        u32::try_from(self.next_id).ok().map(CueId)
-    }
-
-    pub fn cues(&self) -> impl Iterator<Item = &Cue> {
-        self.lists.iter().flat_map(|list| &list.cues)
-    }
-
-    pub fn cue(&self, id: CueId) -> Option<&Cue> {
-        self.cues().find(|cue| cue.id == id)
-    }
-
-    /// Returns the first cue whose number is `number`, in the order of the
-    /// lists and then of the rows, since cue numbers need not be unique.
-    /// Surrounding spaces count for nothing, and no cue is the one with no
-    /// number.
-    pub fn numbered(&self, number: &str) -> Option<&Cue> {
-        let number = number.trim();
-        self.cues()
-            .find(|cue| !number.is_empty() && cue.number.trim() == number)
-    }
-
-    pub fn target(&self, cue: &Cue) -> Option<&Cue> {
-        cue.target.and_then(|id| self.cue(id))
-    }
-
-    pub fn list_of(&self, id: CueId) -> Option<usize> {
-        self.lists
-            .iter()
-            .position(|list| list.position(id).is_some())
-    }
-
-    pub fn active_of(&self, id: CueId) -> Option<&Active> {
-        self.active.iter().find(|active| active.id == id)
     }
 
     fn active_where(&self, test: impl Fn(&Active) -> bool) -> Vec<CueId> {

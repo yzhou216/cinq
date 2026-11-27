@@ -6,34 +6,31 @@
 //!
 //! A name that another output has, channels that are neither one nor two,
 //! and a level out of range stay in their fields, marked, without applying,
-//! as a level of a cue does.  Each field is as wide as what it holds, and
-//! the line beside it, in dim text, tells what the setting takes and what it
-//! does.  That line turns red and tells why where the value is not applied,
-//! so that the color is never the only sign.
+//! as a level of a cue does.  The line beside each field, in dim text, tells
+//! what the setting takes.  It turns red and tells why where the value is not
+//! applied, so that the color is never the only sign.
 
 mod device;
-mod reasons;
-pub(super) use reasons::address_help;
-pub(in crate::front) use reasons::rejection;
+mod settings;
 #[cfg(test)]
 mod tests;
 
 use iced::{
-    Center, Element, Fill, Padding,
+    Center, Element, Fill,
     widget::{Text, column, container, row, scrollable, text, text_input},
 };
 
-use super::{LEVEL_ROOM, lock, locked::locked};
+use super::{lock, locked::locked};
 use crate::{
     back::Output,
     front::{
         App, Message, Setting,
-        view::{FORMS, OUTPUT_NAME, SPACING, char_width, dropdown_width, format, reached, theme},
+        message::reasons::rejection,
+        view::{FORMS, SPACING, char_width, dropdown_width, reached, theme},
     },
 };
 
-/// Columns of the font that the labels of the settings take, as many as
-/// the longest of them
+/// Columns of the font that the labels of the settings take
 const LABEL: f32 = 14.0;
 
 /// Columns of the font that the name field holds, with room for a long
@@ -45,11 +42,9 @@ const NAME_ROOM: f32 = 24.0;
 const CHANNELS_ROOM: f32 = 8.0;
 
 /// Columns of the font that the device list shows of a name, as many as
-/// `Dante Virtual Soundcard, not found` takes, so that most device names
-/// show whole and a longer one ends in an ellipsis
+/// `Dante Virtual Soundcard, not found` takes
 const DEVICE_ROOM: f32 = 34.0;
 
-/// Returns the width of a field that holds `columns` columns of text
 pub(super) fn room(columns: f32) -> f32 {
     char_width() * columns + text_input::DEFAULT_PADDING.x()
 }
@@ -98,6 +93,15 @@ pub(super) fn refused<'a>(reason: &str) -> Text<'a> {
     text(format!("Not applied: {reason}")).style(text::danger)
 }
 
+/// Returns the reason that the text typed into the latest field is not
+/// applied, if the field is of a setting that `of` accepts and it is not
+pub(super) fn refusal(app: &App, of: impl Fn(&Setting) -> bool) -> Option<String> {
+    app.typed
+        .as_ref()
+        .filter(|(setting, _)| of(setting))
+        .and_then(|(setting, typed)| rejection(app, *setting, typed))
+}
+
 /// Returns the line of help beside a setting: `hint`, in dim text, or the
 /// reason that the value is not applied, in red, where there is one
 pub(super) fn help<'a>(hint: impl Into<String>, rejection: Option<String>) -> Element<'a, Message> {
@@ -111,94 +115,12 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     let Some(output) = app.output.and_then(|id| app.workspace.output(id)) else {
         return text("Select an output to inspect it").into();
     };
-    let id = output.id;
-    // Field for a setting, with the reason that the text in it is not
-    // applied, if it is not
-    let field = |setting: Setting,
-                 placeholder: &str,
-                 value: String,
-                 columns: f32,
-                 reject: &dyn Fn(&str) -> Option<String>| {
-        let (input, shown) = typing(app, setting, placeholder, value, columns);
-        let rejection = reject(&shown);
-        (input.style(theme::field(rejection.is_none())), rejection)
-    };
-    let (name, name_rejection) = field(
-        Setting::OutputName(id),
-        "Name",
-        output.name.clone(),
-        NAME_ROOM,
-        &|name| reasons::name(app, output, name),
-    );
-    let (channels, channels_rejection) = field(
-        Setting::Channels(id),
-        "1-2",
-        output.channels.to_string(),
-        CHANNELS_ROOM,
-        &reasons::channels,
-    );
-    let (new_cues, new_cues_rejection) = field(
-        Setting::NewCues(id),
-        "off",
-        output.new_cues.map(format::decibels).unwrap_or_default(),
-        LEVEL_ROOM,
-        &reasons::level,
-    );
-    let sending = app
-        .workspace
-        .cues()
-        .filter(|cue| cue.kind.plays_file() && app.workspace.sends(cue).contains_key(&id))
-        .count();
-    let settings = [
-        (
-            "Name",
-            [reached(name.id(OUTPUT_NAME)), help("", name_rejection)],
-        ),
-        (
-            "Device",
-            [device(app, output), help(device::hint(app, output), None)],
-        ),
-        (
-            "Channels",
-            [
-                reached(channels),
-                help(reasons::channels_help(), channels_rejection),
-            ],
-        ),
-        (
-            "New cues send",
-            [
-                // Unit keeps a gap from the help that follows it, which
-                // would otherwise read on from it
-                container(
-                    row![reached(new_cues), text("dB")]
-                        .spacing(SPACING)
-                        .align_y(Center),
-                )
-                .padding(Padding::ZERO.right(SPACING))
-                .into(),
-                help(
-                    "New cues send here at this level; empty for none",
-                    new_cues_rejection,
-                ),
-            ],
-        ),
-    ];
     // Scrolls, so that no field is cut to a sliver in a low or narrow window
     // and Tab can reach one below the part in view
     scrollable(
         column![text(format!("Output: {}{}", output.name, lock(app)))]
-            .extend(settings.into_iter().map(|(label, cells)| {
-                row![text(label).width(char_width() * LABEL)]
-                    .extend(cells)
-                    .spacing(SPACING)
-                    .align_y(Center)
-                    .into()
-            }))
-            .push(text(match sending {
-                1 => "1 cue sends here".to_owned(),
-                count => format!("{count} cues send here"),
-            }))
+            .extend(settings::of(app, output).into_iter().map(setting))
+            .push(sending(app, output))
             .spacing(SPACING)
             .width(Fill),
     )
@@ -209,8 +131,27 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     .into()
 }
 
-/// Returns the list of the devices that the output can play on, as wide
-/// as its name and no wider, whichever device it holds
+fn setting<'a>((label, cells): (&'static str, [Element<'a, Message>; 2])) -> Element<'a, Message> {
+    row![text(label).width(char_width() * LABEL)]
+        .extend(cells)
+        .spacing(SPACING)
+        .align_y(Center)
+        .into()
+}
+
+fn sending<'a>(app: &App, output: &Output) -> Text<'a> {
+    let sending = app
+        .workspace
+        .cues()
+        .filter(|cue| cue.kind.plays_file() && app.workspace.sends(cue).contains_key(&output.id))
+        .count();
+    text(match sending {
+        1 => "1 cue sends here".to_owned(),
+        count => format!("{count} cues send here"),
+    })
+}
+
+/// Returns the device list, as wide as the name that it holds and no wider
 fn device<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message> {
     container(device::view(app, output))
         .max_width(dropdown_width(DEVICE_ROOM))

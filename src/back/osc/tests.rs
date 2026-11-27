@@ -6,6 +6,18 @@
 
 use super::{Destination, framed, packet};
 
+/// Returns a bundle of `elements`, each with its size, after a time tag
+pub(super) fn bundle(elements: &[&[u8]]) -> Vec<u8> {
+    let sized = elements
+        .iter()
+        .flat_map(|element| [&(element.len() as i32).to_be_bytes()[..], element].concat());
+    [b"#bundle\0", &1_u64.to_be_bytes()[..]]
+        .concat()
+        .into_iter()
+        .chain(sized)
+        .collect()
+}
+
 #[test]
 fn message_without_arguments_holds_its_address_and_an_empty_type_tag() {
     assert_eq!(

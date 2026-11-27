@@ -32,11 +32,7 @@ impl App {
         let steps = within_a_lap(offset.unsigned_abs(), found_rows);
         let (row, went_round) = (0..steps).fold((self.position(), false), |(row, round), _| {
             let next = found(&texts, text, row, backward);
-            let round = round
-                || row
-                    .zip(next)
-                    .is_some_and(|(from, to)| wrapped(from, to, backward));
-            (next.or(row), round)
+            (next.or(row), round || wrapped(row, next, backward))
         });
         let remark = if text.is_empty() {
             Some(NO_PREVIOUS)
@@ -45,8 +41,11 @@ impl App {
         } else {
             went_round.then(|| continued(backward))
         };
-        Self { remark, ..self }
-            .jumping(|app| app.searched_to(row))
-            .revealed()
+        Self {
+            notices: self.notices.with_remark(remark),
+            ..self
+        }
+        .jumping(|app| app.selecting_position(row))
+        .revealed()
     }
 }

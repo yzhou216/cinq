@@ -14,22 +14,23 @@ use std::{
 use tempfile::TempDir;
 
 use super::{
-    ask,
+    ask, collecting,
     fakes::{Fake, open_on_both, overdue, patch, show, sounds},
-    settle, silent_file, waiting,
+    settle, silent_file,
 };
 use crate::back::{
     Audio, Channels, CueId, Fault,
-    audio::{Wanted, mixer::Mixer, opener::Opener, opening::RETRY},
+    audio::{
+        Wanted,
+        devices::fault::RETRY,
+        sound::{mixer::Mixer, opener::Opener},
+    },
 };
 
 /// Makes the sound of cue 1 ready in `audio`, waiting five seconds at most
 fn make_ready(audio: &mut Audio, wanted: &Wanted) {
     audio.preloader.want(vec![ask(wanted)]);
-    waiting(|| {
-        audio.preloader.collect();
-        audio.preloader.ready(CueId(1)).then_some(())
-    });
+    collecting(&mut audio.preloader, |preloader| preloader.ready(CueId(1)));
 }
 
 /// Returns audio on the show of Main on the device `a` and Sub on the
@@ -91,15 +92,12 @@ fn retried(faults: [Fault; 2]) -> usize {
 }
 
 #[test]
-fn a_fault_that_the_show_must_mend_is_never_tried_again() {
+fn only_faults_that_may_pass_are_tried_again() {
     let unplayable = || Fault::Unplayable("no samples that cinq plays".to_owned());
+    let refused = Fault::Refused("the device is busy".to_owned());
+    // A fault that the show must mend is never tried again
     assert_eq!(retried([unplayable(), unplayable()]), 0);
     assert_eq!(retried([missing(), unplayable()]), 1);
-}
-
-#[test]
-fn faults_that_may_pass_are_tried_again() {
-    let refused = Fault::Refused("the device is busy".to_owned());
     assert_eq!(retried([refused, Fault::Stopped("it went".to_owned())]), 2);
 }
 

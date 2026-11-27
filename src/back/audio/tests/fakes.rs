@@ -19,10 +19,12 @@ use super::voice::opened;
 use crate::back::{
     Audio, Channels, Command, CueId, Device, Fault, OutputEdit, OutputId, Workspace,
     audio::{
-        mixer::{Mix, Mixer},
-        opener::{Make, Opener},
-        opening::RETRY,
+        devices::fault::RETRY,
         patch::{Need, Patch},
+        sound::{
+            mixer::{Mix, Mixer},
+            opener::{Make, Opener},
+        },
     },
 };
 

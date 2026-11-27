@@ -8,9 +8,9 @@
 
 use iced::keyboard::{Key, key::Named};
 
-use super::{focusing, show};
+use super::{focusing, opened};
 use crate::{
-    back::{CueId, Kind},
+    back::CueId,
     front::{
         App, Caret, Focus,
         update::tests::{field_keys, press},
@@ -19,10 +19,9 @@ use crate::{
 
 #[test]
 fn no_field_takes_the_keyboard_while_the_stage_window_has_it() {
-    let (open, _) = show(Kind::Video).staged();
     let selected = App {
         selected: Some(CueId(1)),
-        ..open
+        ..opened()
     };
     let staged = focusing(selected, true);
     let (staged, naming) = staged.focused(Focus::Name(Caret::End));
@@ -35,9 +34,8 @@ fn no_field_takes_the_keyboard_while_the_stage_window_has_it() {
 
 #[test]
 fn key_of_fullscreen_held_down_toggles_the_stage_window_once() {
-    let (open, _) = show(Kind::Video).staged();
     let f11 = press(Key::Named(Named::F11));
-    let (open, toggling) = open.typed(f11, false);
+    let (open, toggling) = opened().typed(f11, false);
     assert_eq!(toggling.units(), 1);
     let (_, repeating) = open.typed(f11, true);
     assert_eq!(repeating.units(), 0);
@@ -48,8 +46,7 @@ fn help_key_opens_the_page_from_the_main_window_only() {
     // The page opens in the main window, which the fullscreen stage window
     // may cover
     let typed = |in_stage: bool| {
-        let (open, _) = show(Kind::Video).staged();
-        let (next, task) = focusing(open, in_stage).typed(press(Key::Named(Named::F1)), false);
+        let (next, task) = focusing(opened(), in_stage).typed(press(Key::Named(Named::F1)), false);
         (next.help, task.units())
     };
     assert_eq!(typed(false), (true, 0));
@@ -60,7 +57,7 @@ fn help_key_opens_the_page_from_the_main_window_only() {
 fn other_help_page_keys_act_from_the_stage_window_so_that_it_closes() {
     // The view hides the main window under the page, so that no field of
     // it takes the keys, and the update only decides which keys act
-    let (open, _) = show(Kind::Video).staged();
+    let open = opened();
     let keyboard = focusing(App { help: true, ..open }, true);
     let keys = [
         press(Key::Named(Named::F1)),
@@ -98,13 +95,16 @@ fn other_help_page_keys_act_from_the_stage_window_so_that_it_closes() {
 #[test]
 fn keys_of_search_help_and_hints_answer_from_the_stage_window_that_the_main_window_takes_them() {
     let typed = |key: Key, in_stage: bool| {
-        let (open, _) = show(Kind::Video).staged();
-        focusing(open, in_stage).typed(press(key), false).0.remark
+        focusing(opened(), in_stage)
+            .typed(press(key), false)
+            .0
+            .notices
+            .remark
     };
     let words = Some("Click the main window for search, help, or hint mode");
     assert_eq!(typed(Key::Named(Named::F1), true), words);
     assert_eq!(typed(Key::Character("f".into()), true), words);
     assert_eq!(typed(Key::Named(Named::F1), false), None);
-    let (open, _) = show(Kind::Video).staged();
-    assert_eq!(focusing(open, true).searching(false).0.remark, words);
+    let (searched, _) = focusing(opened(), true).searching(false);
+    assert_eq!(searched.notices.remark, words);
 }

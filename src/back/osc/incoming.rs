@@ -29,7 +29,7 @@ pub struct Message {
 /// Argument of a message, of which only the numbers and booleans that can
 /// say off matter
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Argument {
+pub(super) enum Argument {
     Int(i32),
     Float(f32),
     Bool(bool),
@@ -40,7 +40,7 @@ pub enum Argument {
 impl Argument {
     /// Returns whether the argument is a zero or false, as a button of a
     /// remote sends when it is released
-    pub fn is_off(self) -> bool {
+    pub(super) fn is_off(self) -> bool {
         matches!(self, Self::Int(0) | Self::Bool(false)) || self == Self::Float(0.0)
     }
 }

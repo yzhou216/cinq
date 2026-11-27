@@ -12,9 +12,8 @@
 //! which double quotes keep whole across spaces, as in
 //! `/scene/recall "Act 1" 2`.
 //!
-//! The encoding is written by hand, since the `rosc` crate is unmaintained.
-//! So is the decoding of the packets that arrive, which [`incoming`] reads,
-//! [`remote`] turns into commands, and [`listen`] receives over UDP.
+//! The encoding, and the decoding of the packets that arrive, are written by
+//! hand, since the `rosc` crate is unmaintained.
 
 mod incoming;
 mod listen;
@@ -79,7 +78,7 @@ impl Destination {
 
     /// Returns whether `text` reads as `host:port` with a good host but a
     /// port that is not a number from 1 to 65535
-    pub fn port_is_bad(text: &str) -> bool {
+    pub(super) fn port_is_bad(text: &str) -> bool {
         Self::split(text)
             .1
             .rsplit_once(':')
@@ -98,16 +97,20 @@ impl Destination {
         !host.is_empty() && !host.contains(char::is_whitespace) && !host.contains(NOT_IN_HOST)
     }
 
-    fn port_is_valid(port: &str) -> bool {
+    pub fn port_is_valid(port: &str) -> bool {
         port.parse::<u16>().is_ok_and(|port| port > 0)
     }
+}
+
+pub(super) fn has_open_quote(text: &str) -> bool {
+    text.matches('"').count() % 2 == 1
 }
 
 /// Returns the OSC message that `text` reads as, or none unless it starts
 /// with an address, holds no null, which OSC reads as the end of a string,
 /// and closes every double quote that it opens
 pub fn packet(text: &str) -> Option<Vec<u8>> {
-    if text.contains('\0') || text.matches('"').count() % 2 == 1 {
+    if text.contains('\0') || has_open_quote(text) {
         return None;
     }
     let mut words = words(text).into_iter();
@@ -124,8 +127,7 @@ pub fn packet(text: &str) -> Option<Vec<u8>> {
     )
 }
 
-/// Returns `packet` as one SLIP frame, for a stream
-pub fn framed(packet: &[u8]) -> Vec<u8> {
+pub(super) fn framed(packet: &[u8]) -> Vec<u8> {
     let escaped = packet.iter().flat_map(|&byte| match byte {
         END => vec![ESC, ESCAPED_END],
         ESC => vec![ESC, ESCAPED_ESC],

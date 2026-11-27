@@ -7,30 +7,27 @@
 //! iced's pick list takes no keys, so keys pressed over its open menu act
 //! on the cue list behind it.  These lists look like iced's pick list but
 //! open a [`menu`] of their own, in which the keys of [`Action::Next`] and
-//! [`Action::Previous`] move the highlight, which the menu keeps in view,
-//! and Enter or the key of [`Action::Pick`] picks the highlighted option,
-//! while the key of [`Action::CloseMenu`] closes the menu without a pick.
-//! PageDown, PageUp, Home, and End move the highlight a page or to either
-//! end, as in Vim's popup menu.  GO and Panic act as everywhere and close the
-//! menu, so that the show is in view, and the menu keeps every other key
-//! until it closes.  The interface hears of each opening and closing, so that
-//! its status bar hints the keys of an open menu.
+//! [`Action::Previous`] move the highlight, and Enter or the key of
+//! [`Action::Pick`] picks the highlighted option, while the key of
+//! [`Action::CloseMenu`] closes the menu without a pick.  PageDown, PageUp,
+//! Home, and End move the highlight a page or to either end, as in Vim's popup
+//! menu.  GO and Panic act as everywhere and close the menu, so that the show
+//! is in view, and the menu keeps every other key until it closes.  The
+//! interface hears of each opening and closing, so that its status bar hints
+//! the keys of an open menu.
 //!
-//! The keys that move between fields move to these lists as well, which
-//! then show the border of a focused field, and Enter opens the menu, which
-//! takes the keys from there, unless Enter is bound to GO or Panic, which
-//! act as everywhere.  The list hands the keyboard to its menu as it
-//! opens, so that the keys act on the cue list again once the menu closes,
-//! as they do after Enter leaves a text field.  A pick or a close by key hands
-//! the keyboard back to the list, so that the key that moves on goes to the
-//! field after it.
+//! The keys that move between fields move to these lists as well, which then
+//! show the border of a focused field, and Enter opens the menu, unless Enter
+//! is bound to GO or Panic.  The list hands the keyboard to its menu as it
+//! opens, so that the keys act on the cue list again once the menu closes, as
+//! they do after Enter leaves a text field.  A pick or a close by key hands the
+//! keyboard back to the list, so that the key that moves on goes to the field
+//! after it.  Hint mode labels the list, and its label gives the list the
+//! keyboard.
 //!
-//! Hint mode labels the list, and its label gives the list the keyboard, so
-//! that Enter opens the menu.
-//!
-//! A list with less room than its longest name cuts the name it shows
-//! short, and its menu grows as wide as that name, so that a list in the
-//! narrow sidebar can hold the long names of audio devices.
+//! A list with less room than its longest name cuts the name it shows short,
+//! and its menu grows as wide as that name, so that a list in the narrow
+//! sidebar can hold the long names of audio devices.
 //!
 //! [`Action::Next`]: crate::front::keymap::Action::Next
 //! [`Action::Previous`]: crate::front::keymap::Action::Previous
@@ -46,7 +43,7 @@ use iced::{Color, Element, Padding, widget::button};
 use unicode_width::UnicodeWidthStr;
 
 use crate::front::{Message, keymap::Keymap, view::char_width};
-pub(in crate::front::view) use shorten::shortened;
+pub(in crate::front::view) use shorten::{ELLIPSIS, shortened, shortened_start};
 
 /// Padding of the list and of each option of its menu, as iced's pick list
 /// pads them
@@ -104,9 +101,9 @@ impl<'a> Dropdown<'a> {
         }
     }
 
-    pub fn placeholder_color(self, color: Color) -> Self {
+    pub fn placeholder_color(self, color: Option<Color>) -> Self {
         Self {
-            placeholder_color: Some(color),
+            placeholder_color: color,
             ..self
         }
     }
@@ -128,7 +125,6 @@ impl<'a> Dropdown<'a> {
         }
     }
 
-    /// Draws the list in the colors of the highlight of a menu where `lit`
     pub fn lit(self, lit: bool) -> Self {
         Self { lit, ..self }
     }
@@ -154,8 +150,6 @@ impl<'a> From<Dropdown<'a>> for Element<'a, Message> {
     }
 }
 
-/// Returns the width of a list that shows `columns` columns of a name, with
-/// its padding and its arrow
 pub fn width(columns: f32) -> f32 {
     columns * char_width() + PADDING.x() + widget::ARROW
 }

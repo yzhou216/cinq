@@ -7,10 +7,6 @@
 
 use super::*;
 
-fn paste(cues: Vec<Cue>, at: Place) -> Command {
-    Command::Paste { list: 0, cues, at }
-}
-
 /// Returns copies of the cues of `from` with the identities `ids`
 fn copies(from: &Workspace, ids: &[u32]) -> Vec<Cue> {
     ids.iter()
@@ -39,14 +35,19 @@ fn copy_of_a_cue_forgets_the_stamp_of_its_file_so_that_it_loads() {
 
 #[test]
 fn pasted_cues_take_new_identities_and_keep_their_settings_in_order() {
-    let shown = workspace(vec![audio(1), audio(2), audio(3)]);
+    let shown = workspace(vec![audio(1), audio(2), audio(3)])
+        .apply(rename(1, "Rain"))
+        .apply(rename(2, "Wind"))
+        .apply(rename(3, "Hail"));
     let cues = copies(&shown, &[1, 2]);
     let pasted = shown.apply(paste(cues, Place::After(CueId(3))));
     assert_eq!(ids(&pasted), [1, 2, 3, 4, 5]);
-    let (copy, original) = (pasted.cue(CueId(4)).unwrap(), pasted.cue(CueId(1)).unwrap());
-    assert_eq!(
-        (&copy.name, &copy.file, copy.kind),
-        (&original.name, &original.file, original.kind)
+    let names: Vec<_> = pasted.cues().map(|cue| cue.name.as_str()).collect();
+    assert_eq!(names, ["Rain", "Wind", "Hail", "Rain", "Wind"]);
+    assert!(
+        pasted
+            .cues()
+            .all(|cue| (cue.kind, cue.file.as_str()) == (Kind::Audio, "sound.ogg"))
     );
 }
 
@@ -115,7 +116,7 @@ fn copy_holds_its_file_by_absolute_path_and_paste_makes_it_relative_where_it_lan
     let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
         .file("sounds/rain.ogg")
         .build();
-    let from = Workspace::new(vec![CueList::new("Main", vec![cue])]).directory("/shows/storm");
+    let from = fresh(vec![cue]).directory("/shows/storm");
     let cues = copies(&from, &[1]);
     assert_eq!(cues[0].file, "/shows/storm/sounds/rain.ogg");
     let file_after = |directory: &str| {

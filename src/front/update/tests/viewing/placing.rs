@@ -13,7 +13,7 @@ use crate::{
     front::{
         Message,
         message::Height,
-        update::{paging::viewport::Shape, viewing::place},
+        update::rows::{paging::viewport::Shape, viewing::place},
     },
 };
 

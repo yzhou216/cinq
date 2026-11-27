@@ -32,11 +32,7 @@ pub(super) fn collapsed(selected: u32) -> App {
         cue(7, 0, Kind::Audio, "Birds"),
         cue(8, 0, Kind::Audio, "Dawn"),
     ];
-    App {
-        workspace: Workspace::new(vec![CueList::new("Main", cues)]),
-        selected: Some(CueId(selected)),
-        ..App::default()
-    }
+    one_list(cues, Some(CueId(selected)))
 }
 
 /// Returns the state after the groups open or close, as a menu does
@@ -100,11 +96,10 @@ fn a_count_or_a_motion_takes_the_rows_that_are_shown() {
 #[test]
 fn copying_and_cutting_a_collapsed_group_take_every_cue_that_it_holds() {
     let copied = typing(collapsed(1), "2 y y");
-    let held: Vec<_> = copied.clipboard.cues.iter().map(|cue| cue.id.0).collect();
-    assert_eq!(held, [1, 2, 3, 4, 5, 6]);
+    assert_eq!(held(&copied), [1, 2, 3, 4, 5, 6]);
     let cut = typing(collapsed(2), "x");
     assert_eq!(rows(&cut), [1, 7, 8]);
-    assert_eq!(cut.clipboard.cues.len(), 5);
+    assert_eq!(held(&cut), [2, 3, 4, 5, 6]);
 }
 
 #[test]

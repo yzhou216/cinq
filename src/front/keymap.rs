@@ -5,14 +5,13 @@
 //! Key bindings, which turn key presses into the messages that buttons send
 
 mod action;
-pub mod config;
 #[cfg(test)]
 mod desk;
 mod press;
 #[cfg(test)]
 mod tests;
 mod typing;
-mod vi;
+pub(super) mod vi;
 
 use std::collections::HashMap;
 
@@ -21,7 +20,7 @@ use strum::VariantArray;
 
 pub use action::{Action, Rows};
 #[cfg(test)]
-pub(in crate::front) use desk::{declared, desk};
+pub(super) use desk::{declared, desk};
 #[cfg(test)]
 pub use press::sequence;
 pub use press::{KeyPress, Press, shown, written};
@@ -46,21 +45,21 @@ impl Default for Keymap {
 }
 
 impl Keymap {
-    fn empty(name: &str) -> Self {
+    pub(super) fn empty(name: &str) -> Self {
         Self {
             name: name.to_owned(),
             bindings: HashMap::new(),
         }
     }
 
-    fn named(self, name: &str) -> Self {
+    pub(super) fn named(self, name: &str) -> Self {
         Self {
             name: name.to_owned(),
             ..self
         }
     }
 
-    pub(in crate::front) fn with(self, action: Action, keys: Vec<Vec<Press>>) -> Self {
+    pub(super) fn with(self, action: Action, keys: Vec<Vec<Press>>) -> Self {
         // Pair chained last wins over the keys that the action had
         let bindings = self.bindings.into_iter().chain([(action, keys)]).collect();
         Self { bindings, ..self }
@@ -91,18 +90,18 @@ impl Keymap {
         }
     }
 
-    /// Describes the bindings that hide others: those that [`conflict`]
-    /// finds, and a key of [`Action::AT_ONCE`], which keeps every other
-    /// sequence that holds it from being typed, by acting halfway through it
-    /// or when held with other modifiers than it is bound with
     #[cfg(test)]
     fn conflicts(&self) -> Vec<String> {
         self.clashes().into_iter().map(|(_, said)| said).collect()
     }
 
-    /// Returns each of [`Self::conflicts`] with the action that cannot be
-    /// reached, whose entry in the file the operator should change
-    fn clashes(&self) -> Vec<(Action, String)> {
+    /// Describes the bindings that hide others, each with the action that
+    /// cannot be reached, whose entry in the file the operator should change:
+    /// those that [`conflict`] finds, and a key of [`Action::AT_ONCE`], which
+    /// keeps every other sequence that holds it from being typed, by acting
+    /// halfway through it or when held with other modifiers than it is bound
+    /// with
+    pub(super) fn clashes(&self) -> Vec<(Action, String)> {
         let hidden = self
             .bound()
             .array_combinations()
@@ -124,8 +123,8 @@ impl Keymap {
         hidden.chain(cut_short).collect()
     }
 
-    /// Returns the bindings that act on the cue list, which are all that a
-    /// key typed there reads, and not those of an open menu
+    /// Returns the bindings that a key typed in the cue list reads, which
+    /// leaves out those of an open menu
     fn typable(&self) -> impl Iterator<Item = Binding<'_>> + Clone {
         self.bound().filter(|(action, _)| action.acts_in_cue_list())
     }
@@ -143,7 +142,7 @@ type Binding<'a> = (Action, &'a [Press]);
 
 /// A binding cannot start with a digit, since digits typed first count the
 /// command.
-fn binding(text: &str) -> Result<Vec<Press>, String> {
+pub(super) fn binding(text: &str) -> Result<Vec<Press>, String> {
     let keys = press::sequence(text)?;
     match keys.first() {
         None => Err("a binding needs at least one key".to_owned()),

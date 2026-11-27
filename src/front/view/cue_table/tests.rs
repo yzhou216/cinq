@@ -11,8 +11,13 @@ mod output_failed;
 mod send_failed;
 mod state;
 
+use iced::{Theme, widget::text};
+
 use super::Column;
-use crate::back::{Command, Cue, CueId, CueList, Edit, Kind, Media, OutputId, Sends, Workspace};
+use crate::{
+    back::{Command, Cue, CueId, CueList, Edit, Kind, Media, OutputId, Sends, Workspace},
+    front::view::theme,
+};
 
 fn show(sends: Option<Sends>) -> Workspace {
     let cue = Cue::new(CueId(1), "1", Kind::Audio, "Rain")
@@ -40,5 +45,22 @@ fn texts(workspace: &Workspace, column: Column) -> Vec<String> {
         .cues
         .iter()
         .map(|cue| column.text(workspace, &groups, cue))
+        .collect()
+}
+
+fn told<Style>(lines: Vec<(String, Style)>) -> Vec<String> {
+    lines.into_iter().map(|(line, _)| line).collect()
+}
+
+/// Returns whether `style` is the color of a warning
+fn yellow(style: impl Fn(&Theme) -> text::Style) -> bool {
+    let theme = theme::modus_vivendi();
+    style(&theme).color == text::warning(&theme).color
+}
+
+fn yellows<Style: Fn(&Theme) -> text::Style>(lines: Vec<(String, Style)>) -> Vec<(String, bool)> {
+    lines
+        .into_iter()
+        .map(|(line, style)| (line, yellow(style)))
         .collect()
 }

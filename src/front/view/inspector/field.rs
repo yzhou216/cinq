@@ -4,18 +4,16 @@
 
 //! Fields of the inspector, each a labelled input for one setting
 
-use iced::{
-    Element, Fill,
-    widget::{row, text_input},
-};
+use iced::{Element, Fill};
 use strum::{IntoStaticStr, VariantArray};
 
+use self::target::target_menu;
 use super::locked::locked;
 use crate::{
     back::{Advance, Cue, Destination, Edit, Kind, osc_packet},
     front::{
         App, Message, Setting,
-        view::{FILE, NAME, SPACING, button, dropdown, format, reached, theme},
+        view::{dropdown, format},
     },
 };
 
@@ -37,7 +35,6 @@ pub(super) enum Field {
     LoopStart,
     #[strum(serialize = "Loop end")]
     LoopEnd,
-    /// Message of a network cue
     #[strum(serialize = "Message")]
     Osc,
 }
@@ -62,9 +59,8 @@ impl Field {
     }
 
     /// Returns why the cue ignores the value of this field, such as the
-    /// post-wait of an auto-follow cue, the loop start of a cue that does not
-    /// loop, or the post-wait and Then setting of a cue in a group, which goes
-    /// on to no cue
+    /// post-wait of an auto-follow cue, or the post-wait and Then setting of a
+    /// cue in a group, which goes on to no cue
     fn ignored(self, cue: &Cue, inside: bool) -> Option<&'static str> {
         match self {
             Field::PostWait | Field::Then if inside => Some("in a group"),
@@ -75,60 +71,18 @@ impl Field {
     }
 
     /// Returns the input for this field, or its value in a box that the
-    /// keyboard skips when the show cannot be edited or the cue ignores the
-    /// value, with the reason that it does
+    /// keyboard skips where the show cannot be edited or the cue ignores it
     pub(super) fn input<'a>(self, app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         let id = cue.id;
         let editable = app.editable();
         let inside = app.current().group_of(id).is_some();
         let ignored = self.ignored(cue, inside);
-        let has_file = cue.kind.has_file();
-        let field = |value: &str, edit: fn(String) -> Edit| -> Element<'a, Message> {
-            if !editable || ignored.is_some() {
-                return locked(value, self.placeholder(cue), ignored, Fill);
-            }
-            let input = text_input(self.placeholder(cue), value)
-                .on_input(move |text| match self {
-                    // A path applies once the field is left, as a level does
-                    Field::Target if has_file => Message::SettingTyped(Setting::File(id), text),
-                    _ => Message::Edit(id, edit(text)),
-                })
-                .style(theme::field(self.valid(cue)));
-            // Enter in the empty File field opens the chooser, since Tab skips
-            // the Choose button, and leaves the field once a file is named
-            reached(match self {
-                Field::Name => input.id(NAME),
-                Field::Target if has_file => input
-                    .id(FILE)
-                    .on_submit_maybe(value.is_empty().then_some(Message::ChooseFile(id))),
-                _ => input,
-            })
-        };
+        let field =
+            |value: &str, edit: fn(String) -> Edit| self.entry(app, cue, ignored, value, edit);
         match self {
             Field::Number => field(&cue.number, Edit::Number),
             Field::Name => field(&cue.name, Edit::Name),
-            Field::Target => match cue.kind {
-                Kind::Audio | Kind::Video | Kind::Picture => row![
-                    field(&typed_file(app, cue), Edit::File),
-                    button("Choose").on_press_maybe(editable.then_some(Message::ChooseFile(id))),
-                ]
-                .spacing(SPACING)
-                .into(),
-                Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo
-                    if editable =>
-                {
-                    target_menu(app, cue)
-                }
-                Kind::Fade | Kind::Start | Kind::Stop | Kind::Pause | Kind::Devamp | Kind::GoTo => {
-                    shown(
-                        &app.workspace
-                            .target(cue)
-                            .map_or_else(String::new, Cue::to_string),
-                    )
-                }
-                Kind::Network => field(&cue.destination, Edit::Destination),
-                Kind::Light | Kind::Group | Kind::Wait | Kind::Memo => shown(""),
-            },
+            Field::Target => self.target(app, cue, ignored),
             Field::Notes => field(&cue.notes, Edit::Notes),
             Field::PreWait => field(cue.pre_wait.text(), |text| Edit::PreWait(text.into())),
             Field::Duration if cue.kind.has_duration() => {
@@ -164,7 +118,6 @@ impl Field {
         }
     }
 
-    /// Returns whether the field holds a time that reads as no time
     fn unreadable(self, cue: &Cue) -> bool {
         match self {
             Field::PreWait => !cue.pre_wait.is_valid(),
@@ -209,8 +162,8 @@ impl Field {
 /// Returns the sentence that tells which of the time fields in `columns`
 /// reads as no time, if one does, since such a time counts as zero, except
 /// for an end or a loop time, which is then left empty.  A field that the
-/// cue ignores is passed over, as `inside` a group or not, since it does
-/// nothing and the view shows it greyed out.
+/// cue ignores, `inside` a group or not, is passed over, since the view shows
+/// it greyed out.
 pub(super) fn unread(cue: &Cue, inside: bool, columns: &[&[Field]]) -> Option<String> {
     columns
         .iter()
@@ -236,38 +189,6 @@ fn shown<'a>(value: &str) -> Element<'a, Message> {
     locked(value, "", None, Fill)
 }
 
-fn target_menu<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
-    let id = cue.id;
-    let targets: Vec<&Cue> = app
-        .workspace
-        .cues()
-        .filter(|other| cue.can_target(other))
-        .collect();
-    let selected = targets
-        .iter()
-        .find(|target| Some(target.id) == cue.target)
-        .copied();
-    let placeholder = target_placeholder(targets.is_empty());
-    dropdown(
-        targets,
-        selected,
-        move |target: &Cue| Message::Edit(id, Edit::Target(Some(target.id))),
-        &app.config.keymap,
-    )
-    .placeholder(placeholder)
-    .into()
-}
-
-/// Returns what the target menu says while nothing is chosen, which is not
-/// an invitation to choose where the list holds no cue to choose
-fn target_placeholder(none_to_choose: bool) -> &'static str {
-    if none_to_choose {
-        "no cue to choose"
-    } else {
-        "choose a cue"
-    }
-}
-
 /// Returns the path that the File field of `cue` shows: what was typed into
 /// it while the typing waits for the field to be left, or else the file
 fn typed_file(app: &App, cue: &Cue) -> String {
@@ -277,5 +198,7 @@ fn typed_file(app: &App, cue: &Cue) -> String {
     }
 }
 
+mod entry;
+mod target;
 #[cfg(test)]
 mod tests;

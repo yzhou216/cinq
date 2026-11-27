@@ -11,9 +11,9 @@ use std::{
 
 use iced::Task;
 
-use super::{EXTENSION, Saved, Show, chooser, file::write, with_extension};
+use super::{EXTENSION, Saved, Show, chooser, file::write, named, with_extension};
 use crate::{
-    front::{App, Message, update::on_own_thread},
+    front::{App, Message, Problems, update::on_own_thread},
     warn,
 };
 
@@ -74,29 +74,26 @@ impl App {
                     ..self.show
                 };
                 Self {
-                    told: Some(format!("Saved {}", show.name())),
-                    file_problem: None,
-                    open_failed: false,
-                    keep_problem: None,
+                    notices: self
+                        .notices
+                        .with_told(Some(format!("Saved {}", show.name()))),
+                    problems: self.problems.without_files(),
                     show,
                     ..self
                 }
             }
-            Err(reason) => {
-                // File name rather than path, which the sidebar would cut short
-                let name = saved.file.file_name().map_or_else(
-                    || saved.file.to_string_lossy(),
-                    |name| name.to_string_lossy(),
-                );
-                let problem = format!("Cannot save {name}: {reason}");
-                // The name of the show already stands at the left of the bar
-                Self {
-                    told: Some(format!("Cannot save: {reason}")),
-                    file_problem: Some(problem),
+            Err(reason) => Self {
+                // Name of the show already stands at the left of the bar
+                notices: self
+                    .notices
+                    .with_told(Some(format!("Cannot save: {reason}"))),
+                problems: Problems {
+                    file: Some(format!("Cannot save {}: {reason}", named(&saved.file))),
                     open_failed: false,
-                    ..self
-                }
-            }
+                    ..self.problems
+                },
+                ..self
+            },
         }
     }
 }

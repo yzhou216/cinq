@@ -2,8 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Entry of a running cue in the sidebar: its name, a progress bar, how it
-//! runs, and the Stop button
+//! Entry of a running cue in the sidebar
 
 use iced::{
     Element, Fill,
@@ -17,8 +16,7 @@ use crate::{
     front::Message,
 };
 
-/// Thickness of the progress bars of running cues, thin enough that several
-/// running cues fit in the sidebar at once
+/// Thin enough that several running cues fit in the sidebar at once
 const BAR: f32 = 10.0;
 
 /// Returns the name of a running cue and how it runs, each cut to its room

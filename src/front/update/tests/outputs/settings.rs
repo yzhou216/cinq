@@ -6,7 +6,7 @@
 
 use std::time::Instant;
 
-use super::super::{after, output_editing::names, show};
+use super::super::{after, output_editing::names, show, typed_setting};
 use crate::{
     back::{CueId, OutputId, Place},
     front::{App, Focus, Message, Setting},
@@ -15,10 +15,6 @@ use crate::{
 /// Returns the interface with the outputs shown, Main selected
 fn outputs_shown() -> App {
     after(show(None), [Message::ShowOutputs])
-}
-
-fn typed(app: App, setting: Setting, text: &str) -> App {
-    after(app, [Message::SettingTyped(setting, text.to_owned())])
 }
 
 /// Returns the interface once the operator has left the field, as Enter
@@ -30,27 +26,27 @@ fn left(app: App) -> App {
 #[test]
 fn typed_names_apply_once_they_read_and_show_as_typed_meanwhile() {
     let main = OutputId(1);
-    let app = typed(outputs_shown(), Setting::OutputName(main), "House");
+    let app = typed_setting(outputs_shown(), Setting::OutputName(main), "House");
     assert_eq!(app.workspace.outputs()[0].name, "House");
     assert_eq!(
         app.typed,
         Some((Setting::OutputName(main), "House".to_owned()))
     );
-    let app = typed(app, Setting::OutputName(main), "");
+    let app = typed_setting(app, Setting::OutputName(main), "");
     assert_eq!(app.workspace.outputs()[0].name, "House", "no name reads");
 }
 
 #[test]
 fn typed_new_cues_level_applies_once_the_field_is_left() {
     let main = OutputId(1);
-    let app = typed(outputs_shown(), Setting::NewCues(main), "-");
+    let app = typed_setting(outputs_shown(), Setting::NewCues(main), "-");
     assert_eq!(app.workspace.outputs()[0].new_cues, Some(0.0));
     assert_eq!(app.typed, Some((Setting::NewCues(main), "-".to_owned())));
-    let app = typed(app, Setting::NewCues(main), "-6");
+    let app = typed_setting(app, Setting::NewCues(main), "-6");
     assert_eq!(app.workspace.outputs()[0].new_cues, Some(0.0));
     let app = left(app);
     assert_eq!(app.workspace.outputs()[0].new_cues, Some(-6.0));
-    let app = left(typed(app, Setting::NewCues(main), ""));
+    let app = left(typed_setting(app, Setting::NewCues(main), ""));
     assert_eq!(app.workspace.outputs()[0].new_cues, None);
 }
 
@@ -66,7 +62,7 @@ fn channels_apply_at_enter_not_at_each_prefix_that_reads() {
     let app = ["1", "12", "12-", "12-13"]
         .into_iter()
         .fold(outputs_shown(), |app, text| {
-            typed(app, Setting::Channels(main), text)
+            typed_setting(app, Setting::Channels(main), text)
         });
     assert_eq!(channels(&app), "1-2");
     assert_eq!(
@@ -83,10 +79,10 @@ fn channels_apply_at_enter_not_at_each_prefix_that_reads() {
 #[test]
 fn channels_apply_when_the_operator_goes_on_to_anything_else() {
     let main = OutputId(1);
-    let typing = |text: &str| typed(outputs_shown(), Setting::Channels(main), text);
+    let typing = |text: &str| typed_setting(outputs_shown(), Setting::Channels(main), text);
     let next = |app: App, message| app.next(message).0;
     // Another field, a key outside any field, a click, or any other message
-    let field = typed(typing("3-4"), Setting::OutputName(main), "House");
+    let field = typed_setting(typing("3-4"), Setting::OutputName(main), "House");
     assert_eq!(channels(&field), "3-4");
     let elsewhere = next(typing("3-4"), Message::Step(1));
     assert_eq!(channels(&elsewhere), "3-4");
@@ -107,9 +103,9 @@ fn typed_sends_apply_and_an_empty_field_takes_the_send_away() {
         let cue = app.workspace.cue(cue).expect("the cue is there");
         app.workspace.sends(cue).get(&main).copied()
     };
-    let app = left(typed(show(None), Setting::Send(cue, main), "-6"));
+    let app = left(typed_setting(show(None), Setting::Send(cue, main), "-6"));
     assert_eq!(sends(&app), Some(-6.0));
-    let app = left(typed(app, Setting::Send(cue, main), ""));
+    let app = left(typed_setting(app, Setting::Send(cue, main), ""));
     assert_eq!(sends(&app), None);
 }
 
@@ -120,10 +116,10 @@ fn editing_a_send_keeps_the_sends_to_outputs_that_have_gone() {
         show(None),
         [Message::ShowOutputs, Message::Add(Place::After, 1)],
     );
-    let app = typed(app, Setting::Send(cue, sub), "-3");
+    let app = typed_setting(app, Setting::Send(cue, sub), "-3");
     let app = after(app, [Message::Delete(1)]);
     assert_eq!(names(&app), ["Main"]);
-    let app = left(typed(app, Setting::Send(cue, main), "-6"));
+    let app = left(typed_setting(app, Setting::Send(cue, main), "-6"));
     let kept = app.workspace.cue(cue).and_then(|cue| cue.sends.clone());
     assert_eq!(kept.and_then(|sends| sends.get(&sub).copied()), Some(-3.0));
 }
@@ -131,9 +127,9 @@ fn editing_a_send_keeps_the_sends_to_outputs_that_have_gone() {
 #[test]
 fn enter_in_a_field_that_reads_no_value_leaves_it_and_tells_why() {
     let main = OutputId(1);
-    let app = typed(outputs_shown(), Setting::Channels(main), "x");
+    let app = typed_setting(outputs_shown(), Setting::Channels(main), "x");
     let app = app.next(Message::Focus(Focus::Cues)).0;
     assert_eq!(channels(&app), "1-2");
     assert_eq!(app.typed, None);
-    assert!(app.unapplied.is_some());
+    assert!(app.notices.unapplied.is_some());
 }

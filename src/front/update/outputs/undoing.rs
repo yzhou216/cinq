@@ -16,7 +16,7 @@
 use std::ops::ControlFlow;
 
 use crate::{
-    back::{Change, Command, Output, OutputId, Workspace, moved_output},
+    back::{Change, Command, Output, OutputId, Workspace, output_moved_between},
     front::App,
 };
 
@@ -103,5 +103,5 @@ fn touched(
     if let Some((now, _)) = differs {
         return Some(now.id);
     }
-    moved_output(was, now, prefer).map(|output| output.id)
+    output_moved_between(was, now, prefer).map(|output| output.id)
 }

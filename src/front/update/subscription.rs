@@ -18,11 +18,11 @@ use itertools::chain;
 
 use super::keys;
 use crate::{
-    back::{Heard, TICK, osc_listen},
-    front::{App, Message, keymap},
+    back::{Heard, TICK, Watch, osc_listen, watch},
+    front::{App, Message, config},
 };
 
-/// Interval at which the files of the show are looked at again, for a change
+/// Interval at which the files of the show are looked at, for a change
 const RECHECK: Duration = Duration::from_secs(2);
 
 /// How long the search line tells that no row matches
@@ -43,8 +43,14 @@ impl App {
         let ticks = chain!(tick, picture)
             .min()
             .map(|wait| pace::after(self.last_tick, wait, self.paced_windows()).map(Message::Tick));
-        let rechecks = (!self.rechecking && self.workspace.to_recheck().next().is_some())
-            .then(|| time::every(RECHECK).map(|_| Message::Recheck));
+        // The files that cues have read identify the watch, so that a file
+        // read anew starts the next one
+        let rechecks = Some(Watch::all(&self.workspace, self.workspace.to_recheck()))
+            .filter(|files| !files.is_empty())
+            .map(|files| {
+                Subscription::run_with(files, |files| watch(files.clone(), RECHECK))
+                    .map(|()| Message::Recheck)
+            });
         let settling = self
             .search
             .as_ref()
@@ -64,7 +70,7 @@ impl App {
         ];
         let reconfigured = self.config.source.file().map(|file| {
             Subscription::run_with(file.to_owned(), |file| {
-                keymap::config::watch(file.clone(), keymap::config::Errors::standard())
+                config::watch(file.clone(), config::Errors::standard())
             })
             .map(|config| Message::Reconfigured(Box::new(config)))
         });
@@ -165,7 +171,6 @@ fn focused(event: Event, _status: event::Status, id: window::Id) -> Option<Messa
     matches!(event, Event::Window(window::Event::Focused)).then_some(Message::WindowFocused(id))
 }
 
-/// Reports a press of the back or forward button of the mouse
 fn side_pressed(event: Event, _status: event::Status, window: window::Id) -> Option<Message> {
     match event {
         Event::Mouse(mouse::Event::ButtonPressed(

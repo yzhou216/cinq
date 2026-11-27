@@ -4,10 +4,10 @@
 
 //! Tests of a file chosen for a new cue and a failed link
 
-use super::after;
+use super::{after, helping, typed_into};
 use crate::{
     back::{CueId, Edit, Place, Workspace},
-    front::{App, Focus, Message, Setting},
+    front::{App, Focus, Message, Setting, app::Held},
 };
 
 #[test]
@@ -30,34 +30,26 @@ fn sound_file_chosen_for_a_new_cue_names_it_by_its_path_from_the_show() {
 #[test]
 fn link_that_fails_to_open_shows_until_the_help_page_closes() {
     let failure = || Message::LinkOpened(Err("Cannot open it".to_owned()));
-    let open = App {
-        help: true,
-        ..App::default()
-    };
+    let open = helping(App::default());
     let (failed, _) = open.next(failure());
-    assert_eq!(failed.link_problem.as_deref(), Some("Cannot open it"));
+    assert_eq!(failed.problems.link.as_deref(), Some("Cannot open it"));
     let (closed, _) = failed.next(Message::CloseHelp);
-    assert_eq!(closed.link_problem, None);
+    assert_eq!(closed.problems.link, None);
     let (unseen, _) = closed.next(failure());
-    assert_eq!(unseen.link_problem, None);
+    assert_eq!(unseen.problems.link, None);
 }
 /// Returns the state after the keys of `path` go one at a time into the File
 /// field of cue `id`, the way the field reports them, with the keyboard still
 /// in it
 fn typed_path(app: App, id: CueId, path: &str) -> App {
-    path.char_indices().fold(app, |app, (at, key)| {
-        let typed = Setting::File(id);
-        let text = path[..at + key.len_utf8()].to_owned();
-        after(
-            app,
-            [Message::SettingTyped(typed, text), Message::Held(true)],
-        )
+    typed_into(app, path, |prefix| {
+        Message::SettingTyped(Setting::File(id), prefix)
     })
 }
 
 /// Returns the state after the keyboard leaves the File field
 fn left(app: App) -> App {
-    after(app, [Message::Held(false), Message::Clicked])
+    after(app, [Message::Held(Held::default()), Message::Clicked])
 }
 
 fn added() -> (App, CueId) {

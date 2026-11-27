@@ -4,10 +4,13 @@
 
 //! What a checkbox and a button share when Tab reaches them and Enter acts
 //!
-//! The state that tells whether the keyboard is theirs, the border that marks
-//! it as a text field is marked, and the rule for Enter, which they take
-//! unless a key that acts at once is bound to it, and which the key bindings
-//! never see, where it would put a cue on standby.
+//! Enter belongs to the focused widget unless a key that acts at once is bound
+//! to it, and the key bindings never see it there, where it would put a cue on
+//! standby.
+
+#[cfg(test)]
+mod tests;
+mod widget;
 
 use iced::{
     Border, Color, Event, Rectangle, Renderer, Theme,
@@ -16,10 +19,14 @@ use iced::{
     widget::text_input,
 };
 
-use super::pressed;
-use crate::front::{Message, view::theme};
+use super::{key_pressed, pressed};
+use crate::front::{
+    Focus, Message,
+    keymap::{KeyPress, Keymap},
+    view::theme,
+};
+pub use widget::Focused;
 
-/// Radius of the border that marks a widget as it has the keyboard
 const RADIUS: f32 = 2.0;
 
 pub struct State {
@@ -60,22 +67,37 @@ pub fn mark(renderer: &mut Renderer, theme: &Theme, bounds: Rectangle) {
     );
 }
 
-/// Returns whether a widget that may have the keyboard takes `key`, which it
-/// does for Enter alone, unless a key that acts at once is bound to it, and
-/// keeps the event from the widgets after it when it does
-pub fn took(focused: bool, key: &Key, at_once: bool, shell: &mut Shell<'_, Message>) -> bool {
-    let taken = focused && !at_once && *key == Key::Named(Named::Enter);
-    if taken {
-        shell.capture_event();
-    }
-    taken
-}
-
-/// Takes the keyboard from the widget when any button of the mouse or a touch
-/// goes down, as a click does from a text field
-pub fn click_takes(state: &mut State, event: &Event, shell: &mut Shell<'_, Message>) {
+/// Handles the keyboard events of a widget that may have the keyboard, and
+/// returns whether it took the event.  A press of the left button of the
+/// mouse or a touch takes the keyboard from the widget, as a click does from
+/// a text field.  The widget takes Enter alone, unless a key that acts at once
+/// is bound to it, and keeps the event from the widgets after it.  Enter sends
+/// `act` once however long it is held, and then gives the keyboard back to the
+/// cue list where `leaves`.
+pub fn keyed(
+    state: &mut State,
+    event: &Event,
+    keymap: &Keymap,
+    act: Option<&Message>,
+    leaves: bool,
+    shell: &mut Shell<'_, Message>,
+) -> bool {
     if pressed(event) && state.focused {
         state.focused = false;
         shell.request_redraw();
     }
+    key_pressed(event).is_some_and(|KeyPress { key, press, repeat }| {
+        let at_once = press.is_some_and(|press| keymap.acts_at_once(press));
+        let taken = state.focused && !at_once && *key == Key::Named(Named::Enter);
+        if taken {
+            shell.capture_event();
+            if let (false, Some(act)) = (repeat, act) {
+                shell.publish(act.clone());
+                if leaves {
+                    shell.publish(Message::Focus(Focus::Cues));
+                }
+            }
+        }
+        taken
+    })
 }

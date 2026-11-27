@@ -12,12 +12,12 @@ use iced::{
 };
 
 use super::{
-    super::{press, show},
+    super::{helping, press, show},
     letter, typed,
 };
 use crate::{
     back::CueId,
-    front::{App, Message, update::Spot},
+    front::{App, Message, Spot},
 };
 
 #[test]
@@ -90,10 +90,7 @@ fn rows_of_a_half_page_that_a_count_set_reset_as_the_main_window_changes_size() 
 
 #[test]
 fn keys_of_a_page_scroll_the_help_page_and_move_no_selection() {
-    let open = || App {
-        help: true,
-        ..show(Some(CueId(2)))
-    };
+    let open = || helping(show(Some(CueId(2))));
     ["d", "u", "f", "b"].into_iter().for_each(|key| {
         let (after, started) = typed(open(), key, &[]);
         assert_eq!(

@@ -14,10 +14,8 @@ use crate::back::{Cue, CueList, Kind, OutputId, Workspace};
 /// auto-continue and auto-follow chains are visible before they run.  The
 /// count leaves out the cues that cannot play, which GO skips, and each of
 /// them says why.  A cue that sends to no output that can play, among `failing`
-/// or in the show, is told as silent, though GO fires it.  A start, stop,
-/// pause, devamp, or GoTo cue tells what it does to its target, which it
-/// names by the list too where that is another.  A chain with no cue that can
-/// play says so in words before it names the cues and why each cannot play.
+/// or in the show, is told as silent, though GO fires it.  A chain with no cue
+/// that can play says so before it names the cues and why each cannot.
 pub fn chain(workspace: &Workspace, list: &CueList, standby: &Cue, failing: &[OutputId]) -> String {
     let fired = workspace.next_go(list).count();
     let cues = list.chain(standby.id);
@@ -60,8 +58,8 @@ pub fn chain(workspace: &Workspace, list: &CueList, standby: &Cue, failing: &[Ou
 }
 
 /// Tells that a GoTo cue is about to move standby to `target` in `seconds`,
-/// for the line of the chain to lead with, since the standby that the panel
-/// names is about to change
+/// for the chain to lead with, since the standby that the panel names is
+/// about to change
 pub fn moving(target: &Cue, seconds: f64) -> String {
     format!("Standby moves to {} in {}", number(target), span(seconds))
 }

@@ -12,6 +12,14 @@ fn cue(kind: Kind) -> Cue {
     Cue::new(CueId(1), "1", kind, "Cue").build()
 }
 
+/// Returns an audio cue that goes on to the next cue by itself
+fn following() -> Cue {
+    Cue {
+        advance: Advance::Follow,
+        ..cue(Kind::Audio)
+    }
+}
+
 #[test]
 fn a_kind_with_no_file_and_no_target_has_no_target_row() {
     [Kind::Light, Kind::Group, Kind::Wait, Kind::Memo]
@@ -37,10 +45,7 @@ fn a_network_cue_puts_its_message_in_the_wide_form_and_its_notes_in_the_narrow_o
 
 #[test]
 fn a_cue_tells_why_it_ignores_a_field() {
-    let following = Cue {
-        advance: Advance::Follow,
-        ..cue(Kind::Audio)
-    };
+    let following = following();
     assert_eq!(
         Field::PostWait.ignored(&following, false),
         Some("with auto-follow")
@@ -151,12 +156,8 @@ fn a_duration_that_the_cue_does_not_hold_is_not_a_time_to_tell() {
 fn a_reason_fits_the_box_beside_the_longest_value_at_1024_pixels() {
     // The box of the Then setting at 1024x768 shows about 30 characters
     // of the longest value, "wait for GO", with its reason in parentheses
-    let following = Cue {
-        advance: Advance::Follow,
-        ..cue(Kind::Audio)
-    };
     [
-        Field::PostWait.ignored(&following, false),
+        Field::PostWait.ignored(&following(), false),
         Field::Then.ignored(&cue(Kind::Audio), true),
         Field::LoopEnd.ignored(&cue(Kind::Audio), false),
     ]
@@ -176,6 +177,6 @@ fn the_empty_destination_of_a_network_cue_names_both_forms() {
 
 #[test]
 fn the_target_menu_does_not_invite_a_choice_where_there_is_none() {
-    assert_eq!(super::target_placeholder(false), "choose a cue");
-    assert_eq!(super::target_placeholder(true), "no cue to choose");
+    assert_eq!(super::target::target_placeholder(false), "choose a cue");
+    assert_eq!(super::target::target_placeholder(true), "no cue to choose");
 }

@@ -6,11 +6,12 @@
 
 use unicode_width::UnicodeWidthStr;
 
-use super::{YIELDING, fitted, hinted, opened, opened_with, owned};
+use super::{YIELDING, add, added, fitted, opened, opened_with, owned, texts};
 use crate::{
-    back::{Command, Kind, Place, Workspace},
+    back::{Command, Workspace},
     front::{
         App,
+        app::{Held, Keyboard},
         keymap::{Action, Keymap, desk},
     },
 };
@@ -18,26 +19,15 @@ use crate::{
 /// Returns the first two hints, which tell the latest change and then
 /// the key that renames the cue, after `command`
 fn told(keymap: Keymap, command: Command, text_held: bool) -> Vec<String> {
-    let workspace = Workspace::default();
     let app = App {
-        workspace: workspace.apply(command),
-        text_held,
+        workspace: Workspace::default().apply(command),
+        keyboard: Keyboard::default().with_held(Held {
+            text: text_held,
+            ..Held::default()
+        }),
         ..opened_with(keymap, false, false)
     };
-    hinted(&app)
-        .into_iter()
-        .map(|(_, hint)| hint)
-        .take(2)
-        .collect()
-}
-
-fn add() -> Command {
-    Command::Add {
-        list: 0,
-        kind: Kind::Audio,
-        at: Place::End,
-        count: 1,
-    }
+    texts(&app).into_iter().take(2).collect()
 }
 
 #[test]
@@ -65,28 +55,22 @@ fn a_text_field_that_keeps_every_key_hints_neither_undo_nor_rename() {
 
 #[test]
 fn the_show_mode_that_locks_the_name_hints_no_rename() {
-    let locked = Workspace::default()
-        .apply(add())
-        .apply(Command::ShowMode(true));
+    let locked = added().apply(Command::ShowMode(true));
     let app = App {
         workspace: locked,
         ..opened(false, false)
     };
-    assert!(
-        hinted(&app)
-            .iter()
-            .all(|(_, hint)| !hint.contains("rename"))
-    );
+    assert!(texts(&app).iter().all(|hint| !hint.contains("rename")));
 }
 
 #[test]
 fn the_outputs_hint_the_rename_of_an_output_and_not_that_of_the_cue_just_added() {
     let app = App {
-        workspace: Workspace::default().apply(add()),
+        workspace: added(),
         outputs_shown: true,
         ..opened(false, false)
     };
-    let hints: Vec<_> = hinted(&app).into_iter().map(|(_, hint)| hint).collect();
+    let hints = texts(&app);
     assert!(hints.contains(&"i: rename".to_owned()), "{hints:?}");
     assert!(!hints.contains(&"cc: rename".to_owned()), "{hints:?}");
 }

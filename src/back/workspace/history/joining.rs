@@ -5,6 +5,8 @@
 //! Changes in a row that make one change: edits of one setting of one cue,
 //! and moves of one cue, whether or not they change its depth
 
+mod moves;
+
 use super::Change;
 use crate::back::CueId;
 
@@ -60,64 +62,6 @@ impl Change {
             (Self::Edited { cue, undo, .. }, Self::Edited { redo, .. }) => {
                 Self::Edited { cue, undo, redo }
             }
-            (Self::Moved { cue, from, .. }, Self::Moved { to, .. }) => {
-                Self::Moved { cue, from, to }
-            }
-            (
-                Self::Moved { cue, from, .. },
-                Self::Regrouped {
-                    list,
-                    deeper,
-                    moved: true,
-                    before,
-                    after,
-                    ..
-                },
-            ) => Self::Regrouped {
-                list,
-                cues: vec![cue],
-                deeper,
-                moved: true,
-                before: placed_at(before, cue, from),
-                after,
-            },
-            (
-                Self::Regrouped {
-                    list,
-                    cues,
-                    deeper,
-                    moved: true,
-                    before,
-                    after,
-                },
-                Self::Moved { cue, to, .. },
-            ) => Self::Regrouped {
-                list,
-                cues,
-                deeper,
-                moved: true,
-                before,
-                after: placed_at(after, cue, to),
-            },
-            (
-                Self::Regrouped {
-                    list,
-                    cues,
-                    moved: true,
-                    before,
-                    ..
-                },
-                Self::Regrouped {
-                    after, moved: true, ..
-                },
-            ) => Self::Regrouped {
-                deeper: deeper_than(&before, &after, &cues),
-                list,
-                cues,
-                moved: true,
-                before,
-                after,
-            },
             (
                 Self::Outputs { before, .. },
                 Self::Outputs {
@@ -141,7 +85,7 @@ impl Change {
                 before,
                 after,
             },
-            (_, next) => next,
+            (last, next) => last.moved_on(next),
         }
     }
 
@@ -157,25 +101,4 @@ impl Change {
             _ => false,
         }
     }
-}
-
-/// Returns whether the first of `cues` lies deeper in the arrangement `after`
-/// than in `before`
-fn deeper_than(before: &[(CueId, u8)], after: &[(CueId, u8)], cues: &[CueId]) -> bool {
-    let depth = |arrangement: &[(CueId, u8)]| {
-        cues.first().and_then(|&cue| {
-            arrangement
-                .iter()
-                .find_map(|&(id, depth)| (id == cue).then_some(depth))
-        })
-    };
-    depth(after) > depth(before)
-}
-
-/// Returns the arrangement with the entry of `cue` at the place `to`, as a
-/// move of the cue within its list puts it
-fn placed_at(arrangement: Vec<(CueId, u8)>, cue: CueId, to: usize) -> Vec<(CueId, u8)> {
-    let (moving, rest): (Vec<_>, Vec<_>) = arrangement.into_iter().partition(|&(id, _)| id == cue);
-    let (head, tail) = rest.split_at(to.min(rest.len()));
-    head.iter().chain(&moving).chain(tail).copied().collect()
 }

@@ -5,7 +5,7 @@
 //! Tests of the columns of a group and of the cues that it holds
 
 use super::{
-    super::{Column, columns::state},
+    super::{Column, columns::states::state},
     texts,
 };
 use crate::back::{Advance, Command, Cue, CueId, CueList, Edit, Kind, Media, Workspace};

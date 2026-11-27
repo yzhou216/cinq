@@ -11,19 +11,18 @@
 //! its loop to its end once a devamp cue has let it go.  It starts a decoder
 //! at the last sync sample before the start of its stretch that shows no
 //! later than the first picture of the stretch, and decodes from there to
-//! the last sample that shows before its end.  Each sample
-//! holds a picture, which the decoder finishes as soon as it has read the
-//! sample rather than once the next picture starts, since a sample that
-//! fails to decode would otherwise take the picture before it along.  The
-//! pictures go out in the order they show, which [`order`] keeps, each at
-//! the time of its own sample, and those before the start of the stretch
-//! are let go without turning them into RGBA, which [`color`] turns the rest
-//! into.  A pass ends by telling its player that it has sent every
-//! picture, or why its picture cannot play, as a pass that decodes no
-//! picture cannot, and it stops decoding as soon as its player has gone.
-//! Each pass opens its file and reads the index of its track anew, which
-//! takes a long file a moment, hidden for a clip that loops by the pass
-//! that decodes ahead.
+//! the last sample that shows before its end.  Each sample holds a picture,
+//! which the decoder finishes as soon as it has read the sample rather than
+//! once the next picture starts, since a sample that fails to decode would
+//! otherwise take the picture before it along.  The pictures go out in the
+//! order they show, which [`order`] keeps, each at the time of its own
+//! sample, and those before the start of the stretch are let go without
+//! turning them into RGBA, which [`color`] turns the rest into.  A pass ends
+//! by telling its player that it has sent every picture, or why its picture
+//! cannot play, as a pass that decodes no picture cannot, and it stops
+//! decoding as soon as its player has gone.  Each pass opens its file and
+//! reads the index of its track anew, which takes a long file a moment,
+//! hidden for a clip that loops by the pass that decodes ahead.
 
 mod color;
 mod order;
@@ -50,17 +49,16 @@ use order::Order;
 
 /// Pictures that the thread of a pass decodes ahead of the clock of its
 /// run, besides the one it holds as it waits to send it: enough to ride out
-/// the pictures that take longest to decode, such as those that start a
-/// group of pictures, and few enough to keep the memory of a pass small,
-/// as each picture of 1080p takes 8 MB
+/// the slowest to decode, such as those that start a group of pictures, and
+/// few enough to keep memory small, as a picture of 1080p takes 8 MB
 const AHEAD: usize = 2;
 
 /// Why the picture of a file that holds H.264 cannot play, when the decoder
 /// decodes none of it
 pub(super) const UNDECODABLE: &str = "its picture cannot be decoded";
 
-/// Picture along with the time of its run at which it is due: the seconds
-/// of the clip played, counting every pass of a clip that loops
+/// Picture due at `at` seconds of the clip played, counting every pass of
+/// a clip that loops
 pub(super) struct Frame {
     pub(super) at: f64,
     pub(super) picture: Picture,
@@ -77,7 +75,6 @@ pub(super) enum Sent {
 enum Stop {
     /// Player of the run has gone, along with the way to it
     Gone,
-    /// File cannot be read, for the given reason
     Failed(String),
 }
 
@@ -145,10 +142,9 @@ fn decoded(
         .map(|(_, sent)| sent)
 }
 
-/// Decodes the NAL units of a sample with `decoder`, and returns its
-/// picture, once finished, when it decodes to one in eight bits for each
-/// color with the colors shared by four pixels, which [`rgba`] turns into
-/// RGBA
+/// Returns the finished picture that the NAL units of a sample decode to
+/// with `decoder`, if it holds eight bits for each color, with the colors
+/// shared by four pixels, as [`rgba`] needs
 fn picture(decoder: &mut Decoder, units: &[NalUnit<'_>]) -> Option<Decoded> {
     // Unit that fails to decode adds nothing to the picture, which
     // decoding goes on without, and a sample that holds two pictures, as no

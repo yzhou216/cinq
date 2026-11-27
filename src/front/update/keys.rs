@@ -2,25 +2,21 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Keys and the keyboard focus
+//! Keys typed outside the fields, and the keys that act in them
 //!
 //! Keys typed outside any text field go to the key bindings in
 //! [`crate::front::keymap`], and the keys of a command typed halfway wait
-//! in the interface state until the command is complete.  The inspector and
-//! the toolbar keep the keys typed into their fields, apart from the keys
-//! that act in fields.  iced moves the keyboard focus only on clicks, so the
-//! keys that edit fields move it themselves.
+//! in the interface state until the command is complete.  The fields keep
+//! the keys typed into them, apart from the keys that act in fields.  iced
+//! moves the keyboard focus only on clicks, so the keys that edit fields
+//! move it themselves, through [`super::focus`].
 
-use iced::{
-    Task,
-    advanced::widget::{operate, operation::focusable},
-    keyboard,
-    widget::operation::{self, AbsoluteOffset, RelativeOffset},
-};
+mod across;
+mod help;
 
-use super::{
-    focus_order::move_focus, reveal_focused::reveal_focused, select_focused::select_focused,
-};
+use iced::{Task, keyboard, widget::operation};
+
+use super::focus::{move_focus, reveal_focused, select_focused, unfocus};
 use crate::{
     back::Kind,
     front::{
@@ -65,107 +61,74 @@ impl App {
         }
     }
 
+    /// Applies a key press that no field captured, in stages: hint mode takes
+    /// it first, then the key bindings parse it, and the operator or action
+    /// that it completes, if any, acts
     pub(super) fn typed(self, press: Press, repeat: bool) -> (Self, Task<Message>) {
         if self.hints.is_some() {
             return self.hint_typed(press, repeat);
         }
         let outcome = self.config.keymap.parse(&self.keys, press);
         let across = outcome.across();
-        let app = Self {
-            keys: outcome.pending,
-            clipped: self
-                .clipped
-                .filter(|_| outcome.action.is_none_or(|(action, _)| action.only_moves())),
-            remark: self.remark.filter(|_| outcome.action.is_none()),
-            unapplied: self.unapplied.filter(|_| outcome.action.is_none()),
-            ..self
-        };
-        if let Some((operator, motion, count)) = across {
-            // Help page has no cues to operate on, and the stage window leaves
-            // the cues to the main window
-            let remark = app.refusal(operator);
-            return if app.help || app.stage.has_keyboard() {
-                (Self { remark, ..app }, Task::none())
-            } else {
-                let (app, task) = app.handled(Message::Across(operator, motion, count));
-                (
-                    Self {
-                        remark: remark.or(app.remark),
-                        ..app
-                    },
-                    task,
-                )
-            };
+        let action = outcome.action;
+        let app = self.parsed(outcome.pending, action);
+        match across {
+            Some((operator, motion, count)) => app.operated(operator, motion, count),
+            None => app.acted(action, repeat),
         }
-        match outcome.action {
-            Some((action, _)) if repeat && action.acts_once_a_press() => (app, Task::none()),
+    }
+
+    /// Keeps the keys of a command typed halfway.  A key that completes an
+    /// action drops the remark and the unapplied text, and the clipboard
+    /// mark too, unless the action only moves.
+    fn parsed(self, pending: Vec<Press>, action: Option<(Action, Option<usize>)>) -> Self {
+        Self {
+            keys: pending,
+            notices: self.notices.after_key(action.map(|(action, _)| action)),
+            ..self
+        }
+    }
+
+    /// Applies the action that a key completed, if any, unless it is dropped
+    /// or refused first
+    fn acted(self, action: Option<(Action, Option<usize>)>, repeat: bool) -> (Self, Task<Message>) {
+        let refusal = action.and_then(|(action, _)| self.refusal(action));
+        match action {
+            Some((action, _)) if repeat && action.acts_once_a_press() => (self, Task::none()),
             // Cue list is out of sight from the stage window, so that the keys
             // that change the show or the clipboard are left to the main window,
             // as are the page, the search line, and hint mode, which would open
             // out of sight under a fullscreen stage window, and show mode locks
             // the show, so that the status bar says why
-            Some((action, _)) if app.refusal(action).is_some() => (
+            Some(_) if refusal.is_some() => (
                 Self {
-                    remark: app.refusal(action),
-                    ..app
+                    notices: self.notices.with_remark(refusal),
+                    ..self
                 },
                 Task::none(),
             ),
-            Some((
-                action @ (Action::Next | Action::Previous | Action::ScrollDown | Action::ScrollUp),
-                count,
-            )) if app.help => {
-                let down = if matches!(action, Action::Next | Action::ScrollDown) {
-                    1.0
-                } else {
-                    -1.0
-                };
-                let lines = count.map_or(1.0, |count| count as f32);
-                let offset = AbsoluteOffset {
-                    x: 0.0,
-                    y: down * lines * view::line_height(),
-                };
-                (app, operation::scroll_by(view::HELP, offset))
-            }
-            Some((Action::First, _)) if app.help => {
-                (app, operation::snap_to(view::HELP, RelativeOffset::START))
-            }
-            Some((Action::Last, _)) if app.help => {
-                (app, operation::snap_to(view::HELP, RelativeOffset::END))
-            }
-            // The page has no focus for links, so that its keys reach the
-            // tutorial, which a held key would open again on every repeat
-            Some((Action::Standby, _)) if app.help && repeat => (app, Task::none()),
-            Some((Action::Standby, _)) if app.help => app.handled(Message::OpenTutorial),
-            Some((action, count)) if app.help && !action.acts_over_help() => match action.page() {
-                Some(page) => app.help_paged(page, count),
-                None => (app, Task::none()),
-            },
-            Some((action, count)) if !app.help || action.acts_over_help() => {
-                // The list that held the keyboard would swallow the letters
-                // of a label, and the key of a new cue would find it there again
-                let leaves = app.held && action.leaves_lists();
-                let (app, task) = app.handled(action.message(count));
-                if leaves {
-                    (app, operate(focusable::unfocus()).chain(task))
-                } else {
-                    (app, task)
-                }
-            }
-            _ => (app, Task::none()),
+            Some((action, count)) if self.help => self.help_keyed(action, count, repeat),
+            Some((action, count)) => self.keyed(action, count),
+            None => (self, Task::none()),
         }
+    }
+
+    /// Applies the message of the key of `action`, after leaving the list
+    /// that holds the keyboard if the action needs the keyboard elsewhere
+    fn keyed(self, action: Action, count: Option<usize>) -> (Self, Task<Message>) {
+        // The list that held the keyboard would swallow the letters
+        // of a label, and the key of a new cue would find it there again
+        let leaves = self.keyboard.held.any && action.leaves_lists();
+        let (app, task) = self.handled(action.message(count));
+        (app, if leaves { unfocus().chain(task) } else { task })
     }
 
     /// Gives up the search line, with the selection going back to where the
     /// search began, and takes the keyboard out of the field that has it,
     /// as Control+c does in Vim.  Playback goes on, since it is no Panic.
     pub(super) fn cancelled(self) -> (Self, Task<Message>) {
-        let (app, reveal) = if self.search.is_some() {
-            self.search_cancelled().revealed()
-        } else {
-            (self, Task::none())
-        };
-        (app, Task::batch([reveal, operate(focusable::unfocus())]))
+        let (app, reveal) = self.search_abandoned();
+        (app, Task::batch([reveal, unfocus()]))
     }
 
     /// Takes the kind that a pick chose for the cues that the key of adding
@@ -176,7 +139,7 @@ impl App {
     /// of the interface does not hold the keyboard yet while the menu hands it
     /// back, so that this does not ask for it.
     pub(super) fn with_new_kind(self, new_kind: Kind) -> (Self, Task<Message>) {
-        (Self { new_kind, ..self }, operate(focusable::unfocus()))
+        (Self { new_kind, ..self }, unfocus())
     }
 
     /// Editing the name shows the Basics tab, which holds the Name field, or
@@ -204,7 +167,7 @@ impl App {
             Focus::Name(_) => (self, Task::none()),
             Focus::Next => (self.without_search(), reached(move_focus(false))),
             Focus::Previous => (self.without_search(), reached(move_focus(true))),
-            Focus::Cues => (self, operate(focusable::unfocus())),
+            Focus::Cues => (self, unfocus()),
         }
     }
 }

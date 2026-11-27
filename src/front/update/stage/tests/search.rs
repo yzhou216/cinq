@@ -4,13 +4,11 @@
 
 //! Tests of the search line while the stage window has the keyboard
 
-use super::{focusing, show};
-use crate::back::Kind;
+use super::{focusing, opened};
 
 #[test]
 fn search_line_takes_no_keyboard_while_the_stage_window_has_it() {
-    let (open, _) = show(Kind::Video).staged();
-    let (staged, searching) = focusing(open, true).searching(false);
+    let (staged, searching) = focusing(opened(), true).searching(false);
     assert_eq!((staged.search.is_none(), searching.units()), (true, 0));
     let (back, searching) = focusing(staged, false).searching(false);
     assert_eq!((back.search.is_some(), searching.units()), (true, 1));

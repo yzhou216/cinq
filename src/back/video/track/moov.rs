@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The tracks of an MP4 file, read from its moov box without decoding what
+//! Tracks of an MP4 file, read from its moov box without decoding what
 //! cinq does not use
 //!
 //! mp4-atom refuses a box that holds a box it cannot read, so that decoding
@@ -30,7 +30,6 @@ const SOUND: FourCC = FourCC::new(b"soun");
 pub(super) struct Movie {
     /// H.264 track with the lowest identity, with its configuration
     pub(super) video: Option<(Trak, Avcc)>,
-    /// Whether the file holds a sound track
     pub(super) sound: bool,
     /// Whether a track that cannot be read may have held the picture
     pub(super) lost: bool,
@@ -39,8 +38,7 @@ pub(super) struct Movie {
 }
 
 /// Reads the moov box of the MP4 file in `file`, which is `length` bytes
-/// long, or returns none when the file holds none that fits in it.  The
-/// boxes before it are skipped by their sizes.
+/// long, or returns none when the file holds none that fits in it.
 pub(super) fn read<R: Read + Seek>(file: &mut R, length: u64) -> Option<Movie> {
     let (_, body) = boxes(file, 0, length).find(|(kind, _)| *kind == Moov::KIND)?;
     file.seek(SeekFrom::Start(body.start)).ok()?;
@@ -58,7 +56,7 @@ pub(super) fn read<R: Read + Seek>(file: &mut R, length: u64) -> Option<Movie> {
 
 /// Returns the configuration of H.264 that the description of `trak` holds,
 /// which makes the track one of H.264
-pub(super) fn avcc(trak: &Trak) -> Option<&Avcc> {
+fn avcc(trak: &Trak) -> Option<&Avcc> {
     trak.mdia
         .minf
         .stbl

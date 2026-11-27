@@ -4,7 +4,7 @@
 
 //! Tests of where the cue list scrolls to show the selected row
 
-use crate::front::update::scroll::{Span, scrolling_to};
+use crate::front::update::rows::scroll::{Span, scrolling_to};
 
 #[test]
 fn a_row_far_outside_the_view_scrolls_to_the_middle_and_one_near_it_by_the_least() {

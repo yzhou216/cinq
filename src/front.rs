@@ -8,33 +8,32 @@
 //! open inspector tab.  It reads the show from the back end and changes it
 //! only by sending back-end commands.  Operator input arrives as a
 //! [`Message`], [`update`] applies it, and [`view`] draws the result.  Keys
-//! become messages through [`keymap`], whose bindings a configuration file
-//! can change.  Besides the main window, a stage window shows the pictures
-//! of picture and video cues once the show holds one.
+//! become messages through [`keymap`], whose bindings the [`config`] file
+//! can change.  A stage window shows the pictures of picture and video
+//! cues once the show holds one.
 
+mod app;
+mod config;
+mod files;
+#[cfg(test)]
+mod fixtures;
 mod keymap;
 mod message;
+mod stepping;
 mod update;
 mod view;
 
 use std::{
-    collections::BTreeSet,
-    env, fs, io,
-    path::{self, Path, PathBuf},
-    time::{Duration, Instant},
+    env,
+    path::{self, PathBuf},
 };
 
 use iced::{Size, window};
 
-use crate::{
-    back::{Audio, CueId, CueList, Fault, Kind, Lights, Network, OutputId, Video, Workspace},
-    warn,
-};
-use keymap::{Press, config::Config};
-use message::{Caret, Focus, Message, Setting, Tab};
-use update::{
-    Clipboard, Clipped, Hints, History, Keeper, Measures, Reader, Search, Searched, Show, Stage,
-};
+use crate::back::{Audio, LightReports, Lights, Network, Video};
+use app::{App, Notices, Problems};
+use message::{Caret, Focus, Message, Setting, Spot, Tab};
+use update::{History, Keeper, Search};
 
 /// Opens the main window with the show in `show`, or a new show without
 /// one, and runs the interface until the main window closes.  The key
@@ -46,9 +45,9 @@ pub fn run(config_dir: Option<PathBuf>, show: Option<PathBuf>) -> iced::Result {
     if let Some(missing) = no_wayland() {
         return Err(missing);
     }
-    let config = keymap::config::file(config_dir.as_deref());
+    let config = config::file(config_dir.as_deref());
     let show = show.map(|show| path::absolute(&show).unwrap_or(show));
-    keymap::config::guard();
+    config::guard();
     let ran = iced::daemon(
         move || Cinq::new(config.as_deref(), show.clone()),
         Cinq::update,
@@ -63,7 +62,7 @@ pub fn run(config_dir: Option<PathBuf>, show: Option<PathBuf>) -> iced::Result {
     })
     .subscription(Cinq::subscription)
     .run();
-    keymap::config::restore();
+    config::restore();
     ran
 }
 
@@ -86,9 +85,9 @@ fn window_settings(size: Size) -> window::Settings {
     }
 }
 
-/// Returns why the window cannot open on GNU/Linux and the BSDs, where cinq
-/// opens it on Wayland alone, when no variable names a Wayland compositor
-/// to open it on, as winit tells before it tries, but only by panicking
+/// Returns the error that stands in for a winit panic when no variable names
+/// a Wayland compositor, on the platforms where cinq opens its window on
+/// Wayland alone
 fn no_wayland() -> Option<iced::Error> {
     let wayland_only = cfg!(any(
         target_os = "linux",
@@ -108,224 +107,14 @@ fn no_wayland() -> Option<iced::Error> {
     })
 }
 
-/// Interface state together with the parts that have side effects, which
-/// stay apart from it so that only [`Cinq::update`] reaches them
+/// Interface state with the parts that have side effects, which only
+/// [`Cinq::update`] reaches
 struct Cinq {
     app: App,
     audio: Audio,
     video: Video,
     lights: Lights,
+    light_reports: LightReports,
     network: Network,
     keeper: Keeper,
-}
-
-#[derive(Default)]
-struct App {
-    workspace: Workspace,
-    /// Main window, once it has been asked for, whose closing quits cinq
-    main: Option<window::Id>,
-    stage: Stage,
-    /// Windows that are minimized, which iced does not draw
-    minimized: Vec<window::Id>,
-    show: Show,
-    /// What went wrong with show files last, until opening or saving one
-    /// succeeds
-    file_problem: Option<String>,
-    /// Whether `file_problem` is a show that failed to open, which leaves the
-    /// show on screen, an empty one when cinq has just started
-    open_failed: bool,
-    /// Why the keeper failed to keep unsaved changes last, until opening or
-    /// saving a show succeeds.  It arrives late and about an earlier change,
-    /// so it has a slot of its own.
-    keep_problem: Option<String>,
-    /// What the latest opening or saving told, which the status bar shows
-    /// until the show changes
-    told: Option<String>,
-    /// Way to read the unsaved changes kept for shows, if the platform has
-    /// a directory to keep them in
-    reader: Option<Reader>,
-    /// Why each output that cannot play cannot, by its identity
-    audio_problems: Vec<(OutputId, Fault)>,
-    /// Why messages of network cues failed, until one gets there, each with
-    /// the first cue that names the destination
-    network_problems: Vec<(CueId, String)>,
-    /// Destinations that messages of network cues failed to reach, which
-    /// each cue that names one tells on its row
-    network_failed: BTreeSet<String>,
-    /// Why no light gets out, until a round of sending gets some out, while
-    /// the patch has an instrument
-    light_problem: Option<String>,
-    /// Why the address of `osc_listen` cannot be listened on, until the
-    /// setting changes
-    osc_problem: Option<String>,
-    /// Latest command from the network that did nothing, as one line, until
-    /// a later command acts or the setting changes
-    osc_ignored: Option<String>,
-    /// Interval at which to look for news of the network and light output,
-    /// while either has any
-    network_checks: Option<Duration>,
-    /// ID and name of each audio device, as they were listed last
-    audio_devices: Vec<(String, String)>,
-    /// Why the configuration file did not keep the audio device chosen
-    /// last, until it keeps another
-    device_problem: Option<String>,
-    /// Rows that a half page moves in the cue list, once a count has set them
-    scroll: Option<usize>,
-    /// What the latest measures of the cue list and the help page found
-    measures: Measures,
-    list: usize,
-    /// Places that jumps have left, for going back to them
-    history: History,
-    /// Cue shown in the inspector
-    selected: Option<CueId>,
-    /// Text of a setting as the operator types it, which its field shows in
-    /// place of the setting until the operator does anything else
-    typed: Option<(Setting, String)>,
-    /// Whether the outputs of the show show in place of the cue list
-    outputs_shown: bool,
-    /// Output that the inspector shows while the outputs show
-    output: Option<OutputId>,
-    tab: Tab,
-    /// Cues copied or cut, which pasting adds
-    clipboard: Clipboard,
-    /// What the latest copy or cut told, until the operator does anything
-    /// but move the selection or switch lists
-    clipped: Option<Clipped>,
-    /// What the latest key found to say that is no change, such as an empty
-    /// clipboard, until the operator does anything else
-    remark: Option<&'static str>,
-    /// Why the text that the operator left in a field was not applied, which
-    /// the field forgets once the keyboard has left it, until the operator
-    /// does anything else
-    unapplied: Option<String>,
-    /// Cues that the latest edit stopped by taking them away or giving them
-    /// another file, which the notice of the change tells
-    stopped: Vec<CueId>,
-    /// Changes that the latest undo or redo took back or made again, which
-    /// its notice counts where there are several
-    turns: usize,
-    /// Kind of cue that Add cue creates
-    new_kind: Kind,
-    /// Time of the last clock tick, or `None` while the clock is stopped
-    last_tick: Option<Instant>,
-    config: Config,
-    /// Keys of a command typed so far, such as a count or the `g` of `g g`
-    keys: Vec<Press>,
-    /// Search line, while it is open
-    search: Option<Search>,
-    /// Text of the search accepted last, which the keys of the next and
-    /// previous match look for
-    searched: Searched,
-    /// Labels of hint mode, while it is on
-    hints: Option<Hints>,
-    help: bool,
-    /// Whether the menu of a drop-down list is open, which the status bar
-    /// hints the keys of
-    menu: bool,
-    /// Whether a text field or a drop-down list has the keyboard, which the
-    /// status bar hints how to leave
-    held: bool,
-    /// Whether the File field of a cue has the keyboard, which the status bar
-    /// hints Enter for while it is empty
-    file_held: bool,
-    /// Whether a checkbox has the keyboard, which the status bar hints Enter
-    /// for as it flips it, where it opens a drop-down list
-    check_held: bool,
-    /// Whether a button has the keyboard, which the status bar hints Enter
-    /// for as it presses the button
-    button_held: bool,
-    /// Whether the address of an instrument in the light patch has the
-    /// keyboard, which shows the help on addresses under the patch
-    address_held: bool,
-    /// Whether a text field has the keyboard, which keeps every key but those
-    /// that act in fields, so that the status bar hints no other key.  A
-    /// closed drop-down list, which `held` alone tells, lets the keys of undo
-    /// and redo act as well.
-    text_held: bool,
-    /// Whether the highlight of the open menu of the Device list of an
-    /// output rests on its default, which the Default device list of the
-    /// sidebar tells in color
-    default_highlighted: bool,
-    /// Why the link that the help page opened last failed to open, which
-    /// the page shows while it stays open
-    link_problem: Option<String>,
-    /// Whether the files of audio, video, and picture cues are being loaded
-    loading: bool,
-    /// Whether the files that could not be played are being read again
-    rechecking: bool,
-}
-
-impl App {
-    fn current(&self) -> &CueList {
-        &self.workspace.lists()[self.list]
-    }
-
-    fn selected_here(&self) -> Option<CueId> {
-        self.selected.filter(|_| self.selected_index().is_some())
-    }
-
-    /// Returns the place of the selected cue among all the cues of the list
-    fn selected_index(&self) -> Option<usize> {
-        self.selected.and_then(|id| self.current().position(id))
-    }
-
-    /// Returns the row that shows the selected cue, counted from zero among
-    /// the rows that the table shows, which is the row of the collapsed group
-    /// that holds the cue where one does
-    fn selected_row(&self) -> Option<usize> {
-        let list = self.current();
-        let groups = list.groups();
-        let standing = *groups.shown_as().get(self.selected_index()?)?;
-        groups.shown().binary_search(&standing).ok()
-    }
-
-    fn editable(&self) -> bool {
-        !self.workspace.show_mode()
-    }
-
-    fn running(&self) -> bool {
-        self.workspace.active().iter().any(|active| !active.paused)
-    }
-
-    fn moving_pictures(&self) -> bool {
-        self.workspace
-            .active()
-            .iter()
-            .any(|active| active.shows_video() && !active.paused)
-    }
-}
-
-/// Returns the item `offset` places after `from`, or before it when
-/// `offset` is negative, among `count` items.  Stepping stays put past
-/// either end, and without an item to step from, it starts at the first.
-fn step(from: Option<usize>, offset: isize, count: usize) -> Option<usize> {
-    let last = count.checked_sub(1)?;
-    Some(from.map_or(0, |index| index.saturating_add_signed(offset).min(last)))
-}
-
-/// Reads a file, or returns none when there is no such file.  A failure
-/// goes on standard error whole, with the path, as a failed save does, and
-/// the screen gets its words alone, as `permission denied`.
-fn read(file: &Path) -> Result<Option<String>, String> {
-    match fs::read_to_string(file) {
-        Ok(text) => Ok(Some(text)),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
-        Err(error) => {
-            warn::once(&format!("cannot open {}: {error}", file.display()));
-            Err(warn::words(&error))
-        }
-    }
-}
-
-/// Returns where a view that shows `height` of its content from `scrolled`
-/// on has to scroll to, to show the span from `top` to `bottom` while
-/// scrolling as little as it can, or `None` when the span is in view
-fn reveal(top: f32, bottom: f32, scrolled: f32, height: f32) -> Option<f32> {
-    if top < scrolled {
-        Some(top)
-    } else if bottom > scrolled + height {
-        Some(bottom - height)
-    } else {
-        None
-    }
 }

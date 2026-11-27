@@ -2,20 +2,25 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of a key that completes or continues no command, which drops the
-//! keys typed so far, and of the keys of Vim for the next and previous row
+//! Tests of a key that ends no command, which drops the keys typed so far
 
 use super::*;
 
 #[test]
 fn key_that_ends_no_command_drops_the_keys_typed_so_far_and_itself() {
-    ["d i", "g w", "4 w", "2 g w"]
-        .into_iter()
-        .for_each(|text| assert_eq!(typed(text), Outcome::default(), "{text}"));
+    [
+        // After g, after z, and after an operator, with counts around them
+        "g w", "4 w", "2 g w", "z w", "z j", "3 z w", "d i", "d z", "2 d 3 z", "d g z", "d u",
+        "d x", "d p", "d o", "d l", "d g t", "y x", "y p",
+    ]
+    .into_iter()
+    .for_each(|text| assert_eq!(typed(text), Outcome::default(), "{text}"));
     // Next key starts afresh
     assert_actions(&[
         ("g w j", Action::Next, None),
         ("2 g j", Action::Next, Some(2)),
+        ("z w j", Action::Next, None),
+        ("d x j", Action::Next, None),
     ]);
 }
 

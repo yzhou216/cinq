@@ -9,18 +9,36 @@ mod tests;
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+pub(in crate::front::view) const ELLIPSIS: &str = "\u{2026}";
+
+/// Returns the characters of `chars` that fit in `columns` columns of the
+/// font, which is monospace, with the last column left for the ellipsis
+fn kept(chars: impl Iterator<Item = char>, columns: usize) -> impl Iterator<Item = char> {
+    chars.scan(0, move |taken, character| {
+        *taken += character.width().unwrap_or(0);
+        (*taken < columns).then_some(character)
+    })
+}
+
 /// Returns `name` cut short to `columns` columns of the font, which is
 /// monospace, with an ellipsis in place of the rest
 pub(in crate::front::view) fn shortened(name: &str, columns: usize) -> String {
     if name.width() <= columns {
         return name.to_owned();
     }
-    let kept: String = name
-        .chars()
-        .scan(0, |taken, character| {
-            *taken += character.width().unwrap_or(0);
-            (*taken < columns).then_some(character)
-        })
-        .collect();
-    format!("{kept}\u{2026}")
+    format!(
+        "{}{ELLIPSIS}",
+        kept(name.chars(), columns).collect::<String>()
+    )
+}
+
+/// Returns `name` cut short to `columns` columns with an ellipsis in place of
+/// its start, since names that share a beginning, as `House speaker pair 01`
+/// and `House speaker pair 02` do, differ at the end
+pub(in crate::front::view) fn shortened_start(name: &str, columns: usize) -> String {
+    if name.width() <= columns {
+        return name.to_owned();
+    }
+    let tail = kept(name.chars().rev(), columns).collect::<Vec<_>>();
+    format!("{ELLIPSIS}{}", tail.into_iter().rev().collect::<String>())
 }

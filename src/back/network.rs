@@ -18,6 +18,7 @@
 //! for the interface to show until a message gets there or no cue names the
 //! destination any more, and warns once on standard error.
 
+mod address;
 mod connection;
 #[cfg(test)]
 mod tests;
@@ -25,7 +26,7 @@ mod tests;
 use std::{
     collections::{BTreeMap, BTreeSet},
     io::{self, ErrorKind},
-    net::{Ipv4Addr, SocketAddr, TcpStream, ToSocketAddrs, UdpSocket},
+    net::TcpStream,
     sync::{
         Arc, Mutex, MutexGuard, PoisonError,
         atomic::{AtomicUsize, Ordering},
@@ -37,6 +38,7 @@ use std::{
 
 use super::osc::{self, Destination, Outgoing};
 use crate::warn;
+use address::{ipv4_address, udp_socket};
 
 /// Longest that a message may wait to go out, and longest quiet that a TCP
 /// connection outlasts
@@ -175,7 +177,7 @@ fn started(destination: &str, shared: &Arc<Shared>) -> Queue {
 /// which closes the connection
 fn work(destination: &str, messages: &mpsc::Receiver<(Instant, Outgoing)>, shared: &Shared) {
     messages.iter().fold(None, |kept, (handed, outgoing)| {
-        // A burst ends after a quiet second, whenever the dispatcher notices
+        // Burst ends after a quiet second, whenever the dispatcher notices
         let fresh = kept.filter(|(used, _): &Connection| used.elapsed() <= PATIENCE);
         let connection = match deliver(fresh, outgoing, handed) {
             Ok(connection) => {
@@ -230,34 +232,4 @@ fn time_left(handed: Instant) -> io::Result<Duration> {
                 "dropped rather than sent more than a second late",
             )
         })
-}
-
-/// Network cues go out over IPv4, as the networks of consoles run, while a
-/// resolver can give IPv6 first, as `::1` for `localhost`.
-fn ipv4_address(address: &str) -> io::Result<SocketAddr> {
-    address
-        .to_socket_addrs()
-        .map_err(unfound)?
-        .find(SocketAddr::is_ipv4)
-        .ok_or_else(|| io::Error::new(ErrorKind::NotFound, "no IPv4 address for the host"))
-}
-
-/// Words a failed lookup as cinq's own, since the resolver's message, such
-/// as `failed to lookup address information: Name or service not known`,
-/// runs past the sidebar and adds nothing that the operator can act on,
-/// while an address that cannot be read keeps its own
-fn unfound(error: io::Error) -> io::Error {
-    match error.kind() {
-        ErrorKind::InvalidInput => error,
-        kind => io::Error::new(kind, "cannot find the host"),
-    }
-}
-
-/// Returns a socket that may send to a broadcast address, such as
-/// `255.255.255.255`, which the system otherwise refuses with a permission
-/// error
-fn udp_socket() -> io::Result<UdpSocket> {
-    let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 0))?;
-    socket.set_broadcast(true)?;
-    Ok(socket)
 }

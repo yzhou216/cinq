@@ -5,19 +5,18 @@
 //! Tests of the keys that edit the show, which the stage window leaves to
 //! the main window
 
-use super::{focusing, show};
+use super::{focusing, opened};
 use crate::{
-    back::{CueId, Kind},
+    back::CueId,
     front::{App, update::tests::typing},
 };
 
 /// Returns the state of the interface after the window that `main` picks
 /// takes the keyboard, with the only cue selected
 fn focused(main: bool) -> App {
-    let (open, _) = show(Kind::Video).staged();
     let open = App {
         selected: Some(CueId(1)),
-        ..open
+        ..opened()
     };
     focusing(open, !main)
 }
@@ -25,7 +24,10 @@ fn focused(main: bool) -> App {
 /// Returns the number of cues of the first list and whether anything went
 /// to the clipboard
 fn found(app: &App) -> (usize, bool) {
-    (app.workspace.lists()[0].cues.len(), app.clipped.is_some())
+    (
+        app.workspace.lists()[0].cues.len(),
+        app.notices.clipped.is_some(),
+    )
 }
 
 #[test]
@@ -62,9 +64,12 @@ fn undo_and_redo_wait_for_the_main_window_too() {
 #[test]
 fn a_refused_key_tells_why_and_a_key_that_edits_nothing_tells_nothing() {
     let refused = typing(focused(false), "o");
-    assert_eq!(refused.remark, Some("Click the main window to edit"));
-    assert_eq!(typing(focused(false), "j").remark, None);
-    assert_eq!(typing(focused(true), "o").remark, None);
+    assert_eq!(
+        refused.notices.remark,
+        Some("Click the main window to edit")
+    );
+    assert_eq!(typing(focused(false), "j").notices.remark, None);
+    assert_eq!(typing(focused(true), "o").notices.remark, None);
     // Next key that acts takes the remark back
-    assert_eq!(typing(refused, "j").remark, None);
+    assert_eq!(typing(refused, "j").notices.remark, None);
 }

@@ -133,19 +133,19 @@ pub(super) fn yielding(app: &App) -> &'static [Action] {
 /// that does.  Where the keymap binds no key to cancel, Tab is the only key
 /// that leaves a checkbox, a closed list, or the empty File field, where Enter
 /// chooses a file, so that it outlasts the words too.
-pub(super) fn outlasting(app: &App) -> &'static [Action] {
-    let tab_leaves = (!app.text_held || hints::choosing(app))
-        && app.config.keymap.hint(Action::Cancel, "cancel").is_none();
-    match (hints::in_field(app), tab_leaves, app.text_held) {
-        (true, true, false) => &[
-            Action::Cancel,
-            Action::CloseMenu,
-            Action::NextField,
-            Action::Pick,
-        ],
-        (true, true, true) => &[Action::Cancel, Action::CloseMenu, Action::NextField],
-        (true, false, false) => &[Action::Cancel, Action::CloseMenu, Action::Pick],
-        (true, false, true) => &[Action::Cancel, Action::CloseMenu],
-        (false, ..) => &[],
+pub(super) fn outlasting(app: &App) -> Vec<Action> {
+    if !hints::in_field(app) {
+        return Vec::new();
     }
+    let tab_leaves = (!app.keyboard.held.text || hints::choosing(app))
+        && app.config.keymap.hint(Action::Cancel, "cancel").is_none();
+    [
+        Some(Action::Cancel),
+        Some(Action::CloseMenu),
+        tab_leaves.then_some(Action::NextField),
+        (!app.keyboard.held.text).then_some(Action::Pick),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }

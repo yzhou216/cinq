@@ -7,7 +7,7 @@
 use super::{Warning, failing, warnings};
 use crate::{
     back::{Channels, Command, CueList, Device, Fault, OutputEdit, OutputId, Workspace},
-    front::App,
+    front::{App, Problems},
 };
 
 /// Returns an app whose show has an output on each of `devices`, the first
@@ -27,7 +27,10 @@ fn app(devices: &[Device], faults: Vec<(OutputId, Fault)>) -> App {
     );
     App {
         workspace,
-        audio_problems: faults,
+        problems: Problems {
+            audio: faults,
+            ..Problems::default()
+        },
         ..App::default()
     }
 }

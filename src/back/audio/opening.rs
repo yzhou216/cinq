@@ -8,25 +8,20 @@
 //! A device that is not there, or that stops, as one unplugged or a Dante
 //! Virtual Soundcard that restarts does, opens again every [`RETRY`] on its
 //! own, so that the operator need not act and the devices that play go on
-//! unbroken.  The threads of [`super::opener`] open them, and a device that
-//! is being opened keeps what it was until its thread answers, so that no
-//! sync waits on a device.
+//! unbroken.  The threads of [`super::sound::opener`] open them, and a
+//! device that is being opened keeps what it was until its thread answers,
+//! so that no sync waits on a device.
 
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use itertools::Itertools;
 
-use super::{
+use crate::back::audio::{
     Audio, Fault,
-    opener::Answer,
+    devices::fault::RETRY,
     patch::{Key, Need, Patch},
-    preload::Preloader,
-    voice::channels_of,
+    sound::{mixer::channels_of, opener::Answer, preload::Preloader},
 };
-
-/// Time between tries to open a device that is not there, or that has
-/// stopped
-pub(super) const RETRY: Duration = Duration::from_secs(2);
 
 impl Audio {
     /// Opens the devices that the outputs need and that are not open, or
@@ -92,12 +87,11 @@ impl Audio {
     /// Opens again each device that is absent or has stopped, once every
     /// [`RETRY`] after its latest answer, unless its fault is one that the
     /// show must mend.  Also looks at each device that opened with fewer
-    /// channels than the outputs need, to open it once it offers more.  The
-    /// other devices play on unbroken.  A device that offers no more is
-    /// looked at ever more seldom, as [`probes`] tells.  The runs that had
-    /// a sound on a device that stopped start again on all of theirs, from
-    /// where they are, as the next part of the sync starts them, and so do
-    /// those that come to play on a device that opens at last.
+    /// channels than the outputs need, to open it once it offers more, ever
+    /// more seldom as [`super::devices::probes`] tells.  The runs that had a
+    /// sound on a device that stopped start again on all of theirs, as the
+    /// next part of the sync starts them, and so do those that come to play
+    /// on a device that opens at last.
     pub(super) fn revived(&mut self) {
         let due = self.tried.elapsed() >= RETRY;
         let (failed, rest): (Vec<Need>, Vec<Need>) = self

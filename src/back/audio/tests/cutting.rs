@@ -10,13 +10,12 @@
 
 use std::thread;
 
-use super::voice::{DECODING, audio, fired_promising, sounding, video};
+use super::voice::{DECODING, audio, fired_promising, sounding, target, video};
 use crate::back::{
     Cue, CueId,
     audio::{
-        mixer::Mixer,
         patch::Key,
-        voice::{Target, Voice},
+        sound::{mixer::Mixer, voice::Voice},
     },
 };
 
@@ -71,7 +70,7 @@ fn a_loop_that_stops_is_cut_short_however_little_lies_ahead() {
 
 #[test]
 fn sound_track_that_ends_before_the_picture_is_not() {
-    // The picture plays for ten seconds, which the sound track need not
+    // Picture plays for ten seconds, which the sound track need not
     assert!(!cut(video(), 0.5, 0.5, 80));
 }
 
@@ -85,18 +84,9 @@ fn sound_on_a_device_that_does_not_play_is_not() {
         .and_then(|cue| cue.sound_ends(clip))
         .expect("the cue has sound");
     let (mut mixer, mut mix) = Mixer::bench(2, 2, 8000, 16);
-    let target = Target {
-        key: Some("a".to_owned()),
-        mixer: &mut mixer,
-        gains: Box::new([[1.0, 0.0]; 2]),
-    };
-    let voice = Voice::open(
-        vec![target],
-        &directory.path().join("silence.wav"),
-        active,
-        clip,
-    )
-    .expect("the device takes the sound");
+    let targets = vec![target("a", &mut mixer)];
+    let voice = Voice::open(targets, &directory.path().join("silence.wav"), active, clip)
+        .expect("the device takes the sound");
     thread::sleep(DECODING);
     (0..3).for_each(|_| mix.render(&mut [0.0_f32; 512]));
     let on = |key: &Key| key.as_deref() == Some("a");

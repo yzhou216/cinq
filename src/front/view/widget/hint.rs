@@ -8,9 +8,9 @@
 //! about it, with the message that the click would send.  One walk when hint
 //! mode starts collects the places that the operator can see, in the order that
 //! they lie in the tree, which gives the labels their order, and leaves out
-//! those inside a [`hide`](super::hide), and those whose top left corner, which
+//! those inside a [`hide`](super::hide()), and those whose top left corner, which
 //! the label lies level with, is outside the window or outside a scrollable
-//! around them.  The app keeps the labels, and [`layer`] draws them over the
+//! around them.  The app keeps the labels, and [`layer()`] draws them over the
 //! window.  A text field or a drop-down list takes the keyboard when [`reach`]
 //! finds it again by its bounds.
 

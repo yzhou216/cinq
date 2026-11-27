@@ -6,11 +6,7 @@
 
 use iced::{
     Point, Rectangle, Size, Vector,
-    advanced::widget::{
-        Operation,
-        operation::{Outcome, Scrollable},
-    },
-    widget::operation::{AbsoluteOffset, RelativeOffset},
+    advanced::widget::{Operation, operation::Outcome},
 };
 
 use super::{
@@ -18,17 +14,7 @@ use super::{
     layer::{PADDING, corner},
     visit::walk,
 };
-use crate::front::{Message, view::char_width};
-
-struct Scrolled;
-
-impl Scrollable for Scrolled {
-    fn snap_to(&mut self, _offset: RelativeOffset<Option<f32>>) {}
-
-    fn scroll_to(&mut self, _offset: AbsoluteOffset<Option<f32>>) {}
-
-    fn scroll_by(&mut self, _offset: AbsoluteOffset, _bounds: Rectangle, _content: Rectangle) {}
-}
+use crate::front::{Message, fixtures::Scrolled, view::char_width};
 
 fn rectangle(x: f32, y: f32, width: f32, height: f32) -> Rectangle {
     Rectangle::new(Point::new(x, y), Size::new(width, height))
@@ -76,7 +62,7 @@ fn a_place_scrolled_out_of_the_scrollable_is_left_out() {
             rectangle(0.0, 0.0, 100.0, 100.0),
             rectangle(0.0, 0.0, 100.0, 300.0),
             Vector::new(0.0, 150.0),
-            &mut Scrolled,
+            &mut Scrolled::default(),
         );
         operation.traverse(&mut |operation| {
             // Places lie at 40, 160, 260 in the content, so that they show
@@ -103,7 +89,7 @@ fn a_place_in_a_scrollable_that_lies_in_another_is_judged_by_both() {
             rectangle(0.0, 0.0, 100.0, 100.0),
             rectangle(0.0, 0.0, 100.0, 400.0),
             Vector::new(0.0, 20.0),
-            &mut Scrolled,
+            &mut Scrolled::default(),
         );
         operation.traverse(&mut |operation| {
             operation.scrollable(
@@ -111,7 +97,7 @@ fn a_place_in_a_scrollable_that_lies_in_another_is_judged_by_both() {
                 rectangle(0.0, 70.0, 100.0, 100.0),
                 rectangle(0.0, 70.0, 100.0, 300.0),
                 Vector::ZERO,
-                &mut Scrolled,
+                &mut Scrolled::default(),
             );
             operation.traverse(&mut |operation| {
                 // Show at 60, 110, and 40 in the window
@@ -155,7 +141,7 @@ fn a_place_keeps_its_layout_bounds_and_the_bounds_that_it_shows_at() {
         rectangle(0.0, 0.0, 100.0, 100.0),
         rectangle(0.0, 0.0, 100.0, 300.0),
         Vector::new(0.0, 150.0),
-        &mut Scrolled,
+        &mut Scrolled::default(),
     );
     operation.traverse(&mut |operation| place(operation, 0, rectangle(5.0, 160.0, 50.0, 20.0)));
     let Outcome::Some(places) = operation.finish() else {

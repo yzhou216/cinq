@@ -5,24 +5,23 @@
 //! Video output, where the back end has side effects
 //!
 //! [`Video::sync`] runs after every change to the workspace, as
-//! [`super::Audio::sync`] does, and makes the pictures match it.  Each run
-//! of a video or picture cue gets a [`Player`] from the moment GO fires it,
-//! and each sync hands on the newest picture that the clock of each run has
-//! reached, so that the picture follows the clock of the show and holds
-//! still while the run is paused.  The sound follows the clock of the audio
+//! [`super::Audio::sync`] does.  Each run of a video or picture cue gets a
+//! [`Player`] when GO fires it, and each sync hands on the newest picture
+//! that the clock of the run has reached, so that the picture holds still
+//! while the run is paused.  The sound follows the clock of the audio
 //! device instead, from which the clock of the show drifts over a long
-//! video, as cinq-show(5) tells.  The pictures that the next GO of each
-//! list may start are made ready ahead, as their sounds are, since decoding
-//! has to start at the sync sample before the start of a clip, a few
-//! seconds before it in many files, and a large picture file takes a moment
-//! to decode.  A clip that loops shows the pictures of its loop again and
-//! again, and once a devamp cue has let it go on, those from the end of
-//! its loop to the end of its clip, which a run takes up as the workspace
-//! changes the clip that it shows.  The workspace stays the only record of
-//! what should be seen, so a picture that cannot play goes back to it as a
-//! file that cannot be played.  Video files hold H.264 in MP4, whose
-//! tracks [`track`] reads, and which [`decoder`] decodes with rust_h264,
-//! while picture files hold PNG or JPEG, which [`still`] decodes.
+//! video, as cinq-show(5) tells.
+//!
+//! The pictures that the next GO of each list may start are made ready
+//! ahead, as their sounds are, since decoding has to start at the sync
+//! sample before the start of a clip, a few seconds before it in many
+//! files, and a large picture file takes a moment to decode.  The
+//! workspace stays the only record of what should be seen, so a picture
+//! that cannot play goes back to it as a file that cannot be played.
+//!
+//! Video files hold H.264 in MP4, which [`track`] reads and [`decoder`]
+//! decodes with rust_h264.  Picture files hold PNG or JPEG, which [`still`]
+//! decodes.
 
 mod decoder;
 mod player;
@@ -35,18 +34,16 @@ use std::{collections::HashMap, path::PathBuf};
 
 use itertools::{Either, Itertools};
 
-use super::{Active, CueId, Problem, Shown, Workspace, items::taken, load::unplayable};
+use super::{Active, CueId, Problem, Shown, Workspace, failure::unplayable, items::taken};
 pub use decoder::Picture;
 use player::{Advanced, Player};
 pub(super) use still::probe as probe_still;
 pub(super) use track::probe;
 
-/// Endings of the names of the video files that the video output plays,
-/// as MP4, QuickTime, and iTunes name them
+/// Endings of the video files that play, as MP4, QuickTime, and iTunes name them
 pub const VIDEO_FILES: [&str; 3] = ["m4v", "mov", "mp4"];
 
-/// Endings of the names of the picture files that the video output shows,
-/// as PNG and JPEG name them
+/// Endings of the picture files that show, as PNG and JPEG name them
 pub const PICTURE_FILES: [&str; 3] = ["jpeg", "jpg", "png"];
 
 /// What a player decodes, which one made ready ahead has to match for a
@@ -59,8 +56,8 @@ struct Showing {
 impl Showing {
     /// Returns whether a player made ready for `self` decodes `other` as
     /// well, which it does when the two differ in no more than a devamp cue
-    /// letting the clip go on, as one that comes in the pre-wait of the run
-    /// does, since the player moves on to the new clip once it is taken
+    /// letting the clip go on, as one in the pre-wait of the run does, since
+    /// the player moves on to the new clip once it is taken
     fn matches(&self, other: &Self) -> bool {
         let unreleased = |shown| match shown {
             Shown::Clip(clip) => Shown::Clip(clip.unreleased()),
@@ -80,7 +77,7 @@ pub struct Video {
 impl Video {
     /// Returns the workspace with the files whose picture cannot play, along
     /// with the pictures that have come due since the last sync, each with
-    /// its cue.
+    /// its cue
     pub fn sync(&mut self, workspace: Workspace) -> (Workspace, Vec<(CueId, Picture)>) {
         // Players whose run has ended, and those made ready that no run
         // takes, stay behind and go at the end

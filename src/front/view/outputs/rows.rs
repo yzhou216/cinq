@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Rows of the outputs, with the titles of their columns above
+//! Rows of the outputs, with the titles of their columns above them
 
 use iced::{
     Element, Fill, padding,

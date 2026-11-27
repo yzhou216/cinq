@@ -27,7 +27,7 @@ use crate::front::keymap::{KeyPress, Press};
 /// What a key that deletes before the caret removes
 #[derive(Clone, Copy)]
 enum Delete {
-    /// The word before the caret
+    /// Word before the caret
     Word,
     /// Everything before the caret
     All,

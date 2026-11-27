@@ -5,22 +5,15 @@
 //! Tests of the keys that enter the name of the selected cue, at its end,
 //! at its start, or with all of it selected
 
-use super::{show, typing, typing_task};
-use crate::{
-    back::CueId,
-    front::{App, Message, Tab},
-};
+use super::{locked, on_levels, show, typing, typing_task};
+use crate::{back::CueId, front::Tab};
 
 #[test]
 fn keys_of_vim_enter_the_name_of_the_selected_cue_and_show_its_tab() {
-    let tabbed = || App {
-        tab: Tab::Levels,
-        ..show(Some(CueId(3)))
-    };
     ["i", "a", "A", "I", "S", "c c"]
         .into_iter()
         .for_each(|keys| {
-            let (entered, task) = typing_task(tabbed(), keys);
+            let (entered, task) = typing_task(on_levels(Some(CueId(3))), keys);
             assert_eq!(
                 (entered.tab, task.units() > 0),
                 (Tab::Basics, true),
@@ -31,11 +24,7 @@ fn keys_of_vim_enter_the_name_of_the_selected_cue_and_show_its_tab() {
 
 #[test]
 fn c_begins_no_operator_so_a_c_before_another_key_drops_both() {
-    let levels = App {
-        tab: Tab::Levels,
-        ..show(Some(CueId(3)))
-    };
-    let moved = typing(levels, "c j");
+    let moved = typing(on_levels(Some(CueId(3))), "c j");
     assert_eq!((moved.selected, moved.tab), (Some(CueId(3)), Tab::Levels));
     assert_eq!(moved.workspace.lists()[0].cues.len(), 12);
 }
@@ -44,12 +33,7 @@ fn c_begins_no_operator_so_a_c_before_another_key_drops_both() {
 fn entering_the_name_does_nothing_without_a_selection_or_in_show_mode() {
     let (none, task) = typing_task(show(None), "I");
     assert_eq!((none.tab, task.units()), (Tab::Basics, 0));
-    let (locked, _) = show(Some(CueId(3))).handled(Message::ShowMode(true));
-    let locked = App {
-        tab: Tab::Levels,
-        ..locked
-    };
-    let (locked, task) = typing_task(locked, "S");
+    let (locked, task) = typing_task(locked(on_levels(Some(CueId(3)))), "S");
     assert_eq!((locked.tab, task.units()), (Tab::Levels, 0));
 }
 

@@ -14,8 +14,11 @@
 use itertools::Itertools;
 use kira::Decibels;
 
-use super::mixer::Gains;
 use crate::back::{Channels, Device, Output, OutputId, Sends};
+
+/// Gain from the left and the right of a sound into each channel of a
+/// device, in order
+pub(super) type Gains = Box<[[f32; 2]]>;
 
 /// Device of a mixer, by its ID, or none for the default device of the
 /// system
@@ -28,7 +31,7 @@ pub(super) struct Patched {
     pub(super) key: Key,
     /// Name of the device, which finds it on a machine that gives it
     /// another ID
-    pub(super) name: Option<String>,
+    name: Option<String>,
     pub(super) channels: Channels,
 }
 

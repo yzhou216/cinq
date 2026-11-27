@@ -5,7 +5,7 @@
 //! Tests of the edits that change one setting of a cue and that take it back
 
 use super::{Advance, Cue, CueId, Edit};
-use crate::back::{Kind, Media};
+use crate::back::{Kind, sound};
 
 /// Returns a cue whose every setting differs from what the edits below set
 fn cue() -> Cue {
@@ -146,10 +146,7 @@ fn reverting_an_edit_sets_the_setting_back_to_what_the_cue_held() {
 #[test]
 fn edit_that_changes_the_file_does_not_touch_the_media_of_the_cue() {
     let loaded = Cue {
-        media: Media::Loaded {
-            duration: 10.0,
-            sound: Some(10.0),
-        },
+        media: sound(10.0),
         ..cue()
     };
     let edited = loaded.clone().edited(Edit::File("storm.ogg".to_owned()));

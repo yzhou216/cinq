@@ -60,20 +60,20 @@ fn files_whose_boxes_lie_in_the_other_ways_that_the_format_allows_play() {
         wide(&mdat),
         narrow(&(moov, shifted(&body, 8))),
     ];
-    // The moov box and its trak box with such headers
+    // Moov box and its trak box with such headers
     let wide_moov = [
         narrow(&ftyp),
         narrow(&mdat),
         wide(&(moov, with_wide_header(*b"trak"))),
     ];
-    // A media data box that claims no bytes, after the moov box
+    // Media data box that claims no bytes, after the moov box
     let (_, data) = &mdat;
     let to_the_end = [
         narrow(&ftyp),
         narrow(&(moov, shifted(&body, body.len() + 8))),
         [&[0; 4][..], b"mdat", data].concat(),
     ];
-    // The udta and meta boxes that ffmpeg writes
+    // Udta and meta boxes that ffmpeg writes
     let tagged = (
         moov,
         [body.clone(), narrow(&(*b"udta", ilst_udta()))].concat(),
@@ -82,7 +82,7 @@ fn files_whose_boxes_lie_in_the_other_ways_that_the_format_allows_play() {
     // No ftyp box, a box that the reader skips taking its place so that the
     // samples stay where the moov box locates them
     let no_ftyp = [
-        narrow(&(*b"free", ftyp.1.clone())),
+        narrow(&(*b"free", ftyp.1)),
         narrow(&mdat),
         narrow(&(moov, body)),
     ];

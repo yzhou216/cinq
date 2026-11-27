@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The chain that one GO fires through groups, and how long a group's
+//! Chain that one GO fires through groups, and how long a group's
 //! action takes
 
 use super::Groups;

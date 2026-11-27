@@ -7,19 +7,15 @@
 use iced::{mouse, window};
 
 use super::{
-    after,
-    history::{cue, place},
-    show,
+    after, helping,
+    history::{cue, jumped, place},
+    windowed,
 };
 use crate::front::{App, Message};
 
 #[test]
 fn the_side_buttons_of_the_mouse_go_back_and_forward_from_the_main_window_only() {
-    let main = window::Id::unique();
-    let jumped = App {
-        main: Some(main),
-        ..after(show(cue(5)), [Message::SwitchList(1)])
-    };
+    let (jumped, main) = windowed(jumped());
     let side = |app: App, window, button| after(app, [Message::SidePressed(window, button)]);
     let elsewhere = side(jumped, window::Id::unique(), mouse::Button::Back);
     assert_eq!(place(&elsewhere), (1, cue(20)));
@@ -33,12 +29,7 @@ fn the_side_buttons_of_the_mouse_go_back_and_forward_from_the_main_window_only()
 
 #[test]
 fn the_side_buttons_do_nothing_over_the_help_page() {
-    let main = window::Id::unique();
-    let jumped = App {
-        main: Some(main),
-        help: true,
-        ..after(show(cue(5)), [Message::SwitchList(1)])
-    };
+    let (jumped, main) = windowed(helping(jumped()));
     let back = after(jumped, [Message::SidePressed(main, mouse::Button::Back)]);
     assert_eq!(place(&back), (1, cue(20)));
     let closed = App {

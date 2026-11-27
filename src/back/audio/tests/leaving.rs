@@ -19,21 +19,24 @@ use kira::{
 use tempfile::TempDir;
 
 use super::{
+    collecting,
     devamping::{RATE, vamp},
-    silence_at, upcoming, waiting as waiting_for,
+    silence_at, upcoming,
+    voice::target,
+    waiting as waiting_for,
 };
 use crate::back::{
     Command, CueId, READY_AHEAD, Workspace,
-    audio::{
+    audio::sound::{
         mixer::Mixer,
         preload::{Ask, Preloader},
-        voice::{Target, Voice},
+        voice::Voice,
     },
     workspace::tests::GO,
 };
 
 /// Starts the sound of the cue that [`vamp`] fires, which loops from 1 to 2
-/// seconds into a file of 4, on a mixer that [`Mix`](super::super::mixer::Mix)
+/// seconds into a file of 4, on a mixer that [`Mix`](super::super::sound::mixer::Mix)
 /// renders, as a run that has played `played` seconds, and returns the voice
 /// with the seconds of sound that it still has after `rendered` seconds.
 /// Kira's decoder thread may run behind the mixer on a busy machine, and a
@@ -48,11 +51,7 @@ fn opened_at(played: f64, rendered: f64, ends: bool) -> (bool, bool) {
     let active = workspace.active_of(CueId(1)).expect("the cue runs");
     let clip = active.sound().expect("the cue has sound");
     let (mut mixer, mut mix) = Mixer::bench(2, 2, 8000, 16);
-    let targets = vec![Target {
-        key: Some("a".to_owned()),
-        mixer: &mut mixer,
-        gains: Box::new([[1.0, 0.0]; 2]),
-    }];
+    let targets = vec![target("a", &mut mixer)];
     let voice = Voice::open(targets, &directory.path().join("silence.wav"), active, clip)
         .expect("the sound starts");
     let mut render = || mix.render(&mut [0.0_f32; 512]);
@@ -93,11 +92,8 @@ fn a_run_devamped_in_its_pre_wait_still_takes_the_sound_made_ready() {
     };
     let mut preloader = Preloader::new();
     preloader.want(asks(&waiting));
-    waiting_for(|| {
-        preloader.collect();
-        preloader.ready(CueId(1)).then_some(())
-    })
-    .expect("the sound is made ready");
+    collecting(&mut preloader, |preloader| preloader.ready(CueId(1)))
+        .expect("the sound is made ready");
     let devamped = waiting.apply(GO);
     let after = asks(&devamped);
     let released = after[0].wanted.clone();

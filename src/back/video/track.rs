@@ -19,6 +19,7 @@
 
 mod locate;
 mod moov;
+mod tables;
 #[cfg(test)]
 mod tests;
 mod timing;
@@ -27,28 +28,25 @@ use std::{
     collections::BTreeSet,
     fs::File,
     io::{BufReader, Read, Seek, SeekFrom},
-    iter,
     path::Path,
 };
 
 use rust_h264::nal::{NalUnit, parse_avcc};
 
-use crate::{back::load::unreadable, warn};
+use crate::{back::failure::unreadable, warn};
 use locate::{Place, places};
-use timing::{Sample, timeline};
+use tables::{parameters, timed};
+use timing::Sample;
 
 const NO_VIDEO: &str = "holds no H.264 video";
 
-/// Why a file holds no picture to play when it holds no index that fits in it,
-/// as a copy that stopped short has none, or a file that is not MP4
+/// No index fits in a copy that stopped short, or in a file that is not MP4
 const NO_INDEX: &str = "is cut short, or is not an MP4 file";
 
-/// Why a file holds no picture to play when its H.264 track, or a track that
-/// may be it, cannot be read
+/// The H.264 track, or a track that may be it, cannot be read
 const DAMAGED_INDEX: &str = "holds a damaged index";
 
-/// Why a file holds no picture to play when the tables of its H.264 track
-/// cannot be right
+/// The tables of the H.264 track cannot be right
 const DAMAGED: &str = "holds a damaged H.264 track";
 
 /// Profiles of H.264 that play: Baseline, Main, and High, which hold eight
@@ -65,7 +63,6 @@ pub(super) struct Track {
     length: u64,
     /// Samples in the order they decode
     pub(super) samples: Vec<Sample>,
-    /// Where each sample lies in the file
     places: Vec<Place>,
     /// Bytes before each NAL unit of a sample that give its length
     length_size: usize,
@@ -77,7 +74,7 @@ pub(super) struct Track {
     sound: bool,
     /// What the file left out because it cannot be read, as the words that
     /// say so
-    pub(super) skipped: BTreeSet<String>,
+    skipped: BTreeSet<String>,
 }
 
 /// Reads how many seconds the picture of a video file plays and whether
@@ -90,13 +87,13 @@ pub(in crate::back) fn probe(path: &Path) -> Result<(f32, bool), String> {
             .skipped
             .iter()
             .for_each(|skipped| warn::once(&format!("{}: {skipped}", path.display())));
-        track.summary()
+        (track.duration as f32, track.sound)
     })
 }
 
 impl Track {
-    /// Opens the video file at `path` and reads the tables of its first
-    /// H.264 track, or tells why it cannot be played
+    /// Opens the video file at `path` and reads the tables of the H.264
+    /// track with the lowest track ID, or tells why it cannot be played
     pub(super) fn open(path: &Path) -> Result<Self, String> {
         let file = File::open(path).map_err(unreadable)?;
         let length = file.metadata().map_err(|error| error.to_string())?.len();
@@ -112,43 +109,13 @@ impl Track {
         }
         let stbl = &trak.mdia.minf.stbl;
         let places = places(stbl, length).ok_or(DAMAGED)?;
-        // Tables of the track, whose runs of equal values give each sample
-        // the time it takes to decode and its offset from there to the time
-        // it shows, and list the samples that decoding can start at
-        let deltas = stbl
-            .stts
-            .entries
-            .iter()
-            .flat_map(|entry| iter::repeat_n(entry.sample_delta, entry.sample_count as usize))
-            .take(places.len());
-        // Both versions of the box hold 32 bits, which mp4-atom widens and
-        // the timeline reads signed
-        let offsets = stbl
-            .ctts
-            .iter()
-            .flat_map(|ctts| &ctts.entries)
-            .flat_map(|entry| {
-                iter::repeat_n(entry.sample_offset as i32, entry.sample_count as usize)
-            });
-        let syncs = stbl.stss.as_ref().map(|stss| stss.entries.as_slice());
-        let (samples, duration) = timeline(deltas, offsets, syncs, trak.mdia.mdhd.timescale);
+        let (samples, duration) = timed(stbl, places.len(), trak.mdia.mdhd.timescale);
         if samples.is_empty() || duration <= 0.0 {
             return Err(NO_VIDEO.to_owned());
         }
-        let parameters = avc
-            .sequence_parameter_sets
-            .iter()
-            .chain(&avc.picture_parameter_sets)
-            .flat_map(|set| {
-                // avcC counts the bytes of each set in two bytes, so that
-                // the length always fits
-                let length = set.len() as u32;
-                length.to_be_bytes().into_iter().chain(set.iter().copied())
-            })
-            .collect();
         Ok(Self {
             length_size: usize::from(avc.length_size),
-            parameters,
+            parameters: parameters(avc),
             sound: movie.sound,
             skipped: movie.skipped,
             samples,
@@ -157,12 +124,6 @@ impl Track {
             length,
             file,
         })
-    }
-
-    /// Returns how many seconds the picture lasts and whether the file holds
-    /// a sound track, which [`probe`] returns
-    pub(super) fn summary(&self) -> (f32, bool) {
-        (self.duration as f32, self.sound)
     }
 
     pub(super) fn parameter_sets(&self) -> Vec<NalUnit<'_>> {

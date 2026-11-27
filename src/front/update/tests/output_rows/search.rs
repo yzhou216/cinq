@@ -67,7 +67,7 @@ fn a_search_that_wraps_in_the_outputs_says_so_and_one_without_a_match_says_that(
             .chain([Message::SearchAccepted]),
     );
     assert_eq!(at(&wrapped), 1);
-    assert_eq!(wrapped.remark, Some("Search continued at the top"));
+    assert_eq!(wrapped.notices.remark, Some("Search continued at the top"));
     let lost = App {
         searched: Searched {
             text: "zzz".to_owned(),
@@ -76,7 +76,7 @@ fn a_search_that_wraps_in_the_outputs_says_so_and_one_without_a_match_says_that(
         ..outputs()
     };
     let nothing = after(lost, [Message::SearchStep(1)]);
-    assert_eq!(nothing.remark, Some("No output matches"));
+    assert_eq!(nothing.notices.remark, Some("No output matches"));
     assert_eq!(at(&nothing), 1);
 }
 

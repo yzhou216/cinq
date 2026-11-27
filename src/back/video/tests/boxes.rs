@@ -62,14 +62,18 @@ pub(super) fn wide((kind, body): &Part) -> Vec<u8> {
     [&1_u32.to_be_bytes()[..], kind, &size.to_be_bytes(), body].concat()
 }
 
+/// Returns where the type of the first box of `kind` starts in `bytes`
+pub(super) fn position_of(bytes: &[u8], kind: &[u8; 4]) -> usize {
+    bytes
+        .windows(4)
+        .position(|window| window == kind)
+        .expect("the box is there")
+}
+
 /// Returns `moov`, the bytes of a moov box after its header, with each
 /// chunk of samples `by` bytes further into the file
 pub(super) fn shifted(moov: &[u8], by: usize) -> Vec<u8> {
-    let at = moov
-        .windows(4)
-        .position(|window| window == b"stco")
-        .expect("the box is there")
-        + 8;
+    let at = position_of(moov, b"stco") + 8;
     let count = u32::from_be_bytes(moov[at..at + 4].try_into().expect("four bytes")) as usize;
     let offsets = moov[at + 4..]
         .chunks(4)

@@ -4,16 +4,15 @@
 
 //! Levels at which an audio or video cue sends to each output of the show
 //!
-//! Each output has a field, which holds the level that the cue sends at,
-//! or nothing where the cue does not send there.  Typing a level sends the
-//! cue there, and emptying the field takes the send away.  The fields lie
-//! side by side in rows that wrap, so that most of the outputs show at once,
-//! and scroll within the inspector, so that every output stays in reach, as
-//! the 32 outputs of a Dante Virtual Soundcard need.  The name of an output
-//! that cannot play now shows in yellow where cinq tries its device again
-//! by itself, and in red where the output must change, followed in words by
-//! what is wrong with it, and the header tells how many of the outputs that
-//! the cue sends to cannot, so that the color is never the only sign.
+//! Each output has a field that holds the level that the cue sends at, or
+//! nothing where the cue does not send there.  Typing a level sends the cue
+//! there, and emptying the field takes the send away.  The fields lie in rows
+//! that wrap and scroll, so that every output stays in reach, as the 32
+//! outputs of a Dante Virtual Soundcard need.  The name of an output that
+//! cannot play now shows in yellow where cinq tries its device again by
+//! itself, and in red where the output must change, followed in words by
+//! what is wrong with it, and the header counts the outputs that the cue
+//! sends to and that cannot, so that the color is never the only sign.
 
 #[cfg(test)]
 mod tests;
@@ -22,18 +21,20 @@ use iced::{
     Center, Element, Fill, Length,
     widget::{column, row, scrollable, text, text::Wrapping},
 };
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use unicode_width::UnicodeWidthStr;
 
 use super::{
     LEVEL_ROOM,
-    output::{refused, styled, typing},
-    rejection,
+    output::{refusal, refused, styled, typing},
 };
 use crate::{
-    back::{Cue, Fault, Sends},
+    back::{Cue, Fault, OutputId, Sends},
     front::{
         App, Message, Setting,
-        view::{SENDS, SPACING, button, char_width, faults, format},
+        message::reasons::rejection,
+        view::{
+            SENDS, SPACING, button, char_width, faults, format, widget::shortened_start as cut,
+        },
     },
 };
 
@@ -59,27 +60,6 @@ const NAME_MOST: usize = 32;
 /// field and not with the unit before it
 const ENTRY_SPACING: f32 = 3.0 * SPACING;
 const _: () = assert!(ENTRY_SPACING > 2.0 * SPACING);
-
-/// Returns `name` cut to `columns` columns with an ellipsis in place of its
-/// start, since outputs that share a beginning, as `House speaker pair 01`
-/// and `House speaker pair 02` do, differ at the end
-fn cut(name: &str, columns: usize) -> String {
-    if name.width() <= columns {
-        return name.to_owned();
-    }
-    let kept: String = name
-        .chars()
-        .rev()
-        .scan(0, |taken, character| {
-            *taken += character.width().unwrap_or(0);
-            (*taken < columns).then_some(character)
-        })
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    format!("\u{2026}{kept}")
-}
 
 /// Returns the name of an output, cut to `columns` columns, with its fault,
 /// if it has one, in words, as `House L (not found)`, so that the color of
@@ -138,47 +118,10 @@ pub(super) fn view<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         .zip(names)
         .map(|(output, (name, fault))| {
             let level = sends.get(&output.id).map(|level| format::decibels(*level));
-            let setting = Setting::Send(cue.id, output.id);
-            let (field, shown) = typing(app, setting, "off", level.unwrap_or_default(), LEVEL_ROOM);
-            let valid = rejection(app, setting, &shown).is_none();
-            let field = styled(app, field, &shown, "off", LEVEL_ROOM, valid);
-            let name = text(name)
-                .width(fault.map_or(Length::Fixed(name_room), |_| Length::Shrink))
-                .wrapping(Wrapping::None)
-                .style(match fault {
-                    Some(fault) if fault.retried() => text::warning,
-                    Some(_) => text::danger,
-                    None => text::default,
-                });
-            row![name, field, text("dB")]
-                .spacing(SPACING)
-                .align_y(Center)
-                .into()
+            send(app, cue, output.id, level, (name, fault), name_room)
         });
-    let silent = silent(app, &sends);
-    // The line that tells what is wrong with a send takes the place of the
-    // count, since no room is left beside a field in a row of its own
-    let told = match refusal(app, cue) {
-        Some(reason) => refused(&reason),
-        None => text(match silent.len() {
-            0 => String::new(),
-            count => format!("{} cannot play now", format::count(count, "output")),
-        })
-        .style(if silent.iter().all(|fault| fault.retried()) {
-            text::warning
-        } else {
-            text::danger
-        }),
-    };
-    let header = row![
-        text("Outputs"),
-        button("Edit outputs").on_press(Message::ShowOutputs),
-        told
-    ]
-    .spacing(SPACING)
-    .align_y(Center);
     column![
-        header,
+        header(app, cue, &silent(app, &sends)),
         // Bar beside the fields, rather than over the last of each row
         scrollable(
             row(outputs)
@@ -194,11 +137,60 @@ pub(super) fn view<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
     .into()
 }
 
-/// Returns the reason that the text typed into the field of a send of `cue`
-/// is not applied, if it is not
-fn refusal(app: &App, cue: &Cue) -> Option<String> {
-    app.typed
-        .as_ref()
-        .filter(|(setting, _)| matches!(setting, Setting::Send(id, _) if *id == cue.id))
-        .and_then(|(setting, typed)| rejection(app, *setting, typed))
+/// Returns the entry of one output: its name, the field of the level that
+/// `cue` sends to it, which is `level` as text where it sends, and the unit
+fn send<'a>(
+    app: &App,
+    cue: &Cue,
+    output: OutputId,
+    level: Option<String>,
+    (name, fault): (String, Option<&Fault>),
+    name_room: f32,
+) -> Element<'a, Message> {
+    let setting = Setting::Send(cue.id, output);
+    let (field, shown) = typing(app, setting, "off", level.unwrap_or_default(), LEVEL_ROOM);
+    let valid = rejection(app, setting, &shown).is_none();
+    let field = styled(app, field, &shown, "off", LEVEL_ROOM, valid);
+    let name = text(name)
+        .width(fault.map_or(Length::Fixed(name_room), |_| Length::Shrink))
+        .wrapping(Wrapping::None)
+        .style(match fault {
+            Some(fault) if fault.retried() => text::warning,
+            Some(_) => text::danger,
+            None => text::default,
+        });
+    row![name, field, text("dB")]
+        .spacing(SPACING)
+        .align_y(Center)
+        .into()
+}
+
+/// Returns the title of the sends, the button that opens the outputs, and
+/// the count of the outputs that `silent` lists, which the line about a
+/// refused level replaces, since no room is left beside a field in a row of
+/// its own
+fn header<'a>(app: &App, cue: &Cue, silent: &[&Fault]) -> Element<'a, Message> {
+    let told = match refusal(
+        app,
+        |setting| matches!(setting, Setting::Send(id, _) if *id == cue.id),
+    ) {
+        Some(reason) => refused(&reason),
+        None => text(match silent.len() {
+            0 => String::new(),
+            count => format!("{} cannot play now", format::count(count, "output")),
+        })
+        .style(if silent.iter().all(|fault| fault.retried()) {
+            text::warning
+        } else {
+            text::danger
+        }),
+    };
+    row![
+        text("Outputs"),
+        button("Edit outputs").on_press(Message::ShowOutputs),
+        told
+    ]
+    .spacing(SPACING)
+    .align_y(Center)
+    .into()
 }

@@ -6,8 +6,7 @@
 //!
 //! The list of the kind of cue to add keeps the keys typed while it has
 //! the keyboard, as the fields of the inspector do.  A window too narrow for
-//! the controls on one line, such as one tiled beside another, gives them a
-//! second line, in the same order.
+//! the controls on one line wraps them, in the same order.
 
 use iced::{
     Center, Element, padding,
@@ -26,31 +25,39 @@ use crate::{
 const ONE_LINE: f32 = 84.0;
 
 pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
-    let keymap = &app.config.keymap;
-    if app.outputs_shown {
-        // Add output takes the place of Add cue, as the keys of adding and
-        // deleting a cue add and delete outputs here
-        let several = app.workspace.outputs().len() > 1;
-        return keep_keys(
-            tools(
-                Vec::new(),
-                vec![
-                    show_mode(app),
-                    button("Add output")
-                        .on_press_maybe(app.editable().then_some(Message::Add(Place::After, 1)))
-                        .into(),
-                    button("Delete output")
-                        .on_press_maybe(
-                            (app.editable() && several && app.output.is_some())
-                                .then_some(Message::Delete(1)),
-                        )
-                        .into(),
-                ],
-                window,
-            ),
-            keymap,
-        );
-    }
+    keep_keys(
+        if app.outputs_shown {
+            outputs(app, window)
+        } else {
+            cues(app, window)
+        },
+        &app.config.keymap,
+    )
+}
+
+/// Returns the controls of the outputs, where the keys that add and delete a
+/// cue add and delete outputs
+fn outputs(app: &App, window: f32) -> Element<'_, Message> {
+    let several = app.workspace.outputs().len() > 1;
+    tools(
+        Vec::new(),
+        vec![
+            show_mode(app),
+            button("Add output")
+                .on_press_maybe(app.editable().then_some(Message::Add(Place::After, 1)))
+                .into(),
+            button("Delete output")
+                .on_press_maybe(
+                    (app.editable() && several && app.output.is_some())
+                        .then_some(Message::Delete(1)),
+                )
+                .into(),
+        ],
+        window,
+    )
+}
+
+fn cues(app: &App, window: f32) -> Element<'_, Message> {
     let selected_here = app.selected_here().is_some();
     // Selected cue on standby already leaves nothing to put there
     let movable = selected_here && app.current().standby != app.selected;
@@ -58,30 +65,32 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
         // Names the list for a newcomer, who took it for the kind of the
         // selected cue, which it only sets for the cue that Add cue makes
         text("New cue:"),
-        dropdown(Kind::VARIANTS, Some(app.new_kind), Message::NewKind, keymap),
+        dropdown(
+            Kind::VARIANTS,
+            Some(app.new_kind),
+            Message::NewKind,
+            &app.config.keymap,
+        ),
     ]
     .spacing(SPACING)
     .align_y(Center);
-    keep_keys(
-        tools(
-            vec![
-                button("Standby selected")
-                    .on_press_maybe(movable.then_some(Message::StandbySelected))
-                    .into(),
-            ],
-            vec![
-                show_mode(app),
-                new_cue.into(),
-                button("Add cue")
-                    .on_press_maybe(app.editable().then_some(Message::Add(Place::After, 1)))
-                    .into(),
-                button("Delete cue")
-                    .on_press_maybe((app.editable() && selected_here).then_some(Message::Delete(1)))
-                    .into(),
-            ],
-            window,
-        ),
-        keymap,
+    tools(
+        vec![
+            button("Standby selected")
+                .on_press_maybe(movable.then_some(Message::StandbySelected))
+                .into(),
+        ],
+        vec![
+            show_mode(app),
+            new_cue.into(),
+            button("Add cue")
+                .on_press_maybe(app.editable().then_some(Message::Add(Place::After, 1)))
+                .into(),
+            button("Delete cue")
+                .on_press_maybe((app.editable() && selected_here).then_some(Message::Delete(1)))
+                .into(),
+        ],
+        window,
     )
 }
 

@@ -2,8 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Cue lists, each with its own standby position, the groups in them in
-//! [`groups`], and where a cue lands in [`placing`]
+//! Cue lists, each with its own standby position
 
 mod groups;
 mod placing;
@@ -46,16 +45,12 @@ impl CueList {
         Self { standby, ..self }
     }
 
-    /// Inserts a new cue of `kind` with an identity, a number, and a depth at
-    /// a place in the list, named as new cues of its kind are.  As in QLab, a
-    /// new cue that acts on another cue targets the cue it follows when it
-    /// can act on that cue, but never a group that holds the new cue, which
-    /// a cue added below a group is in.  The cue it follows is the row above
-    /// it in the cue list, so that a cue added below a collapsed group
-    /// targets the group.  A cue that goes at the end of a list
-    /// whose standby waits past the end goes on standby, so that GO fires the
-    /// first cue of a new list, and the cue added to a list played to its
-    /// end.
+    /// Inserts a new cue of `kind` at `at`, named as new cues of its kind
+    /// are.  As in QLab, a new cue that acts on another cue targets the cue
+    /// it follows when it can act on that cue, but never a group that holds
+    /// the new cue, which a cue added below a group is in.  The cue it
+    /// follows is the row above it in the cue list, so that a cue added
+    /// below a collapsed group targets the group.
     pub(in crate::back) fn with_new_cue(
         self,
         id: CueId,
@@ -78,15 +73,12 @@ impl CueList {
                     && !(before.kind == Kind::Group && depth > groups.depths()[row])
             })
             .map(|(_, before)| before.id);
-        Self {
-            standby: self.standby.or((index == self.cues.len()).then_some(id)),
-            ..self
-        }
-        .with_cue_at(index, Cue { target, ..cue })
+        self.with_pasted(index, vec![Cue { target, ..cue }])
     }
 
     /// Inserts cues at an index.  Standby waiting past the end moves to the
-    /// first cue pasted there, as for a cue added there.
+    /// first cue inserted at the end, so that GO fires the first cue of a
+    /// new list, and a cue added to a list played to its end.
     pub(in crate::back) fn with_pasted(self, index: usize, pasted: Vec<Cue>) -> Self {
         let index = index.min(self.cues.len());
         let standby = self.standby.or(pasted

@@ -28,7 +28,6 @@ pub(super) struct Order<T> {
     showing: Vec<usize>,
     /// How many places of `showing` have had their turn
     next: usize,
-    /// Pictures that have decoded and wait for their turn
     held: BTreeMap<usize, T>,
 }
 

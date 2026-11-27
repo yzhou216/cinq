@@ -2,30 +2,28 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Inspector, which shows every setting of the selected cue on three tabs,
-//! and the light patch of the show on a fourth, or those of the selected
-//! output, without tabs, while the outputs show
+//! Inspector of the selected cue on three tabs, with the light patch on a
+//! fourth, or of the selected output, without tabs, while the outputs show
 
 mod field;
 mod forms;
 mod header;
+mod levels;
 mod light;
 mod locked;
 mod output;
-pub(in crate::front) use output::rejection;
-use output::{refused, styled, typing};
 mod sends;
 
 use iced::{
-    Center, Element, Size,
-    widget::{column, container, progress_bar, row, rule, slider, text},
+    Element, Size,
+    widget::{column, container, row, rule, text},
 };
 use strum::VariantArray;
 
-use super::{INSPECTOR, SPACING, char_width, check, cue_table::RADIO, format, keep_keys, radio};
+use super::{INSPECTOR, SPACING, char_width, check, cue_table::RADIO, keep_keys, radio};
 use crate::{
-    back::{Cue, Edit, Kind, LEVELS, Media},
-    front::{App, Message, Setting, Tab},
+    back::{Cue, Edit, Kind},
+    front::{App, Message, Tab},
 };
 use field::Field;
 use forms::forms;
@@ -39,7 +37,6 @@ const LEVEL_ROOM: f32 = 6.0;
 /// less keeps
 const LEAST_HEIGHT: f32 = 240.0;
 
-/// Fields of the Basics tab, one column after the other
 const BASICS: [&[Field]; 2] = [
     &[Field::Number, Field::Name, Field::Target, Field::Notes],
     &[
@@ -55,8 +52,8 @@ const BASICS: [&[Field]; 2] = [
 /// drop-down list, which need less
 const BASICS_SHARES: [u16; 2] = [3, 2];
 
-/// Fields of the Time & Loops tab, one column after the other: the clip with
-/// its length, and the loop within the clip
+/// Fields of the Time & Loops tab: the clip with its length, and the loop
+/// within the clip
 const TIME: [&[Field]; 2] = [
     &[Field::Start, Field::End, Field::Duration],
     &[Field::LoopStart, Field::LoopEnd],
@@ -108,7 +105,7 @@ pub(super) fn view(app: &App, window: Size) -> Element<'_, Message> {
             if cue.kind.plays_file() { &TIME } else { &[] },
             time(app, cue),
         ),
-        (Tab::Levels, Some(cue)) => inspected(app, cue, columns, &[], levels(app, cue)),
+        (Tab::Levels, Some(cue)) => inspected(app, cue, columns, &[], levels::view(app, cue)),
         (_, None) if app.current().cues.is_empty() => {
             text("This list has no cues to inspect").into()
         }
@@ -134,8 +131,8 @@ fn lock(app: &App) -> &'static str {
     }
 }
 
-/// Returns what the Time & Loops tab says of a cue that plays no file, which
-/// for a light cue tells where its fade time is
+/// Returns what the Time & Loops tab says of a cue that plays no file, with
+/// the place of the fade time of a light cue
 fn no_file(kind: Kind) -> String {
     match kind {
         kind @ (Kind::Light | Kind::Fade) => {
@@ -168,67 +165,6 @@ fn time<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
         ))
     };
     forms(app, cue, TIME, [1, 1], looping)
-}
-
-fn levels<'a>(app: &'a App, cue: &'a Cue) -> Element<'a, Message> {
-    let label = match cue.kind {
-        Kind::Video if matches!(cue.media, Media::Loaded { sound: None, .. }) => {
-            return text("The file of this cue holds no sound").into();
-        }
-        Kind::Audio | Kind::Video => "Level",
-        Kind::Fade => "Fade target to",
-        Kind::Light => return light::levels(app, cue),
-        Kind::Picture
-        | Kind::Start
-        | Kind::Stop
-        | Kind::Pause
-        | Kind::Devamp
-        | Kind::GoTo
-        | Kind::Network
-        | Kind::Group
-        | Kind::Wait
-        | Kind::Memo => {
-            return text(format!("{} cues have no level", cue.kind)).into();
-        }
-    };
-    let id = cue.id;
-    let editable = app.editable();
-    let (field, typed) = typing(
-        app,
-        Setting::Level(id),
-        "",
-        format::decibels(cue.level),
-        LEVEL_ROOM,
-    );
-    let reason = rejection(app, Setting::Level(id), &typed);
-    let field = styled(app, field, &typed, "", LEVEL_ROOM, reason.is_none());
-    let level: Element<'_, Message> = if editable {
-        slider(LEVELS, cue.level, move |db| {
-            Message::Edit(id, Edit::Level(db))
-        })
-        .step(0.5_f32)
-        .into()
-    } else {
-        progress_bar(LEVELS, cue.level).into()
-    };
-    let stop = (cue.kind == Kind::Fade).then(|| {
-        check(
-            "Stop target when done",
-            cue.stop_target,
-            editable.then_some(move |stop| Message::Edit(id, Edit::StopTarget(stop))),
-            &app.config.keymap,
-        )
-    });
-    column![
-        row![text(label), level, field, text("dB")]
-            .extend(reason.map(|reason| refused(&reason).into()))
-            .spacing(SPACING)
-            .align_y(Center),
-        stop,
-        cue.kind.plays_file().then(|| sends::view(app, cue)),
-    ]
-    .spacing(SPACING)
-    .into()
 }
 
 #[cfg(test)]

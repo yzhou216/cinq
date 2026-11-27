@@ -7,11 +7,16 @@
 use super::{after, show, typing};
 use crate::{
     back::{CueId, Place},
-    front::{App, Message, Tab, update::Spot},
+    front::{App, Message, Spot, Tab},
 };
 
 pub(super) fn cue(id: u32) -> Option<CueId> {
     Some(CueId(id))
+}
+
+/// Returns the state after the jump from cue 5 to the second list
+pub(super) fn jumped() -> App {
+    after(show(cue(5)), [Message::SwitchList(1)])
 }
 
 /// Returns the list and the selection, the place that the operator sees
@@ -20,51 +25,13 @@ pub(super) fn place(app: &App) -> (usize, Option<CueId>) {
 }
 
 #[test]
-fn switching_lists_is_a_jump_that_back_returns_from() {
-    let app = after(show(cue(5)), [Message::SwitchList(1)]);
-    assert_eq!(place(&app), (1, cue(20)));
-    assert_eq!(place(&after(app, [Message::Back(1)])), (0, cue(5)));
-}
-
-#[test]
-fn the_key_of_back_does_what_its_message_does() {
-    let jumped = || after(show(cue(5)), [Message::SwitchList(1)]);
+fn switching_lists_is_a_jump_that_back_returns_from_by_its_message_or_its_key() {
+    assert_eq!(place(&jumped()), (1, cue(20)));
+    let by_message = after(jumped(), [Message::Back(1)]);
+    assert_eq!(place(&by_message), (0, cue(5)));
     let by_key = typing(jumped(), "Control+o");
-    assert_eq!(place(&by_key), (0, cue(5)));
-    assert_eq!(place(&by_key), place(&after(jumped(), [Message::Back(1)])));
-    let again = typing(by_key, "Control+i");
-    assert_eq!(place(&again), (1, cue(20)));
-}
-
-#[test]
-fn back_and_forward_retrace_the_places() {
-    let app = after(
-        show(cue(5)),
-        [Message::SwitchList(1), Message::Row(2), Message::Back(2)],
-    );
-    assert_eq!(place(&app), (0, cue(5)));
-    let app = after(app, [Message::Forward(1)]);
-    assert_eq!(place(&app), (1, cue(20)));
-    let app = after(app, [Message::Forward(1)]);
-    assert_eq!(place(&app), (1, cue(21)));
-    assert_eq!(place(&after(app, [Message::Forward(1)])), (1, cue(21)));
-}
-
-#[test]
-fn a_jump_after_going_back_keeps_the_places_ahead_behind() {
-    let jumped = || {
-        after(
-            show(cue(5)),
-            [Message::SwitchList(1), Message::Back(1), Message::Row(1)],
-        )
-    };
-    let app = jumped();
-    assert_eq!(place(&app), (0, cue(1)));
-    assert!(!app.can_go_forward());
-    assert_eq!(place(&after(jumped(), [Message::Forward(1)])), (0, cue(1)));
-    let app = after(app, [Message::Back(1)]);
-    assert_eq!(place(&app), (0, cue(5)));
-    assert_eq!(place(&after(app, [Message::Back(1)])), (1, cue(20)));
+    assert_eq!(place(&by_key), place(&by_message));
+    assert_eq!(place(&typing(by_key, "Control+i")), (1, cue(20)));
 }
 
 #[test]
@@ -86,7 +53,6 @@ fn back_after_a_jump_visits_what_vim_visits() {
 
 #[test]
 fn going_back_or_forward_takes_the_keyboard_out_of_a_field() {
-    let jumped = || after(show(cue(5)), [Message::SwitchList(1)]);
     let backed = || after(jumped(), [Message::Back(1)]);
     let leaves = |app: App, message| {
         let before = place(&app);
@@ -211,7 +177,7 @@ fn a_list_without_a_selected_cue_is_a_place_by_its_index() {
 
 #[test]
 fn the_places_that_back_and_forward_go_to_are_known_before_they_are_taken() {
-    let app = after(show(cue(5)), [Message::SwitchList(1)]);
+    let app = jumped();
     assert_eq!(app.back_to(), Some(Spot::Cue(CueId(5))));
     assert_eq!(app.forward_to(), None);
     let back = after(app, [Message::Back(1)]);

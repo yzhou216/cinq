@@ -16,14 +16,14 @@ mod tests;
 
 use std::{fmt, iter};
 
+use super::outputs;
 use crate::{back::Device, front::App};
 
-/// Option of a list of audio devices
 #[derive(Debug, Clone, PartialEq)]
 pub(super) struct Choice {
-    /// ID of the device, or none for the default device
+    /// None for the default device
     pub(super) id: Option<String>,
-    /// Name of the device as the system gives it
+    /// As the system gives it
     pub(super) name: String,
     label: String,
 }
@@ -90,4 +90,14 @@ pub(super) fn default_label(app: &App) -> String {
             |option| option.to_string(),
         );
     format!("Default device ({name})")
+}
+
+/// Returns what a warning or an output calls `device`: the ID of the device
+/// that the Default device list chooses where it is the default, so that the
+/// text names what to fix
+pub(super) fn named(app: &App, device: &Device) -> String {
+    match device {
+        Device::Default => default_label(app),
+        device => outputs::device(device).to_owned(),
+    }
 }

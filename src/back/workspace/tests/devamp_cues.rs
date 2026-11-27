@@ -7,14 +7,6 @@
 
 use super::*;
 
-/// Returns the cues with a problem, each with its id
-fn broken(workspace: &Workspace) -> Vec<(u32, Problem<'_>)> {
-    workspace
-        .problems()
-        .map(|(cue, problem)| (cue.id.0, problem))
-        .collect()
-}
-
 #[test]
 fn devamp_cue_needs_a_target_that_loops() {
     let wait = Cue::new(CueId(5), "5", Kind::Wait, "Wait").build();
@@ -29,7 +21,7 @@ fn devamp_cue_needs_a_target_that_loops() {
         devamp_cue(8, 9),
     ]);
     assert_eq!(
-        broken(&show),
+        problems(&show),
         [
             (3, Problem::NotLooping),
             (6, Problem::WrongTarget),

@@ -10,12 +10,16 @@ mod devices;
 mod faults;
 pub(super) mod format;
 mod help;
+mod ids;
+pub use ids::{
+    ADDRESS, BUTTON, CHECK, CUES, CURRENT_LIST, FILE, FORMS, HELP, INSPECTOR, NAME, OUTPUT_NAME,
+    OUTPUTS, SEARCH, SELECTED, SENDS, SIDEBAR_SCROLL,
+};
 mod inspector;
-pub(in crate::front) use cue_table::searchable as cue_texts;
-pub(in crate::front) use inspector::rejection;
+pub(super) use cue_table::searchable as cue_texts;
 mod next_keys;
 mod outputs;
-pub(in crate::front) use outputs::searchable as output_texts;
+pub(super) use outputs::searchable as output_texts;
 mod sidebar;
 pub(super) mod stage;
 mod status_bar;
@@ -41,102 +45,37 @@ use super::{
     App, Message,
     keymap::{Action, Keymap},
 };
-pub(in crate::front) use widget::{Act, Site, hint};
+pub(super) use widget::{Act, Site, hint};
 use widget::{
     button, check, check_and_leave, dropdown, dropdown_width, hide, hinted, keep_keys, line_keys,
     marked_row, radio, reached,
 };
 
-/// Identity of the cue list, through which the selection scrolls into view
-pub const CUES: &str = "cues";
-
-/// Identity of the selected row, through which the list finds where to
-/// scroll
-pub const SELECTED: &str = "selected";
-
-/// Identity of the outputs list, through which the selected output scrolls
-/// into view
-pub const OUTPUTS: &str = "outputs";
-
-/// Identity of the sends of a cue, through which the field that Tab reached
-/// scrolls into view
-pub const SENDS: &str = "sends";
-
-/// Identity of the forms of a tab that lie one above the other in a narrow
-/// window, and of the settings of an output, through which the field that Tab
-/// reached scrolls into view
-pub const FORMS: &str = "forms";
-
-/// Identity of the sidebar, through which the list that Tab reached scrolls
-/// into view
-pub const SIDEBAR_SCROLL: &str = "sidebar";
-
-/// Identity of the entry of the sidebar that shows, through which the sidebar
-/// finds where to scroll
-pub const CURRENT_LIST: &str = "current list";
-
-/// Identity of the help page, which the keys that move the selection
-/// scroll while it is open
-pub const HELP: &str = "help";
-
-/// Identity of the Name field, through which the key of the edit action
-/// gives it the keyboard focus
-pub const NAME: &str = "name";
-
-/// Identity of the inspector, whose first field the first Tab from the cue
-/// list reaches
-pub const INSPECTOR: &str = "inspector";
-
-/// Identity of the File field of an audio, video, or picture cue, which the
-/// status bar hints Enter for while it is empty and has the keyboard
-pub const FILE: &str = "file";
-
-/// Identity of every checkbox that takes the keyboard, which the status bar
-/// hints Enter for as it flips the box
-pub const CHECK: &str = "check";
-
-/// Identity of every button that takes the keyboard, which the status bar
-/// hints Enter for as it presses the button
-pub const BUTTON: &str = "button";
-
-/// Identity of the address fields of the light patch, which show the help on
-/// addresses while one of them has the keyboard
-pub const ADDRESS: &str = "address";
-
-/// Identity of the search line in the status bar, through which the key of
-/// the search action gives it the keyboard focus
-pub const SEARCH: &str = "search";
-
-/// What the search line and the status bar tell when no cue matches the text
-/// of a search
 pub const NO_MATCH: &str = "No cue matches";
 
-/// What the search line and the status bar tell when no output matches the
-/// text of a search while the outputs show
 const NO_OUTPUT_MATCH: &str = "No output matches";
 
-/// Returns what the search line tells when no row matches, for the rows that
-/// show
+/// Returns what the search line and the status bar tell when no row matches,
+/// for the rows that show
 pub fn no_match(outputs: bool) -> &'static str {
     if outputs { NO_OUTPUT_MATCH } else { NO_MATCH }
 }
-
-/// Identity of the Name field of an output, which the key of the edit
-/// action gives the keyboard focus while the outputs show
-pub const OUTPUT_NAME: &str = "output name";
 
 /// Monospace, so that columns of text line up
 pub const FONT: Font = Font::MONOSPACE;
 
 pub const TEXT_SIZE: Pixels = Pixels(16.0);
 
+fn height_of(size: Pixels) -> f32 {
+    f32::from(LineHeight::default().to_absolute(size))
+}
+
 pub fn line_height() -> f32 {
-    f32::from(LineHeight::default().to_absolute(TEXT_SIZE))
+    height_of(TEXT_SIZE)
 }
 
 pub const SPACING: f32 = 10.0;
 
-/// Widest that the sidebar grows
 const SIDEBAR: f32 = 560.0;
 
 /// Line between the parts of the status bar, and between a message and the
@@ -152,11 +91,10 @@ pub fn answered(told: String, keymap: &Keymap, action: Action) -> String {
     }
 }
 
-/// Layers that come and go lie over those that stay, since iced leaves a
-/// missing layer out of its stack and matches the state of each widget to
-/// the widget in the same place, so that the cue list stays scrolled where
-/// it was, and the fields keep what they hold, as the layers come and go.
-/// The help page takes the whole window, and the window beneath it is
+/// Layers that come and go lie over those that stay, since iced matches the
+/// state of each widget to the widget in the same place, and leaves a missing
+/// layer out of its stack.  That keeps the cue list scrolled and the fields
+/// filled as the layers come and go.  The window beneath the help page is
 /// hidden rather than left out, so that it comes back as it was, with the
 /// keyboard focus where it was.
 pub fn view(app: &App) -> Element<'_, Message> {
@@ -200,9 +138,9 @@ pub fn view(app: &App) -> Element<'_, Message> {
     .into()
 }
 
-/// Returns what `shown` makes of the items of `yielding` that have given
-/// way, as they give way in turn, the first to go first: the first result
-/// that `fits` accepts, or else the one in which all of them have gone
+/// Returns the first result of `shown` that `fits` accepts as the items of
+/// `yielding` give way in turn, the first to go first, or else the result
+/// with all of them gone
 fn giving_way<Y, T>(yielding: &[Y], shown: impl Fn(&[Y]) -> T, fits: impl Fn(&T) -> bool) -> T {
     (0..=yielding.len())
         .map(|gone| shown(&yielding[..gone]))
@@ -235,18 +173,12 @@ fn char_width() -> f32 {
 }
 
 /// Counts the warnings that the sidebar lists
-pub(in crate::front) fn warnings(app: &App) -> usize {
+pub(super) fn warnings(app: &App) -> usize {
     app.workspace.problems().count()
         + app.workspace.stranded().count()
         + app.workspace.unlit_cues().count()
         + faults::warnings(app).len()
-        + app.network_problems.len()
-        + usize::from(app.light_problem.is_some())
+        + app.problems.listed()
         + usize::from(app.stage.missing(&app.workspace))
-        + usize::from(app.osc_problem.is_some())
-        + usize::from(app.osc_ignored.is_some())
-        + usize::from(app.file_problem.is_some())
-        + usize::from(app.keep_problem.is_some())
-        + usize::from(app.device_problem.is_some())
         + app.config.problems.len()
 }

@@ -7,9 +7,9 @@
 //!
 //! The cue that fired last shows on top.  As in QLab, those that fired
 //! before it show around a picture of another shape than the window, and
-//! through one that fades, so that a picture fading out as its cue stops
-//! fades to whatever shows once it has gone.  The pointer stays hidden over
-//! the stage, out of the audience's sight.
+//! through one that fades, so that a picture fading out fades to whatever
+//! shows once it has gone.  The pointer stays hidden over the stage, out of
+//! the audience's sight.
 
 use iced::{Element, mouse, widget::mouse_area};
 

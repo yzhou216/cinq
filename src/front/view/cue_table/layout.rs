@@ -51,7 +51,6 @@ impl<'a> Layout<'a> {
         }
     }
 
-    /// Returns the cues of the rows that the table shows, in order
     pub(super) fn rows(&self) -> Vec<&'a Cue> {
         let cues = &self.groups.list().cues;
         self.shown.iter().map(|&row| &cues[row]).collect()

@@ -17,7 +17,7 @@ use std::{
 use iced::Task;
 
 use super::on_own_thread;
-use crate::front::{App, Message, keymap};
+use crate::front::{App, Message, config};
 
 /// Path of the tutorial under a data directory, as packages install it
 const TUTORIAL: &str = "doc/cinq/tutorial.pdf";
@@ -35,7 +35,7 @@ impl App {
     ) -> (Self, Task<Message>) {
         let task = on_own_thread(open).map(Message::LinkOpened);
         let app = Self {
-            link_problem: None,
+            problems: self.problems.with_link(None),
             ..self
         };
         (app, task)
@@ -54,8 +54,7 @@ pub(super) fn open_link(target: &OsStr) -> Result<(), String> {
 /// it when it is not there yet, except on Darwin, which opens it in the
 /// default text editor, since few programs there say they open TOML.
 pub(super) fn edit_config(file: &Path) -> Result<(), String> {
-    keymap::config::make(file)
-        .map_err(|error| format!("Cannot make {}: {error}", file.display()))?;
+    config::make(file).map_err(|error| format!("Cannot make {}: {error}", file.display()))?;
     if cfg!(target_os = "macos") {
         open_in_text_editor(file)
     } else {
@@ -63,7 +62,7 @@ pub(super) fn edit_config(file: &Path) -> Result<(), String> {
     }
 }
 
-/// Waits for `open -t`, which tells whether there is a default text editor.
+/// Waits for `open -t`, which tells whether there is a default text editor
 fn open_in_text_editor(file: &Path) -> Result<(), String> {
     let cannot = |why: String| format!("Cannot open {}: {why}", file.display());
     let status = std::process::Command::new("/usr/bin/open")

@@ -2,16 +2,13 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of searching the cues: matching, the row that a search
-//! starts from, wrapping, searching up the list, cancelling by Backspace and
-//! by Escape, no match, and the keys of GO and Panic, which still act over
-//! the search line
+//! Tests of searching the cues, and the helpers that the search tests share
 
 use iced::keyboard::{Key, key::Named};
 
-use super::press;
+use super::{one_list, press};
 use crate::{
-    back::{Cue, CueId, CueList, Kind, Workspace},
+    back::{Cue, CueId, Kind},
     front::{App, Message, view},
 };
 
@@ -27,11 +24,7 @@ pub(super) fn show(selected: Option<CueId>) -> App {
         cue(4, "4", "Storm end"),
         cue(5, "A5", "Wind"),
     ];
-    App {
-        workspace: Workspace::new(vec![CueList::new("Main", cues)]),
-        selected,
-        ..App::default()
-    }
+    one_list(cues, selected)
 }
 
 /// Opens the search line in the state, for a search down the list or up it

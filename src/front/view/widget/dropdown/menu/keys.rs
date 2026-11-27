@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What a key does while the menu is open
+//! Replies of the open menu to the keys pressed
 
 use iced::keyboard::{Key, key::Named};
 
@@ -32,7 +32,6 @@ pub(super) enum Reply {
 }
 
 impl Reply {
-    /// Returns what a motion does
     pub(super) fn moving(action: Action) -> Option<Self> {
         match action {
             Action::Next => Some(Self::Step(1)),

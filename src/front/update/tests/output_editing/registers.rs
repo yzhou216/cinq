@@ -4,13 +4,13 @@
 
 //! Tests of the register of outputs, which the keys that copy and paste fill
 
-use super::{ALL, clipped, locked, names, on, typed};
+use super::{ALL, locked, names, on, on_clipboard, typed};
 use crate::{
     back::{CueId, Edit, OutputId, Place, Sends},
     front::{
         App, Message,
         update::{
-            clipboard::{Clipboard, Register},
+            editing::{Clipboard, Register},
             tests::{after, history::cue, output_rows::at, show},
         },
     },
@@ -47,9 +47,12 @@ fn a_cut_output_pasted_back_takes_back_its_identity_as_dd_p_returns_a_line() {
 }
 
 #[test]
-fn a_copy_pasted_is_an_output_of_its_own_with_a_free_name_and_no_sends() {
+fn a_copy_pasted_is_an_output_of_its_own_with_a_free_name() {
     let copied = typed(sending_to_sub(), "yy");
-    assert_eq!(clipped(&copied), Some(("Copied the output Sub", false)));
+    assert_eq!(
+        on_clipboard(&copied),
+        Some(("Copied the output Sub", false))
+    );
     assert_eq!(names(&copied), ALL, "copying changes nothing");
     let pasted = typed(copied, "p");
     assert_eq!(names(&pasted)[2..5], ["Sub", "Sub 2", "Monitor"]);
@@ -57,9 +60,10 @@ fn a_copy_pasted_is_an_output_of_its_own_with_a_free_name_and_no_sends() {
     let copy = &pasted.workspace.outputs()[3];
     assert_eq!(copy.new_cues, None);
     assert_ne!(copy.id, OutputId(3));
+    // The copy has no sends, since no cue sends to it
     let cue = pasted.workspace.cue(CueId(3)).expect("the cue is there");
     let sends: Vec<_> = pasted.workspace.sends(cue).into_iter().collect();
-    assert_eq!(sends, [(OutputId(3), -4.0)], "no cue sends to the copy");
+    assert_eq!(sends, [(OutputId(3), -4.0)]);
     // Count pastes that many, each under a name of its own
     let twice = typed(typed(on(3), "yy"), "2p");
     assert_eq!(names(&twice)[2..6], ["Sub", "Sub 2", "Sub 3", "Monitor"]);
@@ -71,20 +75,23 @@ fn a_copy_pasted_is_an_output_of_its_own_with_a_free_name_and_no_sends() {
 #[test]
 fn a_copy_with_the_motions_and_capital_y_takes_the_outputs_that_they_reach() {
     let two = typed(on(2), "yj");
-    assert_eq!(clipped(&two), Some(("Copied 2 outputs", false)));
+    assert_eq!(on_clipboard(&two), Some(("Copied 2 outputs", false)));
     let pasted = typed(two, "p");
     assert_eq!(
         names(&pasted)[1..5],
         ["House R", "House R 2", "Sub 2", "Sub"]
     );
     let line = after(on(2), [Message::Copy(1)]);
-    assert_eq!(clipped(&line), Some(("Copied the output House R", false)));
+    assert_eq!(
+        on_clipboard(&line),
+        Some(("Copied the output House R", false))
+    );
 }
 
 #[test]
 fn copying_acts_in_show_mode_and_pasting_does_not() {
     let copied = typed(locked(on(3)), "yy");
-    assert!(copied.clipped.is_some());
+    assert!(copied.notices.clipped.is_some());
     assert_eq!(names(&typed(copied, "p")), ALL);
 }
 
@@ -110,7 +117,7 @@ fn outputs_have_a_register_apart_from_cues() {
         ],
     );
     assert_eq!(empty.workspace.outputs().len(), 1);
-    assert_eq!(empty.remark, Some("The clipboard is empty"));
+    assert_eq!(empty.notices.remark, Some("The clipboard is empty"));
 }
 
 #[test]

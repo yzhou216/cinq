@@ -28,7 +28,6 @@ use crate::held;
 /// Text of the kind that a system error without a kind of its own has
 const UNCATEGORIZED: &str = "uncategorized error";
 
-/// Most distinct lines that go out
 const LIMIT: usize = 1000;
 
 static WARNINGS: Mutex<Warnings> = Mutex::new(Warnings {

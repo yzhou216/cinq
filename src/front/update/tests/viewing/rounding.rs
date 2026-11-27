@@ -6,7 +6,7 @@
 
 use crate::front::{
     message::Height,
-    update::{
+    update::rows::{
         paging::viewport::Shape,
         viewing::{in_view, scroll},
     },
@@ -50,24 +50,18 @@ fn a_row_with_most_of_it_showing_is_in_view_whatever_the_rounding_of_the_offset(
 }
 
 #[test]
-fn control_e_moves_the_selection_one_row_at_a_time_whatever_the_rounding_of_the_offset() {
-    [0.0, 0.2, 0.4, -0.3]
-        .into_iter()
-        .for_each(|drift| assert_eq!(through(1, drift, 0.0, 0), [1, 2, 3, 4], "drift {drift}"));
-    // Row that stays in view keeps the selection
-    assert_eq!(through(1, 0.0, 0.0, 9), [9, 9, 9, 9]);
-}
-
-#[test]
-fn control_y_moves_the_selection_one_row_at_a_time_whatever_the_rounding_of_the_offset() {
+fn control_e_and_y_move_the_selection_one_row_at_a_time_whatever_the_rounding() {
     let bottom = 40.0 * 31.8;
     [0.0, 0.2, 0.4, -0.3].into_iter().for_each(|drift| {
+        assert_eq!(through(1, drift, 0.0, 0), [1, 2, 3, 4], "E, drift {drift}");
         assert_eq!(
             through(-1, drift, bottom, 52),
             [51, 50, 49, 48],
-            "drift {drift}"
+            "Y, drift {drift}"
         );
     });
+    // Row that stays in view keeps the selection
+    assert_eq!(through(1, 0.0, 0.0, 9), [9, 9, 9, 9]);
     assert_eq!(through(-1, 0.0, bottom, 45), [45, 45, 45, 45]);
 }
 

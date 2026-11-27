@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Tests of show files, which hold the settings that each kind of cue uses
-//! and where its sound file is, and of bringing back cue lists kept from
-//! before as one change
+//! and where its sound file is, of the loop sections that it leaves out, and
+//! of bringing back cue lists kept from before as one change
 
 use super::*;
 use std::path::{Path, PathBuf};
@@ -24,7 +24,7 @@ fn storm() -> Workspace {
     .directory("/show")
 }
 
-pub(super) fn read_list(cues: &str) -> Result<Workspace, String> {
+fn read_list(cues: &str) -> Result<Workspace, String> {
     Workspace::from_show(&format!("[[list]]\nname = \"Main\"\n{cues}"), "/show")
 }
 
@@ -54,35 +54,6 @@ level = -60.0
 stop_target = true
 "#
     );
-}
-
-#[test]
-fn show_file_reads_back_as_it_was_written() {
-    let busy = Workspace::new(vec![
-        CueList::new(
-            "Main",
-            vec![
-                Cue {
-                    pre_wait: 0.5.into(),
-                    post_wait: 2.0.into(),
-                    advance: Advance::Continue,
-                    notes: "GO on the house lights".to_owned(),
-                    ..audio(1)
-                },
-                Cue::new(CueId(2), "2", Kind::Wait, "Hold")
-                    .duration(1.5)
-                    .build(),
-                Cue::new(CueId(3), "", Kind::Stop, "End")
-                    .target(CueId(1))
-                    .build(),
-            ],
-        ),
-        CueList::new("Preshow", Vec::new()),
-    ])
-    .directory("/show");
-    let read = read_back(&shown(&busy));
-    assert_eq!(read.lists().len(), 2);
-    assert_eq!(read.next_cue_id(), Some(CueId(4)));
 }
 
 #[test]
@@ -183,25 +154,6 @@ fn show_always_holds_a_list() {
 }
 
 #[test]
-fn show_file_holds_where_an_audio_cue_starts_and_ends_and_whether_it_loops() {
-    let rain = workspace(vec![
-        Cue::new(CueId(1), "1", Kind::Audio, "Rain")
-            .file("rain.ogg")
-            .start(1.5)
-            .end(20.0)
-            .looping(true)
-            .build(),
-    ])
-    .directory("/show");
-    let text = shown(&rain);
-    assert!(text.contains("file = \"rain.ogg\"\nstart = 1.5\nend = 20.0\nloop = true\n"));
-    let read = read_back(&text);
-    let cue = read.cue(CueId(1)).expect("the rain is there");
-    assert_eq!((cue.start.value(), cue.end.time()), (1.5, Some(20.0)));
-    assert!(cue.looping);
-}
-
-#[test]
 fn show_file_with_a_level_that_no_cue_could_be_given_cannot_be_read() {
     let cue = |level: &str| format!("[[list.cue]]\nid = 1\nkind = \"audio\"\nlevel = {level}\n");
     assert!(read_list(&cue("60.0")).is_err());
@@ -227,4 +179,28 @@ fn examples_of_the_manual_page_open_as_shows() {
         let read = Workspace::from_show(example, "/show");
         assert!(read.is_ok(), "{example}: {:?}", read.err());
     });
+}
+
+#[test]
+fn show_file_leaves_out_a_loop_that_a_cue_does_not_set() {
+    let text = shown(&workspace(vec![Cue {
+        looping: true,
+        ..audio(1)
+    }]));
+    assert!(text.contains("loop = true\n"), "{text}");
+    assert!(!text.contains("loop_"), "{text}");
+}
+
+#[test]
+fn show_file_leaves_out_a_loop_for_a_kind_that_plays_no_file() {
+    let read = read_list(
+        "[[list.cue]]\nid = 1\nkind = \"memo\"\nloop_start = 2.0\nloop_end = 6.0\n\n\
+         [[list.cue]]\nid = 2\nkind = \"picture\"\nfile = \"slide.png\"\nloop_start = 2.0\n\n\
+         [[list.cue]]\nid = 3\nkind = \"devamp\"\ntarget = 4\nloop_end = 6.0\n\n\
+         [[list.cue]]\nid = 4\nkind = \"audio\"\nfile = \"sound.ogg\"\nloop_start = 2.0\n",
+    )
+    .expect("the show reads");
+    let text = shown(&read);
+    assert_eq!(text.matches("loop_").count(), 1, "{text}");
+    assert!(text.contains("loop_start = 2.0\n"), "{text}");
 }

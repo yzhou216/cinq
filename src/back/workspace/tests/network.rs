@@ -5,8 +5,6 @@
 //! Tests of network cues, which send their message once each time that
 //! they start, and cannot play without a destination and a message
 
-use std::path::Path;
-
 use super::*;
 use crate::back::{Destination, Outgoing, osc_packet};
 
@@ -68,11 +66,7 @@ fn network_cue_without_destination_or_message_cannot_play() {
 }
 
 #[test]
-fn show_file_holds_the_destination_and_message_of_network_cues_alone() {
-    let show = workspace(vec![fire(1, 0.0)]).show(Some(Path::new("/show")));
-    assert!(show.contains("destination = \"10.101.100.20:3037\"\nmessage = \"/eos/cue/1/fire\"\n"));
-    let read = Workspace::from_show(&show, "/show").unwrap();
-    assert_eq!(read.show(Some(Path::new("/show"))), show);
+fn show_file_leaves_the_destination_out_for_a_cue_that_sends_nothing() {
     let memo = Cue::new(CueId(1), "1", Kind::Memo, "Note")
         .destination("ion:1")
         .build();

@@ -14,7 +14,7 @@ use std::{
 use iced::futures::{FutureExt, Stream, StreamExt};
 
 use super::{Heard, MESSAGES, Remote, commands, listen, pauses, reason};
-use crate::back::osc;
+use crate::back::osc::{self, tests::bundle};
 
 const LOOPBACK: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
@@ -108,17 +108,8 @@ fn commands_of_a_datagram_come_in_order_without_releases_and_unknown_addresses()
             "OSC from {from}: not an OSC packet"
         ))]
     );
-    let bundle = [
-        &b"#bundle\0"[..],
-        &[0; 8],
-        &(go.len() as i32).to_be_bytes(),
-        &go,
-        &(message("/panic").len() as i32).to_be_bytes(),
-        &message("/panic"),
-    ]
-    .concat();
     assert_eq!(
-        commands(&bundle, from),
+        commands(&bundle(&[&go, &message("/panic")]), from),
         [
             Heard::Command(from, Remote::Go),
             Heard::Command(from, Remote::Panic)
@@ -129,13 +120,7 @@ fn commands_of_a_datagram_come_in_order_without_releases_and_unknown_addresses()
 #[test]
 fn bundle_gives_the_commands_of_its_first_messages_only() {
     let go = osc::packet("/go").unwrap();
-    let element = [&(go.len() as i32).to_be_bytes()[..], &go].concat();
-    let bundle = [
-        b"#bundle\0".to_vec(),
-        vec![0; 8],
-        element.repeat(MESSAGES + 10),
-    ]
-    .concat();
+    let bundle = bundle(&vec![go.as_slice(); MESSAGES + 10]);
     let heard = vec![Heard::Command(LOOPBACK.into(), Remote::Go); MESSAGES]
         .into_iter()
         .chain([Heard::Ignored(format!(

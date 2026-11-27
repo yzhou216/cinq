@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The messages that act on the rows of the list in the main window
+//! Messages that act on the rows of the list in the main window
 
 use super::Message;
 

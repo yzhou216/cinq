@@ -6,22 +6,13 @@
 
 use super::*;
 
-fn depths(workspace: &Workspace) -> Vec<u8> {
-    workspace.lists()[0].depths()
-}
-
 /// Returns the cues of `ids` with the cues that they hold, as a copy takes them
 fn copied(workspace: &Workspace, ids: &[u32]) -> Vec<Cue> {
-    let ids: Vec<CueId> = ids.iter().map(|&id| CueId(id)).collect();
     workspace.lists()[0]
-        .with_members(&ids)
+        .with_members(&cue_ids(ids))
         .into_iter()
         .filter_map(|id| workspace.cue(id).cloned())
         .collect()
-}
-
-fn paste(cues: Vec<Cue>, at: Place) -> Command {
-    Command::Paste { list: 0, cues, at }
 }
 
 /// Returns a list with a group that holds a sound and a group of its own
@@ -96,17 +87,9 @@ fn control_cue_pasted_with_its_group_targets_the_copy() {
     let list = workspace(vec![group(1), within(1, stop_cue(2, 1)), audio(3)]);
     let both = list.clone().apply(paste(copied(&list, &[1]), Place::End));
     assert_eq!(ids(&both), [1, 2, 3, 4, 5]);
-    let target = |id| {
-        both.cue(CueId(id))
-            .and_then(|cue| cue.target)
-            .map(|id| id.0)
-    };
-    assert_eq!(target(5), Some(4));
+    assert_eq!(target_of(&both, 5), Some(CueId(4)));
     let alone = list.clone().apply(paste(copied(&list, &[2]), Place::End));
-    assert_eq!(
-        alone.cue(CueId(4)).and_then(|cue| cue.target),
-        Some(CueId(1))
-    );
+    assert_eq!(target_of(&alone, 4), Some(CueId(1)));
 }
 
 #[test]

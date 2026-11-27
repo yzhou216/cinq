@@ -17,14 +17,16 @@ use std::{
 
 use super::{
     fakes::{Gate, MAIN, is_open, named, show},
-    settle, waiting,
+    settle, until, waiting,
 };
 use crate::back::{
     Audio, Channels, Command, Fault, OutputEdit, READY_AHEAD, Workspace,
     audio::{
-        mixer::Mixer,
-        opener::{Make, Opener},
         patch::Need,
+        sound::{
+            mixer::Mixer,
+            opener::{Make, Opener},
+        },
     },
 };
 
@@ -47,7 +49,6 @@ fn note(events: &Mutex<Vec<String>>, event: String) {
         .push(event);
 }
 
-/// Returns the events that the devices have noted so far
 fn logged(events: &Mutex<Vec<String>>) -> Vec<String> {
     events.lock().expect("no test panics with the lock").clone()
 }
@@ -96,14 +97,6 @@ fn on_a(channels: Channels) -> Workspace {
     Workspace::default()
         .apply(Command::EditOutput(MAIN, OutputEdit::Device(named("a"))))
         .apply(Command::EditOutput(MAIN, OutputEdit::Channels(channels)))
-}
-
-/// Waits until `done` holds, taking in the answers as a sync does
-fn until(audio: &mut Audio, done: impl Fn(&Audio) -> bool) {
-    waiting(|| {
-        audio.arrived();
-        done(audio).then_some(())
-    });
 }
 
 /// Waits until a device has noted `event`

@@ -27,7 +27,7 @@ use std::{collections::BTreeSet, ops::Range};
 use super::CueList;
 use crate::back::{Cue, CueId, Kind};
 
-/// A list with the depths of its cues worked out, to ask what groups hold
+/// List with the depths of its cues worked out, to ask what groups hold
 #[derive(Debug, Clone)]
 pub struct Groups<'a> {
     list: &'a CueList,
@@ -77,12 +77,6 @@ impl CueList {
         self.groups().extent(index)
     }
 
-    /// Returns the cues that a group holds, at any depth, in order, or
-    /// none for a cue that is no group
-    pub fn members(&self, id: CueId) -> &[Cue] {
-        self.groups().members(id)
-    }
-
     /// Returns the group that holds a cue directly, if one does
     pub fn group_of(&self, id: CueId) -> Option<&Cue> {
         self.groups().group_of(id)
@@ -101,7 +95,7 @@ impl<'a> Groups<'a> {
         self.list
     }
 
-    /// Returns how deep each cue lies in groups, in order
+    /// Returns how deep each cue lies in groups, as [`CueList::depths`] tells
     pub fn depths(&self) -> &[u8] {
         &self.depths
     }
@@ -117,8 +111,8 @@ impl<'a> Groups<'a> {
         rows.into_iter().map(|row| self.list.cues[row].id).collect()
     }
 
-    /// Returns the rows that the cue at `index` takes together with the cues
-    /// that it holds, which is the row alone for a cue that is no group
+    /// Returns the rows that the cue at `index` takes, as [`CueList::extent`]
+    /// tells
     pub fn extent(&self, index: usize) -> Range<usize> {
         let end = self.depths.get(index).map_or(index, |&depth| {
             self.depths[index + 1..]
@@ -126,11 +120,11 @@ impl<'a> Groups<'a> {
                 .position(|&below| below <= depth)
                 .map_or(self.depths.len(), |offset| index + 1 + offset)
         });
-        index..end.max(index)
+        index..end
     }
 
-    /// Returns the cues that a group holds, at any depth, in order, or
-    /// none for a cue that is no group
+    /// Returns the cues that a group holds, at any depth, in order, or none
+    /// for a cue that is no group
     pub fn members(&self, id: CueId) -> &'a [Cue] {
         self.list
             .position(id)

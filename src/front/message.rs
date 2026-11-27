@@ -8,8 +8,10 @@
 
 mod field;
 mod line;
+pub(super) mod reasons;
 mod rows;
 mod scrolling;
+mod spot;
 mod tab;
 
 use std::{ffi::OsString, net::IpAddr, path::PathBuf, time::Instant};
@@ -17,14 +19,17 @@ use std::{ffi::OsString, net::IpAddr, path::PathBuf, time::Instant};
 use iced::{Size, mouse, window};
 
 use super::{
-    keymap::{Action, Press, config::Config},
-    update::{Measured, Read, Saved, Spot},
+    app::Held,
+    config::Config,
+    keymap::{Action, Press},
+    update::{Measured, Read, Saved},
     view::Site,
 };
 use crate::back::{Command, CueId, Device, Edit, Kind, OutputId, PatchEdit, Place, Remote};
 pub use field::{Caret, Focus, Setting};
 pub use line::LineKey;
 pub use scrolling::{Fold, Height, Page};
+pub use spot::Spot;
 pub use tab::Tab;
 
 /// Operator intent or a report of work done, which becomes a back-end
@@ -33,8 +38,8 @@ pub use tab::Tab;
 pub enum Message {
     Go,
     Panic,
-    /// Drops the keys typed so far, gives up the search line, and takes the
-    /// keyboard out of a field, without touching playback
+    /// Drops the keys typed so far, gives up the search line, and leaves a
+    /// field, without touching playback
     Cancel,
     PauseAll,
     ResumeAll,
@@ -45,36 +50,34 @@ pub enum Message {
     Select(CueId),
     /// Moves the selection by a number of cues, downwards when positive
     Step(isize),
-    /// Selects the cue on a row counted from one, or the last cue for a row
-    /// past the end
+    /// Selects the row counted from one, or the last cue past the end
     Row(usize),
-    /// Scrolls the cue list by a page and moves the selection with it, with
-    /// the count typed before the keys, which sets the rows of a half page and
-    /// counts the whole pages
+    /// Scrolls the list by a page and moves the selection with it.  The
+    /// count typed before the keys sets the rows of a half page and counts
+    /// the whole pages.
     Page(Page, Option<usize>),
-    /// Selects the row, counted from zero, where a page scrolled the list to,
-    /// which has scrolled already, unless the place that the key found has
-    /// changed since, as a key pressed in between would have changed it
+    /// Selects the row, counted from zero, where a page scrolled the list
+    /// to, unless the place that the key found has changed since, as a key
+    /// pressed in between would have changed it
     Landed {
         from: Spot,
         row: usize,
     },
-    /// What a measure of the rows or of the help page found
     Measured(Measured),
     /// The mouse may have scrolled the list, so that it is measured again
     Remeasure,
     /// A window has drawn, which measures the rows when no measure of them
-    /// is kept, as the window opens and after a change that made it out of
-    /// date, since the list is laid out only once the window has drawn
+    /// is kept, since the list is laid out only once the window has drawn
     Drawn(window::Id),
     /// Scrolls the list a number of rows, down when positive, and keeps the
     /// selection in view
     Scroll(isize),
-    /// Selects the row at a height in view, counted from the top or the bottom
-    /// with the count typed before the keys, as a jump
+    /// Selects the row at a height in view as a jump, counted from the top
+    /// or the bottom with the count typed before the keys
     InView(Height, Option<usize>),
-    /// Selects the row, counted from zero, that a measure of the list found,
-    /// as a jump, unless the place that the key found has changed since
+    /// Selects the row, counted from zero, that a measure of the list
+    /// found, as a jump, unless the place that the key found has changed
+    /// since
     Reached {
         from: Spot,
         row: usize,
@@ -82,12 +85,10 @@ pub enum Message {
     /// Scrolls the list to put the selected row at a height in view, after
     /// selecting the row that the count typed before the keys names
     Place(Height, Option<usize>),
-    /// Collapses or expands groups of the cue list
     Fold(Fold),
     /// Collapses the group, or expands it where it is collapsed, as a click
     /// on its mark does
     FlipGroup(CueId),
-    /// A drop-down list opened its menu, or its menu closed
     MenuOpen(bool),
     /// The highlight of the open menu of the Device list of an output moved
     /// onto its default option, or off it, or the menu closed, which tells
@@ -95,22 +96,19 @@ pub enum Message {
     DefaultHighlighted(bool),
     StandbySelected,
     SwitchList(usize),
-    /// Shows the cue list a number of lists further down the sidebar
     StepList(isize),
     /// Goes a number of places back, among those that jumps have left
     Back(usize),
-    /// Goes a number of places forward again after going back
     Forward(usize),
     /// Opens the search line, which selects the rows that its text matches,
     /// searching up the list when `backward`
     Search {
         backward: bool,
     },
-    /// Text of the search line, as typed so far
     Searching(String),
-    /// Recalls a search into the search line with a key of Vim's command line
+    /// Recalls a search into the search line with a key of Vim's command
+    /// line
     SearchKey(LineKey),
-    /// Accepts the text of the search line
     SearchAccepted,
     /// Selects the row a number of matches of the last search further on in
     /// the direction that it went, or the other way when negative
@@ -119,11 +117,7 @@ pub enum Message {
     SearchSettled,
     ShowMode(bool),
     Tab(Tab),
-    /// Shows the inspector tab a number of tabs to the right, wrapping
-    /// around at either end
     StepTab(isize),
-    /// Shows the inspector tab with a number, counted from one, or the last
-    /// tab when there are fewer
     ShowTab(usize),
     NewKind(Kind),
     /// Adds a number of cues in a row next to the selection, on the side that
@@ -146,7 +140,6 @@ pub enum Message {
     /// Pastes the clipboard a number of times next to the selection, on the
     /// side that the function picks
     Paste(fn(CueId) -> Place, usize),
-    /// Deletes a number of cues from the selection down
     Delete(usize),
     /// Applies the operator `Cut`, `Copy`, `Delete`, `Indent`, or `Outdent`
     /// to the cues from the selection to where the motion `Next`,
@@ -166,8 +159,8 @@ pub enum Message {
     /// Labels every place that a click acts on, or takes the labels away if
     /// they are there
     Hint,
-    /// Places that a click acts on and the operator can see, in the order that
-    /// they lie in the window, which the labels of hint mode go to
+    /// Places that a click acts on and the operator can see, in the order
+    /// that they lie in the window, which the labels of hint mode go to
     Hinted(Vec<Site>),
     /// Nothing, which the keys of a menu amount to outside one
     Nothing,
@@ -180,15 +173,17 @@ pub enum Message {
         press: Press,
         repeat: bool,
     },
-    /// What loading the files of audio, video, and picture cues found, for
-    /// the show of an identity
+    /// What loading the files of cues found, for the show of an identity
     Loaded(u64, Vec<Command>),
-    /// Time to load again the files that could not be played
+    /// Time to read again the files that have changed, gone, or come back
     Recheck,
     /// Time to look for news of the network output
     NetworkChecked,
-    /// Command that arrived over OSC from a host, which acts as a click that
-    /// leaves hint mode
+    /// Change in whether light gets out, which the light thread told: why
+    /// none does, or none for light that gets out
+    LightTold(Option<String>),
+    /// Command that arrived over OSC from a host, which acts as a click
+    /// that leaves hint mode
     Remote(IpAddr, Remote),
     /// Packet or message that arrived over OSC and is no command
     OscIgnored(String),
@@ -231,18 +226,14 @@ pub enum Message {
     /// Text typed into the field of a setting, which applies once it reads
     /// as a value, or once the field is left for a level or channels
     SettingTyped(Setting, String),
-    /// Plays an output on a device
     OutputDevice(OutputId, Device),
-    /// Asks which show to open
     Open,
     /// Show read from its file, with the unsaved changes kept for it
     Opened(Box<Read>),
     /// Saves the show in its file, or asks where to save a show that has
     /// none
     Save,
-    /// Asks where to save the show, and saves it there
     SaveAs,
-    /// Saves the show in a file that the operator chose
     SaveTo(PathBuf),
     Saved(Saved),
     /// Mouse button pressed anywhere in a window
@@ -252,26 +243,9 @@ pub enum Message {
     /// Window changed size, to no size at all while it is minimized
     Resized(window::Id, Size),
     WindowFocused(window::Id),
-    /// Whether a text field or a drop-down list has the keyboard, as the
-    /// widgets told after the latest thing that the operator did
-    Held(bool),
-    /// Whether the File field of a cue has the keyboard, as the widgets told
-    /// with [`Message::Held`]
-    FileHeld(bool),
-    /// Whether a checkbox has the keyboard, as the widgets told with
-    /// [`Message::Held`]
-    CheckHeld(bool),
-    /// Whether a button has the keyboard, as the widgets told with
-    /// [`Message::Held`]
-    ButtonHeld(bool),
-    /// Whether the address of an instrument in the light patch has the
-    /// keyboard, as the widgets told with [`Message::Held`]
-    AddressHeld(bool),
-    /// Whether a text field, which keeps every key, has the keyboard, as the
-    /// widgets told with [`Message::Held`]
-    TextHeld(bool),
-    /// Toggles the stage window between fullscreen and a window
+    /// Which widgets have the keyboard, as they told after the latest thing
+    /// that the operator did
+    Held(Held),
     ToggleFullscreen,
-    /// Window closed, as the operator closes it
     Closed(window::Id),
 }

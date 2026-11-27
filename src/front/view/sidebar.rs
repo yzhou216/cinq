@@ -2,34 +2,29 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Cue lists, running cues, warnings, and the audio device, all visible at
-//! the same time, with the warnings above the audio device, which a show sets
-//! once, so that the first warning shows whole at the least height of the
-//! window
+//! Cue lists, running cues, warnings, and the audio device, with the
+//! warnings above the audio device, which a show sets once, so that the first
+//! warning shows whole at the least height of the window
 
 mod devices;
+mod problems;
 mod running;
 #[cfg(test)]
 mod tests;
 
 use iced::{
     Element, Fill,
-    widget::{column, container, rule, scrollable, text, text::Wrapping},
+    widget::{column, container, rule, scrollable, text},
 };
 use unicode_width::UnicodeWidthStr;
 
 use super::{
-    CURRENT_LIST, SIDEBAR, SIDEBAR_SCROLL, SPACING, button, char_width,
+    CURRENT_LIST, SIDEBAR, SIDEBAR_SCROLL, SPACING, char_width,
     cue_table::{RADIO, SCROLL_BAR},
-    faults::{self, Warning},
-    format, radio, warnings,
+    faults, radio,
     widget::shortened,
 };
 use crate::front::{App, Message};
-
-/// Most warnings that the sidebar lists, so that the Default device list
-/// below them stays in view, the rest being counted in a line of their own
-const WARNINGS: usize = 3;
 
 /// Least width of the sidebar, enough for the name of a short cue list, such
 /// as `Act 1`, with its count beside the radio button, so that a narrow
@@ -44,139 +39,20 @@ pub(super) fn width(window: f32) -> f32 {
 }
 
 pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
-    let workspace = &app.workspace;
     let columns = (width - 2.0 * SPACING - SCROLL_BAR) / char_width();
-    // Each list takes one line, so that the rest of the sidebar stays in view,
-    // and the inspector holds the whole name
-    let room = columns - RADIO / char_width();
-    let lists = workspace.lists().iter().enumerate().map(|(index, list)| {
-        let entry = radio(
-            label(&list.name, list.cues.len(), room as usize),
-            index,
-            (!app.outputs_shown).then_some(app.list),
-            Message::SwitchList,
-        );
-        current(entry, !app.outputs_shown && index == app.list)
-    });
-    let failing = faults::failing(app);
-    let active = workspace
-        .active()
-        .iter()
-        .filter_map(|active| {
-            workspace.cue(active.id).map(|cue| {
-                let silent = workspace.sends_to_failing(cue, &failing);
-                running::active_cue(active, cue, workspace.target(cue), columns as usize, silent)
-            })
-        })
-        .collect::<Vec<_>>();
-    let outputs_failing = faults::warnings(app).into_iter().map(|warning| {
-        let told = match &warning {
-            Warning::Device {
-                device,
-                fault,
-                outputs: affected,
-            } => {
-                let state = fault.state().to_lowercase();
-                let reason = fault
-                    .reason()
-                    .map(|reason| format!(": {reason}"))
-                    .unwrap_or_default();
-                let count = format::count(affected.len(), "output");
-                format!("{}: {state} ({count}){reason}", devices::named(app, device))
-            }
-            Warning::Channels { output, fault } => {
-                format!("{}: {}", output.name, fault.state().to_lowercase())
-            }
-        };
-        pressing(told, Message::InspectOutput(warning.output()))
-    });
-    let network = app
-        .network_problems
-        .iter()
-        .filter_map(|(id, problem)| {
-            workspace
-                .cue(*id)
-                .map(|cue| pressing(format!("{cue}: {problem}"), Message::Select(cue.id)))
-        })
-        .chain(app.light_problem.iter().map(|problem| {
-            text(format!("Light output: {problem}"))
-                .style(text::danger)
-                .into()
-        }))
-        .chain(
-            app.osc_problem
-                .iter()
-                .map(|problem| text(problem).style(text::danger).into()),
-        );
-    let files = [&app.file_problem, &app.keep_problem, &app.device_problem]
-        .into_iter()
-        .flatten()
-        .map(|problem| text(problem).style(text::warning).into());
-    // Latest alone, whatever the flood of commands that did nothing
-    let ignored = app
-        .osc_ignored
-        .iter()
-        .map(|line| text(line).style(text::warning).into());
-    let settings = app
-        .config
-        .warnings()
-        .map(|warning| text(warning).style(text::warning).into());
-    // Window that the audience needs, closed while a cue shows on it
-    let stage = app
-        .stage
-        .missing(workspace)
-        .then(|| text("Stage window closed").style(text::warning).into());
-    let count = warnings(app);
-    let warned = text(format!("Warnings ({count})")).style(if count > 0 {
-        text::warning
-    } else {
-        text::default
-    });
-    let problems = workspace
-        .problems()
-        .map(|(cue, problem)| pressing(format!("{cue}: {problem}"), Message::Select(cue.id)));
-    let stranded = workspace.stranded().map(|cue| {
-        pressing(
-            format!("{cue}: sends to no output"),
-            Message::Select(cue.id),
-        )
-    });
-    let unlit = workspace
-        .unlit_cues()
-        .map(|(cue, unlit)| pressing(format!("{cue}: {unlit}"), Message::Select(cue.id)));
-    let everything: Vec<Element<'_, Message>> = outputs_failing
-        .chain(network)
-        .chain(stage)
-        .chain(files)
-        .chain(ignored)
-        .chain(settings)
-        .chain(problems)
-        .chain(stranded)
-        .chain(unlit)
-        .collect();
-    let (shown, left) = limited(everything);
-    let more = (left > 0).then(|| text(format!("and {left} more")).style(text::warning).into());
     scrollable(
         column![
             text("Cue lists"),
-            column(lists).spacing(SPACING),
+            lists(app, columns),
             rule::horizontal(1),
-            current(
-                radio(
-                    format!("Outputs ({})", workspace.outputs().len()),
-                    (),
-                    app.outputs_shown.then_some(()),
-                    |()| Message::ShowOutputs,
-                ),
-                app.outputs_shown,
-            ),
+            outputs(app),
             rule::horizontal(1),
-            text(format!("Active ({})", workspace.active().len())),
-            // An empty list leaves out its body, as the header tells that it is empty
-            (!active.is_empty()).then(|| column(active).spacing(SPACING)),
+            text(format!("Active ({})", app.workspace.active().len())),
+            // Empty list leaves out its body, as the header tells that it is empty
+            active(app, columns),
             rule::horizontal(1),
-            warned,
-            (!shown.is_empty()).then(|| column(shown.into_iter().chain(more)).spacing(SPACING)),
+            problems::header(app),
+            problems::list(app),
             rule::horizontal(1),
             text("Default device"),
             devices::view(app),
@@ -192,6 +68,55 @@ pub(super) fn view(app: &App, width: f32) -> Element<'_, Message> {
     .into()
 }
 
+fn lists(app: &App, columns: f32) -> Element<'_, Message> {
+    // Each list takes one line, so that the rest of the sidebar stays in view,
+    // and the inspector holds the whole name
+    let room = columns - RADIO / char_width();
+    let entries = app
+        .workspace
+        .lists()
+        .iter()
+        .enumerate()
+        .map(|(index, list)| {
+            let entry = radio(
+                label(&list.name, list.cues.len(), room as usize),
+                index,
+                (!app.outputs_shown).then_some(app.list),
+                Message::SwitchList,
+            );
+            current(entry, !app.outputs_shown && index == app.list)
+        });
+    column(entries).spacing(SPACING).into()
+}
+
+fn outputs(app: &App) -> Element<'_, Message> {
+    current(
+        radio(
+            format!("Outputs ({})", app.workspace.outputs().len()),
+            (),
+            app.outputs_shown.then_some(()),
+            |()| Message::ShowOutputs,
+        ),
+        app.outputs_shown,
+    )
+}
+
+fn active(app: &App, columns: f32) -> Option<Element<'_, Message>> {
+    let workspace = &app.workspace;
+    let failing = faults::failing(app);
+    let entries = workspace
+        .active()
+        .iter()
+        .filter_map(|active| {
+            workspace.cue(active.id).map(|cue| {
+                let silent = workspace.sends_to_failing(cue, &failing);
+                running::active_cue(active, cue, workspace.target(cue), columns as usize, silent)
+            })
+        })
+        .collect::<Vec<_>>();
+    (!entries.is_empty()).then(|| column(entries).spacing(SPACING).into())
+}
+
 /// Returns `entry`, marked for the sidebar to scroll to when it `shows`
 fn current<'a>(entry: Element<'a, Message>, shows: bool) -> Element<'a, Message> {
     if shows {
@@ -201,31 +126,8 @@ fn current<'a>(entry: Element<'a, Message>, shows: bool) -> Element<'a, Message>
     }
 }
 
-/// Returns a warning that `message` answers when it is pressed.  A word that
-/// no space breaks, as the ID of a device is, breaks within itself rather than
-/// being cut.
-fn pressing(told: String, message: Message) -> Element<'static, Message> {
-    button(text(told).wrapping(Wrapping::WordOrGlyph))
-        .on_press(message)
-        .width(Fill)
-        .into()
-}
-
-/// Splits `warnings` into the first that the sidebar lists and how many it
-/// leaves out, which is never exactly one, since the line that counts it
-/// takes as much room as the warning does
-fn limited<T>(warnings: Vec<T>) -> (Vec<T>, usize) {
-    let shown = if warnings.len() == WARNINGS + 1 {
-        warnings.len()
-    } else {
-        WARNINGS
-    };
-    let left = warnings.len().saturating_sub(shown);
-    (warnings.into_iter().take(shown).collect(), left)
-}
-
 /// Returns the name of a list with the number of its cues, in `columns`
-/// columns, where the name gives way and the number stays whole
+/// columns, where the name gives way to the number
 fn label(name: &str, count: usize, columns: usize) -> String {
     let count = format!(" ({count})");
     format!(

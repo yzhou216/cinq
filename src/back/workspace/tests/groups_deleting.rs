@@ -8,10 +8,6 @@
 use super::*;
 use crate::back::Change;
 
-fn depths(workspace: &Workspace) -> Vec<u8> {
-    workspace.lists()[0].depths()
-}
-
 /// Returns a list with a group that holds a sound and a group of its own
 fn nested() -> Workspace {
     workspace(vec![
@@ -92,9 +88,8 @@ fn deleting_a_group_stops_the_cues_that_it_holds() {
 fn members_of_cues_come_once_each_in_the_order_of_the_list() {
     let list = nested();
     let with = |ids: &[u32]| -> Vec<u32> {
-        let ids: Vec<CueId> = ids.iter().map(|&id| CueId(id)).collect();
         list.lists()[0]
-            .with_members(&ids)
+            .with_members(&cue_ids(ids))
             .iter()
             .map(|id| id.0)
             .collect()

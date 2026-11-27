@@ -5,11 +5,10 @@
 //! Outputs of the show, which the main window shows in place of a cue list
 //! once the sidebar or the keys that step through the lists choose them
 //!
-//! Each row shows an output with the device and the channels it plays on,
-//! the level at which new cues send to it, and, in a few words, why it
-//! cannot play where it cannot: in yellow where cinq tries its device again
-//! by itself, and in red where the output must change.  A click selects the
-//! output, which the inspector then edits.
+//! Each row tells, in a few words, why an output cannot play where it
+//! cannot: in yellow where cinq tries its device again by itself, and in red
+//! where the output must change.  A click selects the output, which the
+//! inspector then edits.
 
 mod rows;
 #[cfg(test)]
@@ -93,7 +92,6 @@ enum Column {
 }
 
 impl Column {
-    /// Returns what the column shows of the output at index `row`
     fn text(self, app: &App, row: usize, output: &Output) -> String {
         match self {
             Column::Number => (row + 1).to_string(),
@@ -108,8 +106,7 @@ impl Column {
         }
     }
 
-    /// Returns the width of the widest text of the column, its title among
-    /// them
+    /// Returns the width of the widest text of the column, its title included
     fn widest(self, app: &App) -> f32 {
         app.workspace
             .outputs()
@@ -120,10 +117,10 @@ impl Column {
             * char_width()
     }
 
-    /// Returns the width of the column.  Devices take what the others
-    /// leave, which fit their widest text, so that the state of an output
-    /// keeps to one line, and names wrap past [`NAME_ROOM`], unless `gone`
-    /// has them give way to the device.
+    /// Returns the width of the column: Device takes what the others leave,
+    /// which fit their widest text, so that the state of an output keeps to
+    /// one line, and names wrap past [`NAME_ROOM`], unless `gone` has them
+    /// give way to the device.
     fn width(self, app: &App, gone: &[Yield]) -> Length {
         let widest = || self.widest(app);
         let squeezed = |gives: Yield, room: f32| {
@@ -145,8 +142,8 @@ impl Column {
 }
 
 /// Returns the width that the Device column needs to keep its widest text
-/// on one line, and no more than [`DEVICE_WIDEST`] columns, so that a name
-/// too long for any table does not drive the New cues column away
+/// on one line, at most [`DEVICE_WIDEST`] columns, so that a name too long
+/// for any table does not drive the New cues column away
 fn device_wanted(app: &App) -> f32 {
     Column::Device
         .widest(app)
@@ -203,7 +200,7 @@ fn fitting(app: &App, room: f32) -> Vec<(Column, Length)> {
 }
 
 /// Returns the width that the Device column has in `room` beside the other
-/// `columns`, and the space between the columns
+/// `columns`
 fn device_room(columns: &[(Column, Length)], room: f32) -> f32 {
     let fixed: f32 = columns
         .iter()
@@ -219,7 +216,6 @@ pub(super) fn view(app: &App) -> Element<'_, Message> {
     responsive(move |size| rows::list(app, size.width - SCROLL_BAR)).into()
 }
 
-/// Returns the name that an output goes by for its device
 pub(super) fn device(device: &Device) -> &str {
     match device {
         Device::Default => "Default device",

@@ -9,16 +9,19 @@ use std::fs;
 
 use tempfile::TempDir;
 
-use super::playing;
+use super::{findings, playing};
 use crate::back::{
-    Command, CueId, CueList, Kind, Media, Workspace,
+    CueId, Kind, Media, Workspace,
     audio::tests::silence,
-    load::{Load, load_files, unplayable},
+    failure::unplayable,
+    load::{Load, load_files},
+    loaded,
+    workspace::tests::fresh,
 };
 
 /// Returns a directory holding `good.wav`, which plays for a second, and
 /// `fake.wav`, which holds text that no decoder reads
-fn directory() -> TempDir {
+pub(super) fn directory() -> TempDir {
     let directory = TempDir::new().expect("a temporary directory can be made");
     fs::write(directory.path().join("good.wav"), silence(1.0)).expect("the file can be written");
     fs::write(directory.path().join("fake.wav"), "not a sound").expect("the file can be written");
@@ -27,13 +30,13 @@ fn directory() -> TempDir {
 
 /// Returns the workspace of an audio cue for each of `files`, as loading has
 /// left it
-fn read(directory: &TempDir, files: &[&str]) -> Workspace {
+pub(super) fn read(directory: &TempDir, files: &[&str]) -> Workspace {
     let cues = files
         .iter()
         .zip(1..)
         .map(|(file, id)| playing(id, Kind::Audio, file))
         .collect();
-    let workspace = Workspace::new(vec![CueList::new("Main", cues)]).directory(directory.path());
+    let workspace = fresh(cues).directory(directory.path());
     load_files(Load::all(&workspace, workspace.unloaded()))
         .into_iter()
         .fold(workspace, Workspace::apply)
@@ -41,14 +44,17 @@ fn read(directory: &TempDir, files: &[&str]) -> Workspace {
 
 /// Returns what a look at the files that have been read finds that has
 /// changed, with the number of the cue that each finding belongs to
-fn looked(workspace: &Workspace) -> Vec<(u32, Media)> {
-    load_files(Load::all(workspace, workspace.to_recheck()))
+pub(super) fn looked(workspace: &Workspace) -> Vec<(u32, Media)> {
+    findings(load_files(Load::all(workspace, workspace.to_recheck())))
+}
+
+/// Returns the workspace once a look at its files has been applied, as the
+/// interface does
+pub(super) fn looked_at(workspace: Workspace) -> Workspace {
+    looked(&workspace)
         .into_iter()
-        .filter_map(|command| match command {
-            Command::Loaded { cue, media, .. } => Some((cue.0, media)),
-            _ => None,
-        })
-        .collect()
+        .map(|(cue, media)| loaded(cue, "good.wav", media))
+        .fold(workspace, Workspace::apply)
 }
 
 fn not_found() -> Media {
@@ -86,15 +92,7 @@ fn file_that_goes_is_found_gone_at_every_look_and_read_when_it_comes_back() {
     let kept = fs::read(&path).expect("the file can be read");
     fs::remove_file(&path).expect("the file can be removed");
     assert_eq!(looked(&workspace), [(1, not_found())]);
-    let gone = looked(&workspace)
-        .into_iter()
-        .map(|(cue, media)| Command::Loaded {
-            cue: CueId(cue),
-            file: "good.wav".to_owned(),
-            media,
-            seen: None,
-        })
-        .fold(workspace, Workspace::apply);
+    let gone = looked_at(workspace);
     assert_eq!(looked(&gone), [(1, not_found())]);
     fs::write(&path, kept).expect("the file can be written");
     assert!(matches!(looked(&gone)[..], [(1, Media::Loaded { .. })]));

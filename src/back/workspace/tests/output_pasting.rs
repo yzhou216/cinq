@@ -6,7 +6,7 @@
 //! of a cut output taking back its identity
 
 use super::{
-    outputs::{delete_outputs, edit_output, names, rename_output, sends},
+    outputs::{delete_outputs, edit_output, names, rename_output, send_on, sends, sends_of_cue},
     *,
 };
 use crate::back::{Channels, Output, OutputEdit, OutputId};
@@ -28,10 +28,7 @@ fn house_sub_and_lobby() -> Workspace {
         .apply(rename_output(2, "Sub"))
         .apply(edit_output(2, OutputEdit::NewCues(Some(-6.0))))
         .apply(rename_output(3, "Lobby"))
-        .apply(Command::Edit(
-            CueId(1),
-            Edit::Sends(Some(sends(&[(2, -3.0)]))),
-        ))
+        .apply(send_on(&[(2, -3.0)]))
 }
 
 fn cut(show: &Workspace, ids: &[u32]) -> Vec<Output> {
@@ -88,13 +85,12 @@ fn deleting_several_outputs_is_one_change_and_never_takes_every_output() {
 #[test]
 fn a_cut_output_pasted_back_takes_back_its_identity_and_the_cues_that_sent_to_it() {
     let show = house_sub_and_lobby();
-    let cue = |show: &Workspace| show.cue(CueId(1)).cloned().expect("the cue is there");
     let gone = show.clone().apply(delete_outputs(&[2]));
-    assert_eq!(gone.sends(&cue(&gone)), sends(&[]));
+    assert_eq!(sends_of_cue(&gone), sends(&[]));
     let back = cut_and_pasted_back(show, &[2], 1);
     assert_eq!(names(&back), ["House", "Sub", "Lobby"]);
     assert_eq!(ids(&back), [1, 2, 3]);
-    assert_eq!(back.sends(&cue(&back)), sends(&[(2, -3.0)]));
+    assert_eq!(sends_of_cue(&back), sends(&[(2, -3.0)]));
     assert_eq!(
         back.output(OutputId(2)).and_then(|output| output.new_cues),
         Some(-6.0)
@@ -117,8 +113,7 @@ fn a_copy_gets_an_identity_a_free_name_and_no_new_cues_or_sends() {
     assert_eq!(ids(&pasted), [1, 2, 4, 3]);
     let copy = pasted.output(OutputId(4)).expect("the copy is there");
     assert_eq!((copy.new_cues, copy.channels), (None, Channels::MAIN));
-    let cue = pasted.cue(CueId(1)).expect("the cue is there");
-    assert_eq!(pasted.sends(cue), sends(&[(2, -3.0)]));
+    assert_eq!(sends_of_cue(&pasted), sends(&[(2, -3.0)]));
 }
 
 #[test]

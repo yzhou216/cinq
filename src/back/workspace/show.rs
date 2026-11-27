@@ -2,35 +2,34 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Show files, which hold the light patch and the cue lists of a workspace
-//! as TOML
+//! Show files, which hold the outputs, the light patch, and the cue lists of
+//! a workspace as TOML
 //!
-//! A show file lists the instruments of the light patch, then the cue lists
-//! of a show in order, each with its cues, and each cue with the settings
-//! that its kind uses, leaving out those that keep their defaults, apart
-//! from the level, the duration, and whether a fade stops its target, which
-//! it holds for every cue whose kind uses them.  Cues and instruments keep
-//! their identities, by which fade and stop cues name their targets and
-//! light cues their instruments.  What playback and loading find, such as
-//! the cue on standby, the cues that run, the light levels, and how long
-//! each sound or video file plays, belongs to the session rather than to
-//! the show, and the file leaves it out.  The outputs come first, as
-//! [`outputs`] tells.  What keeps a file from opening lives in [`check`].
+//! A show file lists the outputs, then the instruments of the light patch,
+//! then the cue lists in order, each with its cues.  A cue holds the
+//! settings that its kind uses, leaving out those that keep their defaults,
+//! apart from the level, the duration, and whether a fade stops its target,
+//! which it holds for every cue whose kind uses them.
+//! Cues and instruments keep their identities, by which fade and stop cues
+//! name their targets and light cues their instruments.  What playback and
+//! loading find, such as the cue on standby, the cues that run, the light
+//! levels, and how long each sound or video file plays, belongs to the
+//! session rather than to the show, and the file leaves it out.
 
 mod check;
+mod cue;
 mod outputs;
+mod syntax;
 
-use std::{
-    collections::BTreeMap,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use super::Workspace;
-use crate::back::{Advance, Cue, CueId, CueList, Instrument, InstrumentId, Kind, Output};
+use crate::back::{Cue, CueList, Instrument, Output};
+use cue::CueFile;
 use outputs::OutputFile;
+use syntax::read_problem;
 
 #[derive(Serialize, Deserialize)]
 struct ShowFile {
@@ -47,48 +46,6 @@ struct ListFile {
     name: String,
     #[serde(default, rename = "cue", skip_serializing_if = "Vec::is_empty")]
     cues: Vec<CueFile>,
-}
-
-/// Setting that is `None` stays out of the file, since TOML has no null,
-/// and one that the file leaves out reads as `None`.
-#[derive(Serialize, Deserialize)]
-struct CueFile {
-    id: u32,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    number: String,
-    kind: Kind,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    file: String,
-    start: Option<f32>,
-    end: Option<f32>,
-    #[serde(default, rename = "loop", skip_serializing_if = "std::ops::Not::not")]
-    looping: bool,
-    loop_start: Option<f32>,
-    loop_end: Option<f32>,
-    #[serde(default, skip_serializing_if = "is_top")]
-    depth: u8,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    collapsed: bool,
-    target: Option<u32>,
-    pre_wait: Option<f32>,
-    duration: Option<f32>,
-    post_wait: Option<f32>,
-    #[serde(default, skip_serializing_if = "is_manual")]
-    advance: Advance,
-    level: Option<f32>,
-    stop_target: Option<bool>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    notes: String,
-    /// Levels at which the cue sends to outputs, by their names
-    sends: Option<BTreeMap<String, f32>>,
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    lights: BTreeMap<InstrumentId, f32>,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    destination: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    message: String,
 }
 
 impl Workspace {
@@ -169,132 +126,4 @@ impl ListFile {
             .collect::<Result<_, _>>()?;
         Ok(CueList::new(self.name, cues))
     }
-}
-
-impl CueFile {
-    fn of(cue: &Cue, file: String, outputs: &[Output]) -> Self {
-        let set = |seconds: f32| Some(seconds).filter(|&seconds| seconds > 0.0);
-        let plays = cue.kind.plays_file();
-        let network_only = |text: &str| {
-            if cue.kind == Kind::Network {
-                text.to_owned()
-            } else {
-                String::new()
-            }
-        };
-        Self {
-            id: cue.id.0,
-            number: cue.number.clone(),
-            kind: cue.kind,
-            name: cue.name.clone(),
-            file,
-            start: set(cue.start.value()).filter(|_| plays),
-            end: cue.end.time().filter(|_| plays),
-            looping: plays && cue.looping,
-            loop_start: cue.loop_start.time().filter(|_| plays),
-            loop_end: cue.loop_end.time().filter(|_| plays),
-            depth: cue.depth,
-            collapsed: cue.kind == Kind::Group && cue.collapsed,
-            target: cue
-                .target
-                .filter(|_| cue.kind.has_target())
-                .map(|target| target.0),
-            pre_wait: set(cue.pre_wait.value()),
-            duration: cue.kind.has_duration().then(|| cue.duration.value()),
-            post_wait: set(cue.post_wait.value()),
-            advance: cue.advance,
-            level: cue.kind.has_level().then_some(cue.level),
-            stop_target: (cue.kind == Kind::Fade).then_some(cue.stop_target),
-            notes: cue.notes.clone(),
-            sends: cue
-                .sends
-                .as_ref()
-                .filter(|_| plays)
-                .map(|sends| outputs::sends_by_name(sends, outputs)),
-            lights: if cue.kind == Kind::Light {
-                cue.lights.clone()
-            } else {
-                BTreeMap::new()
-            },
-            destination: network_only(&cue.destination),
-            message: network_only(&cue.message),
-        }
-    }
-
-    fn cue(self, outputs: &[Output]) -> Result<Cue, String> {
-        let sends = self
-            .sends
-            .map(|sends| outputs::sends_by_id(sends, outputs, self.id))
-            .transpose()?;
-        Ok(Cue::new(CueId(self.id), self.number, self.kind, self.name)
-            .file(self.file)
-            .maybe_start(self.start)
-            .maybe_end(self.end)
-            .looping(self.looping)
-            .maybe_loop_start(self.loop_start)
-            .maybe_loop_end(self.loop_end)
-            .depth(self.depth)
-            .collapsed(self.kind == Kind::Group && self.collapsed)
-            .maybe_target(self.target.map(CueId))
-            .maybe_pre_wait(self.pre_wait)
-            .maybe_duration(self.duration)
-            .maybe_post_wait(self.post_wait)
-            .advance(self.advance)
-            .maybe_level(self.level)
-            .maybe_stop_target(self.stop_target)
-            .notes(self.notes)
-            .maybe_sends(sends)
-            .lights(self.lights)
-            .destination(self.destination)
-            .message(self.message)
-            .build())
-    }
-}
-
-fn is_top(depth: &u8) -> bool {
-    *depth == 0
-}
-
-fn is_manual(advance: &Advance) -> bool {
-    *advance == Advance::Manual
-}
-
-/// Returns what keeps `text` from being TOML or a show in one line, led by
-/// where it lies, since the drawing of the line and the caret that the error
-/// holds would not fit where the problem is told
-fn read_problem(text: &str, error: &toml::de::Error) -> String {
-    let message = error.message().lines().join(" ");
-    match error.span() {
-        Some(span) => {
-            let before = text.get(..span.start).unwrap_or(text);
-            let line = before.matches('\n').count() + 1;
-            let column = before
-                .rsplit('\n')
-                .next()
-                .map_or(0, |row| row.chars().count())
-                + 1;
-            let place = table_place(text, span.start)
-                .map(|place| format!("{place}: "))
-                .unwrap_or_default();
-            format!("line {line}, column {column}: {place}{message}")
-        }
-        None => message,
-    }
-}
-
-/// Returns which output the error at byte `start` of `text` lies in, as
-/// `output 2`, where it lies at the head of an `[[output]]` table, as a
-/// field that the table lacks does, so that a show with twenty outputs
-/// names the one
-fn table_place(text: &str, start: usize) -> Option<String> {
-    const HEAD: &str = "[[output]]";
-    text.get(start..)?.starts_with(HEAD).then(|| {
-        let before = text.get(..start).unwrap_or_default();
-        // A head may carry a comment after it
-        let earlier = before
-            .lines()
-            .filter(|line| line.trim_start().starts_with(HEAD))
-            .count();
-        format!("output {}", earlier + 1)
-    })
 }

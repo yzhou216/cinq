@@ -11,9 +11,13 @@
 //! A show keeps at least one output, and no two outputs share a name, since
 //! the show file names outputs by their names.
 
+mod change;
+mod insertion;
+
 use std::mem;
 
-use super::{Change, Workspace};
+use self::change::OutputChange;
+use super::Workspace;
 use crate::back::{Cue, Output, OutputEdit, OutputId, Sends, items::replaced_where};
 
 impl Workspace {
@@ -56,100 +60,6 @@ impl Workspace {
         (!sends.iter().map(|(id, level)| (*id, *level)).eq(first)).then_some(sends)
     }
 
-    /// Returns the first name that `name` makes from the numbers from one on
-    /// and that neither an output of the show nor one of `also` has
-    fn unused_name(&self, also: &[Output], name: impl Fn(usize) -> String) -> String {
-        (1..)
-            .map(name)
-            .find(|name| {
-                self.outputs
-                    .iter()
-                    .chain(also)
-                    .all(|output| output.name != *name)
-            })
-            .expect("the outputs run out before the names do")
-    }
-
-    /// Adds `count` outputs in a row at `at` among the outputs, or at the
-    /// end past them, as one change, each on the default device and its first
-    /// two channels, under the first name of the form Output 1 that no output
-    /// has
-    pub(super) fn added_output(self, at: usize, count: usize, anchor: Option<OutputId>) -> Self {
-        let added = (0..count).fold(Vec::<Output>::new(), |added, offset| {
-            let id = OutputId(self.next_output + offset as u32);
-            let name = self.unused_name(&added, |number| format!("Output {number}"));
-            let output = Output {
-                name,
-                new_cues: None,
-                ..Output::main(id)
-            };
-            added.into_iter().chain([output]).collect()
-        });
-        self.inserted(at, added, false, anchor)
-    }
-
-    /// Pastes `outputs` in a row at `at` among the outputs, as one change.
-    /// With `restore`, an output whose identity no output of the show has
-    /// takes it back, with the level of its new cues, so that the cues that
-    /// sent to it send to it again, as a line cut and pasted back in Vim is
-    /// the line that was.  Every other output is a copy: it has an identity of
-    /// its own, no cue sends to it, and no new cue sends to it either.  A name
-    /// that an output has gets the lowest number from 2 on that makes it free,
-    /// after a number that the name ends in after a space gives way to the new
-    /// one, so that a copy of House R 2 is House R 3.
-    pub(super) fn pasted_outputs(
-        self,
-        at: usize,
-        outputs: Vec<Output>,
-        restore: bool,
-        anchor: Option<OutputId>,
-    ) -> Self {
-        let (pasted, _) = outputs.into_iter().fold(
-            (Vec::<Output>::new(), self.next_output),
-            |(pasted, next), output| {
-                let back = restore
-                    && self.output(output.id).is_none()
-                    && pasted.iter().all(|placed| placed.id != output.id);
-                let base = numbered_from(&output.name);
-                let name = self.unused_name(&pasted, |number| match number {
-                    1 => output.name.clone(),
-                    number => format!("{base} {number}"),
-                });
-                let placed = if back {
-                    Output { name, ..output }
-                } else {
-                    Output {
-                        id: OutputId(next),
-                        name,
-                        new_cues: None,
-                        ..output
-                    }
-                };
-                let next = if back { next } else { next + 1 };
-                (pasted.into_iter().chain([placed]).collect(), next)
-            },
-        );
-        self.inserted(at, pasted, true, anchor)
-    }
-
-    /// Puts `added` among the outputs at `at`, or at the end past them, as
-    /// one change that tells whether they were `pasted`, and nothing when
-    /// there is nothing to put
-    fn inserted(
-        self,
-        at: usize,
-        added: Vec<Output>,
-        pasted: bool,
-        anchor: Option<OutputId>,
-    ) -> Self {
-        if added.is_empty() {
-            return self;
-        }
-        let at = at.min(self.outputs.len());
-        let outputs = [&self.outputs[..at], &added, &self.outputs[at..]].concat();
-        self.with_outputs_changed(outputs, None, false, pasted, anchor)
-    }
-
     /// Deletes outputs as one change, unless that would leave the show none,
     /// and records whether they were cut to the register of outputs
     pub(super) fn deleted_outputs(self, ids: &[OutputId], cut: bool) -> Self {
@@ -162,7 +72,7 @@ impl Workspace {
         if outputs.is_empty() || outputs.len() == self.outputs.len() {
             return self;
         }
-        self.with_outputs_changed(outputs, None, cut, false, None)
+        OutputChange::to(outputs).with_cut(cut).recorded_on(self)
     }
 
     /// Moves an output by a number of places, downwards when positive, as
@@ -177,7 +87,9 @@ impl Workspace {
         let mut outputs = self.outputs.clone();
         let output = outputs.remove(from);
         outputs.insert(to, output);
-        self.with_outputs_changed(outputs, None, false, false, Some(id))
+        OutputChange::to(outputs)
+            .with_anchor(Some(id))
+            .recorded_on(self)
     }
 
     /// Edits one setting of an output, apart from a name that is empty or
@@ -193,38 +105,15 @@ impl Workspace {
         if matches!(&edit, OutputEdit::Name(name) if taken(name)) {
             return self;
         }
-        let setting = Some((id, mem::discriminant(&edit)));
+        let setting = mem::discriminant(&edit);
         let outputs = replaced_where(
             self.outputs.clone(),
             |output| output.id == id,
             |output| output.edited(edit),
         );
-        self.with_outputs_changed(outputs, setting, false, false, None)
-    }
-
-    /// Records the change of the outputs to `outputs`, unless they stay as
-    /// they are, which leaves redo alone, as a cue edit that changes nothing
-    /// does
-    fn with_outputs_changed(
-        self,
-        outputs: Vec<Output>,
-        setting: Option<(OutputId, mem::Discriminant<OutputEdit>)>,
-        cut: bool,
-        pasted: bool,
-        anchor: Option<OutputId>,
-    ) -> Self {
-        if outputs == self.outputs {
-            return self;
-        }
-        let change = Change::Outputs {
-            before: self.outputs.clone(),
-            after: outputs.clone(),
-            setting,
-            cut,
-            pasted,
-            anchor,
-        };
-        self.with_outputs(outputs).recorded(change)
+        OutputChange::to(outputs)
+            .with_setting(id, setting)
+            .recorded_on(self)
     }
 
     /// Puts `outputs` in place of those of the show without recording a
@@ -242,17 +131,4 @@ impl Workspace {
             ..self
         }
     }
-}
-
-/// Returns `name` without the space and the number that end it, which a
-/// numbered copy replaces with its own, unless nothing but the number is
-/// left
-fn numbered_from(name: &str) -> &str {
-    name.rsplit_once(' ')
-        .filter(|(base, number)| {
-            !base.trim().is_empty()
-                && !number.is_empty()
-                && number.chars().all(|digit| digit.is_ascii_digit())
-        })
-        .map_or(name, |(base, _)| base)
 }

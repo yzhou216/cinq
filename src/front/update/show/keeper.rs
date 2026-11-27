@@ -17,7 +17,7 @@ use itertools::{Either, Itertools};
 use super::{
     Show,
     file::{kept_file, remove, write},
-    read,
+    named, read,
 };
 
 /// The keeper decides at once what to write and what to remove, and leaves
@@ -194,7 +194,7 @@ impl Change {
             Change::Remove(file) => remove(file),
         }
         .map_err(|error| {
-            let name = self.file().file_name().unwrap_or_default().display();
+            let name = named(self.file());
             format!("Cannot keep the unsaved changes to {name}: {error}")
         })
     }

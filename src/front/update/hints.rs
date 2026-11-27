@@ -113,7 +113,6 @@ impl App {
         }
     }
 
-    /// Turns hint mode off, which takes the labels away
     pub(super) fn without_hints(self) -> Self {
         Self {
             hints: None,
@@ -125,7 +124,7 @@ impl App {
     /// the cues of the Active list, in its order, and the number of warnings,
     /// which move those places when a run starts or ends or a warning comes
     /// or goes
-    pub(in crate::front) fn above_places(&self) -> Above {
+    pub(super) fn above_places(&self) -> Above {
         Above {
             active: self
                 .workspace
@@ -141,7 +140,7 @@ impl App {
     /// `before`, which is nothing to compare when the mode was off, since the
     /// places below an entry that came or went lie elsewhere than the labels
     /// do
-    pub(in crate::front) fn hints_after(self, before: Option<&Above>) -> Self {
+    pub(super) fn hints_after(self, before: Option<&Above>) -> Self {
         match before {
             Some(before) if self.hints.is_some() && self.above_places() != *before => {
                 self.without_hints()
@@ -153,22 +152,15 @@ impl App {
     /// Reads a key that arrives while hint mode is on
     pub(super) fn hint_typed(self, press: Press, repeat: bool) -> (Self, Task<Message>) {
         let backspace = Press::from_key(&Key::Named(Named::Backspace), Modifiers::empty());
-        let typed = self
-            .hints
-            .as_ref()
-            .map_or_else(String::new, |hints| hints.typed.clone());
+        let typed = self.hints.as_ref().map_or("", Hints::typed).to_owned();
         match self.config.keymap.alone(press) {
             Some(action) if action.acts_at_once() => self.without_hints().typed(press, repeat),
-            // A held letter would pick the labels that it begins in a row
+            // Held letter would pick the labels that it begins in a row
             _ if repeat => (self, Task::none()),
-            _ if Some(press) == backspace && typed.is_empty() => {
-                (self.without_hints(), Task::none())
-            }
-            _ if Some(press) == backspace => {
-                let kept = typed.chars().count().saturating_sub(1);
-                let shorter = typed.chars().take(kept).collect();
-                self.hint_typed_as(shorter)
-            }
+            _ if Some(press) == backspace => match typed.char_indices().next_back() {
+                Some((last, _)) => self.hint_typed_as(typed[..last].to_owned()),
+                None => (self.without_hints(), Task::none()),
+            },
             _ => match press.letter() {
                 // Labels are lowercase, whatever Caps Lock makes of the key
                 Some(letter) => self.hint_typed_as(format!("{typed}{}", letter.to_lowercase())),

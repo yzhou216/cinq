@@ -45,11 +45,11 @@ fn failed_saving_leaves_the_changes_unsaved() {
     let app = changed.saved(failed);
     assert!(app.show.unsaved());
     assert_eq!(
-        app.file_problem.as_deref(),
+        app.problems.file.as_deref(),
         Some("Cannot save storm.cinq.toml: disk full")
     );
     assert_eq!(
-        app.told.as_deref(),
+        app.notices.told.as_deref(),
         Some("Cannot save: disk full"),
         "the bar answers the key too, without the name that stands at its left"
     );
@@ -124,14 +124,14 @@ fn saving_keeps_the_permissions_of_the_show_and_the_link_to_it() {
 fn saving_ends_the_failure_to_open_whether_it_succeeds_or_fails() {
     let broken =
         || App::default().opened(found(Some("/shows/big.cinq.toml"), Some("[[list"), None));
-    assert!(broken().open_failed);
+    assert!(broken().problems.open_failed);
     let file = "/shows/other.cinq.toml";
     let succeeded = broken().saved(saving(&broken(), file));
-    assert!(!succeeded.open_failed && succeeded.file_problem.is_none());
+    assert!(!succeeded.problems.open_failed && succeeded.problems.file.is_none());
     let failed = Saved {
         result: Err("disk full".to_owned()),
         ..saving(&broken(), file)
     };
     let failed = broken().saved(failed);
-    assert!(!failed.open_failed && failed.file_problem.is_some());
+    assert!(!failed.problems.open_failed && failed.problems.file.is_some());
 }

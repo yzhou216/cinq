@@ -5,13 +5,11 @@
 //! Tests of scrolling a row at a time, in the cue list and on the help page
 
 use super::super::{
+    helping,
     paging::{shaped, typed},
     show,
 };
-use crate::{
-    back::CueId,
-    front::{App, update::viewing::scroll},
-};
+use crate::{back::CueId, front::update::rows::viewing::scroll};
 
 /// Returns the offset in rows and the row that scrolling the list of
 /// [`shaped`] by `rows` rows leaves, with the selection on `current`
@@ -60,10 +58,7 @@ fn keys_of_a_row_scroll_measure_the_cue_list_and_move_no_selection_themselves() 
 
 #[test]
 fn keys_of_a_row_scroll_scroll_the_help_page_a_line_and_move_no_selection() {
-    let open = App {
-        help: true,
-        ..show(Some(CueId(2)))
-    };
+    let open = helping(show(Some(CueId(2))));
     let (after, started) = typed(open, "e", &[]);
     assert_eq!((after.selected, started), (Some(CueId(2)), 1));
     let (after, started) = typed(after, "y", &["3"]);

@@ -6,14 +6,11 @@
 
 use iced::{
     Element, Fill,
-    widget::{
-        column, container, responsive, row, text,
-        text::{LineHeight, Wrapping},
-    },
+    widget::{Row, column, container, responsive, row, text, text::Wrapping},
 };
 
 use super::{
-    SPACING, TEXT_SIZE, button, char_width, faults, format, theme,
+    SPACING, TEXT_SIZE, button, char_width, faults, format, height_of, theme,
     widget::{Button, shortened},
 };
 use crate::{
@@ -21,7 +18,7 @@ use crate::{
     front::{App, Message},
 };
 
-/// Size of the title, which names the standby cue
+/// Text size of the title, which names the standby cue
 const TITLE: f32 = 24.0;
 
 /// Columns of the font that a window needs to keep the buttons beside the
@@ -29,49 +26,19 @@ const TITLE: f32 = 24.0;
 /// buttons, and the spacing take the rest
 const BESIDE: f32 = 68.0;
 
-/// Returns whether a window `window` wide keeps the buttons beside the title
 fn beside(window: f32) -> bool {
     window >= BESIDE * char_width()
-}
-
-fn height_of(size: f32) -> f32 {
-    f32::from(LineHeight::default().to_absolute(size.into()))
 }
 
 pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
     let list = app.current();
     let standby = list.standby.and_then(|id| app.workspace.cue(id));
-    // Summary keeps to three lines, so that the parts below stay where they are
-    // as standby moves
-    let lines = match standby {
-        Some(cue) => {
-            let notes = Some(Cue::one_line(&cue.notes))
-                .filter(|notes| !notes.is_empty())
-                .unwrap_or_else(|| "none".to_owned());
-            [
-                format!("Standby: {cue}"),
-                format!("Notes: {notes}"),
-                format::chain(&app.workspace, list, cue, &faults::failing(app)),
-            ]
-        }
-        None => [
-            "Standby: end of list".to_owned(),
-            "Notes: none".to_owned(),
-            "GO fires nothing".to_owned(),
-        ],
-    };
-    let [title, notes, chain] = lines;
+    let [title, notes, chain] = lines(app, standby);
     let chain = match app.workspace.moving(app.list) {
         Some((target, seconds)) => format!("{}; {chain}", format::moving(target, seconds)),
         None => chain,
     };
-    let paused = app.workspace.active().iter().any(|active| active.paused);
-    let buttons = row![
-        button("Pause all").on_press_maybe(app.running().then_some(Message::PauseAll)),
-        button("Resume all").on_press_maybe(paused.then_some(Message::ResumeAll)),
-        panic(),
-    ]
-    .spacing(SPACING);
+    let buttons = buttons(app);
     // The notes and the chain take the width under the title and the buttons,
     // which a narrow window puts under the title, so that it reads
     let head: Vec<Element<'_, Message>> = if beside(window) {
@@ -92,6 +59,39 @@ pub(super) fn view(app: &App, window: f32) -> Element<'_, Message> {
     .spacing(SPACING)
     .padding(SPACING)
     .into()
+}
+
+/// Returns the title, the notes, and the chain of `standby`, or of the end
+/// of the list, always three lines, so that the parts below stay where they
+/// are as standby moves
+fn lines(app: &App, standby: Option<&Cue>) -> [String; 3] {
+    match standby {
+        Some(cue) => {
+            let notes = Some(Cue::one_line(&cue.notes))
+                .filter(|notes| !notes.is_empty())
+                .unwrap_or_else(|| "none".to_owned());
+            [
+                format!("Standby: {cue}"),
+                format!("Notes: {notes}"),
+                format::chain(&app.workspace, app.current(), cue, &faults::failing(app)),
+            ]
+        }
+        None => [
+            "Standby: end of list".to_owned(),
+            "Notes: none".to_owned(),
+            "GO fires nothing".to_owned(),
+        ],
+    }
+}
+
+fn buttons(app: &App) -> Row<'_, Message> {
+    let paused = app.workspace.active().iter().any(|active| active.paused);
+    row![
+        button("Pause all").on_press_maybe(app.running().then_some(Message::PauseAll)),
+        button("Resume all").on_press_maybe(paused.then_some(Message::ResumeAll)),
+        panic(),
+    ]
+    .spacing(SPACING)
 }
 
 /// Returns the GO button, which hint mode leaves out since Space fires GO from
@@ -126,7 +126,7 @@ fn line<'a>(told: String, size: f32) -> Element<'a, Message> {
             .wrapping(Wrapping::None)
             .into()
     })
-    .height(height_of(size))
+    .height(height_of(size.into()))
     .into()
 }
 

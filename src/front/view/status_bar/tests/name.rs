@@ -9,7 +9,6 @@ use unicode_width::UnicodeWidthStr;
 use super::{super::name::shown, cancel::COLUMNS};
 use crate::front::{App, update::Show};
 
-/// Returns an app with the show in a file of `name`
 fn named(name: &str) -> App {
     App {
         show: Show::in_file(name),

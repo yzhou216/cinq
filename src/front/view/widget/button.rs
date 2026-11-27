@@ -13,8 +13,6 @@
 //! that is made [`reachable`](Button::reachable) is also a stop of the Tab
 //! order, which Enter presses.
 
-mod focused;
-
 use iced::{
     Element, Event, Length, Theme,
     advanced::{Shell, layout::Layout},
@@ -22,8 +20,8 @@ use iced::{
     widget::button::{Status, Style},
 };
 
-use self::focused::Focused;
 use super::{
+    focus::Focused,
     hinted, pressed,
     wrap::{Intercept, wrap},
 };
@@ -124,7 +122,7 @@ impl<'a> From<Button<'a>> for Element<'a, Message> {
         let look = wrap(button.look, OnPress(button.on_press.clone()));
         let reached = match (button.keymap, button.on_press) {
             (Some(keymap), Some(press)) => {
-                Element::new(Focused::new(look, press, button.leaves, keymap))
+                Element::new(Focused::button(look, press, button.leaves, keymap))
             }
             _ => look,
         };

@@ -11,19 +11,16 @@ use crate::{
     front::{
         App, Message,
         view::{
-            devices::{Choice, choices, chosen, default_label},
-            dropdown, faults, keep_keys, outputs, theme,
+            devices::{Choice, choices, chosen, default_label, named},
+            dropdown, faults, keep_keys, theme,
         },
     },
 };
 
-/// Returns whether the device of the output is not there
-pub(super) fn missing(app: &App, output: &Output) -> bool {
+fn missing(app: &App, output: &Output) -> bool {
     matches!(faults::fault(app, output.id), Some(Fault::Missing(_)))
 }
 
-/// Returns the list of the devices that the output can play on, which
-/// shows a device that is not there by its name
 pub(super) fn view<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message> {
     let id = output.id;
     // Device that is not there, which reads so in words and in yellow
@@ -54,12 +51,9 @@ pub(super) fn view<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message>
     .placeholder(placeholder)
     // Sidebar tells in color which device the default stands for
     .on_highlight(move |row| Message::DefaultHighlighted(row.is_some() && row == default_row));
-    let list = if missing {
-        list.placeholder_color(theme::PALETTE.warning)
-    } else {
-        list
-    }
-    .on_open(Message::ListAudioDevices);
+    let list = list
+        .placeholder_color(missing.then_some(theme::PALETTE.warning))
+        .on_open(Message::ListAudioDevices);
     keep_keys(list, keymap)
 }
 
@@ -67,10 +61,7 @@ pub(super) fn view<'a>(app: &'a App, output: &'a Output) -> Element<'a, Message>
 /// not there, which an output on the Default device keeps the name of too,
 /// since the sidebar and not this list chooses it
 pub(super) fn placeholder(app: &App, output: &Output) -> String {
-    let name = match &output.device {
-        Device::Default => default_label(app),
-        device => outputs::device(device).to_owned(),
-    };
+    let name = named(app, &output.device);
     if missing(app, output) {
         format!("{name}, not found")
     } else {

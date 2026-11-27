@@ -10,8 +10,7 @@ use crate::{
     front::{
         App, Message,
         keymap::Action,
-        message::{Height, LineKey, Page},
-        update::Spot,
+        message::{Height, LineKey, Page, Spot},
     },
 };
 

@@ -4,13 +4,11 @@
 
 //! Tests of the State column for a cue that plays, waits, or fails to load
 
-use std::collections::BTreeSet;
-
 use iced::widget::text;
 
 use super::{
-    super::columns::{lines, state},
-    show,
+    super::columns::states::{Look, lines, state},
+    show, told, yellow,
 };
 use crate::{
     back::{Command, Cue, CueId, CueList, InstrumentId, Kind, OutputId, Sends, Workspace},
@@ -21,9 +19,7 @@ fn shown(workspace: &Workspace) -> (String, bool) {
     let list = &workspace.lists()[0];
     let cue = &list.cues[0];
     let (state, style) = state(workspace, cue, None, false);
-    let theme = theme::modus_vivendi();
-    let yellow = style(&theme).color == text::warning(&theme).color;
-    (state, yellow)
+    (state, yellow(style))
 }
 
 #[test]
@@ -42,10 +38,7 @@ fn a_cue_that_sends_somewhere_or_names_no_sends_reads_as_any_other() {
 /// Returns the lines of the State column of the only cue, which is standby
 fn standby_lines(workspace: &Workspace) -> Vec<String> {
     let cue = &workspace.lists()[0].cues[0];
-    lines(workspace, cue, true, None, &[], &BTreeSet::new(), false)
-        .into_iter()
-        .map(|(line, _)| line)
-        .collect()
+    told(lines(workspace, cue, Look::default().with_next(true)))
 }
 
 #[test]
@@ -64,7 +57,7 @@ fn the_state_of_a_row_that_stands_for_the_standby_cue_reads_next() {
     let workspace = show(None);
     let cue = &workspace.lists()[0].cues[0];
     assert_eq!(standby_lines(&workspace), ["NEXT"]);
-    assert!(lines(&workspace, cue, false, None, &[], &BTreeSet::new(), false).is_empty());
+    assert!(lines(&workspace, cue, Look::default()).is_empty());
 }
 
 #[test]

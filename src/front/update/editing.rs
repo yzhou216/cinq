@@ -6,16 +6,25 @@
 //! files of audio, video, and picture cues, and undoing and redoing changes
 //! to the show
 
+mod clipboard;
+mod operators;
+mod stopping;
+
 use std::ops::ControlFlow;
 
 use iced::Task;
 use itertools::Itertools;
 
+use clipboard::PASTE_LIMIT;
+pub(in crate::front) use clipboard::{Clipboard, Clipped};
+pub(super) use clipboard::{EMPTY, Register};
+pub(super) use stopping::Stopping;
+
 use crate::{
     back::{
         Change, Command, CueId, Kind, PICTURE_FILES, Place, SOUND_FILES, VIDEO_FILES, Workspace,
     },
-    front::{App, Message, Tab, update::clipboard::PASTE_LIMIT},
+    front::{App, Message, Tab},
 };
 
 impl App {
@@ -87,7 +96,7 @@ impl App {
 
     /// Removes the selected row and the rows below it, as many as `count`
     /// holds, with the command that `remove` makes of their identities
-    pub(super) fn taking_away(self, count: usize, remove: fn(Vec<CueId>) -> Command) -> Self {
+    fn taking_away(self, count: usize, remove: fn(Vec<CueId>) -> Command) -> Self {
         let Some(first) = self.selected_row() else {
             return self;
         };
@@ -122,10 +131,18 @@ impl App {
     /// for the notice.  A turn that finds none leaves the count of the turn
     /// before, as it leaves that turn's notice.
     pub(super) fn counting(self, turn: impl FnOnce(Self) -> Self) -> Self {
-        let earlier = self.turns;
-        let app = turn(Self { turns: 0, ..self });
+        let earlier = self.notices.turns;
+        let app = turn(Self {
+            notices: self.notices.with_turns(0),
+            ..self
+        });
+        let turns = if app.notices.turns == 0 {
+            earlier
+        } else {
+            app.notices.turns
+        };
         Self {
-            turns: if app.turns == 0 { earlier } else { app.turns },
+            notices: app.notices.with_turns(turns),
             ..app
         }
     }
@@ -184,7 +201,7 @@ impl App {
             Some(change) => {
                 let cue = lands(change);
                 let row = app.selected_row();
-                // The light patch has no row to select, so its tab shows
+                // Light patch has no row to select, so its tab shows
                 let tab = if matches!(change, Change::Patched { .. }) {
                     Tab::Patch
                 } else {
@@ -204,7 +221,7 @@ impl App {
     /// selected cue that the change took away, from the row `row`, leaves
     /// the selection to the cue that has taken its place, or to the last
     /// cue when none has.
-    pub(super) fn showing(self, cue: Option<CueId>, row: Option<usize>) -> Self {
+    fn showing(self, cue: Option<CueId>, row: Option<usize>) -> Self {
         let gone = |id: &CueId| self.workspace.cue(*id).is_none();
         match cue.filter(|id| !gone(id)) {
             Some(id) => self.with_selection(id),

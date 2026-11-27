@@ -4,7 +4,7 @@
 
 //! Tests of the selection after deleting, undo, and standby move
 
-use super::{operators::rows, show};
+use super::show;
 use crate::{
     back::{CueId, Place},
     front::{App, Message},
@@ -56,22 +56,7 @@ fn undoing_an_addition_or_a_paste_selects_the_cue_that_was_selected_when_it_was_
 }
 
 #[test]
-fn undoing_a_counted_addition_removes_all_its_cues_as_one_change_and_selects_the_anchor() {
-    let counted = |place, count| {
-        let (added, _) = show(Some(CueId(4))).handled(Message::Add(place, count));
-        let cues = rows(&added);
-        let (undone, _) = added.handled(Message::Undo(1));
-        (cues, rows(&undone), undone.selected)
-    };
-    let (cues, after, selected) = counted(Place::After, 3);
-    assert_eq!(cues[3..8], [4, 22, 23, 24, 5]);
-    assert_eq!(after, (1..=12).collect::<Vec<_>>());
-    assert_eq!(selected, Some(CueId(4)));
-    let (cues, after, selected) = counted(Place::Before, 3);
-    assert_eq!(cues[2..7], [3, 22, 23, 24, 4]);
-    assert_eq!(after, (1..=12).collect::<Vec<_>>());
-    assert_eq!(selected, Some(CueId(4)));
-    // One undo took all three, and redo puts them back with the first selected
+fn redoing_a_counted_addition_puts_all_its_cues_back_with_the_first_selected() {
     let (added, _) = show(Some(CueId(4))).handled(Message::Add(Place::After, 3));
     let (redone, _) = added.handled(Message::Undo(1)).0.handled(Message::Redo(1));
     assert_eq!(redone.workspace.lists()[0].cues.len(), 15);

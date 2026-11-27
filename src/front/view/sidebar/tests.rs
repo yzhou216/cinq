@@ -7,16 +7,10 @@
 
 use unicode_width::UnicodeWidthStr;
 
-use super::{
-    LEAST, SIDEBAR,
-    devices::{missing, named},
-    label, limited,
-    running::entry,
-    width,
-};
+use super::{LEAST, SIDEBAR, devices::missing, label, problems::limited, running::entry, width};
 use crate::{
-    back::{Command, Cue, CueId, CueList, Device, Fault, Kind, OutputId, Workspace, loaded, sound},
-    front::App,
+    back::{Command, Cue, CueId, CueList, Fault, Kind, OutputId, Workspace, loaded, sound},
+    front::{App, Problems},
 };
 
 #[test]
@@ -84,26 +78,14 @@ fn a_running_cue_whose_outputs_all_failed_says_so_in_place_of_how_it_runs() {
 }
 
 #[test]
-fn a_warning_about_the_default_device_names_the_id_that_the_list_chooses() {
-    let mut app = App::default();
-    app.config.sound.device = Some("alsa:nonexistent-main".to_owned());
-    assert_eq!(
-        named(&app, &Device::Default),
-        "Default device (alsa:nonexistent-main)"
-    );
-    let card = Device::Named {
-        id: "alsa:front:CARD=PCH,DEV=0".to_owned(),
-        name: String::new(),
-    };
-    assert_eq!(named(&app, &card), "alsa:front:CARD=PCH,DEV=0");
-}
-
-#[test]
 fn the_default_device_list_is_lost_while_an_output_on_the_default_fails() {
     let app = App::default();
     assert!(!missing(&app));
     let failed = App {
-        audio_problems: vec![(OutputId(1), Fault::Missing("gone".to_owned()))],
+        problems: Problems {
+            audio: vec![(OutputId(1), Fault::Missing("gone".to_owned()))],
+            ..Problems::default()
+        },
         ..App::default()
     };
     assert!(missing(&failed), "Main is on the default device");

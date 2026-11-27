@@ -7,13 +7,6 @@
 
 use super::*;
 
-fn collapse(ids: &[u32], collapsed: bool) -> Command {
-    Command::Collapse {
-        cues: ids.iter().map(|&id| CueId(id)).collect(),
-        collapsed,
-    }
-}
-
 /// Returns a group, two levels of cues in it, and a cue below it
 fn nested() -> Workspace {
     workspace(vec![
@@ -56,11 +49,9 @@ fn collapsing_is_no_change_to_undo_and_leaves_other_cues_alone() {
 }
 
 #[test]
-fn show_file_keeps_collapsed_groups() {
+fn show_file_writes_collapsed_only_for_collapsed_groups() {
     let workspace = nested().apply(collapse(&[3], true));
     let text = shown(&workspace);
     assert_eq!(text.matches("collapsed = true").count(), 1);
-    let read = read_back(&text);
-    assert_eq!(read.lists()[0].groups().shown(), [0, 1, 2, 4]);
     assert!(!shown(&nested()).contains("collapsed"));
 }

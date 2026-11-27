@@ -22,7 +22,7 @@ fn percent(workspace: Workspace, from: f64, at: &[f64]) -> Vec<i32> {
 
 #[test]
 fn progress_runs_to_the_end_of_the_loop_and_back_to_its_start_each_pass() {
-    // The loop runs from 2 to 6 seconds of a file of ten
+    // Loop runs from 2 to 6 seconds of a file of ten
     let show = workspace(vec![vamp(1)]).apply(GO);
     let at = [1.0, 5.0, 5.5, 6.0, 7.0, 9.0, 10.0, 12.0];
     assert_eq!(percent(show, 0.0, &at), [10, 50, 55, 20, 30, 50, 20, 40]);

@@ -50,11 +50,20 @@ fn black_gray_and_white_keep_their_shade() {
 
 #[test]
 fn pictures_take_the_matrix_of_their_size() {
-    let (_, lines) = HIGH_DEFINITION;
-    let smaller = rgba(&picture(2, lines - 2, 81, 90, 240));
-    assert!(all_close(&smaller.pixels, [255, 0, 0, 255]));
-    let high = rgba(&picture(2, lines, 63, 102, 240));
-    assert!(all_close(&high.pixels, [255, 0, 0, 255]));
+    let (width, lines) = HIGH_DEFINITION;
+    // BT.601 holds below high definition in width and lines, and BT.709 from
+    // either on, as in a wide picture cropped from high definition
+    [
+        (2, lines - 2, 81, 90),
+        (2, lines, 63, 102),
+        (width - 2, 534, 81, 90),
+        (width, 534, 63, 102),
+    ]
+    .iter()
+    .for_each(|&(width, lines, luma, blue)| {
+        let pixels = rgba(&picture(width, lines, luma, blue, 240)).pixels;
+        assert!(all_close(&pixels, [255, 0, 0, 255]), "{width} by {lines}");
+    });
 }
 
 #[test]
@@ -62,15 +71,6 @@ fn picture_cropped_to_no_width_converts_to_no_pixels() {
     let (_, lines) = HIGH_DEFINITION;
     assert!(rgba(&picture(0, lines, 63, 102, 240)).pixels.is_empty());
     assert!(rgba(&picture(0, 2, 63, 102, 240)).pixels.is_empty());
-}
-
-#[test]
-fn wide_picture_cropped_from_high_definition_takes_its_matrix() {
-    let (width, _) = HIGH_DEFINITION;
-    let narrower = rgba(&picture(width - 2, 534, 81, 90, 240));
-    assert!(all_close(&narrower.pixels, [255, 0, 0, 255]));
-    let scope = rgba(&picture(width, 534, 63, 102, 240));
-    assert!(all_close(&scope.pixels, [255, 0, 0, 255]));
 }
 
 #[test]

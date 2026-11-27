@@ -11,24 +11,22 @@ use super::{
 use crate::front::{
     App, Message,
     message::Height,
-    update::{Measured, Rows, paging::viewport::Shape},
+    update::{Measured, Rows, rows::paging::viewport::Shape},
 };
 
 /// Returns the outputs after a measure of `rows` as ten rows of twenty
 /// pixels in a view of five, scrolled by `scrolled` pixels
 fn measure(rows: Rows, scrolled: f32) -> App {
     let app = outputs();
-    let shape = Shape {
-        view: 100.0,
-        content: 200.0,
-        scrolled,
-    };
-    let serial = app.measures.serial();
     let measured = Measured::Rows {
-        serial,
+        serial: app.measures.serial(),
         rows,
         count: 10,
-        shape,
+        shape: Shape {
+            view: 100.0,
+            content: 200.0,
+            scrolled,
+        },
     };
     after(app, [Message::Measured(measured)])
 }

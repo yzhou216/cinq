@@ -9,7 +9,6 @@ use std::io;
 
 use crate::warn;
 
-/// What a round of sending told
 #[derive(Debug, PartialEq)]
 pub(super) enum Round {
     /// Nothing was due or possible to send, which tells nothing

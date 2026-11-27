@@ -32,7 +32,6 @@ pub enum Remote {
 }
 
 impl Remote {
-    /// Returns the number of the cue that the command aims at, if it aims at one
     pub fn number(&self) -> Option<&str> {
         match self {
             Self::Start(number)
@@ -45,7 +44,6 @@ impl Remote {
     }
 }
 
-/// What a message asks for
 #[derive(Debug, PartialEq, Eq)]
 pub enum Reading {
     Command(Remote),

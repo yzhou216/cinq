@@ -2,12 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the update cycle: the keys that act while the help page is
-//! open, the help page that comes and goes without touching the main
-//! window, the selection after deleting or undo takes the selected cue
-//! away, the selection that follows standby, the sound file chosen for a
-//! new cue, the levels typed into fields, a link of the help page that
-//! fails to open, the clipboard, and the keys that enter the name of a cue
+//! Tests of the update cycle, and the helpers that its test modules share
 
 mod adding;
 mod cancel;
@@ -30,7 +25,6 @@ mod matches;
 mod naming;
 mod new_kind;
 mod operators;
-mod operators_pasting;
 mod output_editing;
 mod output_moves;
 mod output_places;
@@ -45,6 +39,7 @@ mod search_columns;
 mod search_line;
 mod search_places;
 mod selection;
+mod show_mode;
 mod side_buttons;
 mod stopping;
 mod typed_levels;
@@ -55,14 +50,15 @@ use std::ops::RangeInclusive;
 
 use iced::{
     Task,
-    advanced::widget::operation::{Focusable, TextInput},
     keyboard::{Key, Modifiers, key::Named},
+    window,
 };
 
 use crate::{
-    back::{CueId, CueList, Place, Workspace, audio},
+    back::{Cue, CueId, CueList, Place, Workspace, audio, loaded, sound},
     front::{
-        App, Message, Tab,
+        App, Message, Setting, Tab,
+        app::Held,
         keymap::{Press, sequence},
         view::format,
     },
@@ -83,7 +79,7 @@ fn show(selected: Option<CueId>) -> App {
     }
 }
 
-pub(super) fn chord(key: Key, modifiers: Modifiers) -> Press {
+fn chord(key: Key, modifiers: Modifiers) -> Press {
     Press::from_key(&key, modifiers).expect("keys in the tests are named")
 }
 
@@ -92,20 +88,92 @@ pub(super) fn press(key: Key) -> Press {
 }
 
 /// Returns how the latest change of the show reads in its notice
-pub(super) fn told(app: &App) -> String {
+fn told(app: &App) -> String {
     let (_, change) = app.workspace.latest_change().expect("a change");
     format::change(&app.workspace, change)
 }
 
 /// Returns the notice of the latest change led by what it means for the cues
-pub(super) fn noticed(app: &App) -> String {
+fn noticed(app: &App) -> String {
     let (_, change) = app.workspace.latest_change().expect("a change");
     let facts = format::consequences_of(&app.workspace, change);
     format::leading(facts, &format::change(&app.workspace, change))
 }
 
+/// Returns what the status bar tells of the last copy or cut, and whether it
+/// was a cut
+fn on_clipboard(app: &App) -> Option<(&str, bool)> {
+    app.notices
+        .clipped
+        .as_ref()
+        .map(|clipped| (clipped.told.as_str(), clipped.cut))
+}
+
+/// Returns the identities of the cues on the clipboard in order
+fn held(app: &App) -> Vec<u32> {
+    app.clipboard.cues.iter().map(|cue| cue.id.0).collect()
+}
+
+/// Returns the state with the help page open
+fn helping(app: App) -> App {
+    App { help: true, ..app }
+}
+
+/// Returns the state with a main window, and the window
+fn windowed(app: App) -> (App, window::Id) {
+    let main = window::Id::unique();
+    (
+        App {
+            main: Some(main),
+            ..app
+        },
+        main,
+    )
+}
+
+/// Returns the state in show mode
+fn locked(app: App) -> App {
+    after(app, [Message::ShowMode(true)])
+}
+
+/// Returns the state of [`show`] with the Levels tab on screen
+fn on_levels(selected: Option<CueId>) -> App {
+    App {
+        tab: Tab::Levels,
+        ..show(selected)
+    }
+}
+
+/// Returns the state of a show of one list of `cues` with `selected` selected
+fn one_list(cues: Vec<Cue>, selected: Option<CueId>) -> App {
+    App {
+        workspace: Workspace::new(vec![CueList::new("Main", cues)]),
+        selected,
+        ..App::default()
+    }
+}
+
+/// Returns the state of a show of one list of `count` audio cues, the first
+/// selected
+fn crowded(count: u32) -> App {
+    one_list((1..=count).map(audio).collect(), Some(CueId(1)))
+}
+
+/// Returns the state with the sound of cue 1 loaded, ten seconds long
+fn with_sound(app: App) -> App {
+    App {
+        workspace: app.workspace.apply(loaded(1, "sound.ogg", sound(10.0))),
+        ..app
+    }
+}
+
+/// Returns the state of [`show`] with cue 1 selected and playing
+fn playing() -> App {
+    after(with_sound(show(Some(CueId(1)))), [Message::Go])
+}
+
 /// Returns the state after the messages, which a test sends one at a time
-pub(super) fn after(app: App, messages: impl IntoIterator<Item = Message>) -> App {
+fn after(app: App, messages: impl IntoIterator<Item = Message>) -> App {
     messages
         .into_iter()
         .fold(app, |app, message| app.next(message).0)
@@ -115,7 +183,7 @@ pub(super) fn after(app: App, messages: impl IntoIterator<Item = Message>) -> Ap
 /// the state with the task that the last key started.  The keys are written as
 /// the configuration file writes a sequence, apart by spaces, as in `3 o` or
 /// `Control+r`.
-pub(super) fn typing_task(app: App, keys: &str) -> (App, Task<Message>) {
+fn typing_task(app: App, keys: &str) -> (App, Task<Message>) {
     sequence(keys)
         .expect("keys in the tests are valid")
         .into_iter()
@@ -124,58 +192,33 @@ pub(super) fn typing_task(app: App, keys: &str) -> (App, Task<Message>) {
         })
 }
 
+/// Returns the state after `text` goes into a field a key at a time, as the
+/// widget reports it: each prefix of it as `message` makes it, with the
+/// keyboard still in the field
+fn typed_into(app: App, text: &str, message: impl Fn(String) -> Message) -> App {
+    text.char_indices().fold(app, |app, (at, key)| {
+        let prefix = text[..at + key.len_utf8()].to_owned();
+        after(
+            app,
+            [
+                message(prefix),
+                Message::Held(Held {
+                    any: true,
+                    ..Held::default()
+                }),
+            ],
+        )
+    })
+}
+
+/// Returns the state after `text` is typed into the field of `setting`
+fn typed_setting(app: App, setting: Setting, text: &str) -> App {
+    after(app, [Message::SettingTyped(setting, text.to_owned())])
+}
+
 /// Returns the state after the keys of [`typing_task`]
 pub(super) fn typing(app: App, keys: &str) -> App {
     typing_task(app, keys).0
-}
-
-/// Widget that can have the keyboard and select its text, which the tests of
-/// operations visit as iced does
-#[derive(Default)]
-pub(super) struct Field {
-    pub(super) focused: bool,
-    pub(super) selected: bool,
-}
-
-impl Field {
-    pub(super) fn new(focused: bool) -> Self {
-        Self {
-            focused,
-            ..Self::default()
-        }
-    }
-}
-
-impl Focusable for Field {
-    fn is_focused(&self) -> bool {
-        self.focused
-    }
-
-    fn focus(&mut self) {
-        self.focused = true;
-    }
-
-    fn unfocus(&mut self) {
-        self.focused = false;
-    }
-}
-
-impl TextInput for Field {
-    fn text(&self) -> &str {
-        ""
-    }
-
-    fn move_cursor_to_front(&mut self) {}
-
-    fn move_cursor_to_end(&mut self) {}
-
-    fn move_cursor_to(&mut self, _position: usize) {}
-
-    fn select_all(&mut self) {
-        self.selected = true;
-    }
-
-    fn select_range(&mut self, _start: usize, _end: usize) {}
 }
 
 /// Returns the keys that act in text fields, apart from those of GO and

@@ -3,13 +3,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Outputs of the show, which the main window shows in place of a cue list,
-//! and the settings of levels, outputs, sends, and the light patch that
-//! apply once the text typed into them reads as a value or the field is left
+//! and the settings that apply once the text typed into them reads as a
+//! value or the field is left
 //!
-//! The keys that move through cues move through the outputs by the code that
-//! the two share, and the keys that edit cues edit the outputs while they
-//! show, so that adding, deleting, moving, and renaming an output takes the
-//! keys of a cue.
+//! The keys of cues move through and edit the outputs while they show, so
+//! that adding, deleting, moving, and renaming an output takes the keys of
+//! a cue.
 
 mod clipboard;
 mod editing;
@@ -22,7 +21,7 @@ use crate::{
         Channels, Command, CueId, Edit, OutputEdit, PatchEdit, Place, parse_address, parse_level,
         parse_percent, parse_send,
     },
-    front::{App, Message, Setting, view},
+    front::{App, Message, Setting, message::reasons},
 };
 
 impl App {
@@ -79,14 +78,12 @@ impl App {
 
     /// Applies the text typed into a field that waits, once the operator has
     /// left it, and forgets the text, so that the field shows the value that
-    /// holds.  Levels wait, since a playing cue follows each prefix that
-    /// reads, such as the `2` of `-25`, and so does the file of a cue, since
-    /// the first key would stop a cue that plays and every prefix of a path
-    /// names a file that does not exist.  So do the channels of an output,
-    /// since a device would open for each of `1`, `12`, and `12-13` on the
-    /// way to the last.  So does the address of an instrument, which each
-    /// prefix would move on the stage.  Names apply as they read, for they
-    /// cost nothing.
+    /// holds.  A field waits where each prefix that reads would cost
+    /// something: the `2` of `-25` would move a playing cue, the first key of
+    /// a file would stop one and every prefix of a path names no file, the
+    /// `1` and `12` of `12-13` would each open a device, and a prefix of an
+    /// address would move an instrument on the stage.  Names apply as they
+    /// read, for they cost nothing.
     pub(super) fn settled(self) -> Self {
         let command = self
             .typed
@@ -101,10 +98,19 @@ impl App {
     }
 
     /// Settles the text of the field that the operator was in, unless it is
-    /// the field of `setting`
+    /// the field of `setting`.  The reason that the text does not apply, if
+    /// it does not, stays for the status bar, since the field shows the value
+    /// that holds once it is left.
     pub(super) fn settled_but(self, setting: Setting) -> Self {
         match &self.typed {
-            Some((typed, _)) if *typed != setting => self.leaving_unapplied().settled(),
+            Some((typed, _)) if *typed != setting => {
+                let unapplied = self.unapplied();
+                Self {
+                    notices: self.notices.preferring_unapplied(unapplied),
+                    ..self
+                }
+                .settled()
+            }
             _ => self,
         }
     }
@@ -113,16 +119,7 @@ impl App {
     /// does not, as the status bar tells it
     pub(super) fn unapplied(&self) -> Option<String> {
         let (setting, text) = self.typed.as_ref()?;
-        view::rejection(self, *setting, text).map(|reason| format!("Not applied: {reason}"))
-    }
-
-    /// Keeps the reason that the text of the field about to be left does not
-    /// apply, since the field shows the value that holds once it is left
-    fn leaving_unapplied(self) -> Self {
-        Self {
-            unapplied: self.unapplied().or(self.unapplied),
-            ..self
-        }
+        reasons::rejection(self, *setting, text).map(|reason| format!("Not applied: {reason}"))
     }
 
     /// Keeps the text typed into the field of `setting` for the field to

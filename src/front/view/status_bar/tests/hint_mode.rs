@@ -4,24 +4,22 @@
 
 //! Tests of the hints while hint mode is on
 
-use super::{hinted, opened_with};
+use super::{opened_with, texts};
 use crate::front::{
-    App, Hints,
+    App,
     keymap::{Keymap, desk},
+    update::Hints,
 };
 
 fn labelling(keymap: Keymap) -> Vec<String> {
-    hinted(&App {
+    texts(&App {
         hints: Some(Hints::default()),
         ..opened_with(keymap, false, false)
     })
-    .into_iter()
-    .map(|(_, hint)| hint)
-    .collect()
 }
 
 #[test]
-fn hint_mode_hints_only_what_acts_there() {
+fn hint_mode_hints_only_what_acts_there_and_backspace_leaves_where_no_key_cancels() {
     assert_eq!(
         labelling(Keymap::default()),
         [
@@ -31,10 +29,6 @@ fn hint_mode_hints_only_what_acts_there() {
             "Escape: Panic"
         ]
     );
-}
-
-#[test]
-fn backspace_leaves_where_the_keymap_binds_no_cancel() {
     assert_eq!(
         labelling(desk(""))[..2],
         ["Type a label", "Backspace: leave"]
@@ -44,12 +38,11 @@ fn backspace_leaves_where_the_keymap_binds_no_cancel() {
 #[test]
 fn backspace_takes_a_letter_back_once_one_is_typed() {
     let typed = |keymap| {
-        hinted(&App {
+        texts(&App {
             hints: Some(Hints::after("s")),
             ..opened_with(keymap, false, false)
         })
         .into_iter()
-        .map(|(_, hint)| hint)
         .take(2)
         .collect::<Vec<_>>()
     };

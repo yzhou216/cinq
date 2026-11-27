@@ -4,10 +4,10 @@
 
 //! Tests of the labels of the audio devices
 
-use super::{choices, chosen, default_label};
+use super::{choices, chosen, default_label, named};
 use crate::{
     back::Device,
-    front::{App, keymap::config::Config},
+    front::{App, config::Config},
 };
 
 fn device(id: &str, name: &str) -> (String, String) {
@@ -90,4 +90,21 @@ fn the_default_option_of_an_output_names_the_device_that_the_sidebar_chooses() {
         "Default device (alsa:gone)",
         "a choice that is not there goes by its ID, as in the sidebar"
     );
+}
+
+#[test]
+fn a_warning_about_the_default_device_names_the_id_that_the_list_chooses() {
+    let app = App {
+        config: Config::default().with_audio_device(Some("alsa:nonexistent-main".to_owned())),
+        ..App::default()
+    };
+    assert_eq!(
+        named(&app, &Device::Default),
+        "Default device (alsa:nonexistent-main)"
+    );
+    let card = Device::Named {
+        id: "alsa:front:CARD=PCH,DEV=0".to_owned(),
+        name: String::new(),
+    };
+    assert_eq!(named(&app, &card), "alsa:front:CARD=PCH,DEV=0");
 }

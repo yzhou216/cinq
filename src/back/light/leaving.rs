@@ -6,13 +6,9 @@
 //! their last levels for as long as they hold those of any source that has
 //! gone quiet
 
-use std::{collections::BTreeMap, time::Duration};
+use std::collections::BTreeMap;
 
 use super::Universes;
-
-/// Pace of the frames that bring a universe to its end, as fast as the
-/// workspace ticks
-pub(super) const FRAME: Duration = Duration::from_millis(25);
 
 /// Frames that send the levels as zeros before the stream says it has ended
 const ZEROED: u8 = 3;

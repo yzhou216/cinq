@@ -70,21 +70,12 @@ fn showing(layers: &[Layer]) -> Vec<u32> {
 }
 
 #[test]
-fn opaque_picture_that_covers_the_region_hides_those_below_it() {
-    let layers = [layer(1, (16, 9), 1.0), layer(2, (1920, 1080), 1.0)];
-    assert_eq!(showing(&layers), [2]);
-}
-
-#[test]
-fn opaque_picture_with_bars_hides_nothing_below_it() {
-    let layers = [layer(1, (16, 9), 1.0), layer(2, (4, 3), 1.0)];
-    assert_eq!(showing(&layers), [1, 2]);
-}
-
-#[test]
-fn picture_fading_out_hides_nothing_below_it() {
-    let layers = [layer(1, (16, 9), 1.0), layer(2, (16, 9), 0.5)];
-    assert_eq!(showing(&layers), [1, 2]);
+fn only_an_opaque_picture_that_covers_the_region_hides_those_below_it() {
+    let above = |top: Layer| showing(&[layer(1, (16, 9), 1.0), top]);
+    assert_eq!(above(layer(2, (1920, 1080), 1.0)), [2]);
+    // Bars leave the region below in view, as a fade does
+    assert_eq!(above(layer(2, (4, 3), 1.0)), [1, 2]);
+    assert_eq!(above(layer(2, (16, 9), 0.5)), [1, 2]);
 }
 
 #[test]

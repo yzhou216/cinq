@@ -2,8 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of how keys are written, and of how the keys that iced reports
-//! match what is written
+//! Tests of how keys are written, and of how iced reports them
 
 use iced::keyboard::{Key, Modifiers, key::Named};
 

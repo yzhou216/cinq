@@ -2,17 +2,21 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Changes to the cue lists: standby, loading, and the edits that show
-//! mode locks, which [`super::history`] records for undo
+//! Changes to the cue lists, which [`super::history`] records for undo
+
+mod cue_edits;
+mod grouping;
+mod numbering;
+mod pasting;
 
 use itertools::Itertools;
 
+use self::numbering::Numbers;
 use super::{
     Workspace,
     history::{Change, Kept, Placed, Standby},
-    numbering::Numbers,
 };
-use crate::back::{CueId, CueList, Edit, Kind, Media, Place, Stamp};
+use crate::back::{CueId, CueList, Edit, Kind, Place};
 
 impl Workspace {
     /// Puts `standby` on standby in a list without recording the move, as
@@ -24,18 +28,15 @@ impl Workspace {
     /// Moves standby as the operator asks, recording the move unless
     /// standby is there already
     pub(super) fn moved_standby(self, list: usize, cue: Option<CueId>) -> Self {
-        let before = self.lists.get(list).map(|cues| cues.standby);
+        let Some(before) = self.lists.get(list).map(|cues| cues.standby) else {
+            return self;
+        };
         let workspace = self.with_standby(list, cue);
-        let after = workspace.lists.get(list).map(|cues| cues.standby);
-        match before.zip(after) {
-            Some((before, after)) if before != after => {
-                workspace.recorded(Change::Standby(Standby {
-                    list,
-                    before,
-                    after,
-                }))
-            }
-            _ => workspace,
+        let moved = workspace.standby_since(list, before);
+        if moved.before == moved.after {
+            workspace
+        } else {
+            workspace.recorded(Change::Standby(moved))
         }
     }
 
@@ -47,10 +48,7 @@ impl Workspace {
     /// groups lies side by side.  Once the identities have run out, no more
     /// cues are added.
     pub(super) fn added(self, list: usize, kind: Kind, at: Place, count: usize) -> Self {
-        let ids: Vec<CueId> = (self.next_id..)
-            .take(count)
-            .map_while(|id| u32::try_from(id).ok().map(CueId))
-            .collect();
+        let ids = self.identities(count);
         let before = self.lists.get(list).and_then(|cues| cues.standby);
         let sends = self.new_sends().filter(|_| kind.plays_file());
         let numbers = Numbers::of(self.cues().map(|cue| cue.number.as_str()));
@@ -79,9 +77,18 @@ impl Workspace {
         workspace.recorded(Change::Added { cues, at, standby })
     }
 
+    /// Returns the next `count` identities, as many of them as have not run
+    /// out
+    fn identities(&self, count: usize) -> Vec<CueId> {
+        (self.next_id..)
+            .take(count)
+            .map_while(|id| u32::try_from(id).ok().map(CueId))
+            .collect()
+    }
+
     /// Returns the move of the standby of a list from `before` to where it
     /// is now
-    pub(super) fn standby_since(&self, list: usize, before: Option<CueId>) -> Standby {
+    fn standby_since(&self, list: usize, before: Option<CueId>) -> Standby {
         Standby {
             list,
             before,
@@ -127,25 +134,6 @@ impl Workspace {
         self.with_list_of(id, |cues| cues.with_moved(id, to))
     }
 
-    /// Edits a cue and records the edit, unless it leaves the setting as it
-    /// was, when it changes nothing at all.  Text fields send their text
-    /// again on keys that change nothing, such as Backspace at the start of
-    /// a field, and such an edit must not stop a running cue.
-    pub(super) fn edited(self, id: CueId, edit: Edit) -> Self {
-        let undo = self
-            .cue(id)
-            .map(|cue| cue.reverting(&edit))
-            .filter(|undo| *undo != edit);
-        match undo {
-            Some(undo) => self.changed(id, edit.clone()).recorded(Change::Edited {
-                cue: id,
-                undo,
-                redo: edit,
-            }),
-            None => self,
-        }
-    }
-
     /// Puts `kept` in place of the lists, outputs, and patch of the show as
     /// one change
     pub(super) fn restored(self, kept: Kept) -> Self {
@@ -176,7 +164,7 @@ impl Workspace {
     /// Puts `lists` in place of the cue lists without recording a change,
     /// as undo and redo do.  The cues that have gone stop, and new cues get
     /// identities that none of the lists holds.
-    pub(super) fn with_lists(self, lists: Vec<CueList>) -> Self {
+    fn with_lists(self, lists: Vec<CueList>) -> Self {
         let lists = super::listed(lists);
         let workspace = Self {
             next_id: super::next_id(&lists).max(self.next_id),
@@ -195,63 +183,6 @@ impl Workspace {
                 .with_list_of(id, |cues| cues.without(id))
                 .stopped(id)
         })
-    }
-
-    /// Edits a cue without recording the edit, as undo and redo edit it.
-    /// A running cue stops when it gets another file, which has yet to
-    /// load, while a file name that leads to the same file, such as the
-    /// one chosen again, leaves it playing.  A running audio or video cue
-    /// moves its level by the change in the level of its cue, so that a cue
-    /// that a fade has lowered stays lower, and a fade under way that leaves
-    /// it playing goes on from there to its own level.  A cue that a panic
-    /// or a fade is stopping keeps fading out, so that no edit brings it
-    /// back.  The level of a fade cue is the level of the fades that the cue
-    /// is making, which turn from where they are toward it in the time they
-    /// have left, and of its runs that have yet to act.
-    pub(super) fn changed(self, id: CueId, edit: Edit) -> Self {
-        let Some(cue) = self.cue(id) else {
-            return self;
-        };
-        let (path, plays) = (self.path(cue), cue.kind.plays_file());
-        let workspace = match edit {
-            Edit::Level(level) if plays => {
-                let by = level - cue.level;
-                self.with_active(id, |active| match active.fade {
-                    Some(fade) if fade.then_stop => active,
-                    _ => active.moved(by),
-                })
-            }
-            Edit::Level(level) if cue.kind == Kind::Fade => {
-                self.with_each_active(|active| active.retargeted(id, level))
-            }
-            _ => self,
-        }
-        .with_list_of(id, |cues| cues.edited(id, edit));
-        let refiled = workspace
-            .cue(id)
-            .is_some_and(|cue| workspace.path(cue) != path);
-        if refiled {
-            workspace
-                .stopped(id)
-                .with_list_of(id, |cues| cues.loaded(id, Media::Unloaded, None))
-        } else {
-            workspace
-        }
-    }
-
-    /// Records what loading the file of a cue found, unless the cue has
-    /// been given another file since loading began.  A run whose sound
-    /// could not start then ends, and the rest of its chain plays on, as GO
-    /// skips a cue that cannot play.
-    pub(super) fn loaded(self, id: CueId, file: &str, media: Media, seen: Option<Stamp>) -> Self {
-        if self.cue(id).is_none_or(|cue| cue.file != file) {
-            return self;
-        }
-        let workspace = match media {
-            Media::Failed(_) => self.skipped(id),
-            _ => self,
-        };
-        workspace.with_list_of(id, |cues| cues.loaded(id, media, seen))
     }
 
     fn place_of(&self, id: CueId) -> Option<Placed> {

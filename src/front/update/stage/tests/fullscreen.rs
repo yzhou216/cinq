@@ -6,7 +6,7 @@
 
 use iced::window::{self, Mode};
 
-use super::{super::toggled, App, Kind, Message, show};
+use super::{super::lifecycle::toggled, App, Kind, Message, closing, opened, show};
 
 #[test]
 fn leaving_fullscreen_asks_the_main_window_for_the_keyboard() {
@@ -30,10 +30,7 @@ fn leaving_fullscreen_with_no_main_window_only_switches_the_mode() {
 
 #[test]
 fn key_of_fullscreen_opens_the_closed_stage_window_fullscreen() {
-    let (open, _) = show(Kind::Video).staged();
-    let stage = open.stage.window().expect("the stage window opens");
-    let (closed, _) = open.closed(stage);
-    let (reopening, opening) = closed.toggled_fullscreen();
+    let (reopening, opening) = closing(opened()).toggled_fullscreen();
     assert!(reopening.stage.window().is_some());
     assert_eq!(opening.units(), 1);
     assert!(!reopening.stage.closed);
@@ -43,12 +40,9 @@ fn key_of_fullscreen_opens_the_closed_stage_window_fullscreen() {
 fn key_of_fullscreen_opens_no_window_where_no_cue_shows_on_it() {
     let (audio, opening) = show(Kind::Audio).toggled_fullscreen();
     assert_eq!((audio.stage.window(), opening.units()), (None, 0));
-    let (open, _) = show(Kind::Video).staged();
-    let stage = open.stage.window().expect("the stage window opens");
-    let (closed, _) = open.closed(stage);
     let emptied = App {
         workspace: show(Kind::Audio).workspace,
-        ..closed
+        ..closing(opened())
     };
     let (emptied, opening) = emptied.toggled_fullscreen();
     assert_eq!((emptied.stage.window(), opening.units()), (None, 0));
@@ -57,16 +51,12 @@ fn key_of_fullscreen_opens_no_window_where_no_cue_shows_on_it() {
 
 #[test]
 fn closed_stage_window_is_missing_only_while_a_cue_shows_on_it() {
-    let (open, _) = show(Kind::Video).staged();
-    let (gone, _) = open.handled(Message::Go);
-    let stage = gone.stage.window().expect("the stage window opens");
+    let (gone, _) = opened().handled(Message::Go);
     assert!(!gone.stage.missing(&gone.workspace));
-    let (closed, _) = gone.closed(stage);
+    let closed = closing(gone);
     assert!(closed.stage.missing(&closed.workspace));
     let (reopened, _) = closed.toggled_fullscreen();
     assert!(!reopened.stage.missing(&reopened.workspace));
-    let (open, _) = show(Kind::Video).staged();
-    let stage = open.stage.window().expect("the stage window opens");
-    let (closed, _) = open.closed(stage);
+    let closed = closing(opened());
     assert!(!closed.stage.missing(&closed.workspace));
 }

@@ -5,18 +5,14 @@
 //! Tests of the passes through a clip that loops part of its file, and of
 //! the pictures that follow once a devamp cue lets the clip go on
 
-use std::{
-    ops::ControlFlow,
-    path::Path,
-    thread,
-    time::{Duration, Instant},
-};
+use std::path::Path;
 
 use super::{
-    PATIENCE, assert_pictures, decoded,
+    assert_pictures, decoded, from_at,
     movie::{movie, picture_number},
-    player::shown,
-    repeated, showing_cues,
+    patiently,
+    player::{pictures_after_the_end, shown},
+    showing_cues,
 };
 use crate::back::{
     Clip, Command, Cue, CueId, Kind, Loop, Shown, Video,
@@ -38,13 +34,13 @@ fn sectioned(released: Option<f64>) -> Clip {
     }
 }
 
-/// Returns the pictures of `numbers`, the first due at `at` pictures of the
-/// video, and each after it a picture later
-fn from_at(numbers: std::ops::RangeInclusive<usize>, at: f64) -> Vec<(usize, f64)> {
-    let first = *numbers.start();
-    numbers
-        .map(|number| (number, at + (number - first) as f64))
-        .collect()
+/// Asserts that the pictures `seen` end at picture 23 and never go back
+fn assert_rising_to_the_last(seen: &[usize]) {
+    assert_eq!(seen.last(), Some(&23));
+    assert!(
+        seen.windows(2).all(|pair| pair[0] < pair[1]),
+        "{seen:?} goes back"
+    );
 }
 
 #[test]
@@ -82,18 +78,9 @@ fn release_that_lands_on_the_pass_under_way_replaces_the_pass_after_it() {
     // before the last, so that the loop pass decoding ahead is not the one
     // to show after it
     let (player, seen) = shown(player.released(Shown::Clip(sectioned(Some(0.5)))), 0.8, 23);
-    assert_eq!(seen.last(), Some(&23));
-    assert!(
-        seen.windows(2).all(|pair| pair[0] < pair[1]),
-        "{seen:?} goes back"
-    );
-    // The last pass is the end of the player, which holds no picture after it
-    let (_, pictures) = (0..40).fold((player, 0), |(player, pictures), _| {
-        thread::sleep(Duration::from_millis(5));
-        let (player, picture) = player.advanced(100.0).expect("the pictures decode");
-        (player, pictures + usize::from(picture.is_some()))
-    });
-    assert_eq!(pictures, 0);
+    assert_rising_to_the_last(&seen);
+    // Last pass is the end of the player, which holds no picture after it
+    assert_eq!(pictures_after_the_end(player), 0);
 }
 
 #[test]
@@ -102,12 +89,7 @@ fn player_of_a_clip_that_does_not_loop_ends_after_its_only_pass() {
     let player = Player::start(path, Shown::Clip(super::clip(0.0, 0.5, false)));
     let (player, seen) = shown(player, 1.0, 14);
     assert_eq!(seen.last(), Some(&14));
-    let (_, pictures) = (0..40).fold((player, 0), |(player, pictures), _| {
-        thread::sleep(Duration::from_millis(5));
-        let (player, picture) = player.advanced(100.0).expect("the pictures decode");
-        (player, pictures + usize::from(picture.is_some()))
-    });
-    assert_eq!(pictures, 0);
+    assert_eq!(pictures_after_the_end(player), 0);
 }
 
 #[test]
@@ -150,29 +132,17 @@ fn run_devamped_in_its_pre_wait_shows_the_pass_from_the_end_of_the_loop() {
     let devamped = waiting.apply(GO).apply(GO);
     let (playing, _) = video.sync(devamped);
     assert_eq!((video.ready.len(), video.runs.len()), (0, 1));
-    let started = Instant::now();
-    let seen = repeated(
+    let (_, seen) = patiently(
         (playing.apply(Command::Tick(5.79)), Vec::new()),
         |(workspace, seen): (_, Vec<usize>)| {
             let (workspace, pictures) = video.sync(workspace);
-            let seen = [
-                seen,
-                pictures
-                    .iter()
-                    .map(|(_, picture)| picture_number(&picture.pixels))
-                    .collect(),
-            ]
-            .concat();
-            if seen.last() == Some(&23) || started.elapsed() > PATIENCE {
-                return ControlFlow::Break(seen);
-            }
-            thread::sleep(Duration::from_millis(5));
-            ControlFlow::Continue((workspace, seen))
+            let numbers = pictures
+                .iter()
+                .map(|(_, picture)| picture_number(&picture.pixels));
+            let seen = [seen, numbers.collect()].concat();
+            let done = seen.last() == Some(&23);
+            ((workspace, seen), done)
         },
     );
-    assert_eq!(seen.last(), Some(&23));
-    assert!(
-        seen.windows(2).all(|pair| pair[0] < pair[1]),
-        "{seen:?} goes back"
-    );
+    assert_rising_to_the_last(&seen);
 }

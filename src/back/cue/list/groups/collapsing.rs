@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The rows that the cue list shows, which leave out the cues that a
+//! Rows that the cue list shows, which leave out the cues that a
 //! collapsed group holds, as Vim shows a closed fold as one line
 //!
 //! A collapsed group still fires, stops, and pauses the cues that it holds

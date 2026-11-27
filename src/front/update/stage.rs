@@ -5,42 +5,34 @@
 //! Stage window, which shows the pictures of the picture and video cues
 //! that run
 //!
-//! The stage window opens once the show holds a picture or video cue, as a
-//! window that the operator can move to the display of the audience, and
-//! shows black while no picture shows.  Each GO that fires a picture or
-//! video cue, itself or through a start cue, makes it fullscreen, on the
-//! display that it is on, and brings it before the other windows, so that
-//! what the cue shows fills the screen.  The key of the fullscreen action
-//! toggles the window between fullscreen and a window, until the next such
-//! GO.  Closing it closes it until a picture or video cue fires again, or
-//! the key of fullscreen is typed, which opens it anew, fullscreen wherever
-//! the platform puts it, while closing the main window quits cinq.  Each
-//! picture that the video output hands on becomes an image for iced once, as
-//! it comes due, and stays until a newer picture of its cue takes its place
-//! or the cue stops.
+//! The window opens once the show holds a picture or video cue, so that the
+//! operator can move it to the display of the audience, and shows black
+//! while no picture shows.  Each GO that fires such a cue, itself or through
+//! a start cue, makes it fullscreen on the display that it is on and raises
+//! it, until the key of fullscreen toggles it.  Closing it keeps it closed
+//! until such a cue fires again or the key of fullscreen is typed, which
+//! opens it anew, fullscreen wherever the platform puts it, while closing
+//! the main window quits cinq.  Each picture that the video output hands on
+//! becomes an image for iced once, as it comes due, and stays until a newer
+//! picture of its cue takes its place or the cue stops.
 //!
-//! The interface wakes for each picture as it comes due, and each picture
-//! costs a whole update, as each tick of the clock does, which builds the
-//! view of the main window again along with that of the stage.  On an
-//! Intel Core i7-13700H, the pictures of a video take the thread of the
-//! interface about 2 ms each, whether the show holds three cues or 300,
-//! while the 40 ticks a second of the clock take 2% of its time with three
-//! cues and 10% with 300.
+//! Each picture costs a whole update, as each tick of the clock does, which
+//! builds the view of the main window again along with that of the stage.
+//! On an Intel Core i7-13700H, a picture takes the thread of the interface
+//! about 2 ms whether the show holds three cues or 300, while the 40 ticks a
+//! second of the clock take 2% of its time with three cues and 10% with 300.
 
+mod lifecycle;
 #[cfg(test)]
 mod tests;
 
 use std::collections::HashMap;
 
-use iced::{
-    Task,
-    widget::image,
-    window::{self, Mode},
-};
+use iced::{widget::image, window};
 
 use crate::{
     back::{CueId, Picture, Workspace},
-    front::{App, Message, STAGE_SIZE, window_settings},
+    front::{STAGE_SIZE, window_settings},
 };
 
 #[derive(Default)]
@@ -84,7 +76,6 @@ impl Stage {
         self.keyboard
     }
 
-    /// Returns the stage once `window` has gained the keyboard
     pub(super) fn with_keyboard_in(self, window: window::Id) -> Self {
         Self {
             keyboard: self.is_window(window),
@@ -142,7 +133,6 @@ impl Stage {
 
 #[cfg(test)]
 impl Stage {
-    /// Returns a stage whose window the operator closed
     pub fn closed() -> Self {
         Self {
             closed: true,
@@ -150,108 +140,10 @@ impl Stage {
         }
     }
 
-    /// Returns a stage whose window has the keyboard
     pub fn holding_keyboard() -> Self {
         Self {
             keyboard: true,
             ..Self::default()
         }
     }
-}
-
-impl App {
-    /// A window that opens fullscreen keeps the keyboard, while the main
-    /// window asks for it back from one that opens as a window, which the
-    /// window manager may refuse, as those of Wayland do.
-    pub(super) fn staged(self) -> (Self, Task<Message>) {
-        if let Some(window) = self.stage.window {
-            let raising = if self.stage.cued {
-                raised(window)
-            } else {
-                Task::none()
-            };
-            let stage = Stage {
-                cued: false,
-                ..self.stage
-            };
-            return (Self { stage, ..self }, raising);
-        }
-        let wanted = !self.stage.closed && self.holds_stage_cue();
-        if !wanted {
-            return (self, Task::none());
-        }
-        let (window, opened) = window::open(self.stage.settings());
-        let main = self.main.filter(|_| !self.stage.cued);
-        let opening = opened.then(move |_| main.map_or_else(Task::none, window::gain_focus));
-        let stage = Stage {
-            window: Some(window),
-            cued: false,
-            ..self.stage
-        };
-        (Self { stage, ..self }, opening)
-    }
-
-    pub(super) fn closed(self, window: window::Id) -> (Self, Task<Message>) {
-        if self.stage.is_window(window) {
-            let stage = Stage {
-                window: None,
-                closed: true,
-                keyboard: false,
-                ..self.stage
-            };
-            let app = Self { stage, ..self }.with_minimized(window, false);
-            (app, Task::none())
-        } else if self.main == Some(window) {
-            (self, iced::exit())
-        } else {
-            (self, Task::none())
-        }
-    }
-
-    /// Toggles the stage window between fullscreen and a window, or opens it
-    /// fullscreen, as a cue that shows on it does, where the operator closed
-    /// it, so that the film that runs shows again
-    pub(super) fn toggled_fullscreen(self) -> (Self, Task<Message>) {
-        match self.stage.window {
-            Some(window) => {
-                let main = self.main;
-                let toggling = window::mode(window).then(move |mode| toggled(window, main, mode));
-                (self, toggling)
-            }
-            None if self.stage.closed && self.holds_stage_cue() => Self {
-                stage: self.stage.cued(),
-                ..self
-            }
-            .staged(),
-            None => (self, Task::none()),
-        }
-    }
-
-    fn holds_stage_cue(&self) -> bool {
-        self.workspace.cues().any(|cue| cue.kind.on_stage())
-    }
-}
-
-/// Switches the stage window out of fullscreen, and the main window then asks
-/// for the keyboard, which the fullscreen window kept, or switches the stage
-/// window into it
-fn toggled(window: window::Id, main: Option<window::Id>, mode: Mode) -> Task<Message> {
-    if mode == Mode::Fullscreen {
-        window::set_mode(window, Mode::Windowed)
-            .chain(main.map_or_else(Task::none, window::gain_focus))
-    } else {
-        window::set_mode(window, Mode::Fullscreen)
-    }
-}
-
-fn raised(window: window::Id) -> Task<Message> {
-    window::mode(window)
-        .then(move |mode| {
-            if mode == Mode::Fullscreen {
-                Task::none()
-            } else {
-                window::set_mode(window, Mode::Fullscreen)
-            }
-        })
-        .chain(window::gain_focus(window))
 }

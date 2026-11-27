@@ -24,7 +24,7 @@ fn file_that_no_decoder_reads_is_not_a_sound_file_that_cinq_can_play() {
     let words = "not a sound file that cinq can play";
     assert_eq!(failing(b"not a sound"), words);
     assert_eq!(failing(&[]), words);
-    // A header that stops where its format chunk begins
+    // Header that stops where its format chunk begins
     assert_eq!(failing(&silence(1.0)[..14]), words);
 }
 

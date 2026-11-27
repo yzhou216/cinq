@@ -134,7 +134,6 @@ impl<T> Operation<T> for Reach {
     }
 }
 
-/// Finds the places in sight, in the order of the walk
 pub fn places() -> Task<Vec<Site>> {
     operate(walk())
 }

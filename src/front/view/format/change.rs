@@ -6,8 +6,10 @@
 
 use std::cmp::Ordering;
 
-use super::{consequences, number, short, the_output};
-use crate::back::{Change, Cue, CueId, Edit, Output, OutputId, Workspace, moved_output};
+mod edit;
+
+use super::{consequences, number, of_cues, short, the_output};
+use crate::back::{Change, CueId, Output, OutputId, Workspace, output_moved_between};
 
 /// Describes a change to the show in few words, starting in lower case, as
 /// the status bar tells what undo or redo acts on
@@ -35,70 +37,13 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
             after,
             ..
         } => cues.first().map_or_else(String::new, |&cue| {
-            let depth = |arrangement: &[(CueId, u8)]| {
-                arrangement
-                    .iter()
-                    .find_map(|&(id, depth)| (id == cue).then_some(depth))
-            };
-            match depth(after).cmp(&depth(before)) {
-                Ordering::Greater => format!("moved cue {} into a group", named(cue)),
-                Ordering::Less => format!("moved cue {} out of a group", named(cue)),
-                Ordering::Equal => format!("moved cue {}", named(cue)),
-            }
+            moved_across(
+                &named(cue),
+                Change::depth_in(after, cue).cmp(&Change::depth_in(before, cue)),
+            )
         }),
-        Change::Regrouped { cues, deeper, .. } => {
-            let way = if *deeper { "into" } else { "out of" };
-            match cues.as_slice() {
-                [cue] => format!("moved cue {} {way} a group", named(*cue)),
-                cues => format!("moved {} cues {way} groups", cues.len()),
-            }
-        }
-        Change::Edited { cue, redo, .. } => {
-            let cue = named(*cue);
-            // A refused time stays in the field and counts as zero
-            let unread = match redo {
-                Edit::Start(time)
-                | Edit::End(time)
-                | Edit::LoopStart(time)
-                | Edit::LoopEnd(time)
-                | Edit::PreWait(time)
-                | Edit::Duration(time)
-                | Edit::PostWait(time) => !time.is_valid(),
-                _ => false,
-            };
-            let told = match redo {
-                Edit::Number(_) => format!("changed the number of cue {cue}"),
-                Edit::Name(_) => format!("changed the name of cue {cue}"),
-                Edit::File(_) | Edit::FileAndName { .. } => {
-                    format!("changed the file of cue {cue}")
-                }
-                Edit::Start(_) => format!("changed the start of cue {cue}"),
-                Edit::End(_) => format!("changed the end of cue {cue}"),
-                Edit::Loop(_) => format!("changed whether cue {cue} loops"),
-                Edit::LoopStart(_) => format!("changed the loop start of cue {cue}"),
-                Edit::LoopEnd(_) => format!("changed the loop end of cue {cue}"),
-                Edit::Target(_) => format!("changed the target of cue {cue}"),
-                Edit::Notes(_) => format!("changed the notes of cue {cue}"),
-                Edit::PreWait(_) => format!("changed the pre-wait of cue {cue}"),
-                Edit::Duration(_) => format!("changed the duration of cue {cue}"),
-                Edit::PostWait(_) => format!("changed the post-wait of cue {cue}"),
-                Edit::Advance(_) => format!("changed what follows cue {cue}"),
-                Edit::Level(_) => format!("changed the level of cue {cue}"),
-                Edit::StopTarget(_) => format!("changed whether cue {cue} stops its target"),
-                Edit::Sends(Some(sends)) if sends.is_empty() => {
-                    format!("changed cue {cue} to play nowhere")
-                }
-                Edit::Sends(_) => format!("changed where cue {cue} plays"),
-                Edit::Light(..) => format!("changed the light levels of cue {cue}"),
-                Edit::Destination(_) => format!("changed the destination of cue {cue}"),
-                Edit::Message(_) => format!("changed the message of cue {cue}"),
-            };
-            if unread {
-                format!("{told} to zero")
-            } else {
-                told
-            }
-        }
+        Change::Regrouped { cues, deeper, .. } => regrouped(&named, cues, *deeper),
+        Change::Edited { cue, redo, .. } => edit::edited(&named(*cue), redo),
         Change::Standby(standby) => match standby.after.and_then(|id| workspace.cue(id)) {
             Some(cue) => format!("moved standby to cue {}", number(cue)),
             None => "moved standby past the end".to_owned(),
@@ -118,7 +63,7 @@ pub fn change(workspace: &Workspace, change: &Change) -> String {
 
 /// Describes a change to the outputs by what differs between them before
 /// and after it, leaving the words that name an output as one where the
-/// change did something to the cues, which [`consequences`] tells first
+/// change did something to the cues, which [`consequences()`] tells first
 fn outputs(
     workspace: &Workspace,
     before: &[Output],
@@ -150,8 +95,9 @@ fn outputs(
             None
         }
     });
-    let moved =
-        || moved_output(before, after, selected).map(|now| format!("moved {}", the(&now.name)));
+    let moved = || {
+        output_moved_between(before, after, selected).map(|now| format!("moved {}", the(&now.name)))
+    };
     match (
         missing(after, before).as_slice(),
         missing(before, after).as_slice(),
@@ -168,18 +114,28 @@ fn outputs(
     .unwrap_or_else(|| "changed the outputs".to_owned())
 }
 
-/// Returns the outputs of `from` that `of` lacks
 fn missing<'a>(from: &'a [Output], of: &[Output]) -> Vec<&'a Output> {
     from.iter()
         .filter(|output| of.iter().all(|other| other.id != output.id))
         .collect()
 }
 
-/// Tells what `verb` did to `cues`, by the number of the cue, or else by how
-/// many cues
-fn of_cues<'a>(verb: &str, mut cues: impl ExactSizeIterator<Item = &'a Cue>) -> String {
-    match (cues.len(), cues.next()) {
-        (1, Some(cue)) => format!("{verb} cue {}", number(cue)),
-        (count, _) => format!("{verb} {count} cues"),
+/// Tells that the cue numbered `number` moved, and whether it went into a
+/// group or out of one by how its depth `compared` after the move
+fn moved_across(number: &str, compared: Ordering) -> String {
+    match compared {
+        Ordering::Greater => format!("moved cue {number} into a group"),
+        Ordering::Less => format!("moved cue {number} out of a group"),
+        Ordering::Equal => format!("moved cue {number}"),
+    }
+}
+
+/// Tells that `cues` went `deeper` into groups or out of them, by the number
+/// of the cue, or else by how many cues
+fn regrouped(named: &dyn Fn(CueId) -> String, cues: &[CueId], deeper: bool) -> String {
+    let way = if deeper { "into" } else { "out of" };
+    match cues {
+        [cue] => format!("moved cue {} {way} a group", named(*cue)),
+        cues => format!("moved {} cues {way} groups", cues.len()),
     }
 }

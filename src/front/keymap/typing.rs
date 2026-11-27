@@ -13,7 +13,6 @@ use super::{Action, Binding, Keymap, Press, written};
 /// What a key press amounts to, after the keys typed before it
 #[derive(Debug, Default, PartialEq)]
 pub struct Outcome {
-    /// Keys of a command typed halfway, which wait for more
     pub pending: Vec<Press>,
     /// Action that the keys complete, with the count typed before them.  An
     /// operator that completes with a motion is the action, with the count
@@ -129,7 +128,6 @@ impl Keymap {
             .filter(|(action, _)| Action::MOTIONS.contains(action))
     }
 
-    /// Returns whether any binding is a sequence of more than one key
     pub fn has_sequences(&self) -> bool {
         self.bound().any(|(_, keys)| keys.len() > 1)
     }

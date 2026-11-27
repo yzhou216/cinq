@@ -8,25 +8,18 @@
 
 use iced::{
     keyboard::{Key, key::Named},
-    mouse, window,
+    mouse,
 };
 
 use super::{
     after, press,
     search::{opened, opening, searched, typed},
-    typing,
+    typing, windowed,
 };
 use crate::{
     back::CueId,
     front::{App, Message, message::Focus},
 };
-
-#[test]
-fn selecting_a_cue_with_the_pointer_closes_the_line() {
-    let (clicked, _) = typed(opened(2), "storm").handled(Message::Select(CueId(3)));
-    assert!(clicked.search.is_none());
-    assert_eq!(clicked.selected, Some(CueId(3)));
-}
 
 #[test]
 fn a_click_closes_the_line_and_keeps_the_selection_where_it_is() {
@@ -40,10 +33,11 @@ fn a_click_closes_the_line_and_keeps_the_selection_where_it_is() {
 }
 
 #[test]
-fn a_click_on_a_cue_still_selects_it_in_either_order() {
+fn selecting_a_cue_with_the_pointer_closes_the_line_in_either_order_of_the_click() {
     for messages in [
-        [Message::Clicked, Message::Select(CueId(3))],
-        [Message::Select(CueId(3)), Message::Clicked],
+        vec![Message::Select(CueId(3))],
+        vec![Message::Clicked, Message::Select(CueId(3))],
+        vec![Message::Select(CueId(3)), Message::Clicked],
     ] {
         let app = after(typed(opened(2), "wind"), messages.clone());
         assert!(app.search.is_none(), "{messages:?}");
@@ -61,10 +55,7 @@ fn accepting_a_search_is_a_jump_from_where_it_began() {
     let accepted = searched(opened(2), "wind");
     assert_eq!(accepted.selected, Some(CueId(5)));
     assert_eq!(back(accepted).selected, Some(CueId(2)));
-}
-
-#[test]
-fn accepting_a_search_that_stayed_is_no_jump() {
+    // A search that stayed on the cue is no jump
     assert!(!searched(opened(5), "wind").can_go_back());
 }
 
@@ -123,12 +114,8 @@ fn going_forward_and_the_buttons_of_the_mouse_close_the_line() {
             .search
             .is_none()
     );
-    let main = window::Id::unique();
     for button in [mouse::Button::Back, mouse::Button::Forward] {
-        let app = App {
-            main: Some(main),
-            ..typed(opened(2), "wind")
-        };
+        let (app, main) = windowed(typed(opened(2), "wind"));
         let (closed, _) = app.next(Message::SidePressed(main, button));
         assert!(closed.search.is_none(), "{button:?}");
         assert_eq!(closed.selected, Some(CueId(5)), "{button:?}");

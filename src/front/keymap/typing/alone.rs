@@ -14,8 +14,7 @@ impl Keymap {
     }
 
     /// Returns whether a key acts while a closed drop-down list has the
-    /// keyboard: those that act in every field, and those of undo and redo,
-    /// since a list has no text to undo and no key of its own but Enter
+    /// keyboard, where no key is the list's own but Enter
     pub fn acts_in_lists(&self, press: Press) -> bool {
         self.alone(press).is_some_and(Action::acts_in_lists)
     }
@@ -24,7 +23,6 @@ impl Keymap {
         self.alone(press).is_some_and(Action::acts_at_once)
     }
 
-    /// Returns whether the key pressed alone is that of [`Action::Cancel`]
     pub(in crate::front::keymap) fn cancels(&self, press: Press) -> bool {
         self.alone(press) == Some(Action::Cancel)
     }

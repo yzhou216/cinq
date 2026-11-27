@@ -5,25 +5,13 @@
 //! Tests of reading the packets that arrive
 
 use super::{Argument, Message, NESTING, packet};
-use crate::back::osc;
+use crate::back::osc::{self, tests::bundle};
 
 fn message(address: &str, arguments: Vec<Argument>) -> Message {
     Message {
         address: address.to_owned(),
         arguments,
     }
-}
-
-/// Returns a bundle of `elements`, each with its size, after a time tag
-fn bundle(elements: &[&[u8]]) -> Vec<u8> {
-    let sized = elements
-        .iter()
-        .flat_map(|element| [&(element.len() as i32).to_be_bytes()[..], element].concat());
-    [b"#bundle\0", &1_u64.to_be_bytes()[..]]
-        .concat()
-        .into_iter()
-        .chain(sized)
-        .collect()
 }
 
 #[test]

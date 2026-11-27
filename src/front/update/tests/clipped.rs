@@ -8,12 +8,6 @@ use iced::keyboard::Key;
 
 use super::*;
 
-fn on_clipboard(app: &App) -> Option<(&str, bool)> {
-    app.clipped
-        .as_ref()
-        .map(|clipped| (clipped.told.as_str(), clipped.cut))
-}
-
 #[test]
 fn copy_and_cut_tell_what_went_to_the_clipboard() {
     let copied = after(show(Some(CueId(4))), [Message::Copy(3)]);

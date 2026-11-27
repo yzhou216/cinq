@@ -4,16 +4,16 @@
 
 //! Interface together with the parts that have side effects: the sound,
 //! video, light, and network output, the keeper of unsaved changes, and the
-//! windows
+//! windows.  This is the only place where state is replaced.
 
 use std::path::{Path, PathBuf};
 
 use iced::{Element, Subscription, Task, window};
 
-use super::{Keeper, device, dispatch::passive, keyboard::held_after, show};
+use super::{Keeper, device, dispatch::passive, focus::held, show};
 use crate::{
     back::{Audio, Lights, Network, Video},
-    front::{App, Cinq, MAIN_SIZE, Message, keymap, view, window_settings},
+    front::{App, Cinq, MAIN_SIZE, Message, Problems, config, view, window_settings},
 };
 
 impl Cinq {
@@ -23,22 +23,27 @@ impl Cinq {
         config: Option<&Path>,
         show: Option<PathBuf>,
     ) -> (Self, Task<Message>) {
-        let config = keymap::config::load(config);
+        let config = config::load(config);
         let audio = Audio::open(config.sound.device.as_deref());
+        let (lights, light_reports) = Lights::open();
         let keeper = Keeper::new(show::unsaved_directory());
         let reader = keeper.reader();
         let (main, opened) = window::open(window_settings(MAIN_SIZE));
         let cinq = Self {
             app: App {
                 main: Some(main),
-                audio_problems: audio.problems(),
+                problems: Problems {
+                    audio: audio.problems(),
+                    ..Problems::default()
+                },
                 config,
                 reader: reader.clone(),
                 ..App::default()
             },
             audio,
             video: Video::default(),
-            lights: Lights::open(),
+            lights,
+            light_reports,
             network: Network::open(),
             keeper,
         };
@@ -67,6 +72,9 @@ impl Cinq {
         // Whatever the operator does can move the keyboard between fields,
         // which only the widgets know
         let asking = !passive(&message);
+        if let Message::LightTold(problem) = &message {
+            self.lights.told(problem.clone());
+        }
         let above = self.app.hints.is_some().then(|| self.app.above_places());
         let (app, task) = std::mem::take(&mut self.app).next(message);
         if routed {
@@ -81,18 +89,16 @@ impl Cinq {
         let kept = self.keeper.keep(&app.show);
         let app = App {
             stage: app.stage.with_pictures(&workspace, pictures).with_due(due),
-            audio_problems: self.audio.problems(),
             // Checks first: once they stop, the problems read after them are
             // final
-            network_checks: self
-                .network
-                .checks()
-                .into_iter()
-                .chain(self.lights.checks())
-                .min(),
-            light_problem: self.lights.problem().map(str::to_owned),
-            network_problems: self.network.problems(&workspace.destinations()),
-            network_failed: self.network.failed(&workspace.destinations()),
+            network_checks: self.network.checks(),
+            problems: Problems {
+                audio: self.audio.problems(),
+                light: self.lights.problem().map(str::to_owned),
+                network: self.network.problems(&workspace.destinations()),
+                network_failed: self.network.failed(&workspace.destinations()),
+                ..app.problems
+            },
             workspace,
             ..app
         }
@@ -102,7 +108,7 @@ impl Cinq {
         let (app, load) = app.load();
         let (app, stage) = app.staged();
         self.app = app;
-        let task = if asking { held_after(task) } else { task };
+        let task = if asking { task.chain(held()) } else { task };
         Task::batch([task, load, stage])
     }
 
@@ -124,6 +130,9 @@ impl Cinq {
     }
 
     pub(in crate::front) fn subscription(&self) -> Subscription<Message> {
-        self.app.subscription()
+        Subscription::batch([
+            self.app.subscription(),
+            self.light_reports.subscription().map(Message::LightTold),
+        ])
     }
 }

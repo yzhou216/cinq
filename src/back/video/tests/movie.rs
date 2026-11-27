@@ -22,7 +22,7 @@ use stream::{MACROBLOCKS, STEP, picture};
 const SIZE: (usize, usize) = (MACROBLOCKS.0 * 16, MACROBLOCKS.1 * 16);
 
 /// Pictures a second of a test video
-pub(in crate::back) const RATE: u32 = 30;
+pub(super) const RATE: u32 = 30;
 
 /// Units of time a second in the track of a test video
 const TIMESCALE: u32 = 600;
@@ -40,7 +40,7 @@ pub(in crate::back) fn movie(count: usize, sync_every: usize) -> (TempDir, PathB
 
 /// Returns a test video as [`movie`] does, but whose pictures numbered in
 /// `broken` hold bytes that no decoder can read
-pub(in crate::back) fn broken_movie(
+pub(super) fn broken_movie(
     count: usize,
     sync_every: usize,
     broken: &[usize],
@@ -59,7 +59,7 @@ pub(super) fn saved(bytes: &[u8]) -> (TempDir, PathBuf) {
 
 /// Returns which picture of a test video `pixels` show, by the shade of
 /// their first pixel, which RGBA holds in limited range
-pub(in crate::back) fn picture_number(pixels: &[u8]) -> usize {
+pub(super) fn picture_number(pixels: &[u8]) -> usize {
     let (first, step) = SHADES;
     let luma = f64::from(pixels[0]) * 219.0 / 255.0 + 16.0;
     ((luma - first as f64) / step as f64).round().max(0.0) as usize

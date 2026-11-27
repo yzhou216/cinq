@@ -27,6 +27,12 @@ Major changes and improvements in each release of cinq, newest first.
   is formatted after a save.
 - A `config.toml` of thousands of keymaps, each starting `from` the next, no
   longer aborts cinq as it is read.
+- While the light patch holds an instrument, the window no longer wakes every
+  second to look for news of the light output, which kept a large show at
+  several percent of a processor while idle; it wakes when the news comes.
+- The window no longer wakes every two seconds to look at the files of the
+  show: a thread looks at their stamps and wakes it only for a file that
+  changed, so that a large show idles near zero.
 
 ## v0.1.7
 

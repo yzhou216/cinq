@@ -23,10 +23,7 @@ fn start_cue_fires_its_target_and_the_chain_without_moving_standby() {
     // the rename is still the change that undo takes back
     assert_eq!(running(&workspace), [3, 4]);
     assert_eq!(standby(&workspace), Some(2));
-    assert_eq!(
-        workspace.active_of(CueId(4)).unwrap().phase(),
-        Phase::Scheduled { starts_in: 2.0 }
-    );
+    assert_phase(&workspace, 4, Phase::Scheduled { starts_in: 2.0 });
     assert!(matches!(workspace.undoable(), Some(Change::Edited { .. })));
 }
 
@@ -36,10 +33,7 @@ fn start_cue_fires_a_target_in_another_list_and_leaves_that_standby_and_history(
         vec![start_cue(1, 3)],
         vec![audio(2), continuing(3), audio(4)],
     ])
-    .apply(Command::Standby {
-        list: 1,
-        cue: Some(CueId(3)),
-    })
+    .apply(move_standby_in(1, 3))
     .apply(GO);
     assert_eq!(running(&workspace), [3, 4]);
     assert_eq!(standby_of(&workspace, 1), Some(3));
@@ -72,10 +66,7 @@ fn start_cue_restarting_a_target_cancels_what_the_old_run_had_yet_to_start() {
         .apply(GO);
     // Cue 2 waits for the new run of cue 1 alone
     assert_eq!(running(&workspace), [1, 2]);
-    assert_eq!(
-        workspace.active_of(CueId(2)).unwrap().phase(),
-        Phase::Scheduled { starts_in: 5.0 }
-    );
+    assert_phase(&workspace, 2, Phase::Scheduled { starts_in: 5.0 });
 }
 
 #[test]
@@ -90,14 +81,8 @@ fn start_cue_resumes_a_paused_target_and_its_followers_instead_of_restarting() {
     assert_eq!(resumed.active_of(CueId(1)).unwrap().run, run);
     assert!(resumed.active().iter().all(|active| !active.paused));
     let later = resumed.apply(Command::Tick(1.0));
-    assert_eq!(
-        later.active_of(CueId(1)).unwrap().phase(),
-        Phase::Running { remaining: 8.0 }
-    );
-    assert_eq!(
-        later.active_of(CueId(2)).unwrap().phase(),
-        Phase::Running { remaining: 10.0 }
-    );
+    assert_phase(&later, 1, Phase::Running { remaining: 8.0 });
+    assert_phase(&later, 2, Phase::Running { remaining: 10.0 });
 }
 
 #[test]
@@ -116,7 +101,7 @@ fn start_cue_fires_an_instant_stop_cue_that_acts_on_the_next_tick() {
     let fired = workspace(vec![audio(1), start_cue(2, 3), stop_cue(3, 1)])
         .apply(GO)
         .apply(GO);
-    // The stop cue is neither dropped unheard nor acting within the tick
+    // Stop cue is neither dropped unheard nor acting within the tick
     assert_eq!(running(&fired), [1, 3]);
     assert_eq!(running(&fired.apply(Command::Tick(0.0))), Vec::<u32>::new());
 }
@@ -147,14 +132,8 @@ fn start_cue_fires_its_target_as_far_along_as_the_tick_passed_its_pre_wait() {
         .apply(GO)
         .apply(Command::Tick(2.0));
     assert_eq!(running(&workspace), [2, 3]);
-    assert_eq!(
-        workspace.active_of(CueId(2)).unwrap().phase(),
-        Phase::Running { remaining: 8.5 }
-    );
-    assert_eq!(
-        workspace.active_of(CueId(3)).unwrap().phase(),
-        Phase::Scheduled { starts_in: 0.5 }
-    );
+    assert_phase(&workspace, 2, Phase::Running { remaining: 8.5 });
+    assert_phase(&workspace, 3, Phase::Scheduled { starts_in: 0.5 });
 }
 
 #[test]
@@ -174,14 +153,7 @@ fn cues_ahead_take_in_what_start_cues_fire_with_their_delays() {
         vec![waiting, audio(2)],
         vec![continuing_after(3, 2.0), audio(4)],
     ]);
-    let ahead = |workspace: &Workspace| {
-        workspace
-            .ahead()
-            .into_iter()
-            .map(|(cue, delay)| (cue.id.0, delay))
-            .collect::<Vec<_>>()
-    };
-    // The next GO of the second list fires cue 3 as well
+    // Next GO of the second list fires cue 3 as well
     assert_eq!(
         ahead(&workspace),
         [(1, 0.0), (3, 1.0), (4, 3.0), (3, 0.0), (4, 2.0)]
@@ -196,10 +168,5 @@ fn cues_ahead_leave_out_what_a_start_cue_only_resumes() {
     let workspace = workspace(vec![audio(1), start_cue(2, 1), audio(3)])
         .apply(GO)
         .apply(Command::Pause(true));
-    let ahead: Vec<u32> = workspace
-        .ahead()
-        .into_iter()
-        .map(|(cue, _)| cue.id.0)
-        .collect();
-    assert_eq!(ahead, [2]);
+    assert_eq!(ahead(&workspace), [(2, 0.0)]);
 }

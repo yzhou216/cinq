@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Header of the inspector, which holds the title of the cue and the
-//! sentences that tell what is wrong with it, all in one line, so that the
-//! rows below never lose their room to a second line
+//! Header of the inspector: the title of the cue and the sentences that tell
+//! what is wrong with it, in one line, so that the rows below never lose
+//! their room to a second line
 
 #[cfg(test)]
 mod tests;
@@ -37,16 +37,15 @@ struct Sentence {
     style: fn(&Theme) -> text::Style,
 }
 
-/// Returns the columns that the gap between two items of the header takes
 fn gap() -> usize {
     (3.0 * SPACING / char_width()).ceil() as usize
 }
 
-/// Returns the header of a cue over `fields`: its title, which keeps to one
-/// line of `columns` columns and ends in an ellipsis where the room runs
-/// out, so that a long name never pushes the rows below it out of view, and
-/// then what keeps GO from playing the cue or from lighting all that it
-/// names, and which of the `times` that it shows reads as no time
+/// Returns the header of a cue over `fields`: its title, kept to one line of
+/// `columns` columns and ending in an ellipsis where the room runs out, so
+/// that a long name never pushes the rows below out of view, then what keeps
+/// GO from playing the cue or from lighting all that it names, and which of
+/// the `times` that it shows reads as no time
 pub(super) fn inspected<'a>(
     app: &'a App,
     cue: &Cue,
@@ -118,8 +117,8 @@ fn trouble(app: &App, cue: &Cue) -> Option<Sentence> {
     })
 }
 
-/// Returns what keeps a light cue from setting all that it should, in words,
-/// in the warning color, since GO still fires the cue
+/// Returns what keeps a light cue from setting all that it should, in the
+/// warning color, since GO still fires the cue
 fn unlit(app: &App, cue: &Cue) -> Option<Sentence> {
     app.workspace.unlit(cue).map(|unlit| Sentence {
         words: format!("This cue {unlit}"),

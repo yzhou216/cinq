@@ -23,14 +23,15 @@ fn rows_after(row: Option<usize>, count: usize, backward: bool) -> impl Iterator
 
 /// Tells whether a step from row `from` to row `to` went past the end of the
 /// list, which a step to the same row does, as the only match is the one
-/// that it began on
-pub(super) fn wrapped(from: usize, to: usize, backward: bool) -> bool {
-    if backward { to >= from } else { to <= from }
+/// that it began on.  A step with no row at either end went nowhere.
+pub(super) fn wrapped(from: Option<usize>, to: Option<usize>, backward: bool) -> bool {
+    from.zip(to)
+        .is_some_and(|(from, to)| if backward { to >= from } else { to <= from })
 }
 
 /// Returns whether one of the texts of a row holds `needle`, which is
 /// lowercase, in any case
-pub(super) fn matches(texts: &[String], needle: &str) -> bool {
+fn matches(texts: &[String], needle: &str) -> bool {
     !needle.is_empty()
         && texts
             .iter()

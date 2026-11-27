@@ -5,16 +5,12 @@
 //! Tests of the pictures that a player hands on as the clock of its run
 //! moves, through the passes of a clip that loops as well
 
-use std::{
-    ops::ControlFlow,
-    thread,
-    time::{Duration, Instant},
-};
+use std::{thread, time::Duration};
 
 use super::{
-    PATIENCE, clip,
+    clip,
     movie::{movie, picture_number},
-    repeated,
+    patiently,
 };
 use crate::back::{Shown, video::player::Player};
 
@@ -22,24 +18,29 @@ use crate::back::{Shown, video::player::Player};
 /// picture numbered `expected`, and returns the player with the numbers of
 /// every picture that it handed on
 pub(super) fn shown(player: Player, played: f64, expected: usize) -> (Player, Vec<usize>) {
-    let started = Instant::now();
-    repeated(
-        (player, Vec::new()),
-        |(player, seen): (Player, Vec<usize>)| {
-            if seen.last() == Some(&expected) || started.elapsed() > PATIENCE {
-                return ControlFlow::Break((player, seen));
-            }
-            let (player, picture) = player.advanced(played).expect("the pictures decode");
-            let seen = match picture {
-                Some(picture) => [seen, vec![picture_number(&picture.pixels)]].concat(),
-                None => {
-                    thread::sleep(Duration::from_millis(5));
-                    seen
-                }
-            };
-            ControlFlow::Continue((player, seen))
-        },
-    )
+    patiently((player, Vec::new()), |(player, seen)| {
+        let (player, picture) = player.advanced(played).expect("the pictures decode");
+        let seen = [
+            seen,
+            picture.map_or_else(Vec::new, |picture| vec![picture_number(&picture.pixels)]),
+        ]
+        .concat();
+        let done = seen.last() == Some(&expected);
+        ((player, seen), done)
+    })
+}
+
+/// Moves `player` on to the end of its clip in the time that a decoding
+/// thread would need to hand on another picture, and returns how many
+/// pictures it handed on, which are none once its last pass has ended
+pub(super) fn pictures_after_the_end(player: Player) -> usize {
+    (0..40)
+        .fold((player, 0), |(player, pictures), _| {
+            thread::sleep(Duration::from_millis(5));
+            let (player, picture) = player.advanced(100.0).expect("the pictures decode");
+            (player, pictures + usize::from(picture.is_some()))
+        })
+        .1
 }
 
 #[test]

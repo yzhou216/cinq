@@ -20,16 +20,14 @@ pub enum Change {
         at: Place,
         standby: Standby,
     },
-    /// Cues pasted at a place, with the places they took in order, and the
-    /// standby of their list before and after, which the first of them can
-    /// take
+    /// Cues pasted at a place, recorded as an addition is
     Pasted {
         cues: Vec<Placed>,
         at: Place,
         standby: Standby,
     },
-    /// Cues deleted, with the places they had in order, and the standby of
-    /// each list they left, and whether they were cut to the clipboard
+    /// Cues deleted, with the places they had in order, the standby of each
+    /// list they left, and whether they were cut to the clipboard
     Deleted {
         cues: Vec<Placed>,
         standby: Vec<Standby>,
@@ -37,12 +35,11 @@ pub enum Change {
     },
     /// Cue moved within its list, from one place to another
     Moved { cue: CueId, from: usize, to: usize },
-    /// Cues moved into groups or out of them, or a cue moved with the cues that
-    /// it holds where the depths of cues change, with the order of the cues of
-    /// their list and the depth that each keeps, before and after.  Where
-    /// `moved` is set the change was a move up or down, which moves of one cue
-    /// in a row make one change of, and `deeper` tells whether the cue came
-    /// to lie deeper.
+    /// Cues moved into groups or out of them, or a cue moved with the cues
+    /// that it holds where depths change, with the order and depths of the
+    /// cues of their list before and after.  Where `moved` is set the change
+    /// was a move up or down, which moves of one cue in a row make one change
+    /// of, and `deeper` tells whether the cue came to lie deeper.
     Regrouped {
         list: usize,
         cues: Vec<CueId>,
@@ -60,13 +57,13 @@ pub enum Change {
     /// those of the show, with those before and after
     Restored { before: Kept, after: Kept },
     /// Outputs added, deleted, moved, or edited, with all of them before
-    /// and after, whether they were cut to the register of outputs or
-    /// pasted from it, the output and the setting that an edit changed, by
-    /// which edits of one setting in a row make one change, and the output
-    /// that was selected when outputs were added, pasted, or moved.  Undo of
-    /// an addition selects it again, as Vim's undo returns the cursor to where
-    /// the change was made, and where an output moved it is the output that
-    /// moved, which two neighbors that swap do not tell by themselves.
+    /// and after.  The `setting` is the output and the setting that an edit
+    /// changed, by which edits of one setting in a row make one change.  The
+    /// `anchor` is the output that was selected when outputs were added,
+    /// pasted, or moved, which undo selects again, as Vim's undo returns the
+    /// cursor to where the change was made.  Where an output moved it is the
+    /// output that moved, which two neighbors that swap do not tell by
+    /// themselves.
     Outputs {
         before: Vec<Output>,
         after: Vec<Output>,
@@ -192,5 +189,12 @@ impl Change {
 
     pub(super) fn moves_standby_of(&self, list: usize) -> bool {
         matches!(self, Change::Standby(standby) if standby.list == list)
+    }
+
+    /// Returns the depth that `arrangement` gives `cue`, where it holds it
+    pub fn depth_in(arrangement: &[(CueId, u8)], cue: CueId) -> Option<u8> {
+        arrangement
+            .iter()
+            .find_map(|&(id, depth)| (id == cue).then_some(depth))
     }
 }

@@ -7,7 +7,7 @@
 
 use std::time::{Duration, Instant};
 
-use super::show;
+use super::{playing, show};
 use crate::{
     back::{Active, CueId, Media, Phase, Workspace, loaded, sound},
     front::{App, Message},
@@ -15,9 +15,7 @@ use crate::{
 
 #[test]
 fn ticks_out_of_order_count_each_moment_once_and_never_turn_the_clock_back() {
-    let app = show(Some(CueId(1)));
-    let workspace = app.workspace.apply(loaded(1, "sound.ogg", sound(10.0)));
-    let (playing, _) = App { workspace, ..app }.handled(Message::Go);
+    let playing = playing();
     let start = Instant::now();
     let at = |milliseconds| start + Duration::from_millis(milliseconds);
     let (ticked, _) = App {

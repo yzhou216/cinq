@@ -4,15 +4,14 @@
 
 //! Tests of the hint of the key that moves standby to the selected cue
 
-use super::{YIELDING, fitted, hinted, opened};
+use super::{YIELDING, covered, fitted, has_hint, hinted, memo, opened};
 use crate::{
-    back::{Command, Cue, CueId, CueList, Kind, Workspace},
+    back::{Command, CueId, CueList, Workspace},
     front::App,
 };
 
 /// Returns an app of two cues with standby on the first and `selected` selected
 fn with(selected: Option<u32>) -> App {
-    let memo = |id: u32| Cue::new(CueId(id), id.to_string(), Kind::Memo, "Note").build();
     App {
         workspace: Workspace::new(vec![CueList::new("Main", vec![memo(1), memo(2)])]).apply(
             Command::Standby {
@@ -26,7 +25,7 @@ fn with(selected: Option<u32>) -> App {
 }
 
 fn told(app: &App) -> bool {
-    hinted(app).iter().any(|(_, hint)| hint == "Enter: standby")
+    has_hint(app, "Enter: standby")
 }
 
 #[test]
@@ -38,14 +37,7 @@ fn enter_is_hinted_to_move_standby_while_the_selection_is_elsewhere() {
 
 #[test]
 fn no_field_list_view_or_page_that_has_the_keys_hints_standby() {
-    let app = |change: fn(App) -> App| change(with(Some(2)));
-    assert!(!told(&app(|app| App { held: true, ..app })));
-    assert!(!told(&app(|app| App { help: true, ..app })));
-    assert!(!told(&app(|app| App { menu: true, ..app })));
-    assert!(!told(&app(|app| App {
-        outputs_shown: true,
-        ..app
-    })));
+    assert!(covered(|| with(Some(2))).iter().all(|app| !told(app)));
 }
 
 #[test]

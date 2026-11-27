@@ -52,7 +52,6 @@ pub(super) fn locked<'a>(
         .into()
 }
 
-/// Returns the height of a text field, which is one line and its padding
 fn height() -> f32 {
     line_height() + text_input::DEFAULT_PADDING.y()
 }

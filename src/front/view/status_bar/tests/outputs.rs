@@ -7,7 +7,7 @@
 use super::{
     super::{hints::notices::notice, order::yielding},
     cancel::COLUMNS,
-    fitted, hinted, opened, opened_with,
+    hints_fitted, opened, opened_with,
 };
 use crate::{
     back::{Command, OutputId, Workspace},
@@ -33,20 +33,15 @@ fn on_file() -> App {
     }
 }
 
-/// Returns the hints that fit in `room` columns
-pub(super) fn shown(app: &App, room: usize) -> String {
-    fitted(&hinted(app), room, yielding(app))
-}
-
 #[test]
 fn the_outputs_hint_the_way_back_and_the_keys_to_add_and_to_rename_an_output() {
     assert_eq!(
-        shown(&in_outputs(Keymap::default()), COLUMNS),
+        hints_fitted(&in_outputs(Keymap::default()), COLUMNS),
         "o: add output | i: rename | Control+o: back to Main | Space: GO | Escape: Panic | ?: help | f: hint"
     );
     // Cue list needs none of them, and has nowhere to go back to
     assert_eq!(
-        shown(&on_file(), COLUMNS),
+        hints_fitted(&on_file(), COLUMNS),
         "Space: GO | Escape: Panic | ?: help | gt: next tab | l: next list | f: hint"
     );
 }
@@ -58,7 +53,7 @@ fn show_mode_locks_the_outputs_so_that_no_key_to_edit_them_is_hinted() {
         ..in_outputs(Keymap::default())
     };
     assert_eq!(
-        shown(&locked, COLUMNS),
+        hints_fitted(&locked, COLUMNS),
         "Control+o: back to Main | Space: GO | Escape: Panic | ?: help | f: hint"
     );
 }
@@ -68,7 +63,7 @@ fn hints_of_the_outputs_give_way_with_the_way_back_lasting_longest_after_help() 
     let app = in_outputs(Keymap::default());
     let in_turn: Vec<_> = [81, 65, 53, 41, 25, 6]
         .into_iter()
-        .map(|room| shown(&app, room))
+        .map(|room| hints_fitted(&app, room))
         .collect();
     assert_eq!(
         in_turn,
@@ -122,7 +117,7 @@ fn a_cut_output_stays_a_cut_in_the_notice_and_in_undo_and_redo() {
         told(cut.clone()).as_deref(),
         Some("Cut the output Output 1 | u: undo")
     );
-    let undone = cut.clone().apply(Command::Undo);
+    let undone = cut.apply(Command::Undo);
     assert_eq!(
         told(undone.clone()).as_deref(),
         Some("Undid: cut the output Output 1 | Control+r: redo")
@@ -143,7 +138,7 @@ fn a_cut_output_stays_a_cut_in_the_notice_and_in_undo_and_redo() {
 #[test]
 fn the_outputs_hint_the_key_that_changes_the_name_to_rename_in_a_keymap_with_no_cancel() {
     let keymap = desk("edit = []\nchange_name = \"F2\"\nadd_below = \"Control+a\"");
-    let told = |room| shown(&in_outputs(keymap.clone()), room);
+    let told = |room| hints_fitted(&in_outputs(keymap.clone()), room);
     assert!(told(COLUMNS).contains("F2: rename"));
     assert!(
         told(COLUMNS).find("Control+a: add output") < told(COLUMNS).find("F2: rename"),

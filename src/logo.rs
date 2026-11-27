@@ -76,7 +76,6 @@ fn stage() -> Layer {
     Layer::fill(stage.collect(), PLUM)
 }
 
-/// Beam of the spotlight, from the valance down to the floor
 fn beam() -> Layer {
     let beam = [
         move_to((57.0, 28.0)),
@@ -88,7 +87,6 @@ fn beam() -> Layer {
     Layer::fill(beam.into_iter().collect(), GOLD).opacity(0.14)
 }
 
-/// Pool of light that the spotlight casts on the floor
 fn pool() -> Layer {
     let pool = Ellipse::new((64.0, 101.0), (26.0, 5.0), 0.0);
     Layer::fill(pool.to_path(TOLERANCE), GOLD).opacity(0.3)

@@ -12,8 +12,8 @@ use crate::{
     back::CueId,
     front::{
         App, Message,
-        message::Height,
-        update::{Spot, paging::viewport::Shape, viewing::in_view},
+        message::{Height, Spot},
+        update::rows::{paging::viewport::Shape, viewing::in_view},
     },
 };
 

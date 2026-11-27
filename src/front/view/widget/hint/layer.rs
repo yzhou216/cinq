@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The labels of hint mode, drawn in one layer over the window
+//! Labels of hint mode, drawn in one layer over the window
 
 use iced::{
     Element, Point, Rectangle, Theme,
@@ -37,7 +37,6 @@ pub fn corner(place: Rectangle, letters: usize) -> Point {
     )
 }
 
-/// Returns the width of the box of a label of `letters` letters
 pub fn width(letters: usize) -> f32 {
     letters as f32 * char_width() + 2.0 * PADDING
 }

@@ -11,25 +11,6 @@ mod moving;
 use super::*;
 use crate::back::Change;
 
-fn collapse(id: u32) -> Command {
-    Command::Collapse {
-        cues: vec![CueId(id)],
-        collapsed: true,
-    }
-}
-
-fn depths(workspace: &Workspace) -> Vec<u8> {
-    workspace.lists()[0].depths()
-}
-
-fn raw_depths(workspace: &Workspace) -> Vec<u8> {
-    workspace.lists()[0]
-        .cues
-        .iter()
-        .map(|cue| cue.depth)
-        .collect()
-}
-
 /// Returns a collapsed group of two levels, with a cue above and below it
 fn closed() -> Workspace {
     workspace(vec![
@@ -40,15 +21,7 @@ fn closed() -> Workspace {
         within(2, audio(5)),
         audio(6),
     ])
-    .apply(collapse(2))
-}
-
-fn target(workspace: &Workspace, id: u32) -> Option<CueId> {
-    workspace.cue(CueId(id)).and_then(|cue| cue.target)
-}
-
-fn paste(cues: Vec<Cue>, at: Place) -> Command {
-    Command::Paste { list: 0, cues, at }
+    .apply(collapse(&[2], true))
 }
 
 /// Asserts that undo and redo bring back the lists of `before`

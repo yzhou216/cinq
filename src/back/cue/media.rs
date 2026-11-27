@@ -10,7 +10,7 @@ use strum::Display;
 
 /// Size and modification time of a file, by which a later look tells that it
 /// has changed
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Stamp {
     len: u64,
     modified: Option<SystemTime>,
@@ -41,7 +41,6 @@ impl Stamp {
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub enum Media {
-    /// File has not been loaded since it was set
     #[default]
     Unloaded,
     /// File plays for `duration` seconds, and its sound for `sound`
@@ -63,16 +62,11 @@ pub enum Problem<'a> {
     NotLoaded,
     #[strum(transparent)]
     LoadFailed(&'a str),
-    /// Audio or video cue starts at or after its end, so it has nothing to
-    /// play
     #[strum(to_string = "starts at or after its end")]
     EmptyClip,
-    /// Audio or video cue starts at or past the end of its file, so it has
-    /// nothing to play
     #[strum(to_string = "starts past the end of its file")]
     PastFile,
-    /// Audio or video cue that loops has a loop that starts at or after its
-    /// end, once both lie within its clip, so it has nothing to loop
+    /// Loop that starts at or after its end, once both lie within the clip
     #[strum(to_string = "loop starts at or after its end")]
     EmptyLoop,
     #[strum(to_string = "no target cue")]
@@ -85,19 +79,14 @@ pub enum Problem<'a> {
     /// again and so never end
     #[strum(to_string = "lies in the group that it starts")]
     InTarget,
-    /// Devamp cue targets a cue that does not loop, which it cannot let go
-    /// on
     #[strum(to_string = "target cue does not loop")]
     NotLooping,
     #[strum(to_string = "no destination as host:port")]
     NoDestination,
-    /// Destination reads as host:port but its port is not a number from 1 to
-    /// 65535
     #[strum(to_string = "port is not a number from 1 to 65535")]
     BadPort,
     #[strum(to_string = "no OSC message as /address arguments")]
     NoMessage,
-    /// Message holds a double quote that is never closed
     #[strum(to_string = "OSC message leaves a double quote open")]
     OpenQuote,
 }

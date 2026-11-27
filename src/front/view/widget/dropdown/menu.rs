@@ -27,7 +27,7 @@ use std::cell::Cell;
 use iced::{advanced::Shell, keyboard::Key};
 
 use super::Dropdown;
-use crate::front::{Message, keymap::Press, step};
+use crate::front::{Message, keymap::Press, stepping::step};
 use keys::{Reply, reply};
 pub(super) use overlay::Menu;
 
@@ -91,13 +91,13 @@ impl<'b> Choice<'b> {
         Self { dropdown, shared }
     }
 
-    pub(super) fn highlighted(&self) -> Option<usize> {
+    fn highlighted(&self) -> Option<usize> {
         self.shared.highlight.get().or(self.dropdown.chosen)
     }
 
     /// Tells the interface which option the highlight rests on, if the list
     /// asks to hear and the option is not the one that it was told last
-    pub(super) fn report(&self, shell: &mut Shell<'_, Message>) {
+    fn report(&self, shell: &mut Shell<'_, Message>) {
         let row = self.highlighted();
         if let Some(tell) = &self.dropdown.on_highlight
             && self.shared.told.replace(row) != row
@@ -197,7 +197,7 @@ impl<'b> Choice<'b> {
 
     /// Closes the menu and tells the interface, which hints the keys of an
     /// open menu while one is open
-    pub(super) fn close(&self, shell: &mut Shell<'_, Message>) {
+    fn close(&self, shell: &mut Shell<'_, Message>) {
         self.shared.open.set(false);
         self.shared.waiting.take();
         if let Some(tell) = &self.dropdown.on_highlight

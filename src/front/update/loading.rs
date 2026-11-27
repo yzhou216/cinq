@@ -11,7 +11,9 @@
 //! recheck run at a time, so that a read that hangs piles up no reads
 //! behind it, and a recheck that hangs never holds back a file just named.
 //! A recheck reads only the files whose stamps have changed, as
-//! [`load_files`] tells.
+//! [`load_files`] tells, and the subscription wakes it only when
+//! [`watch`](crate::back::watch) finds a file that differs from what
+//! its cue read.
 
 use iced::Task;
 

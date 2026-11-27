@@ -9,10 +9,12 @@ mod adding;
 mod cancel;
 mod changes;
 mod fields;
+mod fixtures;
 mod hint_mode;
 mod lists;
 mod menu;
 mod name;
+mod narrow;
 mod next_list;
 mod open;
 mod outputs;
@@ -29,43 +31,20 @@ use super::{
     search_columns,
 };
 use crate::{
-    back::{Command, Cue, CueId, CueList, Kind, Workspace},
-    front::{
-        App,
-        keymap::{Action, Keymap, config::Config},
-        update::Clipped,
-        view::NO_MATCH,
-    },
+    back::{Command, Workspace},
+    front::{App, app::Notices, keymap::Action, view::NO_MATCH},
+};
+use fixtures::{
+    GO, add, added, before, clipping, covered, deleted, has_hint, held, hints, hints_fitted, keyed,
+    memo, opened, opened_with, owned, taken, texts,
 };
 
-fn owned<const N: usize>(hints: [(Option<Action>, &str); N]) -> Vec<(Option<Action>, String)> {
-    hints
-        .into_iter()
-        .map(|(action, hint)| (action, hint.to_owned()))
-        .collect()
-}
-
-/// Returns the hints after a change, with unsaved changes
-fn hints() -> Vec<(Option<Action>, String)> {
-    owned([
-        (None, "Added cue 1 | u: undo"),
-        (Some(Action::Save), "Control+s: save"),
-        (Some(Action::Go), "Space: GO"),
-        (Some(Action::Panic), "Escape: Panic"),
-        (Some(Action::Help), "?: help"),
-    ])
-}
-
 #[test]
-fn hints_that_fit_show_in_full() {
+fn hints_that_fit_show_in_full_and_keys_give_way_in_turn_while_what_the_change_told_stays() {
     assert_eq!(
         fitted(&hints(), 77, &YIELDING),
         "Added cue 1 | u: undo | Control+s: save | Space: GO | Escape: Panic | ?: help"
     );
-}
-
-#[test]
-fn keys_give_way_in_turn_while_what_the_change_told_stays() {
     assert_eq!(
         fitted(&hints(), 76, &YIELDING),
         "Added cue 1 | u: undo | Control+s: save | Escape: Panic | ?: help"
@@ -103,18 +82,7 @@ fn keys_of_going_forward_and_back_give_way_before_the_rest() {
 
 #[test]
 fn a_cut_names_the_keys_that_paste_and_undo_while_a_copy_names_only_the_paste_key() {
-    let shown = |told: &str, cut: bool| App {
-        clipped: Some(Clipped {
-            told: told.to_owned(),
-            cut,
-        }),
-        workspace: Workspace::new(vec![CueList::new(
-            "Main",
-            vec![Cue::new(CueId(1), "1", Kind::Memo, "Note").build()],
-        )])
-        .apply(Command::Delete(vec![CueId(1)])),
-        ..App::default()
-    };
+    let shown = |told: &str, cut: bool| clipping(told, cut, deleted());
     assert_eq!(
         clipped(&shown("Cut cue 4", true)).as_deref(),
         Some("Cut cue 4 | p: paste | u: undo")
@@ -139,12 +107,18 @@ fn what_a_key_remarked_or_why_a_field_was_not_applied_shows_in_the_bar_before_an
             .find_map(|(action, hint)| action.is_none().then_some(hint))
     };
     let remarked = App {
-        remark: Some("The clipboard is empty"),
+        notices: Notices {
+            remark: Some("The clipboard is empty"),
+            ..Notices::default()
+        },
         ..App::default()
     };
     assert_eq!(told(remarked).as_deref(), Some("The clipboard is empty"));
     let unapplied = App {
-        unapplied: Some("Not applied: the name is empty".to_owned()),
+        notices: Notices {
+            unapplied: Some("Not applied: the name is empty".to_owned()),
+            ..Notices::default()
+        },
         ..App::default()
     };
     assert_eq!(
@@ -169,31 +143,10 @@ fn the_search_line_starts_with_a_slash_or_a_question_mark_for_a_search_up() {
     assert_eq!((mark(false), mark(true)), ("/", "?"));
 }
 
-fn opened(menu: bool, help: bool) -> App {
-    opened_with(Keymap::default(), menu, help)
-}
-
-fn opened_with(keymap: Keymap, menu: bool, help: bool) -> App {
-    let mut config = Config::default();
-    config.keymap = keymap;
-    App {
-        config,
-        menu,
-        help,
-        ..App::default()
-    }
-}
-
 #[test]
 fn a_notice_that_does_not_fit_drops_the_key_that_teaches_then_gives_way_at_a_word() {
     let told = "Cut the output House L, so that cues play on House R | p: paste | u: undo";
-    let with_go = |told: Option<String>| -> Vec<(Option<Action>, String)> {
-        told.into_iter()
-            .map(|told| (None, told))
-            .chain([(Some(Action::Go), "Space: GO".to_owned())])
-            .collect()
-    };
-    let shown = |room| shown(with_go, Some(told.to_owned()), room, &YIELDING, &[]);
+    let shown = |room| shown(before([GO]), Some(told.to_owned()), room, &YIELDING, &[]);
     assert_eq!(shown(85), format!("{told} | Space: GO"));
     assert_eq!(shown(73), told, "the key gives way first");
     // The key that pastes gives way before the notice does, and the key that
@@ -221,11 +174,8 @@ fn a_notice_that_does_not_fit_drops_the_key_that_teaches_then_gives_way_at_a_wor
 #[test]
 fn a_notice_cut_where_a_name_ended_in_an_ellipsis_gets_no_second_one() {
     let told = "Cues play on Dante Virtual S…, deleted the output Sub | u: undo";
-    let bare = |told: Option<String>| -> Vec<(Option<Action>, String)> {
-        told.into_iter().map(|told| (None, told)).collect()
-    };
     assert_eq!(
-        shown(bare, Some(told.to_owned()), 45, &YIELDING, &[]),
+        shown(before([]), Some(told.to_owned()), 45, &YIELDING, &[]),
         "Cues play on Dante Virtual S… | u: undo"
     );
 }

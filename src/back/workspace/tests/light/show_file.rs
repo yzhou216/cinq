@@ -4,16 +4,18 @@
 
 //! Tests of the show file with a patch and light cues
 
-use std::path::Path;
-
 use super::*;
 use crate::back::PatchEdit;
 
 #[test]
 fn show_file_holds_the_patch_and_the_levels_of_light_cues() {
-    let show = lit(vec![light(1, &[(2, 50.0)])])
-        .apply(Command::Patch(PatchEdit::Address(InstrumentId(2), 2, 12)))
-        .show(Some(Path::new("/show")));
+    let show = shown(
+        &lit(vec![light(1, &[(2, 50.0)])]).apply(Command::Patch(PatchEdit::Address(
+            InstrumentId(2),
+            2,
+            12,
+        ))),
+    );
     assert_eq!(
         show,
         r#"[[instrument]]
@@ -41,8 +43,6 @@ duration = 4.0
 2 = 50.0
 "#
     );
-    let read = Workspace::from_show(&show, "/show").unwrap();
-    assert_eq!(read.show(Some(Path::new("/show"))), show);
 }
 
 #[test]

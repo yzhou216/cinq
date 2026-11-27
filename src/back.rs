@@ -7,15 +7,15 @@
 //!
 //! A front end reads a [`Workspace`] and changes it only by applying a
 //! [`Command`], so every rule about what may change lives here.  Every
-//! change consumes the workspace and returns a new one, without side
-//! effects.  [`Audio`], which makes the sound that the workspace describes,
-//! [`Video`], which makes its pictures, [`Lights`], which sends its light
-//! levels, [`Network`], which sends the messages of its network cues, and
-//! [`load_files`], which reads the files that cues name, are the parts
-//! with side effects.
+//! change consumes the workspace and returns a new one.  [`Audio`],
+//! [`Video`], [`Lights`], [`Network`], [`osc_listen`], and [`load_files`]
+//! are the parts with side effects: they make the sound and pictures,
+//! send the light levels and the messages of network cues, receive OSC
+//! commands, and read the files that cues name.
 
 mod audio;
 mod cue;
+mod failure;
 mod items;
 mod light;
 mod load;
@@ -37,12 +37,12 @@ pub use cue::{
     Advance, Cue, CueId, CueList, Edit, Groups, Kind, LEVELS, LOUDEST, Media, PERCENT, Problem,
     SILENCE, Stamp, parse_level, parse_percent, parse_send,
 };
-pub use light::Lights;
-pub use load::{Load, load_files};
+pub use light::{Lights, Reports as LightReports};
+pub use load::{Load, Watch, load_files, watch};
 pub use network::Network;
 pub use osc::{Destination, Heard, Outgoing, Remote, listen as osc_listen, packet as osc_packet};
 pub use output::{
-    Channels, DEVICE_CHANNELS, Device, Output, OutputEdit, OutputId, Sends, moved_output,
+    Channels, DEVICE_CHANNELS, Device, Output, OutputEdit, OutputId, Sends, output_moved_between,
 };
 pub use patch::{Instrument, InstrumentId, PatchEdit, parse_address};
 pub use video::{PICTURE_FILES, Picture, VIDEO_FILES, Video};

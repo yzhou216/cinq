@@ -49,27 +49,28 @@ fn devamp_lets_a_loop_play_on_to_its_end_from_the_end_of_the_pass_under_way() {
 
 #[test]
 fn devamp_leaves_at_the_first_end_of_a_pass_that_lies_more_than_the_notice_ahead() {
-    // The loop runs from 2 to 6 seconds, so a pass ends at 6, 10, and 14
-    let at = [0.0, 3.0, 5.25, 5.5, 5.75, 7.0, 9.25, 9.5];
-    let leaves: Vec<Option<f64>> = at
-        .iter()
-        .map(|&played| released(&vamping(played).apply(GO)))
-        .collect();
-    let ends = [6.0, 6.0, 6.0, 10.0, 10.0, 10.0, 10.0, 14.0].map(Some);
-    assert_eq!(leaves, ends);
-    let remaining: Vec<Phase> = at
-        .iter()
-        .map(|&played| phase(&vamping(played).apply(GO)))
-        .collect();
-    let lasts = [10.0, 10.0, 10.0, 14.0, 14.0, 14.0, 14.0, 18.0];
-    let wanted: Vec<Phase> = at
-        .iter()
-        .zip(lasts)
-        .map(|(played, lasts)| Phase::Running {
-            remaining: lasts - played,
-        })
-        .collect();
-    assert_eq!(remaining, wanted);
+    // Loop runs from 2 to 6 seconds, so a pass ends at 6, 10, and 14, and
+    // the clip then plays the 4 seconds from the loop end to its own
+    let rows = [
+        (0.0, 6.0),
+        (3.0, 6.0),
+        (5.25, 6.0),
+        (5.5, 10.0),
+        (5.75, 10.0),
+        (7.0, 10.0),
+        (9.25, 10.0),
+        (9.5, 14.0),
+    ];
+    rows.into_iter().for_each(|(played, leaves)| {
+        let devamped = vamping(played).apply(GO);
+        assert_eq!(released(&devamped), Some(leaves), "after {played}");
+        let remaining = leaves + 4.0 - played;
+        assert_eq!(
+            phase(&devamped),
+            Phase::Running { remaining },
+            "after {played}"
+        );
+    });
 }
 
 #[test]
@@ -84,7 +85,7 @@ fn loop_that_ends_with_the_clip_ends_the_run_at_the_end_of_the_pass() {
             .apply(Command::Tick(played))
             .apply(GO)
     };
-    // The loop runs from 2 to 10 seconds, so a pass ends at 10 and 18
+    // Loop runs from 2 to 10 seconds, so a pass ends at 10 and 18
     let near = devamped(3.0);
     assert_eq!(phase(&near), Phase::Running { remaining: 7.0 });
     assert_eq!(near.clone().apply(Command::Tick(6.9)).active().len(), 1);

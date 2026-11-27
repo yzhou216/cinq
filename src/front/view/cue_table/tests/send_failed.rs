@@ -6,13 +6,11 @@
 
 use std::collections::BTreeSet;
 
-use iced::widget::text;
-
-use super::super::columns::lines;
-use crate::{
-    back::{Cue, CueId, CueList, Kind, Workspace},
-    front::view::theme,
+use super::{
+    super::columns::states::{Look, lines},
+    yellows,
 };
+use crate::back::{Cue, CueId, CueList, Kind, Workspace};
 
 fn network(id: u32, destination: &str) -> Cue {
     Cue::new(CueId(id), id.to_string(), Kind::Network, "Fire")
@@ -33,13 +31,10 @@ fn every_cue_that_names_a_destination_that_failed_reads_in_yellow_that_the_send_
         ],
     )]);
     let failed = BTreeSet::from(["tcp://10.0.0.1:3037".to_owned()]);
-    let theme = theme::modus_vivendi();
     let read = |index: usize, next: bool| {
         let cue = &workspace.lists()[0].cues[index];
-        lines(&workspace, cue, next, None, &[], &failed, false)
-            .into_iter()
-            .map(|(told, style)| (told, style(&theme).color == text::warning(&theme).color))
-            .collect::<Vec<_>>()
+        let look = Look::default().with_next(next).with_unreached(&failed);
+        yellows(lines(&workspace, cue, look))
     };
     let told = || ("SEND FAILED".to_owned(), true);
     assert_eq!(read(0, false), [told()]);
@@ -56,8 +51,9 @@ fn a_cue_reads_no_send_failure_once_the_problem_clears() {
         vec![network(1, "10.0.0.1:3037")],
     )]);
     let cue = &workspace.lists()[0].cues[0];
-    let read =
-        |failed: &BTreeSet<String>| lines(&workspace, cue, false, None, &[], failed, false).len();
+    let read = |failed: &BTreeSet<String>| {
+        lines(&workspace, cue, Look::default().with_unreached(failed)).len()
+    };
     assert_eq!(read(&BTreeSet::from(["tcp://10.0.0.1:3037".to_owned()])), 1);
     assert_eq!(read(&BTreeSet::new()), 0);
 }

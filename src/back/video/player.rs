@@ -19,20 +19,18 @@ use super::{
 };
 use crate::back::{Clip, Pass, Shown};
 
-/// Player moved on to the clock of its run, along with the newest picture
-/// that has come due, if one has, or why the picture cannot play
+/// Player moved on to the clock of its run, with the newest picture that has
+/// come due, if any, or why the picture cannot play
 pub(super) type Advanced = Result<(Player, Option<Picture>), String>;
 
 /// Pictures of the clip of a video cue, which a thread of its own decodes
 /// for each pass through the clip, a few pictures ahead of the clock of the
-/// run that shows them, so that the first ones wait ready until the run
-/// starts its clock.  The pass after the one under way decodes ahead as
-/// well, wherever the clip has one, so that it has decoded from the sync
-/// sample before the start of its stretch by the time the pass under way
-/// ends.  A clip that loops has one until a devamp cue lets it go on, and
-/// the player ends with the last pass.  The threads stop decoding once the
-/// player goes.  The picture of a picture cue makes a single pass of one
-/// picture, which shows until the run ends.
+/// run, so that the first ones wait ready until the run starts its clock.
+/// The pass after the one under way decodes ahead as well, so that it has
+/// decoded from the sync sample before the start of its stretch by the time
+/// the pass under way ends.  A clip that loops has one until a devamp cue lets it go on, and the player
+/// ends with the last pass.  The picture of a picture cue makes a single
+/// pass of one picture, which shows until the run ends.
 pub(super) struct Player {
     path: PathBuf,
     shown: Shown,
@@ -73,10 +71,9 @@ impl Player {
     }
 
     /// Returns the player once the clock of its run has reached `played`
-    /// seconds of its clip, along with the newest picture that has come due
-    /// since, if one has, or why the picture cannot play.  Pictures that
-    /// came due along with a newer one are let go unseen, so that a picture
-    /// that arrives late never holds back those after it.
+    /// seconds of its clip, as [`Advanced`] tells.  Pictures that came due
+    /// along with a newer one are let go unseen, so that a picture that
+    /// arrives late never holds back those after it.
     pub(super) fn advanced(self, played: f64) -> Advanced {
         self.advanced_from(played, None)
     }
@@ -143,7 +140,7 @@ impl Player {
             Shown::Clip(clip) if shown != self.shown => {
                 let pass = clip.pass(self.pass + 1);
                 match self.following {
-                    Some((decoded, pictures)) if Some(decoded) == pass => Some((decoded, pictures)),
+                    kept @ Some((decoded, _)) if Some(decoded) == pass => kept,
                     _ => decoding(&self.path, &clip, self.pass + 1, &self.life),
                 }
             }

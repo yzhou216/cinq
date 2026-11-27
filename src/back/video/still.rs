@@ -20,7 +20,7 @@ use std::{
 use image::{DynamicImage, ImageDecoder, ImageError, ImageReader};
 
 use super::decoder::{Frame, Picture, Sent};
-use crate::back::load::unreadable;
+use crate::back::failure::unreadable;
 
 pub(super) const NO_PICTURE: &str = "holds no PNG or JPEG picture";
 

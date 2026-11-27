@@ -6,13 +6,13 @@
 //! and the field with the keyboard, never playback
 
 use super::{
-    chord, press,
+    chord, helping, playing, press,
     search::{opened, typed},
     show,
 };
 use crate::{
-    back::{CueId, loaded, sound},
-    front::{App, Message, keymap::Press},
+    back::CueId,
+    front::{Message, keymap::Press},
 };
 use iced::keyboard::{Key, Modifiers};
 
@@ -47,16 +47,8 @@ fn cancel_closes_the_search_line_and_puts_the_selection_back_where_the_search_be
 
 #[test]
 fn cancel_leaves_the_help_page_and_playback_alone() {
-    let playing = || {
-        let app = show(Some(CueId(1)));
-        let workspace = app.workspace.apply(loaded(1, "sound.ogg", sound(10.0)));
-        App { workspace, ..app }.handled(Message::Go).0
-    };
     assert!(!playing().workspace.active().is_empty());
-    let open = App {
-        help: true,
-        ..playing()
-    };
+    let open = helping(playing());
     let (typed, task) = open.typed(control_c(), false);
     assert!(typed.help);
     assert_eq!(task.units(), 0);

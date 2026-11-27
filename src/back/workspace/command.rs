@@ -167,7 +167,6 @@ pub enum Place {
 
 #[cfg(test)]
 impl Command {
-    /// Adds outputs with no anchor, as the tests do
     pub fn add_output(at: usize, count: usize) -> Self {
         Self::AddOutput {
             at,

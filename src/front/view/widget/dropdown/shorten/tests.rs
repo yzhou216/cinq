@@ -4,7 +4,7 @@
 
 //! Tests of the names cut short to fit their room
 
-use super::shortened;
+use super::{shortened, shortened_start};
 
 #[test]
 fn name_too_long_ends_in_an_ellipsis_within_its_columns() {
@@ -23,10 +23,26 @@ fn name_too_long_ends_in_an_ellipsis_within_its_columns() {
         ("show.cinq.toml", 1, "\u{2026}"),
         ("Default device", 0, "\u{2026}"),
     ];
-    let wrong: Vec<_> = cases
-        .into_iter()
-        .map(|(name, columns, expected)| (name, columns, expected, shortened(name, columns)))
-        .filter(|(.., expected, got)| expected != got)
-        .collect();
-    assert!(wrong.is_empty(), "{wrong:?}");
+    cases.into_iter().for_each(|(name, columns, expected)| {
+        assert_eq!(shortened(name, columns), expected, "{name} in {columns}");
+    });
+}
+
+#[test]
+fn name_cut_at_its_start_keeps_the_end_within_its_columns() {
+    let cases = [
+        ("Booth monitors", 14, "Booth monitors"),
+        ("Booth monitors", 13, "\u{2026}oth monitors"),
+        // Wide characters take two columns each
+        ("\u{97f3}\u{97ff}\u{5353}", 4, "\u{2026}\u{5353}"),
+        ("show.cinq.toml", 1, "\u{2026}"),
+        ("Default device", 0, "\u{2026}"),
+    ];
+    cases.into_iter().for_each(|(name, columns, expected)| {
+        assert_eq!(
+            shortened_start(name, columns),
+            expected,
+            "{name} in {columns}"
+        );
+    });
 }

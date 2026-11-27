@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     back::{CueId, OutputId},
-    front::{Message, update::Spot},
+    front::{Message, Spot},
 };
 
 #[test]

@@ -2,9 +2,8 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the pictures of picture cues: reading their files, decoding
-//! them onto black, and the video output showing them and making them
-//! ready ahead
+//! Tests of the pictures of picture cues, from their files to the video
+//! output
 
 use std::{fs, path::PathBuf};
 

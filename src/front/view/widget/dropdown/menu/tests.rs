@@ -20,7 +20,7 @@ use super::{Choice, Reply, Shared, reply};
 use crate::front::{
     Message,
     keymap::{Keymap, Press, desk},
-    step,
+    stepping::step,
     view::widget::{dropdown::dropdown, wrap::Intercept},
 };
 
@@ -157,19 +157,12 @@ fn keys_move_pick_close_or_wait_as_the_keymap_binds_them() {
         (Keymap::default(), named(Named::Home), ctrl, Reply::First),
         (Keymap::default(), named(Named::F5), none, Reply::Keep),
     ];
-    let wrong: Vec<_> = cases
+    cases
         .into_iter()
-        .map(|(keymap, key, modifiers, expected)| {
-            let press = Press::from_key(&key, modifiers);
-            let got = reply(&keymap, &key, press);
-            (keymap.name().to_owned(), key, modifiers, expected, got)
-        })
-        .filter(|(.., expected, got)| expected != got)
-        .collect();
-    assert!(
-        wrong.is_empty(),
-        "expected one reply but got another: {wrong:#?}"
-    );
+        .for_each(|(keymap, key, modifiers, expected)| {
+            let got = reply(&keymap, &key, Press::from_key(&key, modifiers));
+            assert_eq!(got, expected, "{} {modifiers:?} {key:?}", keymap.name());
+        });
 }
 
 #[test]
@@ -189,6 +182,8 @@ fn enter_picks_the_highlight_and_go_closes_the_menu_without_keeping_its_key() {
         closed(true, Some(2))
     );
     assert_eq!(pressed(&[named(Named::Space)]), closed(false, None));
+    // Escape closes the same way and acts as Panic
+    assert_eq!(pressed(&[named(Named::Escape)]), closed(false, None));
     assert_eq!(pressed(&[letter("d")]), kept_open(true));
 }
 

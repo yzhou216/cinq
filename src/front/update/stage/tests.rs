@@ -36,6 +36,22 @@ fn show(kind: Kind) -> App {
     }
 }
 
+/// Returns the state with a show of video cues and its stage window open
+fn opened() -> App {
+    show(Kind::Video).staged().0
+}
+
+/// Returns the stage window of `app`
+fn stage_of(app: &App) -> window::Id {
+    app.stage.window().expect("the stage window opens")
+}
+
+/// Returns the state after the operator closes the stage window
+fn closing(app: App) -> App {
+    let stage = stage_of(&app);
+    app.closed(stage).0
+}
+
 fn picture() -> Picture {
     Picture {
         width: 1,
@@ -69,8 +85,8 @@ fn stage_window_opens_once_the_show_holds_a_picture_or_video_cue() {
 
 #[test]
 fn closed_stage_window_stays_closed_until_a_video_cue_fires() {
-    let (open, _) = show(Kind::Video).staged();
-    let stage = open.stage.window().expect("the stage window opens");
+    let open = opened();
+    let stage = stage_of(&open);
     let (closed, quitting) = open.closed(stage);
     assert_eq!(quitting.units(), 0);
     let (closed, opening) = closed.staged();
@@ -95,10 +111,7 @@ fn stage_window_goes_fullscreen_as_go_fires_a_picture_or_video_cue() {
 
 #[test]
 fn stage_window_that_a_cue_opens_again_opens_fullscreen() {
-    let (open, _) = show(Kind::Video).staged();
-    let stage = open.stage.window().expect("the stage window opens");
-    let (closed, _) = open.closed(stage);
-    let (gone, _) = closed.handled(Message::Go);
+    let (gone, _) = closing(opened()).handled(Message::Go);
     assert!(gone.stage.settings().fullscreen);
     let (reopened, _) = gone.staged();
     assert!(!reopened.stage.settings().fullscreen);
@@ -106,8 +119,7 @@ fn stage_window_that_a_cue_opens_again_opens_fullscreen() {
 
 #[test]
 fn stage_window_stays_as_it_is_when_go_fires_no_picture_or_video_cue() {
-    let (open, _) = show(Kind::Video).staged();
-    let (gone, _) = open.handled(Message::Go);
+    let (gone, _) = opened().handled(Message::Go);
     let (shown, _) = gone.staged();
     // Standby has moved on past the only cue, so that GO fires nothing
     let (gone, _) = shown.handled(Message::Go);
@@ -145,12 +157,11 @@ fn stage_draws_with_and_without_pictures() {
 
 #[test]
 fn stage_window_changing_size_leaves_the_cue_list_as_it_is() {
-    let (open, _) = show(Kind::Video).staged();
     let open = App {
         selected: Some(CueId(1)),
-        ..open
+        ..opened()
     };
-    let stage = open.stage.window().expect("the stage window opens");
+    let stage = stage_of(&open);
     let main = open.main.expect("the main window opens");
     let (open, unmoved) = open.handled(Message::Resized(stage, STAGE_SIZE));
     assert_eq!(unmoved.units(), 0);
@@ -160,8 +171,8 @@ fn stage_window_changing_size_leaves_the_cue_list_as_it_is() {
 
 #[test]
 fn stage_window_minimized_and_then_closed_is_no_longer_drawn() {
-    let (open, _) = show(Kind::Video).staged();
-    let stage = open.stage.window().expect("the stage window opens");
+    let open = opened();
+    let stage = stage_of(&open);
     let main = open.main.expect("the main window opens");
     assert_eq!(open.drawn_windows(), [main, stage]);
     let (minimized, _) = open.handled(Message::Resized(stage, Size::ZERO));

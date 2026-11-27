@@ -25,7 +25,7 @@ fn opening_again_the_show_on_screen_brings_back_its_changes_on_screen() {
     let name = app.workspace.cue(CueId(1)).map(|cue| cue.name.as_str());
     assert_eq!(name, Some("Newer"));
     // Nothing to tell of changes that stay on screen
-    assert_eq!(app.told, None);
+    assert_eq!(app.notices.told, None);
     assert!(!app.send(Command::Undo).show.unsaved());
 }
 
@@ -51,39 +51,39 @@ fn opening_a_file_that_is_not_there_starts_a_new_show_that_saving_puts_there() {
 fn file_that_is_not_a_show_leaves_the_show_on_screen() {
     let app = storm().opened(found(Some("/shows/broken.cinq.toml"), Some("[[list"), None));
     assert_eq!(app.show.name(), "storm.cinq.toml");
-    assert!(app.file_problem.is_some());
+    assert!(app.problems.file.is_some());
 }
 
 #[test]
 fn file_that_is_not_a_show_is_told_by_its_name_and_where_it_goes_wrong_in_one_line() {
     let text = "[[list]]\nname = \"Main\"\n[[list.cue]]\nname = \"Knock\nid = 1\n";
     let app = App::default().opened(found(Some("/shows/big.cinq.toml"), Some(text), None));
-    assert!(app.open_failed);
-    let problem = app.file_problem.as_deref().unwrap_or_default();
+    assert!(app.problems.open_failed);
+    let problem = app.problems.file.as_deref().unwrap_or_default();
     assert!(
         problem.starts_with("Cannot open big.cinq.toml: line 4, column 14: "),
         "{problem}"
     );
     assert_eq!(problem.lines().count(), 1, "{problem}");
     let opened = app.opened(found(Some(STORM), Some(SHOW), None));
-    assert!(!opened.open_failed && opened.file_problem.is_none());
+    assert!(!opened.problems.open_failed && opened.problems.file.is_none());
 }
 
 #[test]
 fn opening_another_show_tells_where_the_unsaved_changes_went() {
     let told = "Kept the unsaved changes to storm.cinq.toml | Control+l: open";
     let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
-    assert_eq!(app.told.as_deref(), Some(told));
+    assert_eq!(app.notices.told.as_deref(), Some(told));
     // Also when the show opened brings back unsaved changes of its own
     let kept = SHOW.replace("Note", "Calm");
     let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), Some(&kept)));
-    assert_eq!(app.told.as_deref(), Some(told));
+    assert_eq!(app.notices.told.as_deref(), Some(told));
     // Without the key for a new show, whose changes only starting cinq
     // without a show brings back
     let untitled = App::default().opened(found(None, None, Some(SHOW)));
     let app = untitled.opened(found(Some(CALM), Some(SHOW), None));
     assert_eq!(
-        app.told.as_deref(),
+        app.notices.told.as_deref(),
         Some("Kept the unsaved changes to untitled")
     );
 }
@@ -106,21 +106,24 @@ fn failure_to_keep_outlasts_a_problem_of_opening_until_a_show_opens_or_saves() {
     let failed = || storm().with_keep_problem(Some("Cannot keep the unsaved changes".to_owned()));
     let broken = found(Some("/shows/broken.cinq.toml"), Some("[[list"), None);
     let app = failed().opened(broken);
-    assert!(app.file_problem.is_some() && app.keep_problem.is_some());
+    assert!(app.problems.file.is_some() && app.problems.keep.is_some());
     let opened = app.opened(found(Some(CALM), Some(SHOW), None));
-    assert!(opened.file_problem.is_none() && opened.keep_problem.is_none());
+    assert!(opened.problems.file.is_none() && opened.problems.keep.is_none());
     let app = failed();
     let save = saving(&app, STORM);
-    assert!(app.saved(save).keep_problem.is_none());
+    assert!(app.saved(save).problems.keep.is_none());
 }
 
 #[test]
 fn failure_to_keep_takes_back_the_note_that_changes_were_kept() {
     let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
-    assert!(app.told.is_some());
-    assert!(app.with_keep_problem(None).told.is_some());
+    assert!(app.notices.told.is_some());
+    assert!(app.with_keep_problem(None).notices.told.is_some());
     let app = renamed(storm(), "Cue").opened(found(Some(CALM), Some(SHOW), None));
-    assert_eq!(app.with_keep_problem(Some("late".to_owned())).told, None);
+    assert_eq!(
+        app.with_keep_problem(Some("late".to_owned())).notices.told,
+        None
+    );
 }
 
 #[test]
@@ -208,7 +211,9 @@ fn opening_a_show_over_the_outputs_selects_one_of_its_outputs() {
 
 #[test]
 fn directory_in_place_of_a_show_is_told_without_an_error_number() {
-    let directory = std::env::temp_dir();
-    let reason = crate::front::read(&directory).expect_err("a directory is no show");
+    // Path of its own, since that of temp_dir on Windows ends in a separator,
+    // which makes it read as missing
+    let directory = tempfile::tempdir().unwrap();
+    let reason = crate::front::files::read(directory.path()).expect_err("a directory is no show");
     assert!(!reason.contains("os error"), "{reason}");
 }

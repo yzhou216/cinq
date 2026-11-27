@@ -6,7 +6,7 @@
 
 use iced::keyboard::{Key, Modifiers, key::Named};
 
-use super::{ALL, clipped, locked, names, on, typed, without};
+use super::{ALL, locked, names, on, on_clipboard, typed, without};
 use crate::{
     back::Place,
     front::{
@@ -45,18 +45,11 @@ fn a_count_of_added_outputs_stops_at_sixty_four() {
 }
 
 #[test]
-fn the_keys_that_add_do_nothing_in_show_mode() {
-    let kept = typed(locked(on(2)), "o");
-    assert_eq!(names(&kept), ALL);
-    assert_eq!(at(&kept), 2);
-}
-
-#[test]
 fn dd_x_and_delete_cut_the_output_and_select_the_one_that_takes_its_place() {
     let cut = typed(on(3), "dd");
     assert_eq!(names(&cut), without(&[2]));
     assert_eq!(at(&cut), 3);
-    assert_eq!(clipped(&cut), Some(("Cut the output Sub", true)));
+    assert_eq!(on_clipboard(&cut), Some(("Cut the output Sub", true)));
     assert_eq!(names(&typed(on(3), "x")), without(&[2]));
     // Last output leaves the one before it selected
     assert_eq!(at(&typed(on(10), "dd")), 9);
@@ -86,8 +79,11 @@ fn counts_and_motions_cut_the_outputs_that_they_reach() {
 fn a_cut_that_would_take_every_output_does_nothing_and_says_so() {
     let refused = typed(on(1), "9999dd");
     assert_eq!(names(&refused), ALL);
-    assert_eq!(refused.remark, Some("A show keeps at least one output"));
-    assert!(refused.clipped.is_none());
+    assert_eq!(
+        refused.notices.remark,
+        Some("A show keeps at least one output")
+    );
+    assert!(refused.notices.clipped.is_none());
     // Last output of a show that has one
     let one = after(on(1), [Message::Across(Action::Delete, Action::Last, None)]);
     assert_eq!(names(&one), ALL, "the cut reaches all of them");
@@ -95,15 +91,18 @@ fn a_cut_that_would_take_every_output_does_nothing_and_says_so() {
     assert_eq!(names(&single), ["House L"]);
     let still = typed(single, "dd");
     assert_eq!(names(&still), ["House L"]);
-    assert_eq!(still.remark, Some("A show keeps at least one output"));
+    assert_eq!(
+        still.notices.remark,
+        Some("A show keeps at least one output")
+    );
 }
 
 #[test]
-fn show_mode_locks_the_cut_and_delete_keys_and_fills_no_register() {
-    for keys in ["dd", "x", "dj", "3dd"] {
+fn show_mode_locks_the_keys_that_add_and_cut_and_fills_no_register() {
+    for keys in ["o", "dd", "x", "dj", "3dd"] {
         let kept = typed(locked(on(3)), keys);
-        assert_eq!(names(&kept), ALL, "{keys}");
-        assert!(kept.clipped.is_none(), "{keys}");
+        assert_eq!((names(&kept), at(&kept)), (ALL.to_vec(), 3), "{keys}");
+        assert!(kept.notices.clipped.is_none(), "{keys}");
     }
     let deleted = after(locked(on(3)), [Message::Delete(1)]);
     assert_eq!(names(&deleted), ALL, "Delete");

@@ -8,19 +8,15 @@ use super::*;
 
 /// Returns the state of a show of audio cue 1, fade cue 2 that targets it,
 /// and audio cue 3, with cue 1 selected
-pub(in crate::front::update::tests) fn fading() -> App {
+fn fading() -> App {
     let fade = Cue::new(CueId(2), "2", Kind::Fade, "Fade")
         .target(CueId(1))
         .build();
-    App {
-        workspace: Workspace::new(vec![CueList::new("Main", vec![audio(1), fade, audio(3)])]),
-        selected: Some(CueId(1)),
-        ..App::default()
-    }
+    one_list(vec![audio(1), fade, audio(3)], Some(CueId(1)))
 }
 
 /// Returns the identity and target of each cue of the first list
-pub(in crate::front::update::tests) fn targets(app: &App) -> Vec<(u32, Option<u32>)> {
+fn targets(app: &App) -> Vec<(u32, Option<u32>)> {
     app.workspace.lists()[0]
         .cues
         .iter()
@@ -82,4 +78,20 @@ fn a_fade_copied_without_its_target_keeps_it_while_it_is_there() {
         ],
     );
     assert_eq!(targets(&app)[2], (4, Some(1)));
+}
+
+#[test]
+fn a_fade_cut_or_copied_over_a_motion_remaps_its_target_as_a_count_does() {
+    use crate::front::keymap::Action::{Copy, Cut, Next};
+    let pasted = |operator| {
+        after(
+            operators::across(fading(), operator, Next, None),
+            [Message::Select(CueId(3)), Message::Paste(Place::After, 1)],
+        )
+    };
+    assert_eq!(targets(&pasted(Cut)), [(3, None), (4, None), (5, Some(4))]);
+    let copied = [(1, None), (2, Some(1)), (3, None), (4, None), (5, Some(4))];
+    assert_eq!(targets(&pasted(Copy)), copied);
+    // Undo takes the paste and leaves the cut
+    assert_eq!(targets(&typing(pasted(Cut), "u")), [(3, None)]);
 }

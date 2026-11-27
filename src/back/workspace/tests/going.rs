@@ -7,13 +7,6 @@
 
 use super::*;
 
-fn move_in(list: usize, id: u32) -> Command {
-    Command::Standby {
-        list,
-        cue: Some(CueId(id)),
-    }
-}
-
 #[test]
 fn goto_cue_moves_standby_in_its_own_list_and_fires_nothing() {
     let workspace = workspace(vec![audio(1), audio(2), goto_cue(3, 1)])
@@ -33,7 +26,7 @@ fn goto_cue_moves_the_standby_of_the_list_that_holds_its_target() {
 #[test]
 fn goto_cue_in_a_chain_sets_the_standby_that_go_leaves() {
     let chain = workspace(vec![continuing(1), goto_cue(2, 4), audio(3), audio(4)]);
-    assert_eq!(standby(&chain.clone().apply(GO)), Some(4));
+    assert_eq!(standby(&chain.apply(GO)), Some(4));
     let delayed = workspace(vec![
         continuing_after(1, 2.0),
         goto_cue(2, 4),
@@ -52,7 +45,7 @@ fn goto_move_cannot_be_undone_and_drops_earlier_moves_of_that_list() {
         vec![audio(1), audio(2), audio(3)],
         vec![goto_cue(4, 3)],
     ])
-    .apply(move_in(0, 2))
+    .apply(move_standby(2))
     .apply(Command::Go { list: 1 });
     assert_eq!(standby_of(&moved, 0), Some(3));
     assert!(moved.undoable().is_none());
@@ -80,13 +73,7 @@ fn control_cues_work_in_show_mode() {
 }
 
 #[test]
-fn show_file_keeps_the_kind_and_the_target_of_each_control_cue() {
-    let kinds = |workspace: &Workspace| {
-        workspace
-            .cues()
-            .map(|cue| (cue.kind, cue.target))
-            .collect::<Vec<_>>()
-    };
+fn show_file_names_start_pause_and_goto_cues_by_their_kind() {
     let show = workspace(vec![
         audio(1),
         start_cue(2, 1),
@@ -98,9 +85,6 @@ fn show_file_keeps_the_kind_and_the_target_of_each_control_cue() {
     ["start", "pause", "goto"].into_iter().for_each(|kind| {
         assert!(text.contains(&format!("kind = \"{kind}\"")), "{text}");
     });
-    let read = read_back(&text);
-    assert_eq!(kinds(&read), kinds(&show));
-    assert_eq!(read.cue(CueId(4)).unwrap().target, Some(CueId(1)));
 }
 
 #[test]

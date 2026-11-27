@@ -4,17 +4,14 @@
 
 //! Widgets that iced lacks
 //!
-//! All but [`check`](mod@check), [`dropdown`](mod@dropdown),
-//! [`hint`](mod@hint), and [`pictures`](mod@pictures) work around an iced
-//! widget with [`wrap`], while the checkbox and the drop-down hold the keyboard
-//! focus themselves around iced's checkbox and in the look of iced's pick list,
-//! the pictures draw through a shader of their own, and [`hinted`] marks a
-//! place that a click acts on for hint mode.
+//! Most of them work around an iced widget with [`wrap`].  The checkbox and
+//! the drop-down hold the keyboard focus themselves, and the pictures draw
+//! through a shader of their own.
 
 mod button;
 mod check;
 mod dropdown;
-pub(in crate::front::view) mod focus;
+pub(super) mod focus;
 mod hide;
 pub mod hint;
 mod keep_keys;
@@ -29,7 +26,7 @@ use iced::{Event, Rectangle, mouse, touch};
 use crate::front::keymap::KeyPress;
 pub use button::{Button, button};
 pub use check::{check, check_and_leave};
-pub(in crate::front::view) use dropdown::shortened;
+pub(super) use dropdown::{ELLIPSIS, shortened, shortened_start};
 pub use dropdown::{dropdown, width as dropdown_width};
 pub use hide::hide;
 pub use hint::{Act, Site, Target, hinted, reached, window};

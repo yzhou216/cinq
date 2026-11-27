@@ -19,7 +19,6 @@ use std::{collections::BTreeMap, fmt};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct OutputId(pub u32);
 
-/// Device that an output plays on
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Device {
     /// Default device of the machine, which config.toml can choose
@@ -68,24 +67,21 @@ impl Channels {
         }
     }
 
-    /// Returns each channel, the left first
-    fn each(self) -> impl Iterator<Item = u16> {
-        let (first, second) = match self {
-            Self::Mono(channel) => (channel, None),
-            Self::Stereo(left, right) => (left, Some(right)),
-        };
-        std::iter::once(first).chain(second)
-    }
-
     /// Returns the lowest channel, which a device must have for these to
     /// sound at all
     pub fn lowest(self) -> u16 {
-        self.each().min().unwrap_or(0)
+        match self {
+            Self::Mono(channel) => channel,
+            Self::Stereo(left, right) => left.min(right),
+        }
     }
 
     /// Returns how many channels a device needs to hold these
     pub fn needs(self) -> u16 {
-        self.each().max().map_or(0, |highest| highest + 1)
+        match self {
+            Self::Mono(channel) => channel + 1,
+            Self::Stereo(left, right) => left.max(right) + 1,
+        }
     }
 }
 
@@ -118,7 +114,7 @@ pub struct Output {
 /// others in the same order.  Where both qualify, as when two neighbors swap,
 /// `prefer` is the one, if it is one of them, else the one that was there
 /// first.
-pub fn moved_output<'a>(
+pub fn output_moved_between<'a>(
     before: &[Output],
     after: &'a [Output],
     prefer: Option<OutputId>,
@@ -165,7 +161,6 @@ impl Output {
     }
 }
 
-/// Change that the operator makes to one setting of an output
 #[derive(Debug, Clone, PartialEq)]
 pub enum OutputEdit {
     Name(String),

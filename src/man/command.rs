@@ -25,8 +25,7 @@ type Section = fn(&Man, &mut dyn Write) -> io::Result<()>;
 const BEFORE_SYNOPSIS: [Section; 2] = [Man::render_title, Man::render_name_section];
 const AFTER_SYNOPSIS: [Section; 2] = [Man::render_description_section, Man::render_options_section];
 
-/// Each section comes with the same preamble, which defines the apostrophe,
-/// and the page keeps it only once.
+/// Returns cinq(1) for `platform`, dated `date`
 pub fn command_page(platform: Platform, date: &str) -> String {
     let mut command = Cli::command();
     // Help and version options, which building adds
@@ -55,6 +54,8 @@ pub fn command_page(platform: Platform, date: &str) -> String {
         .and_then(|()| render(&AFTER_SYNOPSIS, &mut page))
         .and_then(|()| epilogue(platform, &notice).to_writer(&mut page))
         .expect("writing to memory does not fail");
+    // Each section comes with the same preamble, which defines the
+    // apostrophe, and the page keeps it only once
     let preamble = Roff::new().render();
     let body = String::from_utf8(page).expect("the page is UTF-8");
     format!("{preamble}{}", body.replace(&preamble, ""))

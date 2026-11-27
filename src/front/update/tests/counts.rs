@@ -100,7 +100,7 @@ fn tab_back_by_a_count_wraps_as_a_single_step_does() {
 
 #[test]
 fn a_counted_undo_or_redo_counts_the_changes_it_turned_for_the_notice() {
-    let turns = |app: App, message| app.handled(message).0.turns;
+    let turns = |app: App, message| app.handled(message).0.notices.turns;
     let undone = || deleted_thrice().handled(Message::Undo(3)).0;
     assert_eq!(turns(deleted_thrice(), Message::Undo(2)), 2);
     assert_eq!(turns(deleted_thrice(), Message::Undo(usize::MAX)), 3);

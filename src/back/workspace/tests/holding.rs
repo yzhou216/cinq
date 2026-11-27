@@ -28,14 +28,8 @@ fn pause_cue_holds_a_playing_cue_its_fade_and_the_cue_waiting_on_its_post_wait()
     let held = held().apply(Command::Tick(3.0));
     let held_level = level(&held, 1).unwrap();
     assert!((held_level + 3.6).abs() < 1e-4, "{held_level}");
-    assert_eq!(
-        held.active_of(CueId(1)).unwrap().phase(),
-        Phase::Running { remaining: 9.0 }
-    );
-    assert_eq!(
-        held.active_of(CueId(2)).unwrap().phase(),
-        Phase::Scheduled { starts_in: 5.0 }
-    );
+    assert_phase(&held, 1, Phase::Running { remaining: 9.0 });
+    assert_phase(&held, 2, Phase::Scheduled { starts_in: 5.0 });
     assert!(held.active_of(CueId(1)).unwrap().paused);
     assert!(held.active_of(CueId(2)).unwrap().paused);
 }
@@ -47,10 +41,7 @@ fn start_cue_resumes_what_a_pause_cue_held() {
     let later = resumed.apply(Command::Tick(1.0));
     let moved = level(&later, 1).unwrap();
     assert!((moved + 7.2).abs() < 1e-4, "{moved}");
-    assert_eq!(
-        later.active_of(CueId(2)).unwrap().phase(),
-        Phase::Scheduled { starts_in: 4.0 }
-    );
+    assert_phase(&later, 2, Phase::Scheduled { starts_in: 4.0 });
 }
 
 #[test]
@@ -70,11 +61,8 @@ fn pause_cue_holds_a_cue_in_its_pre_wait_and_a_cue_that_loops() {
         .apply(GO)
         .apply(GO)
         .apply(Command::Tick(5.0));
-    assert_eq!(
-        held.active_of(CueId(1)).unwrap().phase(),
-        Phase::PreWait { remaining: 3.0 }
-    );
-    assert_eq!(held.active_of(CueId(2)).unwrap().phase(), Phase::Looping);
+    assert_phase(&held, 1, Phase::PreWait { remaining: 3.0 });
+    assert_phase(&held, 2, Phase::Looping);
     assert_eq!(held.active_of(CueId(2)).unwrap().progress(), 0.1);
 }
 
@@ -105,7 +93,7 @@ fn pause_cue_holds_a_cue_that_a_start_cue_has_fired_before_it_acts() {
     .apply(GO)
     .apply(GO)
     .apply(Command::Tick(0.025));
-    // The stop cue waits, paused, for something to resume it
+    // Stop cue waits, paused, for something to resume it
     assert_eq!(running(&workspace), [1, 4]);
     assert!(workspace.active_of(CueId(4)).unwrap().paused);
     let resumed = workspace

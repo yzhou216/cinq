@@ -7,12 +7,9 @@
 
 use std::net::IpAddr;
 
-use iced::{
-    Task,
-    advanced::widget::{operate, operation::focusable},
-};
+use iced::Task;
 
-use super::App;
+use super::{App, focus::unfocus};
 use crate::{
     back::{Command, CueId, Problem, Remote},
     front::Message,
@@ -42,27 +39,27 @@ impl App {
         }
         let here = (self.selected, self.list);
         let (app, task) = Self {
-            osc_ignored: None,
+            problems: self.problems.with_osc_ignored(None),
             ..self
         }
         .carried_out(remote);
         if (app.selected, app.list) == here {
             (app, task)
         } else {
-            (app, Task::batch([task, operate(focusable::unfocus())]))
+            (app, Task::batch([task, unfocus()]))
         }
     }
 
     /// Returns the state with `line` as the command that did nothing.  A first
     /// line moves what lies below it in the sidebar, so that it leaves hint mode.
     pub(super) fn with_ignored(self, line: String) -> Self {
-        let app = if self.osc_ignored.is_none() {
+        let app = if self.problems.osc_ignored.is_none() {
             self.without_hints()
         } else {
             self
         };
         Self {
-            osc_ignored: Some(line),
+            problems: app.problems.with_osc_ignored(Some(line)),
             ..app
         }
     }

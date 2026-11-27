@@ -6,11 +6,10 @@
 //! of a row, as Vim matches the whole line, but for the state, in the cue
 //! list and in the outputs
 
-use super::{after, output_editing::on, output_rows::at, search::searched};
+use super::{after, one_list, output_editing::on, output_rows::at, search::searched};
 use crate::{
     back::{
-        Advance, Channels, Command, Cue, CueId, CueList, Device, Kind, Media, OutputEdit, OutputId,
-        Workspace,
+        Advance, Channels, Command, Cue, CueId, Device, Kind, OutputEdit, OutputId, loaded, sound,
     },
     front::{App, Message},
 };
@@ -19,7 +18,7 @@ use crate::{
 /// selected, and a search line open: a sound with a file, a fade of it that
 /// continues, a pause that waits before it starts, a memo, and a stop
 fn listed() -> App {
-    let sound = Cue::new(CueId(1), "A1", Kind::Audio, "Thunder")
+    let thunder = Cue::new(CueId(1), "A1", Kind::Audio, "Thunder")
         .file("storm/rumble.ogg")
         .build();
     let fade = Cue {
@@ -36,20 +35,12 @@ fn listed() -> App {
     let stop = Cue::new(CueId(4), "A4", Kind::Stop, "End")
         .target(CueId(1))
         .build();
-    let workspace = Workspace::new(vec![CueList::new("Main", vec![sound, fade, waiting, stop])])
-        .apply(Command::Loaded {
-            cue: CueId(1),
-            file: "storm/rumble.ogg".to_owned(),
-            media: Media::Loaded {
-                duration: 12.0,
-                sound: Some(12.0),
-            },
-            seen: None,
-        });
+    let app = one_list(vec![thunder, fade, waiting, stop], Some(CueId(4)));
     App {
-        workspace,
-        selected: Some(CueId(4)),
-        ..App::default()
+        workspace: app
+            .workspace
+            .apply(loaded(1, "storm/rumble.ogg", sound(12.0))),
+        ..app
     }
     .handled(Message::Search { backward: false })
     .0

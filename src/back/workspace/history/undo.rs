@@ -32,11 +32,9 @@ impl Workspace {
             return self;
         }
         let (history, change) = self.history.undoing();
-        let workspace = Self { history, ..self };
-        match change {
-            Some(change) => workspace.reverted(change),
-            None => workspace,
-        }
+        change
+            .into_iter()
+            .fold(Self { history, ..self }, Self::reverted)
     }
 
     pub(in crate::back::workspace) fn redone(self) -> Self {
@@ -44,11 +42,9 @@ impl Workspace {
             return self;
         }
         let (history, change) = self.history.redoing();
-        let workspace = Self { history, ..self };
-        match change {
-            Some(change) => workspace.remade(change),
-            None => workspace,
-        }
+        change
+            .into_iter()
+            .fold(Self { history, ..self }, Self::remade)
     }
 
     pub(in crate::back::workspace) fn recorded(self, change: Change) -> Self {

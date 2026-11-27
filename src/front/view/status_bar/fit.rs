@@ -10,14 +10,16 @@
 //! word, and ends in an ellipsis, as it does at the edge of a room too short
 //! for even its first word.
 
+use std::iter;
+
 use itertools::Itertools;
 use unicode_width::UnicodeWidthStr;
 
 use super::{LINE, format::silences, giving_way};
-use crate::front::{keymap::Action, view::widget::shortened as cut_short};
-
-/// Ends a notice that was shortened
-const ELLIPSIS: &str = "…";
+use crate::front::{
+    keymap::Action,
+    view::widget::{ELLIPSIS, shortened as cut_short},
+};
 
 /// Fewest words of a notice that stay once it is cut at its end, since
 /// `Added cue…` has lost the number that told which cue
@@ -51,19 +53,14 @@ pub(super) fn fitted(
 }
 
 /// Returns the hints that `hints` gives for what the latest change `told`,
-/// as [`fitted`] joins them in `room` columns, and where they still do not
-/// fit once every key has given way, with the notice cut after the longest
-/// of its words that lets them fit.  The keys that follow the notice after
-/// a separator give way first, but for the last.  The keys of `outlasting`
-/// give way only after the notice has been cut to its shortest, so that
-/// the key that leaves a field stays where a long notice would take its room.
-/// A notice that names a cue keeps the words from the last `cue` on, which
-/// tell which cue it was, and gives up the words before them first, down to
-/// [`LEAST_BEFORE`], and only then is cut at its end.  A cut at its end that
-/// would keep fewer than [`LEAST_WORDS`] words is not made, and a
-/// notice that cannot be cut otherwise is left out for the keys that fit.
-/// Where not even that fits, the hints are cut at the edge of the room with an
-/// ellipsis, so that no text runs past it.
+/// as [`fitted`] joins them in `room` columns.  Where they still do not fit
+/// once every key has given way, the notice is cut as [`shortened`] orders,
+/// after the longest of its words that lets them fit.  The keys of
+/// `outlasting` give way only after the notice has been cut to its shortest,
+/// so that the key that leaves a field stays where a long notice would take
+/// its room.  A notice that cannot be cut to [`LEAST_WORDS`] words is left
+/// out for the keys that fit.  Where not even that fits, the hints are cut at
+/// the edge of the room with an ellipsis, so that no text runs past it.
 pub(super) fn shown(
     hints: impl Fn(Option<String>) -> Vec<(Option<Action>, String)>,
     told: Option<String>,
@@ -78,27 +75,22 @@ pub(super) fn shown(
         .filter(|action| !outlasting.contains(action))
         .collect::<Vec<_>>();
     let cut = |yielding: &[Action]| {
-        let joined = |told: Option<String>| fitted(&hints(told), room, yielding);
-        let full = joined(told.clone());
-        if fits(&full) {
-            return Some(full);
-        }
-        told.iter()
-            .flat_map(|told| shortened(told))
-            .map(|short| joined(Some(short)))
+        let shorter = told.iter().flat_map(|told| shortened(told)).map(Some);
+        iter::once(told.clone())
+            .chain(shorter)
+            .map(|told| fitted(&hints(told), room, yielding))
             .find(fits)
     };
-    // A notice cut to a stub says nothing, so the keys keep the room instead
+    // Notice cut to a stub says nothing, so the keys keep the room instead
     let dropped = |yielding: &[Action]| {
         Some(fitted(&hints(None), room, yielding))
             .filter(|joined| !joined.is_empty() && fits(joined))
     };
-    cut(&giving)
-        .or_else(|| dropped(&giving))
-        .or_else(|| cut(yielding))
-        .or_else(|| dropped(yielding))
+    [giving.as_slice(), yielding]
+        .into_iter()
+        .find_map(|yielding| cut(yielding).or_else(|| dropped(yielding)))
         .unwrap_or_else(|| match room {
-            // An ellipsis alone would take a column that is not there
+            // Ellipsis alone would take a column that is not there
             0 => String::new(),
             _ => cut_short(&fitted(&hints(told), room, yielding), room),
         })

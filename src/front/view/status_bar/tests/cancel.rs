@@ -5,26 +5,23 @@
 //! Tests of the hint of the key that cancels what is typed
 
 use super::{
-    super::{order::yielding, status},
-    YIELDING, fitted, hinted, opened, opened_with,
+    super::order::yielding, YIELDING, fitted, has_hint, hinted, opened, opened_with, taken, texts,
 };
 use crate::front::{
     App,
+    app::{Held, Keyboard, Notices},
     keymap::{Action, Keymap, Press, desk},
 };
 use iced::keyboard::{Key, Modifiers};
-use unicode_width::UnicodeWidthStr;
 
 /// Columns of a bar 1024 pixels wide in DejaVu Sans Mono at 16 pixels.
 /// The test counts them rather than measuring the font, since the
 /// monospace font that a build finds differs from one system to another.
 pub(super) const COLUMNS: usize = 104;
 
-/// Returns the hint of the key of cancel, if the bar shows one
 fn cancel_hint(app: &App) -> Option<String> {
-    hinted(app)
+    texts(app)
         .into_iter()
-        .map(|(_, hint)| hint)
         .find(|hint| hint.ends_with(": cancel"))
 }
 
@@ -52,14 +49,13 @@ fn the_key_of_cancel_stays_in_a_bar_of_1024_pixels_while_go_and_panic_give_way()
     let shown = |remark: &'static str| {
         let app = App {
             keys: vec![press("d").expect("a key")],
-            remark: Some(remark),
+            notices: Notices {
+                remark: Some(remark),
+                ..Notices::default()
+            },
             ..opened(false, false)
         };
-        let taken: usize = status(&app, app.show.name().into_owned())
-            .iter()
-            .map(|part| part.text.width())
-            .sum();
-        fitted(&hinted(&app), COLUMNS - taken, &YIELDING)
+        fitted(&hinted(&app), COLUMNS - taken(&app), &YIELDING)
     };
     // GO gives way first, then Panic, while cancel stays
     let short = shown("Copied cue 1 to the clipboard");
@@ -72,7 +68,10 @@ fn the_key_of_cancel_stays_in_a_bar_of_1024_pixels_while_go_and_panic_give_way()
 
 fn leaving(keymap: Keymap, held: bool) -> Vec<String> {
     let app = App {
-        held,
+        keyboard: Keyboard::default().with_held(Held {
+            any: held,
+            ..Held::default()
+        }),
         ..opened_with(keymap, false, false)
     };
     hinted(&app)
@@ -97,10 +96,15 @@ fn the_bar_hints_how_to_leave_a_field_that_has_the_keyboard() {
 fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
     let told = |menu, help| {
         let app = App {
-            held: true,
+            keyboard: Keyboard::default()
+                .with_held(Held {
+                    any: true,
+                    ..Held::default()
+                })
+                .with_menu(menu),
             ..opened(menu, help)
         };
-        hinted(&app).iter().any(|(_, hint)| hint.contains("leave"))
+        texts(&app).iter().any(|hint| hint.contains("leave"))
     };
     assert!(told(false, false));
     assert!(!told(true, false), "a menu has its own keys");
@@ -110,7 +114,10 @@ fn an_open_menu_and_the_help_page_take_the_place_of_those_hints() {
 #[test]
 fn the_hints_of_a_field_give_way_in_turn_with_go_and_panic_before_the_key_that_leaves() {
     let app = App {
-        held: true,
+        keyboard: Keyboard::default().with_held(Held {
+            any: true,
+            ..Held::default()
+        }),
         ..opened(false, false)
     };
     // No help hint here: a field or a list that has the keyboard keeps the
@@ -157,17 +164,10 @@ fn the_search_line_of_a_keymap_with_no_key_to_cancel_names_the_key_that_leaves()
         if let Some(search) = app.search.as_mut() {
             search.text = text.to_owned();
         }
-        hinted(&app)
-            .into_iter()
-            .map(|(_, hint)| hint)
-            .collect::<Vec<_>>()
+        texts(&app)
     };
     assert!(hints("").contains(&"Backspace: leave".to_owned()));
     assert!(hints("kno").contains(&"Enter: find".to_owned()));
     let (vi, _) = opened(false, false).searching(false);
-    assert!(
-        hinted(&vi)
-            .iter()
-            .any(|(_, hint)| hint == "Control+c: cancel")
-    );
+    assert!(has_hint(&vi, "Control+c: cancel"));
 }

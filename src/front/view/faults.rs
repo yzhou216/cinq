@@ -19,7 +19,6 @@ use crate::{
     front::App,
 };
 
-/// Warning about outputs that cannot play
 #[derive(Debug, PartialEq)]
 pub(super) enum Warning<'a> {
     /// Outputs on a device that fails, which share its fault
@@ -28,7 +27,6 @@ pub(super) enum Warning<'a> {
         fault: &'a Fault,
         outputs: Vec<OutputId>,
     },
-    /// Output past the channels of its device
     Channels {
         output: &'a Output,
         fault: &'a Fault,
@@ -46,11 +44,10 @@ impl Warning<'_> {
     }
 }
 
-/// Returns the warnings about the outputs of `app` that cannot play, in the
-/// order of the outputs
+/// Returns the warnings, in the order of the outputs
 pub(super) fn warnings(app: &App) -> Vec<Warning<'_>> {
     let faulty = app.workspace.outputs().iter().filter_map(|output| {
-        let (_, fault) = app.audio_problems.iter().find(|(id, _)| *id == output.id)?;
+        let (_, fault) = app.problems.audio.iter().find(|(id, _)| *id == output.id)?;
         Some((output, fault))
     });
     faulty.fold(Vec::new(), |warnings, (output, fault)| {
@@ -94,7 +91,8 @@ pub(super) fn warnings(app: &App) -> Vec<Warning<'_>> {
 /// where all its channels are past them, since a pair that overlaps the last
 /// channel half sounds, which the sidebar warns of already.
 pub(super) fn failing(app: &App) -> Vec<OutputId> {
-    app.audio_problems
+    app.problems
+        .audio
         .iter()
         .filter(|(id, fault)| match fault {
             Fault::Channels(count) => app
@@ -109,9 +107,9 @@ pub(super) fn failing(app: &App) -> Vec<OutputId> {
         .collect()
 }
 
-/// Returns the fault of the output of `id`, if it cannot play
 pub(super) fn fault(app: &App, id: OutputId) -> Option<&Fault> {
-    app.audio_problems
+    app.problems
+        .audio
         .iter()
         .find(|(output, _)| *output == id)
         .map(|(_, fault)| fault)

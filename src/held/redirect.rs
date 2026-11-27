@@ -26,10 +26,9 @@ use rustix::{
     stdio::{dup2_stderr, dup2_stdout},
 };
 
-/// Bytes that the thread takes from the pipe at most at once
 const CHUNK: usize = 4096;
 
-pub struct Redirect {
+pub(super) struct Redirect {
     /// Standard error as it was, a terminal
     error: OwnedFd,
     /// Standard output as it was, when it is a terminal as well
@@ -42,7 +41,7 @@ pub struct Redirect {
 impl Redirect {
     /// Points standard error, and standard output when it is a terminal, at
     /// a pipe whose bytes the thread hands to `sink`
-    pub fn start(sink: fn(&[u8])) -> io::Result<Self> {
+    pub(super) fn start(sink: fn(&[u8])) -> io::Result<Self> {
         // Bytes that standard output buffered belong to the terminal
         let _ = io::stdout().flush();
         let error = io::stderr().as_fd().try_clone_to_owned()?;
@@ -69,7 +68,7 @@ impl Redirect {
 
     /// Puts the descriptors back, and waits for the thread to hand over what
     /// the pipe still holds
-    pub fn stop(self) {
+    pub(super) fn stop(self) {
         // Bytes that standard output buffered meanwhile belong to the buffer
         let _ = io::stdout().flush();
         self.restored();
@@ -79,8 +78,7 @@ impl Redirect {
         let _ = self.reader.join();
     }
 
-    /// Returns standard error as it was
-    pub fn terminal(&self) -> io::Result<File> {
+    pub(super) fn terminal(&self) -> io::Result<File> {
         self.error.try_clone().map(File::from)
     }
 
@@ -96,7 +94,6 @@ impl Redirect {
     }
 }
 
-/// Returns the read and write ends of a pipe
 fn piped() -> io::Result<(OwnedFd, OwnedFd)> {
     let (read, write) = pipe()?;
     fcntl_setfd(&read, FdFlags::CLOEXEC)?;

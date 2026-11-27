@@ -8,8 +8,7 @@
 //! an output keeps the cues that were copied, as Vim keeps its named
 //! registers apart.  A cut output that is pasted back into the show it came
 //! from takes back its identity, so that the cues that sent to it send to it
-//! again, as a line cut and pasted back in Vim is the line that was.  A copy
-//! gets an identity of its own.
+//! again.  A copy gets an identity of its own.
 
 use super::editing::LIMIT;
 use crate::{
@@ -18,7 +17,7 @@ use crate::{
         App,
         update::{
             Clipped,
-            clipboard::{Clipboard, EMPTY, Register},
+            editing::{Clipboard, EMPTY, Register},
         },
         view::format,
     },
@@ -46,7 +45,7 @@ impl App {
     /// copied, apart from a count that reaches all of them, which cuts none
     pub(in crate::front::update) fn cut_outputs(self, count: usize) -> Self {
         let before = self.workspace.outputs().to_vec();
-        let (app, taken) = self.taking_outputs(count, true);
+        let (app, taken) = self.taking_outputs(count, Command::CutOutputs);
         let told = format::consequences(&app.workspace, &before, app.workspace.outputs());
         app.registered(taken, "cut", true, told)
     }
@@ -77,7 +76,7 @@ impl App {
                 },
                 ..self.clipboard
             },
-            clipped: Some(clipped),
+            notices: self.notices.with_clipped(Some(clipped)),
             ..self
         }
     }
@@ -96,7 +95,7 @@ impl App {
             .collect();
         if outputs.is_empty() {
             return Self {
-                remark: Some(EMPTY),
+                notices: self.notices.with_remark(Some(EMPTY)),
                 ..self
             };
         }

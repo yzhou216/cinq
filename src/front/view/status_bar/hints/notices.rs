@@ -33,16 +33,16 @@ pub(in crate::front::view::status_bar) fn told(app: &App) -> Option<String> {
 /// the latest change to the show
 pub(super) fn asked(app: &App) -> Option<String> {
     clipped(app)
-        .or_else(|| app.remark.map(str::to_owned))
-        .or_else(|| app.unapplied.clone())
-        .or_else(|| app.told.clone())
+        .or_else(|| app.notices.remark.map(str::to_owned))
+        .or_else(|| app.notices.unapplied.clone())
+        .or_else(|| app.notices.told.clone())
 }
 
 /// Tells what the latest copy or cut took, with the key that pastes it and,
 /// for a cut, the key that takes it back
 pub(in crate::front::view::status_bar) fn clipped(app: &App) -> Option<String> {
     let keymap = &app.config.keymap;
-    let clipped = app.clipped.as_ref()?;
+    let clipped = app.notices.clipped.as_ref()?;
     let paste = keymap
         .hint(Action::PasteBelow, "paste")
         .filter(|_| app.editable() && acts_here(app, Action::PasteBelow));
@@ -81,12 +81,12 @@ pub(in crate::front::view::status_bar) fn notice(app: &App) -> Option<String> {
     let (told, action, next) = match turn {
         Turn::Done => (told, Action::Undo, workspace.undoable()),
         Turn::Undone => (
-            format::turned("undid", app.turns, &told),
+            format::turned("undid", app.notices.turns, &told),
             Action::Redo,
             workspace.redoable(),
         ),
         Turn::Redone => (
-            format::turned("redid", app.turns, &told),
+            format::turned("redid", app.notices.turns, &told),
             Action::Undo,
             workspace.undoable(),
         ),
@@ -106,6 +106,11 @@ pub(in crate::front::view::status_bar) fn notice(app: &App) -> Option<String> {
 /// Tells after `told`, the notice of a change to `cues`, which of them the
 /// change stopped
 fn stopping(app: &App, told: String, cues: &[CueId]) -> String {
-    let stopped = app.stopped.iter().filter(|cue| cues.contains(cue)).count();
+    let stopped = app
+        .notices
+        .stopped
+        .iter()
+        .filter(|cue| cues.contains(cue))
+        .count();
     format::stopping(told, cues.len(), stopped)
 }

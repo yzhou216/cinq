@@ -2,15 +2,11 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of adding, deleting, editing, and loading cues
+//! Tests of adding, deleting, moving, numbering, and loading cues
+
+mod running;
 
 use super::*;
-
-/// Returns the command that records that the sound file of cue `id` is
-/// not found
-fn not_found(id: u32) -> Command {
-    loaded(id, "sound.ogg", Media::Failed("file not found".to_owned()))
-}
 
 #[test]
 fn show_mode_blocks_edits_but_not_playback() {
@@ -30,6 +26,19 @@ fn new_cue_before_another_targets_the_cue_it_follows() {
         workspace(vec![audio(1), audio(2)]).apply(add(0, Kind::Fade, Place::Before(CueId(2))));
     assert_eq!(ids(&workspace), [1, 3, 2]);
     assert_eq!(workspace.lists()[0].cues[1].target, Some(CueId(1)));
+}
+
+#[test]
+fn new_fade_cue_targets_the_picture_or_video_cue_it_follows() {
+    [picture(1), video(1)].into_iter().for_each(|cue| {
+        let kind = cue.kind;
+        let workspace = workspace(vec![cue]).apply(add(0, Kind::Fade, Place::After(CueId(1))));
+        assert_eq!(
+            workspace.lists()[0].cues[1].target,
+            Some(CueId(1)),
+            "{kind:?}"
+        );
+    });
 }
 
 #[test]
@@ -53,7 +62,10 @@ fn moved_cue_stops_at_either_end_of_its_list_and_keeps_standby() {
     let down = shown.clone().apply(moving(1, 5));
     assert_eq!(ids(&down), [2, 3, 1]);
     assert_eq!(standby(&down), Some(1));
-    assert_eq!(ids(&shown.apply(moving(3, -1))), [1, 3, 2]);
+    assert_eq!(ids(&shown.clone().apply(moving(3, -1))), [1, 3, 2]);
+    // A distance as large as a number can hold does not overflow
+    assert_eq!(ids(&shown.clone().apply(moving(2, isize::MAX))), [1, 3, 2]);
+    assert_eq!(ids(&shown.apply(moving(2, isize::MIN))), [2, 1, 3]);
 }
 
 #[test]
@@ -81,16 +93,6 @@ fn new_cues_are_numbered_after_the_highest_number_of_any_list() {
 }
 
 #[test]
-fn level_edit_leaves_a_cue_that_a_panic_is_stopping() {
-    let workspace = workspace(vec![audio(1)])
-        .apply(GO)
-        .apply(Command::Panic)
-        .apply(edit(1, Edit::Level(-3.0)))
-        .apply(Command::Tick(PANIC_FADE));
-    assert!(workspace.active().is_empty());
-}
-
-#[test]
 fn run_whose_sound_cannot_start_ends_and_its_chain_plays_on() {
     let workspace = workspace(vec![continuing_after(1, 2.0), audio(2)])
         .apply(GO)
@@ -101,49 +103,6 @@ fn run_whose_sound_cannot_start_ends_and_its_chain_plays_on() {
         workspace.problem(cue),
         Some(Problem::LoadFailed("file not found"))
     );
-}
-
-#[test]
-fn edit_that_changes_nothing_leaves_a_running_cue_playing_and_nothing_to_undo() {
-    // Text fields send their text again on keys that change nothing, such
-    // as Backspace at the start of the field
-    let workspace = workspace(vec![audio(1)])
-        .apply(GO)
-        .apply(edit(1, Edit::File("sound.ogg".to_owned())));
-    let cue = workspace.cue(CueId(1)).unwrap();
-    assert!(workspace.active_of(CueId(1)).is_some());
-    assert_eq!(workspace.problem(cue), None);
-    assert!(workspace.undoable().is_none());
-}
-
-#[test]
-fn choosing_the_file_that_a_running_cue_plays_leaves_it_playing() {
-    let unnamed = Cue {
-        name: "New Audio cue".to_owned(),
-        ..audio(1)
-    };
-    let running = workspace(vec![unnamed]).apply(GO);
-    let chosen = running
-        .cue(CueId(1))
-        .unwrap()
-        .playing("sound.ogg".to_owned());
-    let workspace = running
-        .apply(edit(1, chosen))
-        .apply(edit(1, Edit::File(" sound.ogg\n".to_owned())));
-    let cue = workspace.cue(CueId(1)).unwrap();
-    assert_eq!(cue.name, "sound");
-    assert_eq!(workspace.problem(cue), None);
-    assert!(workspace.active_of(CueId(1)).is_some());
-}
-
-#[test]
-fn editing_a_running_cue_leaves_the_run_under_way() {
-    let workspace = workspace(vec![audio(1)])
-        .apply(GO)
-        .apply(Command::Tick(3.0))
-        .apply(edit(1, Edit::PreWait(10.0.into())));
-    let active = workspace.active_of(CueId(1)).unwrap();
-    assert_eq!(active.phase(), Phase::Running { remaining: 7.0 });
 }
 
 #[test]
@@ -181,58 +140,53 @@ fn files_that_were_read_are_listed_for_another_look_unless_their_cues_run() {
 }
 
 #[test]
-fn editing_a_fade_cue_in_its_pre_wait_leaves_the_fade_it_will_make() {
-    let fade = Cue {
-        pre_wait: 2.0.into(),
-        ..fade_out(2)
-    };
-    let workspace = workspace(vec![continuing(1), fade])
-        .apply(GO)
-        .apply(Command::Tick(1.0))
-        .apply(edit(2, Edit::Level(-10.0)))
-        .apply(edit(2, Edit::StopTarget(false)))
-        .apply(Command::Tick(1.0));
-    let fade = workspace.active_of(CueId(1)).unwrap().fade.unwrap();
-    assert_eq!((fade.to, fade.then_stop), (-10.0, true));
-}
-
-#[test]
-fn editing_the_clip_of_a_running_cue_waits_for_its_next_run() {
-    let workspace = workspace(vec![Cue {
-        looping: true,
-        ..audio(1)
-    }])
-    .apply(GO)
-    .apply(edit(1, Edit::Loop(false)))
-    .apply(Command::Tick(30.0));
-    let active = workspace.active_of(CueId(1)).expect("the loop plays on");
-    assert_eq!(active.phase(), Phase::Looping);
-}
-
-#[test]
-fn level_edit_leaves_a_fade_that_leaves_its_target_playing_running() {
-    let fading = workspace(vec![continuing(1), fade_under(2)])
-        .apply(GO)
-        .apply(Command::Tick(1.0));
-    assert!(
-        fading
-            .active_of(CueId(1))
-            .is_some_and(|active| active.fade.is_some())
-    );
-    let edited = fading.apply(edit(1, Edit::Level(-3.0)));
-    assert!(
-        edited
-            .active_of(CueId(1))
-            .is_some_and(|active| active.fade.is_some())
-    );
-    let active = edited.apply(Command::Tick(5.0));
-    let active = active.active_of(CueId(1)).expect("the cue plays on");
-    assert_eq!((active.level, active.fade.is_none()), (-18.0, true));
-}
-
-#[test]
-fn level_edit_of_a_cue_that_is_not_running_waits_for_its_run() {
-    let edited = workspace(vec![audio(1), audio(2)]).apply(edit(1, Edit::Level(-3.0)));
-    assert!(edited.active().is_empty());
-    assert_eq!(level(&edited.apply(GO), 1), Some(-3.0));
+fn commands_for_cues_and_lists_that_are_not_there_change_nothing() {
+    let gone = CueId(9);
+    let commands = [
+        Command::Go { list: 9 },
+        Command::Stop(gone),
+        Command::Start(gone),
+        Command::Hold(gone),
+        Command::Resume(gone),
+        Command::GoTo(gone),
+        Command::Standby {
+            list: 9,
+            cue: Some(CueId(1)),
+        },
+        Command::Add {
+            list: 9,
+            kind: Kind::Memo,
+            at: Place::End,
+            count: 1,
+        },
+        Command::Paste {
+            list: 9,
+            cues: vec![audio(1)],
+            at: Place::End,
+        },
+        delete(&[9]),
+        Command::Cut(vec![gone]),
+        moving(9, 1),
+        Command::Indent(vec![gone]),
+        Command::Outdent(vec![gone]),
+        collapse(&[9], true),
+        rename(9, "Gone"),
+        Command::Heard {
+            cue: gone,
+            run: 1,
+            played: 1.0,
+        },
+        loaded(9, "sound.ogg", sound(10.0)),
+        Command::Undo,
+        Command::Redo,
+        Command::Tick(0.0),
+    ];
+    let before = workspace(vec![audio(1), audio(2)]).apply(GO);
+    commands.into_iter().for_each(|command| {
+        let after = before.clone().apply(command.clone());
+        assert_eq!(shown(&after), shown(&before), "{command:?}");
+        assert_eq!(running(&after), running(&before), "{command:?}");
+        assert_eq!(standby(&after), standby(&before), "{command:?}");
+        assert!(after.undoable().is_none(), "{command:?}");
+    });
 }

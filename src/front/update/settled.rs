@@ -2,24 +2,24 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Messages that change the state and start no task
+//! Messages that change the state and start no task, which [`App::handled`]
+//! passes on once its families have declined them
+
+mod held;
+mod paneled;
+mod reported;
+mod sent;
 
 use super::{App, Measured, Message};
-use crate::{
-    back::{Command, OutputEdit, PatchEdit},
-    front::Tab,
-};
-
-/// What the status bar tells when an instrument added would share an address
-/// because the last one holds the last address of the last universe
-const NO_ADDRESS_LEFT: &str = "The light patch has no address left for another instrument";
 
 impl App {
     /// Applies a message that only changes state
     ///
-    /// A message that [`Self::handled`] takes up before it reaches here, such
-    /// as a press of a mouse button that it moves by, falls through to the
-    /// arms that leave the state as it is.
+    /// The families of such messages try it in turn, this one first, which
+    /// takes the reports of a measure, a landing, a tick, or a read, and the
+    /// last leaves the state as it is for any other message.  A message that
+    /// [`Self::handled`] takes up before it reaches here, such as a press of a
+    /// mouse button that it moves by, falls through to that last family.
     pub(super) fn settled_by(self, message: Message) -> Self {
         match message {
             Message::Landed { from, row } if self.spot() == from => {
@@ -35,129 +35,16 @@ impl App {
             Message::Reached { from, row } if self.spot() == from => {
                 self.jumping(|app| app.at_row(row.saturating_add(1)))
             }
-            // Menu reports where its highlight rests right after it opens, so
-            // that a flag left by another menu, or by a list that left the
-            // view while open, never lights the sidebar
-            Message::MenuOpen(open) => Self {
-                menu: open,
-                default_highlighted: false,
-                ..self
-            },
-            Message::Held(held) => Self { held, ..self },
-            Message::FileHeld(file_held) => Self { file_held, ..self },
-            Message::CheckHeld(check_held) => Self { check_held, ..self },
-            Message::ButtonHeld(button_held) => Self {
-                button_held,
-                ..self
-            },
-            Message::AddressHeld(address_held) => Self {
-                address_held,
-                ..self
-            },
-            Message::TextHeld(text_held) => Self { text_held, ..self },
-            Message::DefaultHighlighted(highlighted) => Self {
-                default_highlighted: highlighted,
-                ..self
-            },
-            Message::Copy(count) => self.with_copied(count),
-            Message::PauseAll => self.send(Command::Pause(true)),
-            Message::ResumeAll => self.send(Command::Pause(false)),
-            Message::Stop(id) => self.send(Command::Stop(id)),
             Message::Tick(now) => self.ticked(now),
             Message::SearchSettled => self.search_settled(),
-            // Nothing without a selected cue, as the toolbar's button does
-            Message::StandbySelected => {
-                let standby = self.selected_here().map(|cue| Command::Standby {
-                    list: self.list,
-                    cue: Some(cue),
-                });
-                self.send_all(standby)
-            }
-            Message::ShowMode(show_mode) => self.send(Command::ShowMode(show_mode)),
             Message::Loaded(show, found) => self.loaded(show, found),
             Message::Rechecked(show, found) => self.rechecked(show, found),
-            Message::NetworkChecked => self,
-            Message::OscFailed(problem) => Self {
-                osc_problem: Some(problem),
-                ..self
-            },
-            Message::OscIgnored(line) => self.with_ignored(line),
-            Message::OscListening => Self {
-                osc_problem: None,
-                ..self
-            },
             Message::Saved(saved) => self.saved(saved),
-            // Keys typed halfway went by the bindings before, so the update
-            // drops them, as it does for most messages
-            Message::Reconfigured(config) => Self {
-                osc_problem: self
-                    .osc_problem
-                    .filter(|_| config.osc_listen == self.config.osc_listen),
-                osc_ignored: self
-                    .osc_ignored
-                    .filter(|_| config.osc_listen == self.config.osc_listen),
-                config: *config,
-                ..self
-            },
-            Message::LinkOpened(result) => Self {
-                link_problem: result.err(),
-                ..self
-            },
-            Message::AudioDevicesListed(listed) => self.with_audio_devices(listed),
-            Message::AudioDeviceKept(kept) => Self {
-                device_problem: kept.err(),
-                ..self
-            },
-            Message::SelectOutput(output) => Self {
-                output: Some(output),
-                ..self
-            },
-            Message::SettingTyped(setting, text) => {
-                self.settled_but(setting).typed_setting(setting, text)
-            }
-            Message::OutputDevice(output, device) => {
-                self.send(Command::EditOutput(output, OutputEdit::Device(device)))
-            }
-            // Click on blank space would leave the search line open with no
-            // way to close it but Panic, and any click leaves hint mode
-            Message::Clicked => self.without_search().without_hints(),
-            // Stage window holds no cue list to keep in view
-            Message::WindowFocused(window) => Self {
-                stage: self.stage.with_keyboard_in(window),
-                ..self
-            },
-            Message::Edit(id, edit) => self.send(Command::Edit(id, edit)),
-            Message::Patch(PatchEdit::Add) => {
-                let held = self.workspace.patch().len();
-                let app = self.send(Command::Patch(PatchEdit::Add));
-                let remark = (app.workspace.patch().len() == held).then_some(NO_ADDRESS_LEFT);
-                Self { remark, ..app }
-            }
-            Message::Patch(edit) => self.send(Command::Patch(edit)),
             Message::FileChosen(id, path) => {
                 let file = self.workspace.file_name_of(&path);
                 self.with_file(id, file)
             }
-            Message::ToggleHelp => Self {
-                help: !self.help,
-                ..self
-            },
-            Message::CloseHelp => Self {
-                help: false,
-                ..self
-            },
-            Message::Tab(tab) => Self { tab, ..self },
-            Message::ShowTab(number) => Self {
-                tab: Tab::numbered(number),
-                ..self
-            },
-            Message::StepTab(offset) => Self {
-                tab: self.tab.stepped(offset),
-                ..self
-            },
-            // Guarded arms above that do not match, and messages that need
-            // no state change, leave the state as it is
-            _ => self,
+            message => self.reported_by(message),
         }
     }
 }

@@ -16,11 +16,18 @@
 //! themselves, as Vim searches the text of a closed fold, and finds the
 //! cues that a collapsed group hides by their position in the list instead.
 
-use crate::front::{App, step, view};
+mod folding;
+mod history;
+mod navigation;
+pub(super) mod paging;
+pub(super) mod scroll;
+pub(super) mod viewing;
 
-use super::history::Spot;
+use crate::front::{App, Spot, stepping::step, view};
 
-/// Rows that the main window lists
+pub(in crate::front) use history::History;
+pub(in crate::front) use paging::kept::{Measured, Measures};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rows {
     /// Cues of the cue list with this index
@@ -52,8 +59,7 @@ impl App {
         }
     }
 
-    /// Returns the identity of the scrollable that holds the rows
-    pub(super) fn scrollable(&self) -> &'static str {
+    fn scrollable(&self) -> &'static str {
         match self.rows() {
             Rows::Cues(_) => view::CUES,
             Rows::Outputs => view::OUTPUTS,
@@ -65,9 +71,10 @@ impl App {
     pub(super) fn selecting(self, row: Option<usize>) -> Self {
         match self.rows() {
             Rows::Cues(_) => {
+                let list = self.current();
                 let selected = row
-                    .and_then(|row| self.shown_cues().get(row).copied())
-                    .map(|index| self.current().cues[index].id);
+                    .and_then(|row| list.groups().shown().get(row).copied())
+                    .map(|index| list.cues[index].id);
                 Self { selected, ..self }
             }
             Rows::Outputs => {
@@ -79,16 +86,12 @@ impl App {
         }
     }
 
-    /// Returns the place in the cue list of each row that the table shows,
-    /// in order
-    pub(super) fn shown_cues(&self) -> Vec<usize> {
-        self.current().groups().shown()
-    }
-
     /// Returns the places in the cue list of the cues that `count` rows from
     /// the row `first` down show, a collapsed group standing for itself
     pub(super) fn shown_cues_from(&self, first: usize, count: usize) -> Vec<usize> {
-        self.shown_cues()
+        self.current()
+            .groups()
+            .shown()
             .into_iter()
             .skip(first)
             .take(count)

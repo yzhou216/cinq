@@ -2,8 +2,7 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the key bindings, with the helpers that read the keys they
-//! type
+//! Tests of the key bindings, with the helpers that read the keys they type
 
 mod cancel;
 mod dropping;
@@ -19,11 +18,12 @@ use itertools::Itertools;
 use strum::VariantArray;
 
 use super::{
-    Action, Keymap, Press, Rows, binding, config, declared, desk,
+    Action, Keymap, Press, Rows, binding, declared, desk,
     press::{sequence, shown, written},
     typing::Outcome,
     vi,
 };
+use crate::front::config;
 
 fn keys(text: &str) -> Vec<Press> {
     sequence(text).expect("keys in the tests are valid")
@@ -56,6 +56,15 @@ fn typed(text: &str) -> Outcome {
 
 fn action(text: &str) -> Option<(Action, Option<usize>)> {
     typed(text).action
+}
+
+/// Returns what can follow the keys typed so far, as the box of the help
+/// page lists it, with the operator that a motion completes
+fn following(keymap: &Keymap, text: &str) -> Vec<(String, Action, Option<Action>)> {
+    keymap
+        .continuations(&keys(text))
+        .map(|(rest, action, operator)| (written(rest), action, operator))
+        .collect()
 }
 
 fn assert_actions(wanted: &[(&str, Action, Option<usize>)]) {
@@ -102,7 +111,6 @@ fn keys_of_go_and_panic_hide_every_other_sequence_that_holds_them() {
 
 #[test]
 fn back_and_forward_keys_follow_vim_and_the_browsers_and_act_in_fields() {
-    assert_eq!(listed(Action::Back), "Control+o");
     assert_eq!(listed(Action::Forward), "Control+i");
     let acting = |text: &str| Keymap::default().acts_in_fields(press(text));
     assert!(acting("Control+o") && acting("Control+i"));

@@ -14,7 +14,7 @@ use super::typing_task;
 use crate::front::{
     App,
     message::Page,
-    update::paging::{landing, rows, rows_fitting, viewport::Shape},
+    update::rows::paging::{landing, rows, rows_fitting, viewport::Shape},
 };
 
 pub(super) fn letter(key: &str) -> Key {

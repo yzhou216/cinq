@@ -12,6 +12,7 @@ use crate::{
     back::{Command, Kind, Place, Workspace},
     front::{
         App,
+        app::Notices,
         keymap::{Action, Keymap, desk},
     },
 };
@@ -21,11 +22,8 @@ use crate::{
 fn in_menu(app: App) -> Vec<String> {
     hinted(&app)
         .into_iter()
-        .filter_map(|(action, hint)| {
-            action
-                .filter(|action| matches!(action, Action::Pick | Action::CloseMenu))
-                .map(|_| hint)
-        })
+        .filter(|(action, _)| matches!(action, Some(Action::Pick | Action::CloseMenu)))
+        .map(|(_, hint)| hint)
         .collect()
 }
 
@@ -85,7 +83,10 @@ fn an_open_menu_tells_no_notice_so_that_its_keys_come_first() {
             at: Place::End,
             count: 1,
         }),
-        remark: Some("The clipboard is empty"),
+        notices: Notices {
+            remark: Some("The clipboard is empty"),
+            ..Notices::default()
+        },
         ..opened(menu, false)
     };
     let shown = |menu| fitted(&hinted(&app(menu)), 34, &YIELDING);

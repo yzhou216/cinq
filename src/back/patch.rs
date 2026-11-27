@@ -15,7 +15,13 @@ use super::items::replaced_where;
 /// Port-Addresses from 0
 pub(super) const UNIVERSES: RangeInclusive<u16> = 1..=32_768;
 
-pub(super) const ADDRESSES: RangeInclusive<u16> = 1..=512;
+/// DMX channels of a universe
+pub(super) const SLOTS: usize = 512;
+
+pub(super) const DARK: [u8; SLOTS] = [0; SLOTS];
+
+/// Addresses that an instrument may have in its universe
+pub(super) const ADDRESSES: RangeInclusive<u16> = 1..=SLOTS as u16;
 
 /// Identity of an instrument that stays stable when it is renamed, by which
 /// light cues name it
@@ -41,7 +47,6 @@ pub enum PatchEdit {
     Add,
     Remove(InstrumentId),
     Name(InstrumentId, String),
-    /// Universe and DMX address of an instrument
     Address(InstrumentId, u16, u16),
 }
 

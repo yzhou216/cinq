@@ -10,7 +10,7 @@
 //! where they play, which the notice of the change tells.
 
 use crate::{
-    back::{Command, Output},
+    back::{Command, Output, OutputId},
     front::App,
 };
 
@@ -28,7 +28,6 @@ impl App {
     /// and selects the last of them, as Vim leaves its cursor on the last
     /// line that `3o` inserts
     pub(super) fn with_new_outputs(self, above: bool, count: usize) -> Self {
-        // Show mode adds nothing, so the selection stays where it is
         if !self.editable() {
             return self;
         }
@@ -56,15 +55,19 @@ impl App {
     /// `count` holds, and selects the one that takes its place, leaving the
     /// register of outputs as it is
     pub(in crate::front::update) fn without_outputs(self, count: usize) -> Self {
-        self.taking_outputs(count, false).0
+        self.taking_outputs(count, Command::DeleteOutputs).0
     }
 
     /// Removes the selected output and the outputs below it as
-    /// [`App::without_outputs`] does, as a cut when `cut`, and returns the
-    /// outputs removed.  A show keeps at least one output, so that a count
-    /// that reaches all of them removes none and tells so.  Show mode
-    /// removes none.
-    pub(super) fn taking_outputs(self, count: usize, cut: bool) -> (Self, Vec<Output>) {
+    /// [`App::without_outputs`] does, with the command that `remove` makes of
+    /// their identities, and returns the outputs removed.  A show keeps at
+    /// least one output, so that a count that reaches all of them removes
+    /// none and tells so.  Show mode removes none.
+    pub(super) fn taking_outputs(
+        self,
+        count: usize,
+        remove: fn(Vec<OutputId>) -> Command,
+    ) -> (Self, Vec<Output>) {
         let outputs = self.workspace.outputs();
         let first = match self.output_row() {
             Some(first) if self.editable() => first,
@@ -73,17 +76,13 @@ impl App {
         let taken: Vec<Output> = outputs[first..].iter().take(count).cloned().collect();
         if taken.len() == outputs.len() {
             let app = Self {
-                remark: Some(KEEPS_ONE),
+                notices: self.notices.with_remark(Some(KEEPS_ONE)),
                 ..self
             };
             return (app, Vec::new());
         }
         let ids = taken.iter().map(|output| output.id).collect();
-        let app = self.send(if cut {
-            Command::CutOutputs(ids)
-        } else {
-            Command::DeleteOutputs(ids)
-        });
+        let app = self.send(remove(ids));
         let last = app.workspace.outputs().len().saturating_sub(1);
         (app.selecting(Some(first.min(last))), taken)
     }

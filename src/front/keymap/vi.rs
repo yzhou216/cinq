@@ -11,7 +11,7 @@
 
 use super::Action;
 
-pub(super) const NAME: &str = "vi";
+pub(in crate::front) const NAME: &str = "vi";
 
 pub(super) fn keys(action: Action) -> &'static [&'static str] {
     match action {

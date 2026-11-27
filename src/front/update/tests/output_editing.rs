@@ -10,7 +10,12 @@ mod cutting;
 mod notices;
 mod registers;
 
-use super::{after, output_rows::outputs, paging::letter, press};
+use super::{
+    after, locked, on_clipboard,
+    output_rows::{ALL, outputs},
+    paging::letter,
+    press,
+};
 use crate::front::{App, Message};
 
 /// Types the keys one after the other, each a character without modifiers
@@ -18,13 +23,6 @@ pub(super) fn typed(app: App, keys: &str) -> App {
     keys.chars().fold(app, |app, key| {
         app.typed(press(letter(&key.to_string())), false).0
     })
-}
-
-/// Returns what the status bar tells of the last copy or cut, and whether it was a cut
-pub(super) fn clipped(app: &App) -> Option<(&str, bool)> {
-    app.clipped
-        .as_ref()
-        .map(|clipped| (clipped.told.as_str(), clipped.cut))
 }
 
 pub(super) fn names(app: &App) -> Vec<&str> {
@@ -40,23 +38,6 @@ pub(super) fn names(app: &App) -> Vec<&str> {
 pub(super) fn on(row: usize) -> App {
     after(outputs(), [Message::Row(row)])
 }
-
-fn locked(app: App) -> App {
-    after(app, [Message::ShowMode(true)])
-}
-
-const ALL: [&str; 10] = [
-    "House L",
-    "House R",
-    "Sub",
-    "Monitor",
-    "Front fill",
-    "Balcony",
-    "Lobby",
-    "Stage",
-    "FX",
-    "Booth",
-];
 
 fn without(rows: &[usize]) -> Vec<&'static str> {
     ALL.iter()

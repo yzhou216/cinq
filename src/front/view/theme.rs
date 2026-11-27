@@ -14,15 +14,15 @@
 //! The exceptions are [`button`], since iced draws disabled buttons half
 //! transparent, so buttons get a style of their own, which [`go`] and
 //! [`panic`](fn@panic) paint green and red, [`field`], since iced has no
-//! style for a field that holds a mistake and draws the border of a field that
-//! has the keyboard no thicker than any other, [`line`], which drops the border
-//! of the search line so that it fits the status bar, and [`LINK`],
-//! [`SELECTION`], [`HINT_BACKGROUND`], and [`HINT_TEXT`], since iced has no
-//! role for links, for the selected row of a table, or for the labels of hint
-//! mode.  On that row the blue, green, and red state words read at 4.5:1
-//! and not at 7:1, since no blue, green, or red of modus-vivendi reaches 7:1
-//! there, and the words carry the meaning, so that the color is never the
-//! only sign.
+//! style for a field that holds a mistake and draws the border of a field
+//! that has the keyboard no thicker than any other, [`line()`], which drops
+//! the border of the search line so that it fits the status bar, and
+//! [`LINK`], [`SELECTION`], [`HINT_BACKGROUND`], and [`HINT_TEXT`], since
+//! iced has no role for links, for the selected row of a table, or for the
+//! labels of hint mode.  On that row the blue, green, and red state words
+//! read at 4.5:1 and not at 7:1, since no blue, green, or red of
+//! modus-vivendi reaches 7:1 there, and the words carry the meaning, so that
+//! the color is never the only sign.
 
 use iced::{
     Border, Color, color,
@@ -79,7 +79,6 @@ pub(super) const SELECTION: Color = BG_HL_LINE;
 /// [`HINT_TEXT`] reads on it at 9.3:1.
 pub(super) const HINT_BACKGROUND: Color = BG_COMPLETION;
 
-/// Color of the letters of a hint label
 pub(super) const HINT_TEXT: Color = FG_MAIN;
 
 /// Colors of the roles of iced's palette, which spans of rich text take as
@@ -101,8 +100,8 @@ pub fn modus_vivendi() -> Theme {
 /// read-only fields, menus, and scroll rails sit on the dim background,
 /// while borders, rules, and the empty part of bars and sliders use the
 /// border gray.  Blue marks what is filled, chosen, or focused.
-/// Placeholders and disabled values use the dim foreground, which iced
-/// takes from the secondary color.
+/// Placeholders and disabled values take the dim foreground from the
+/// secondary color.
 fn extended() -> Extended {
     let pair = |color, text| Pair { color, text };
     Extended {
@@ -164,8 +163,8 @@ pub(super) fn panic(theme: &Theme, status: Status) -> Style {
 }
 
 /// Thickness of the border of a field or a list that has the keyboard, twice
-/// that of one at rest, so that a change of 2.7 to 1 in the color of the
-/// border is no longer the only sign of where the keyboard is
+/// that of one at rest, so that a change of 2.7 to 1 in its color is not the
+/// only sign of where the keyboard is
 pub(super) const FOCUS_WIDTH: f32 = 2.0;
 
 pub(super) fn field(valid: bool) -> fn(&Theme, text_input::Status) -> text_input::Style {
@@ -181,8 +180,6 @@ pub(super) fn focused(border: Border, status: text_input::Status) -> Border {
     }
 }
 
-/// Draws a field in iced's default style, with a thicker border while it
-/// has the keyboard
 fn focusable(theme: &Theme, status: text_input::Status) -> text_input::Style {
     let style = text_input::default(theme, status);
     text_input::Style {
@@ -191,9 +188,8 @@ fn focusable(theme: &Theme, status: text_input::Status) -> text_input::Style {
     }
 }
 
-/// Draws a field with neither border nor padding of its own, so that the
-/// search line fits in the single line of the status bar, as Vim's command
-/// line does
+/// Draws a field with no border, so that the search line fits in the single
+/// line of the status bar, as Vim's command line does
 pub(super) fn line(theme: &Theme, status: text_input::Status) -> text_input::Style {
     let style = text_input::default(theme, status);
     text_input::Style {
@@ -219,20 +215,14 @@ fn invalid(theme: &Theme, status: text_input::Status) -> text_input::Style {
 /// needs
 pub(super) fn danger(selected: bool) -> fn(&Theme) -> text::Style {
     if selected {
-        lighter_danger
+        |_| text::Style {
+            color: Some(RED_COOLER),
+        }
     } else {
         text::danger
     }
 }
 
-fn lighter_danger(_: &Theme) -> text::Style {
-    text::Style {
-        color: Some(RED_COOLER),
-    }
-}
-
-/// Draws a button in iced's default style but for its colors, which stay
-/// opaque while it is disabled
 fn painted(theme: &Theme, status: Status, background: Color) -> Style {
     let (background, text) = match status {
         Status::Active | Status::Pressed => (background, FG_MAIN),

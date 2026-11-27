@@ -9,6 +9,7 @@
 
 #[cfg(test)]
 mod tests;
+mod texts;
 
 use std::ffi::OsString;
 
@@ -20,6 +21,7 @@ use iced::{
     },
 };
 use strum::VariantArray;
+use texts::{counts, first_steps, operators};
 use unicode_width::UnicodeWidthStr;
 
 use super::{
@@ -29,7 +31,8 @@ use super::{
 };
 use crate::front::{
     App, Message,
-    keymap::{Action, Keymap, config::Source},
+    config::Source,
+    keymap::{Action, Keymap},
 };
 
 /// Widest that the paragraphs of the page grow, so that their lines stay easy to
@@ -75,10 +78,7 @@ fn bindings(keymap: &Keymap, names: bool) -> Element<'_, Message> {
         text(action.name())
     });
     table::table(
-        [keys, actions]
-            .into_iter()
-            .chain(names.then_some(named))
-            .collect::<Vec<_>>(),
+        [keys, actions].into_iter().chain(names.then_some(named)),
         bound(keymap),
     )
     .padding_y(ROW_GAP)
@@ -104,42 +104,10 @@ fn names_fit(keymap: &Keymap, room: f32) -> bool {
 fn page(app: &App, window: f32) -> Element<'_, Message> {
     let keymap = &app.config.keymap;
     let room = (window - 2.0 * SPACING - SCROLL_BAR).min(TABLE_WIDTH);
-    let bindings = bindings(keymap, names_fit(keymap, room));
-    let operators = Some(keymap.operator_keys())
-        .filter(|keys| !keys.is_empty())
-        .map(|keys| text(format!("After {}, a key that selects the next, previous, first, or last cue or output applies the action to the cues or outputs from the selection to where that key would move it.  A count before the operator, before the key, or both counts the move, and the two multiply.", keys.join(" or "))));
-    let key_values = paragraph(
-        "The manual page cinq(5) describes config.toml, where keys go by their W3C UI Events key values, listed at ",
-        link(KEY_VALUES, OsString::from(KEY_VALUES)),
-        ", apart from the space bar, which is Space.",
-        Message::OpenLink,
-    );
-    let tutorial = paragraph(
-        "The ",
-        link("tutorial", ()),
-        " shows step by step how to run a show and how to make one.",
-        |()| Message::OpenTutorial,
-    );
-    let top = column![
-        text(format!("Keys of the {} keymap", keymap.name())).size(24),
-        text(first_steps(keymap)),
-        tutorial,
-    ]
-    .spacing(SPACING);
-    let bottom = column![text(counts(keymap))]
-        .extend(operators.map(Element::from))
-        .push(text("Actions that this keymap binds to no key are left out of the table, and cinq(5) lists them all."))
-        .extend(keymap.has_sequences().then(|| text("The keys of a sequence are typed one after another with no Space between them, since Space is GO.").into()))
-        .push(text("The keys of GO and Panic act at once, even halfway through another command."))
-        .push(source(&app.config.source))
-        .push(key_values)
-        .extend(notice())
-        .push(button("Close").on_press(Message::CloseHelp))
-        .spacing(SPACING);
-    // The table takes the window up to [`TABLE_WIDTH`], since its descriptions
-    // wrap in half of the width of the paragraphs
-    let bindings = container(bindings).width(Fill).max_width(TABLE_WIDTH);
-    let page = column![prose(top), bindings, prose(bottom)].spacing(SPACING);
+    let bindings = container(bindings(keymap, names_fit(keymap, room)))
+        .width(Fill)
+        .max_width(TABLE_WIDTH);
+    let page = column![prose(top(keymap)), bindings, prose(bottom(app))].spacing(SPACING);
     let scrolling = scrollable(page)
         .id(HELP)
         .spacing(0)
@@ -148,14 +116,55 @@ fn page(app: &App, window: f32) -> Element<'_, Message> {
     // Below the page rather than on it, so that it is in view however far
     // the page has scrolled from the link
     let problem = app
-        .link_problem
+        .problems
+        .link
         .as_deref()
         .map(|why| container(text(why)).max_width(WIDTH).into());
     let parts = column![scrolling].extend(problem).spacing(SPACING);
     container(parts).padding(SPACING).into()
 }
 
-/// Returns `part` no wider than [`WIDTH`]
+/// Returns the title of the page, what to press first, and the link to the
+/// tutorial, above the table
+fn top(keymap: &Keymap) -> Element<'_, Message> {
+    let tutorial = paragraph(
+        "The ",
+        link("tutorial", ()),
+        " shows step by step how to run a show and how to make one.",
+        |()| Message::OpenTutorial,
+    );
+    column![
+        text(format!("Keys of the {} keymap", keymap.name())).size(24),
+        text(first_steps(keymap)),
+        tutorial,
+    ]
+    .spacing(SPACING)
+    .into()
+}
+
+/// Returns the notes below the table, from the counts to the notice of the
+/// license and the button that closes the page
+fn bottom(app: &App) -> Element<'_, Message> {
+    let keymap = &app.config.keymap;
+    let key_values = paragraph(
+        "The manual page cinq(5) describes config.toml, where keys go by their W3C UI Events key values, listed at ",
+        link(KEY_VALUES, OsString::from(KEY_VALUES)),
+        ", apart from the space bar, which is Space.",
+        Message::OpenLink,
+    );
+    column![text(counts(keymap))]
+        .extend(operators(keymap).map(|operators| Element::from(text(operators))))
+        .push(text("Actions that this keymap binds to no key are left out of the table, and cinq(5) lists them all."))
+        .extend(keymap.has_sequences().then(|| text("The keys of a sequence are typed one after another with no Space between them, since Space is GO.").into()))
+        .push(text("The keys of GO and Panic act at once, even halfway through another command."))
+        .push(source(&app.config.source))
+        .push(key_values)
+        .extend(notice())
+        .push(button("Close").on_press(Message::CloseHelp))
+        .spacing(SPACING)
+        .into()
+}
+
 fn prose<'a>(part: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
     container(part).width(Fill).max_width(WIDTH).into()
 }
@@ -214,37 +223,4 @@ fn paragraph<'a, Link: Clone + 'static>(
 
 fn link<'a, Link>(label: impl IntoFragment<'a>, target: Link) -> Span<'a, Link> {
     span(label).link(target).color(theme::LINK).underline(true)
-}
-
-/// Tells in a few lines what to press first, with the keys of the keymap in
-/// use, since the table below puts the keys of scrolling before those that
-/// add and name a cue
-fn first_steps(keymap: &Keymap) -> String {
-    let key = |action| keymap.key(action).unwrap_or_else(|| "(no key)".to_owned());
-    format!(
-        "First steps: {go} is GO, which fires the standby cue, and {panic} is Panic, which stops everything.  {next} and {previous} move the selection, and {standby} puts the selected cue on standby.  {add} adds a cue below, {name} names it, and {undo} undoes a change.  {next_field} moves through the fields to the File field, where Enter chooses a file.  {hint} labels each place to click.  {close} closes this page, and {standby} opens the tutorial.  {save} saves the show.  The table lists every key.",
-        go = key(Action::Go),
-        panic = key(Action::Panic),
-        next = key(Action::Next),
-        previous = key(Action::Previous),
-        standby = key(Action::Standby),
-        add = key(Action::AddBelow),
-        name = key(Action::ChangeName),
-        undo = key(Action::Undo),
-        next_field = key(Action::NextField),
-        hint = key(Action::Hint),
-        close = key(Action::CloseHelp),
-        save = key(Action::Save),
-    )
-}
-
-/// Tells what a count typed before a key does, which is the same for the
-/// cues and the outputs that show in their place
-fn counts(keymap: &Keymap) -> String {
-    let example = keymap
-        .key(Action::Next)
-        .map_or_else(String::new, |keys| format!(", as in 3 {keys}"));
-    format!(
-        "A count typed before a key repeats a move{example}.  It goes that many places back or forward, undoes or redoes that many changes, copies, cuts, deletes, or adds that many cues or outputs, indents or outdents that many cues, pastes that many times, goes that many matches along, scrolls that many rows, and goes that many pages down or up.  It picks the row for the first and last cue and for putting a row in place, the row in view for the top and bottom rows, and the tab for the next tab, and sets the rows of a half page."
-    )
 }

@@ -23,7 +23,7 @@ use super::{Choice, rows::rows};
 use crate::front::{
     Message,
     keymap::KeyPress,
-    reveal,
+    stepping::reveal,
     view::{
         char_width, line_height,
         widget::{dropdown::PADDING, key_pressed, pressed},
@@ -63,7 +63,6 @@ pub(super) fn width(list: f32, widest: f32, window: f32) -> f32 {
     list.max(widest + PADDING.x()).min(window)
 }
 
-/// Returns the columns of the font that the names keep in a menu of `width`
 pub(super) fn columns(width: f32) -> usize {
     ((width - PADDING.x()) / char_width()).max(0.0) as usize
 }

@@ -115,14 +115,19 @@ fn offsets_that_overflow_stop_at_the_largest_number() {
     );
 }
 
-#[test]
-fn counts_that_the_file_cannot_hold_give_no_samples() {
-    let identical = |count, size| Stbl {
+/// Returns the tables of a track whose `count` samples, each of `size`
+/// bytes, all lie in one chunk
+fn identical(count: u32, size: u32) -> Stbl {
+    Stbl {
         stsz: Stsz {
             samples: StszSamples::Identical { count, size },
         },
         ..tables(&[0], &[(1, u32::MAX)], &[])
-    };
+    }
+}
+
+#[test]
+fn counts_that_the_file_cannot_hold_give_no_samples() {
     assert_eq!(
         places(&identical(20, 5), 100).map(|places| places.len()),
         Some(20)
@@ -133,18 +138,12 @@ fn counts_that_the_file_cannot_hold_give_no_samples() {
 
 #[test]
 fn samples_of_one_size_that_no_h264_sample_has_give_no_samples() {
-    let identical = |size| Stbl {
-        stsz: Stsz {
-            samples: StszSamples::Identical { count: 100, size },
-        },
-        ..tables(&[0], &[(1, u32::MAX)], &[])
-    };
     // Samples of no bytes fit any number in a file, and those of fewer than
     // five bytes make one for nearly every byte of it
-    assert_eq!(places(&identical(0), 1 << 30), None);
-    assert_eq!(places(&identical(4), 1 << 30), None);
+    assert_eq!(places(&identical(100, 0), 1 << 30), None);
+    assert_eq!(places(&identical(100, 4), 1 << 30), None);
     assert_eq!(
-        places(&identical(5), 1 << 30).map(|places| places.len()),
+        places(&identical(100, 5), 1 << 30).map(|places| places.len()),
         Some(100)
     );
 }

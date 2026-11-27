@@ -2,21 +2,25 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Text for back-end values, kept apart from the widgets that show it
+//! Text for back-end values, kept apart from the widgets that show it.  The
+//! update shares it, to word the notices that it puts in the status bar.
 
 mod chain;
 mod change;
 mod consequences;
+mod notices;
 #[cfg(test)]
 mod tests;
 
 use std::path::Path;
 
-use crate::back::{Active, Advance, Cue, Groups, Kind, Media, Output, Phase, SILENCE, Workspace};
+use crate::back::{Active, Advance, Cue, Groups, Kind, Media, Phase, SILENCE, Workspace};
 pub use chain::{chain, moving};
 pub use change::change;
 use consequences::short;
 pub use consequences::{consequences, consequences_of, leading};
+pub use notices::{clipped, clipped_outputs, pasted_losses, silences, stopping, turned};
+use notices::{of_cues, the_output};
 
 /// Formats seconds as `m:ss.s`
 fn clock(seconds: f64) -> String {
@@ -90,7 +94,6 @@ pub fn post_wait(cue: &Cue) -> String {
     }
 }
 
-/// Returns the short label of the Then column
 pub fn advance(advance: Advance) -> &'static str {
     match advance {
         Advance::Manual => "",
@@ -170,91 +173,7 @@ pub fn activity(active: &Active, cue: &Cue) -> String {
     format!("{}{level}{paused}{fading}", phase(active))
 }
 
-/// Tells what a copy or cut took with `verb`, by the number of the cue, or
-/// else by how many cues
-pub fn clipped(verb: &str, cues: &[Cue]) -> String {
-    match cues {
-        [cue] => format!("{verb} cue {}", number(cue)),
-        cues => format!("{verb} {} cues", cues.len()),
-    }
-}
-
-/// Tells what a paste of `cues` cues left behind, `sends` sends to outputs
-/// and `targets` targets that the show has no namesake of, and how many of
-/// them are `unpatched` light cues, or nothing where it left none
-pub fn pasted_losses(
-    cues: usize,
-    sends: usize,
-    targets: usize,
-    unpatched: usize,
-) -> Option<String> {
-    let lost = [(sends, "send"), (targets, "target")]
-        .into_iter()
-        .filter(|&(number, _)| number > 0)
-        .map(|(number, noun)| count(number, noun))
-        .collect::<Vec<_>>();
-    let told = [
-        (!lost.is_empty()).then(|| format!("dropped {}", lost.join(" and "))),
-        (unpatched > 0).then(|| format!("{unpatched} unpatched")),
-    ]
-    .into_iter()
-    .flatten()
-    .collect::<Vec<_>>();
-    (!told.is_empty()).then(|| format!("Pasted {}, {}", count(cues, "cue"), told.join(", ")))
-}
-
-/// Returns whether `told`, the notice of a change, says that a cue plays
-/// nowhere or sends to no output now, which the operator cannot see or hear,
-/// where an undo of it brings the sound back
-pub fn silences(told: &str) -> bool {
-    ["to play nowhere", "to no output"]
-        .iter()
-        .any(|phrase| told.contains(phrase))
-        && !told.to_lowercase().starts_with("undid")
-}
-
-/// Tells after `told`, which names what an edit did to `cut` cues, that
-/// `stopped` of them were running and stopped by it, since the silence has no
-/// other cause to read from the bar
-pub fn stopping(told: String, cut: usize, stopped: usize) -> String {
-    match (cut, stopped) {
-        (_, 0) => told,
-        (1, _) => format!("{told}, which stopped"),
-        (_, stopped) => format!("{told}, {stopped} of which stopped"),
-    }
-}
-
-/// Tells what an undo or a redo, by `verb`, took back or made again, which is
-/// `turns` changes, the last of them being `told`, or that one change alone
-pub fn turned(verb: &str, turns: usize, told: &str) -> String {
-    match turns {
-        0 | 1 => format!("{verb}: {told}"),
-        turns => format!("{verb} {turns} changes, the last: {told}"),
-    }
-}
-
-/// Tells what a copy or cut of outputs took with `verb`, in lower case, by the
-/// name of the output, or else by how many outputs, after `facts` of what it
-/// did to the cues, which leave out the words that name the output as one
-pub fn clipped_outputs(verb: &str, outputs: &[Output], facts: Option<String>) -> String {
-    let told = match outputs {
-        [output] => format!("{verb} {}", the_output(&output.name, facts.is_some())),
-        outputs => format!("{verb} {} outputs", outputs.len()),
-    };
-    leading(facts, &told)
-}
-
-/// Names an output as "the output Sub", or as "Sub" where `terse`, which
-/// leaves room for what a change did to the cues
-fn the_output(name: &str, terse: bool) -> String {
-    if terse {
-        short(name)
-    } else {
-        format!("the output {}", short(name))
-    }
-}
-
-pub(in crate::front::view) fn number(cue: &Cue) -> String {
+pub(super) fn number(cue: &Cue) -> String {
     if cue.number.trim().is_empty() {
         format!("\"{}\"", Cue::one_line(&cue.name))
     } else {

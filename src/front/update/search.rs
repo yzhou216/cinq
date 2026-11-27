@@ -8,41 +8,33 @@
 //! A search finds the cues that a collapsed group hides, as Vim's finds text
 //! in a closed fold, and selecting one expands the groups that hide it.  The
 //! groups that the preview opens close again once the match moves elsewhere
-//! or the search is cancelled, as Vim's incremental search closes the folds
-//! that it opened, while accepting the search keeps them open.
+//! or the search is cancelled, while accepting the search keeps them open.
 //!
 //! The search line opens at the left of the status bar, and the selection
 //! follows the text typed, as with Vim's `incsearch`.  A search looks from
 //! the row after the selection, or the row before it going up, and ends on
-//! the selection itself, as Vim's does from the start of a line.  Enter
-//! accepts the search, and Escape or Backspace on an empty line gives the
-//! selection back to where it began.  The keys of the next match repeat the
-//! search accepted last in its direction, and those of the previous match in
-//! the other, and wrap around at either end of the list, as `wrapscan` does
-//! in Vim.  The jumps of a search, which Vim lists among its
-//! jump motions, are the one that Enter accepts, from where the search began
-//! to the match, and each step to the next or previous match.  The moves
-//! made while typing and a cancel are no jumps.  Every move that a search
-//! makes goes through [`App::searched_to`].
+//! the selection itself.  Enter accepts the search, and Escape or Backspace
+//! on an empty line gives the selection back to where it began.  The keys of
+//! the next match repeat the search accepted last in its direction, and
+//! those of the previous match in the other, wrapping around at either end
+//! of the list, as `wrapscan` does.  The jumps of a search are the one that
+//! Enter accepts, from where the search began to the match, and each step to
+//! the next or previous match.  The moves made while typing and a cancel are
+//! no jumps.  Every move that a search makes goes through
+//! [`App::selecting_position`].
 
-pub(super) mod line;
+mod line;
 mod matching;
 mod previewing;
+mod state;
 mod stepping;
 
-use iced::{
-    Task,
-    advanced::widget::{operate, operation::focusable},
-    widget::operation,
-};
+use iced::{Task, widget::operation};
 
-use super::{history::Spot, keys::MAIN_WINDOW};
-use crate::{
-    back::CueId,
-    front::{App, Message, view},
-};
-use line::Recall;
+use super::{focus::unfocus, keys::MAIN_WINDOW};
+use crate::front::{App, Message, view};
 use matching::{found, wrapped};
+pub(in crate::front) use state::{Search, Searched};
 
 /// What the status bar tells when a search goes past the end of the list and
 /// goes on from the other end, as Vim tells when the search hits the bottom
@@ -51,51 +43,6 @@ fn continued(backward: bool) -> &'static str {
         "Search continued at the bottom"
     } else {
         "Search continued at the top"
-    }
-}
-
-/// Search line while it is open
-pub(in crate::front) struct Search {
-    pub text: String,
-    /// Whether the search goes up the list, as Vim's `?` does
-    pub backward: bool,
-    /// Selection as it was when the line opened, where cancelling the search
-    /// puts it back and where the search looks first
-    began: Spot,
-    /// Whether no row matches the text
-    missed: bool,
-    /// Whether the line tells so, which it does for a while
-    pub warned: bool,
-    /// Searches that the keys of recall went through, while the text is one of
-    /// them
-    recall: Option<Recall>,
-    /// Collapsed groups that the preview expanded to show the match, which
-    /// close again once the match moves elsewhere or the search is cancelled
-    opened: Vec<CueId>,
-}
-
-/// Search accepted last, which the keys of the next and previous match
-/// repeat
-#[derive(Default, Clone)]
-pub(in crate::front) struct Searched {
-    pub text: String,
-    pub backward: bool,
-    /// Searches accepted before, oldest first, which the keys of recall go
-    /// through.  Nothing clears them.
-    pub history: Vec<String>,
-}
-
-impl Search {
-    fn opened_at(began: Spot, backward: bool) -> Self {
-        Self {
-            text: String::new(),
-            backward,
-            began,
-            missed: false,
-            warned: false,
-            recall: None,
-            opened: Vec::new(),
-        }
     }
 }
 
@@ -108,7 +55,7 @@ impl App {
         if self.stage.has_keyboard() {
             return (
                 Self {
-                    remark: Some(MAIN_WINDOW),
+                    notices: self.notices.with_remark(Some(MAIN_WINDOW)),
                     ..self
                 },
                 Task::none(),
@@ -124,13 +71,6 @@ impl App {
         )
     }
 
-    /// Moves the selection to the item at a position of a search, which is
-    /// the one place where a search changes it.  It records nothing: the
-    /// callers that make a jump remember the place that it left.
-    fn searched_to(self, position: Option<usize>) -> Self {
-        self.selecting_position(position)
-    }
-
     /// Takes the text that the operator typed into the line, and selects
     /// the first row after where the search began that matches it, or else
     /// the row where the search began.  Backspace on a line with no text
@@ -142,28 +82,26 @@ impl App {
         if text.is_empty() && search.text.is_empty() {
             return self.search_cancelled().revealed_unfocused();
         }
-        let (began, backward, opened) = (search.began, search.backward, search.opened.clone());
+        let (began, backward) = (search.began, search.backward);
         let row = self.position_of(began);
         let matched = found(&self.row_texts(), &text, row, backward);
         let missed = !text.is_empty() && matched.is_none();
-        let went_round = row
-            .zip(matched)
-            .is_some_and(|(from, to)| wrapped(from, to, backward));
+        let went_round = wrapped(row, matched, backward);
         let app = Self {
-            search: Some(Search {
+            search: self.search.map(|search| Search {
                 text,
-                backward,
                 missed,
                 warned: missed,
-                began,
                 recall: None,
-                opened,
+                ..search
             }),
-            remark: went_round.then(|| continued(backward)),
+            notices: self
+                .notices
+                .with_remark(went_round.then(|| continued(backward))),
             ..self
         };
         app.search_reclosed()
-            .searched_to(matched.or(row))
+            .selecting_position(matched.or(row))
             .search_previewed()
             .revealed()
     }
@@ -184,7 +122,7 @@ impl App {
             let (app, task) = Self { searched, ..self }
                 .search_cancelled()
                 .search_stepped(1);
-            return (app, Task::batch([task, operate(focusable::unfocus())]));
+            return (app, Task::batch([task, unfocus()]));
         }
         if search.missed {
             return (self.warned(true), Task::none());
@@ -194,17 +132,14 @@ impl App {
             .searched
             .clone()
             .accepting(search.text.clone(), search.backward);
-        let went_round = self
-            .position_of(began)
-            .zip(self.position())
-            .is_some_and(|(from, to)| wrapped(from, to, searched.backward));
+        let went_round = wrapped(self.position_of(began), self.position(), searched.backward);
         let remark = went_round.then(|| continued(searched.backward));
         // Moves of the preview were no jumps, so the jump is the one from
         // where the search began to the match
         Self {
             search: None,
             searched,
-            remark,
+            notices: self.notices.with_remark(remark),
             ..self
         }
         .jumped_from(began)
@@ -226,10 +161,21 @@ impl App {
                 let row = self.position_of(began);
                 Self {
                     search: None,
-                    ..self.search_reclosed().searched_to(row)
+                    ..self.search_reclosed().selecting_position(row)
                 }
             }
             None => self,
+        }
+    }
+
+    /// Closes the line as [`App::search_cancelled`] does, if it is open, and
+    /// brings the selection that it put back into view, which leaves the view
+    /// alone where no line was open
+    pub(super) fn search_abandoned(self) -> (Self, Task<Message>) {
+        if self.search.is_some() {
+            self.search_cancelled().revealed()
+        } else {
+            (self, Task::none())
         }
     }
 
@@ -247,6 +193,6 @@ impl App {
 
     fn revealed_unfocused(self) -> (Self, Task<Message>) {
         let (app, reveal) = self.revealed();
-        (app, Task::batch([reveal, operate(focusable::unfocus())]))
+        (app, Task::batch([reveal, unfocus()]))
     }
 }

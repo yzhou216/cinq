@@ -18,15 +18,18 @@ fn problems(audio: &mut Audio, workspace: Workspace) -> Vec<(OutputId, Fault)> {
     audio.problems()
 }
 
+/// Returns the problem of Main whose device `name` is not there
+fn missing(name: &str) -> [(OutputId, Fault); 1] {
+    let reason = format!("there is no audio device {name}");
+    [(MAIN, Fault::Missing(reason))]
+}
+
 #[test]
 fn output_on_a_device_that_is_not_there_tells_why_nothing_is_heard() {
     let mut audio = Audio::open(Some("cinq:none"));
     assert_eq!(
         problems(&mut audio, Workspace::default()),
-        [(
-            MAIN,
-            Fault::Missing("there is no audio device cinq:none".to_owned())
-        )]
+        missing("cinq:none")
     );
 }
 
@@ -37,10 +40,7 @@ fn routing_to_another_device_opens_it() {
     audio.route(Some("cinq:second"));
     assert_eq!(
         problems(&mut audio, Workspace::default()),
-        [(
-            MAIN,
-            Fault::Missing("there is no audio device cinq:second".to_owned())
-        )]
+        missing("cinq:second")
     );
 }
 
@@ -57,18 +57,12 @@ fn output_on_a_named_device_goes_by_its_name_where_the_id_finds_none() {
             OutputEdit::Channels(Channels::Stereo(4, 5)),
         ));
     let mut audio = Audio::open(None);
-    assert_eq!(
-        problems(&mut audio, workspace),
-        [(
-            MAIN,
-            Fault::Missing("there is no audio device Desk".to_owned())
-        )]
-    );
+    assert_eq!(problems(&mut audio, workspace), missing("Desk"));
 }
 
 #[test]
 fn devices_that_only_record_or_discard_are_not_listed() {
-    use crate::back::audio::device::plays;
+    use crate::back::audio::devices::device::plays;
     assert!(plays("alsa:hw:CARD=1,DEV=0", false));
     assert!(!plays("jack:input", true));
     assert!(!plays("alsa:null", false));

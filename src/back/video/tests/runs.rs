@@ -2,22 +2,14 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Tests of the video output following the runs of video cues: the
-//! pictures it hands on, those it makes ready ahead, and the files whose
-//! picture cannot play
+//! Tests of the video output following the runs of video cues
 
-use std::{
-    fs,
-    ops::ControlFlow,
-    path::Path,
-    thread,
-    time::{Duration, Instant},
-};
+use std::{fs, path::Path};
 
 use super::{
-    GO, PATIENCE,
+    GO,
     movie::{broken_movie, movie, picture_number},
-    repeated, showing, showing_cue, synced,
+    patiently, showing, showing_cues, synced,
 };
 use crate::back::{
     Command, Cue, CueId, Kind, Media, Video, Workspace, video::decoder::UNDECODABLE,
@@ -40,16 +32,10 @@ fn video_output_shows_the_pictures_of_a_run_and_lets_its_thread_go_once_it_stops
 /// Syncs `video` with `workspace`, which keeps its clock where it is, until
 /// the next picture has arrived, and returns when it is due
 fn due(video: &mut Video, workspace: Workspace) -> (Workspace, Option<f64>) {
-    let started = Instant::now();
-    repeated(workspace, |workspace| {
+    patiently((workspace, None), |(workspace, _)| {
         let (workspace, _) = video.sync(workspace);
-        match video.next_due(&workspace) {
-            None if started.elapsed() < PATIENCE => {
-                thread::sleep(Duration::from_millis(5));
-                ControlFlow::Continue(workspace)
-            }
-            next => ControlFlow::Break((workspace, next)),
-        }
+        let next = video.next_due(&workspace);
+        ((workspace, next), next.is_some())
     })
 }
 
@@ -94,7 +80,7 @@ fn run_that_loops_a_picture_that_cannot_be_decoded_ends_with_a_warning() {
         .looping(true)
         .build();
     let mut video = Video::default();
-    let playing = showing_cue(&path, looping).apply(GO);
+    let playing = showing_cues(&path, vec![looping]).apply(GO);
     let (ended, picture) = synced(&mut video, playing);
     assert!(picture.is_none());
     let cue = ended.cue(CueId(1)).expect("the cue is there");

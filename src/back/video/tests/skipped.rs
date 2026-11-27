@@ -6,8 +6,8 @@
 //! cannot be read plays, and that one whose picture cannot be read does not
 
 use super::{
-    boxes::{ilst_udta, narrow, reworked, split},
-    damaged::{DAMAGED_INDEX, bytes, with_udta},
+    boxes::{ilst_udta, narrow, position_of, reworked, split},
+    damaged::{DAMAGED_INDEX, bytes},
     movie::saved,
 };
 use crate::back::video::track::probe;
@@ -53,10 +53,7 @@ fn lost_track(handler: &[u8; 4]) -> Vec<u8> {
 /// Returns `bytes` with the box of `kind`, which a box of another type
 /// takes the place of, so that nothing reads it as the box that it was
 fn renamed(bytes: &[u8], kind: &[u8; 4]) -> Vec<u8> {
-    let at = bytes
-        .windows(4)
-        .position(|window| window == kind)
-        .expect("the box is there");
+    let at = position_of(bytes, kind);
     [&bytes[..at], b"skip", &bytes[at + 4..]].concat()
 }
 
@@ -87,8 +84,10 @@ fn tags_that_cannot_be_read_do_not_stop_the_video_from_playing() {
         [ilst_udta(), ilst_udta()].concat(),
         ilst_udta(),
     ];
-    tags.iter()
-        .for_each(|udta| assert_eq!(probed(with_udta(&bytes(), udta)), Ok(PLAYS)));
+    tags.iter().for_each(|udta| {
+        let tagged = with_boxes(&bytes(), &narrow(&(*b"udta", udta.clone())));
+        assert_eq!(probed(tagged), Ok(PLAYS));
+    });
 }
 
 #[test]
@@ -125,13 +124,9 @@ fn video_track_that_cannot_be_read_is_refused_for_its_index() {
 
 #[test]
 fn video_in_a_profile_that_does_not_play_is_refused_with_the_ones_that_do() {
-    // The profile_idc of the avcC box, which follows its tag and version
+    // Profile_idc of the avcC box, which follows its tag and version
     let bytes = bytes();
-    let at = bytes
-        .windows(4)
-        .position(|window| window == b"avcC")
-        .expect("the box is there")
-        + 5;
+    let at = position_of(&bytes, b"avcC") + 5;
     let high_10 = bytes
         .into_iter()
         .enumerate()

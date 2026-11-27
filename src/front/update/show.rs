@@ -5,16 +5,13 @@
 //! Shows that the operator opens and saves, and the unsaved changes that
 //! cinq keeps for them
 //!
-//! A show lives in a file of its own, which the operator names on the
-//! command line or picks in the desktop's file chooser.  Opening reads the
-//! file and saving writes it, both on a thread of their own, as any reading
-//! of files is, and the kept changes are read on the thread of the
-//! [`Keeper`], after the changes it has yet to write.  Changes that are not
-//! saved never go away unasked: as they happen, the [`Keeper`] keeps them in
-//! a file in the state directory of cinq, which the next opening of the show
-//! reads, so that neither closing the window, nor opening another show, nor
-//! a crash loses them.  The kept changes come back as one change, which undo
-//! takes back to the show as saved, so that nothing has to ask first.
+//! Opening and saving read and write the file on a thread of their own, and
+//! the kept changes are read on the thread of the [`Keeper`], after the
+//! changes it has yet to write.  As changes happen, the [`Keeper`] writes the
+//! unsaved ones to a file in the state directory of cinq, so that neither
+//! closing the window, nor opening another show, nor a crash loses them.  The
+//! next opening of the show reads them back as one change, which undo takes
+//! back to the show as saved, so that nothing has to ask first.
 
 mod file;
 mod keeper;
@@ -32,7 +29,7 @@ use std::{
 use iced::Task;
 
 use super::on_own_thread;
-use crate::front::{App, Message, read};
+use crate::front::{App, Message, files::read};
 pub use keeper::{Keeper, Reader};
 
 const EXTENSION: &str = "cinq.toml";
@@ -53,8 +50,6 @@ pub struct Show {
 }
 
 impl Show {
-    /// Returns a show that lives in `file`, as the tests of the interface
-    /// name one
     #[cfg(test)]
     pub(in crate::front) fn in_file(file: impl Into<PathBuf>) -> Self {
         Self {
@@ -63,8 +58,6 @@ impl Show {
         }
     }
 
-    /// Returns whether a file holds the show, which a show that was neither
-    /// opened nor saved has not
     pub fn has_file(&self) -> bool {
         self.file.is_some()
     }
@@ -88,8 +81,8 @@ impl Show {
         self.id
     }
 
-    /// Returns the directory of the file of the show, which the relative
-    /// paths of the files of its cues go from, or none while it has no file
+    /// Returns the directory that the relative paths of the files of the
+    /// cues go from, or none while the show has no file
     fn directory(&self) -> Option<&Path> {
         self.file.as_deref().and_then(Path::parent)
     }
@@ -170,7 +163,7 @@ impl App {
                 version: self.show.version + 1,
                 ..self.show
             },
-            told: None,
+            notices: self.notices.with_told(None),
             ..self
         }
     }
@@ -182,6 +175,13 @@ fn chooser(directory: Option<&Path>) -> rfd::AsyncFileDialog {
         Some(directory) => chooser.set_directory(directory),
         None => chooser,
     }
+}
+
+/// Returns the name of `file`, or the whole path where it has none, which
+/// the sidebar shows rather than a path that it would cut short
+fn named(file: &Path) -> Cow<'_, str> {
+    file.file_name()
+        .map_or_else(|| file.to_string_lossy(), |name| name.to_string_lossy())
 }
 
 fn with_extension(file: &Path) -> PathBuf {

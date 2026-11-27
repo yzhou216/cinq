@@ -20,6 +20,6 @@ pub fn radio<'a, V: Copy + Eq + 'a>(
     let act = on_click(value);
     hinted(
         iced::widget::radio(label, value, selected, |_| act.clone()),
-        act.clone(),
+        act,
     )
 }

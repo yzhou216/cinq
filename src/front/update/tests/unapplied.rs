@@ -5,7 +5,7 @@
 //! Tests of the reason that the status bar tells when the keyboard leaves a
 //! field that holds a value that was not applied
 
-use super::{after, show};
+use super::{after, show, typed_setting};
 use crate::{
     back::{OutputId, Place},
     front::{App, Focus, Message, Setting},
@@ -16,24 +16,21 @@ const MAIN: OutputId = OutputId(1);
 /// Returns the interface with the outputs shown, Main and Output 1, and
 /// `text` typed into `setting`
 fn typed(setting: Setting, text: &str) -> App {
-    after(
+    let app = after(
         show(None),
-        [
-            Message::ShowOutputs,
-            Message::Add(Place::After, 1),
-            Message::SettingTyped(setting, text.to_owned()),
-        ],
-    )
+        [Message::ShowOutputs, Message::Add(Place::After, 1)],
+    );
+    typed_setting(app, setting, text)
 }
 
 fn leaving(app: App, message: Message) -> Option<String> {
-    app.next(message).0.unapplied
+    app.next(message).0.notices.unapplied
 }
 
 #[test]
 fn leaving_a_field_with_a_value_that_was_rejected_tells_the_reason() {
     let name = || typed(Setting::OutputName(MAIN), "Output 1");
-    assert_eq!(name().unapplied, None, "the field still says why");
+    assert_eq!(name().notices.unapplied, None, "the field still says why");
     assert_eq!(
         leaving(name(), Message::Focus(Focus::Next)).as_deref(),
         Some("Not applied: another output has this name")
@@ -82,10 +79,10 @@ fn typing_in_another_field_leaves_the_first_and_tells_why_it_did_not_apply() {
 fn the_reason_goes_with_the_next_thing_that_the_operator_does() {
     let name = typed(Setting::OutputName(MAIN), "Output 1");
     let told = name.next(Message::Focus(Focus::Next)).0;
-    assert!(told.unapplied.is_some());
+    assert!(told.notices.unapplied.is_some());
     let moved = told.next(Message::Step(1)).0;
     assert_eq!(
-        moved.unapplied, None,
+        moved.notices.unapplied, None,
         "the next thing that the operator does"
     );
 }

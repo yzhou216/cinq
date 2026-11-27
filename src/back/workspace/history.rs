@@ -4,21 +4,17 @@
 
 //! Changes to the show, which undo takes back and redo makes again
 //!
-//! Every change that the operator makes to the show is recorded: a cue
-//! added, moved, or deleted, a setting of a cue edited, a move of standby,
-//! an edit of the light patch, and kept cue lists and patch brought back in
-//! place of those of the show.  Playback is not, since what has been heard
-//! cannot be taken back.  A [`Change`] records only what it touched, so
-//! taking it back leaves alone whatever happened since, such as playback
-//! and the files that loaded.  Standby goes back only where nothing has
-//! moved it in the meantime, and once GO moves standby on, the earlier
-//! moves of that standby are forgotten, those that adding a cue made among
-//! them, so that neither undo nor redo sends GO back to a cue that has
-//! played.  Bringing back kept lists is the exception: its undo and redo
-//! put whole lists in place, standby included.  Edits of one setting of one
-//! cue in a row, such as the keys typed into a field, make one change, as
-//! do moves of one cue in a row.  [`undo`] applies undo and redo to a
-//! workspace.
+//! Every change that the operator makes to the show is recorded.  Playback
+//! is not, since what has been heard cannot be taken back.  A [`Change`]
+//! records only what it touched, so taking it back leaves alone whatever
+//! happened since, such as playback and the files that loaded.  Standby
+//! goes back only where nothing has moved it in the meantime, and once GO
+//! moves standby on, the earlier moves of that standby are forgotten, those
+//! that adding a cue made among them, so that neither undo nor redo sends
+//! GO back to a cue that has played.  Bringing back kept lists is the
+//! exception: its undo and redo put whole lists in place, standby included.
+//! Edits of one setting of one cue in a row, such as the keys typed into a
+//! field, make one change, as do moves of one cue in a row.
 
 mod change;
 mod joining;

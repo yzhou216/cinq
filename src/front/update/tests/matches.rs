@@ -18,24 +18,27 @@ fn stepped(app: App, offset: isize) -> App {
     app.handled(Message::SearchStep(offset)).0
 }
 
+/// Returns the identity of the selected cue after each of the steps from the
+/// state
+fn stepping(app: App, offsets: impl IntoIterator<Item = isize>) -> Vec<u32> {
+    offsets
+        .into_iter()
+        .scan(Some(app), |state, offset| {
+            let next = stepped(state.take()?, offset);
+            let selected = next.selected?.0;
+            *state = Some(next);
+            Some(selected)
+        })
+        .collect()
+}
+
 #[test]
 fn next_and_previous_match_wrap_around_the_list() {
     let accepted = searched(opened(3), "storm");
     assert_eq!(accepted.selected, Some(CueId(4)));
-    let next = stepped(accepted, 1);
-    assert_eq!(next.selected, Some(CueId(1)));
-    let next = stepped(next, 1);
-    assert_eq!(next.selected, Some(CueId(4)));
-    let previous = stepped(next, -1);
-    assert_eq!(previous.selected, Some(CueId(1)));
-    let previous = stepped(previous, -1);
-    assert_eq!(previous.selected, Some(CueId(4)));
-    // Count repeats the step
-    assert_eq!(stepped(previous, 3).selected, Some(CueId(1)));
-    assert_eq!(
-        stepped(stepped(searched(opened(2), "o"), -1), -2).selected,
-        Some(CueId(4))
-    );
+    // The last step has a count, which repeats it
+    assert_eq!(stepping(accepted, [1, 1, -1, -1, 3]), [1, 4, 1, 4, 1]);
+    assert_eq!(stepping(searched(opened(2), "o"), [-1, -2]), [2, 4]);
 }
 
 #[test]
@@ -44,17 +47,7 @@ fn the_next_match_follows_the_direction_of_the_search_and_the_previous_goes_agai
     // the wrap to 4, while going down from 4 reaches 1 by the wrap
     let accepted = searched(opened_backward(5), "o");
     assert_eq!(accepted.selected, Some(CueId(4)));
-    let next = stepped(accepted, 1);
-    assert_eq!(next.selected, Some(CueId(2)));
-    let next = stepped(next, 1);
-    assert_eq!(next.selected, Some(CueId(1)));
-    let next = stepped(next, 1);
-    assert_eq!(next.selected, Some(CueId(4)));
-    let previous = stepped(next, -1);
-    assert_eq!(previous.selected, Some(CueId(1)));
-    let previous = stepped(previous, -1);
-    assert_eq!(previous.selected, Some(CueId(2)));
-    assert_eq!(stepped(previous, 2).selected, Some(CueId(4)));
+    assert_eq!(stepping(accepted, [1, 1, 1, -1, -1, 2]), [2, 1, 4, 1, 2, 4]);
 }
 
 #[test]
@@ -120,24 +113,25 @@ fn a_huge_count_steps_at_most_one_lap() {
     assert_eq!(stepped(2), Some(CueId(4)));
     assert_eq!(stepped(-2), Some(CueId(4)));
     assert_eq!(stepped(3), Some(CueId(1)));
+    // The key takes the count typed digit by digit
+    let typed = typing(searched(opened(3), "storm"), "9 9 9 9 9 9 9 9 n");
+    assert_eq!(typed.selected, Some(CueId(1)));
 }
 
-#[test]
-fn a_huge_count_of_the_key_of_next_match_returns() {
-    let app = typing(searched(opened(3), "storm"), "9 9 9 9 9 9 9 9 n");
-    assert_eq!(app.selected, Some(CueId(1)));
+/// Returns the state with an accepted search for `text` that no cue holds
+fn lost(app: App, text: &str) -> App {
+    App {
+        searched: Searched {
+            text: text.to_owned(),
+            ..Searched::default()
+        },
+        ..app
+    }
 }
 
 #[test]
 fn stepping_with_no_matching_cue_does_nothing_at_any_count() {
-    let missing = App {
-        searched: Searched {
-            text: "zz".to_owned(),
-            backward: false,
-            ..Searched::default()
-        },
-        ..show(Some(CueId(3)))
-    };
+    let missing = lost(show(Some(CueId(3))), "zz");
     assert_eq!(stepped(missing, isize::MAX).selected, Some(CueId(3)));
 }
 
@@ -147,46 +141,38 @@ const BOTTOM: Option<&str> = Some("Search continued at the bottom");
 #[test]
 fn a_search_that_goes_past_the_end_of_the_list_tells_where_it_continued() {
     // Cues 1 and 4 hold Storm, so that a search from 4 goes round to 1
-    assert_eq!(typed(opened(4), "storm").remark, TOP);
-    assert_eq!(searched(opened(4), "storm").remark, TOP);
-    assert_eq!(searched(opened(1), "storm").remark, None);
-    assert_eq!(typed(opened_backward(1), "storm").remark, BOTTOM);
-    assert_eq!(searched(opened_backward(1), "storm").remark, BOTTOM);
-    assert_eq!(searched(opened_backward(4), "storm").remark, None);
+    assert_eq!(typed(opened(4), "storm").notices.remark, TOP);
+    assert_eq!(searched(opened(4), "storm").notices.remark, TOP);
+    assert_eq!(searched(opened(1), "storm").notices.remark, None);
+    assert_eq!(typed(opened_backward(1), "storm").notices.remark, BOTTOM);
+    assert_eq!(searched(opened_backward(1), "storm").notices.remark, BOTTOM);
+    assert_eq!(searched(opened_backward(4), "storm").notices.remark, None);
 }
 
 #[test]
 fn the_keys_of_the_next_and_previous_match_tell_where_they_continued_too() {
     let accepted = searched(opened(1), "storm");
-    assert_eq!(accepted.remark, None);
+    assert_eq!(accepted.notices.remark, None);
     let next = stepped(accepted, 1);
-    assert_eq!((next.selected, next.remark), (Some(CueId(1)), TOP));
+    assert_eq!((next.selected, next.notices.remark), (Some(CueId(1)), TOP));
     let previous = stepped(next, -1);
     assert_eq!(
-        (previous.selected, previous.remark),
+        (previous.selected, previous.notices.remark),
         (Some(CueId(4)), BOTTOM)
     );
     // Step that stays within the list tells nothing, and takes the remark away
-    assert_eq!(stepped(previous, -1).remark, None);
+    assert_eq!(stepped(previous, -1).notices.remark, None);
     // Count that goes round tells it
-    assert_eq!(stepped(searched(opened(1), "storm"), 3).remark, TOP);
+    assert_eq!(stepped(searched(opened(1), "storm"), 3).notices.remark, TOP);
 }
 
 #[test]
 fn the_next_match_with_no_match_says_no_cue_matches_as_typing_does() {
-    let none = searched(opened(2), "storm");
-    let lost = App {
-        searched: Searched {
-            text: "zzz".to_owned(),
-            backward: false,
-            ..Searched::default()
-        },
-        ..none
-    };
-    assert_eq!(stepped(lost, 1).remark, Some("No cue matches"));
+    let lost = lost(searched(opened(2), "storm"), "zzz");
+    assert_eq!(stepped(lost, 1).notices.remark, Some("No cue matches"));
     // Before any search it says that there is none
     assert_eq!(
-        stepped(show(Some(CueId(2))), 1).remark,
+        stepped(show(Some(CueId(2))), 1).notices.remark,
         Some("No previous search")
     );
 }

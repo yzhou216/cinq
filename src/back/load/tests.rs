@@ -6,12 +6,13 @@
 //! as the kind of its cue plays it
 
 mod recheck;
+mod watch;
 
 use std::path::Path;
 
 use super::{Load, load_files};
 use crate::back::{
-    Command, Cue, CueId, CueList, Kind, Media, Workspace, video::tests::movie::movie,
+    Command, Cue, CueId, Kind, Media, silent, video::tests::movie::movie, workspace::tests::fresh,
 };
 
 fn playing(id: u32, kind: Kind, file: &str) -> Cue {
@@ -20,15 +21,21 @@ fn playing(id: u32, kind: Kind, file: &str) -> Cue {
         .build()
 }
 
-fn found(cues: Vec<Cue>, directory: &Path) -> Vec<(u32, Media)> {
-    let workspace = Workspace::new(vec![CueList::new("Main", cues)]).directory(directory);
-    load_files(Load::all(&workspace, workspace.unloaded()))
+/// Returns what the loaded commands found, with the number of the cue that
+/// each finding belongs to
+fn findings(commands: Vec<Command>) -> Vec<(u32, Media)> {
+    commands
         .into_iter()
         .filter_map(|command| match command {
             Command::Loaded { cue, media, .. } => Some((cue.0, media)),
             _ => None,
         })
         .collect()
+}
+
+fn found(cues: Vec<Cue>, directory: &Path) -> Vec<(u32, Media)> {
+    let workspace = fresh(cues).directory(directory);
+    findings(load_files(Load::all(&workspace, workspace.unloaded())))
 }
 
 #[test]
@@ -51,21 +58,6 @@ fn video_file_loads_as_a_picture_for_a_video_cue_and_as_no_sound_for_an_audio_cu
         playing(2, Kind::Audio, "movie.mp4"),
     ];
     let found = found(cues, directory.path());
-    assert_eq!(
-        found[0],
-        (
-            1,
-            Media::Loaded {
-                duration: 0.5,
-                sound: None
-            }
-        )
-    );
+    assert_eq!(found[0], (1, silent(0.5)));
     assert!(matches!(found[1], (2, Media::Failed(_))), "{found:?}");
-}
-
-#[test]
-fn unreadable_file_is_told_without_its_error_number() {
-    let denied = std::io::Error::from_raw_os_error(13);
-    assert_eq!(super::unreadable(denied), "permission denied");
 }

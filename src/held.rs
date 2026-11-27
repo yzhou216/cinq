@@ -6,11 +6,11 @@
 //!
 //! The problems screen takes the alternate screen of a terminal, and what
 //! reaches the terminal meanwhile is lost when it switches back.  From
-//! [`hold`] to [`release`], what cinq writes with [`write`] goes to a buffer
+//! [`hold`] to [`release`], what cinq writes with [`write()`] goes to a buffer
 //! in memory instead.  On POSIX systems, so does what anything else writes
 //! to standard output and error, such as the libraries for sound and
 //! graphics, since [`hold`] points the descriptors at a pipe; on Windows,
-//! only what [`write`] takes is held.  [`release`] writes the buffer on the
+//! only what [`write()`] takes is held.  [`release`] writes the buffer on the
 //! main screen, once the problems clear or when the program ends.  The
 //! buffer keeps the newest megabyte of output and [`release`] says how many
 //! bytes before it were dropped.  The problems screen itself draws on
@@ -36,11 +36,10 @@ use redirect::Redirect;
 
 /// Terminal on standard error, the real one while output is held
 #[cfg(unix)]
-pub type Terminal = File;
+type Terminal = File;
 
-/// Terminal on standard error, the real one while output is held
 #[cfg(not(unix))]
-pub type Terminal = io::Stderr;
+type Terminal = io::Stderr;
 
 static HELD: Mutex<Held> = Mutex::new(Held {
     holding: false,
@@ -54,7 +53,6 @@ static BUFFER: Mutex<Buffer> = Mutex::new(Buffer::new());
 
 #[derive(Default)]
 struct Held {
-    /// Whether output waits for the main screen
     holding: bool,
     /// Descriptors that point at the buffer, when they could
     #[cfg(unix)]
@@ -118,8 +116,6 @@ pub fn terminal() -> io::Result<Terminal> {
     }
 }
 
-/// Returns standard error as it was before [`hold`], for the problems screen
-/// to draw on and to ask about the terminal
 #[cfg(not(unix))]
 pub fn terminal() -> io::Result<Terminal> {
     Ok(io::stderr())
@@ -135,7 +131,6 @@ fn apply(step: impl FnOnce(Held) -> (Held, Vec<u8>)) {
     let _ = io::stderr().write_all(&bytes);
 }
 
-/// Adds `bytes` to the buffer
 fn retain(bytes: &[u8]) {
     let mut buffer = buffer();
     *buffer = mem::take(&mut *buffer).pushed(bytes);

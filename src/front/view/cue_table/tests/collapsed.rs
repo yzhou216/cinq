@@ -5,21 +5,26 @@
 //! Tests of the State column of a collapsed group that hides a problem or a
 //! cue that runs
 
-use iced::widget::text;
-
-use std::collections::BTreeSet;
-
 use super::{
     super::{
         Column,
-        columns::{counted, hidden_problem, lines, shown_lines, state},
+        columns::{
+            counted, shown_lines,
+            states::{Look, hidden_problem, lines, state},
+        },
     },
-    texts,
+    texts, told, yellows,
 };
 use crate::{
     back::{Command, Cue, CueId, CueList, Edit, Kind, Workspace},
     front::view::theme,
 };
+
+fn group(collapsed: bool) -> Cue {
+    Cue::new(CueId(1), "1", Kind::Group, "Group")
+        .collapsed(collapsed)
+        .build()
+}
 
 /// Returns a list of the group 1, collapsed or not, that holds a memo, a
 /// sound with no file, and a fade with no target
@@ -70,10 +75,8 @@ fn a_collapsed_group_on_standby_reads_next_and_then_the_hidden_problem() {
     let cue = &list.cues[0];
     let hidden = hidden_problem(&workspace, &list.groups(), cue);
     let lines_of = |hidden| -> Vec<String> {
-        lines(&workspace, cue, true, hidden, &[], &BTreeSet::new(), false)
-            .into_iter()
-            .map(|(line, _)| line)
-            .collect()
+        let look = Look::default().with_next(true).with_hidden(hidden);
+        told(lines(&workspace, cue, look))
     };
     assert_eq!(lines_of(hidden), ["NEXT", "NO FILE"]);
     assert_eq!(lines_of(None), ["NEXT"]);
@@ -129,19 +132,12 @@ fn counted_lines(commands: &[Command]) -> Vec<(String, bool)> {
         Workspace::apply,
     );
     let list = &workspace.lists()[0];
-    let theme = theme::modus_vivendi();
-    shown_lines(
+    yellows(shown_lines(
         &workspace,
         &list.groups(),
         &list.cues[0],
-        false,
-        &[],
-        &BTreeSet::new(),
-        false,
-    )
-    .into_iter()
-    .map(|(line, style)| (line, style(&theme).color == text::warning(&theme).color))
-    .collect()
+        Look::default(),
+    ))
 }
 
 #[test]
@@ -164,30 +160,19 @@ fn a_collapsed_group_counts_the_cues_it_hides_that_run_and_the_paused_ones_first
 #[test]
 fn a_collapsed_group_tells_each_warning_of_the_cues_it_hides_once() {
     let light = |id: u32| Cue::new(CueId(id), id.to_string(), Kind::Light, "Look").depth(1);
-    let group = |collapsed| {
-        Cue::new(CueId(1), "1", Kind::Group, "Group")
-            .collapsed(collapsed)
-            .build()
-    };
-    let told = |collapsed| {
+    let read = |collapsed| {
         let workspace = Workspace::new(vec![CueList::new(
             "Main",
             vec![group(collapsed), light(2).build(), light(3).build()],
         )]);
         let list = &workspace.lists()[0];
-        shown_lines(
+        told(shown_lines(
             &workspace,
             &list.groups(),
             &list.cues[0],
-            false,
-            &[],
-            &BTreeSet::new(),
-            false,
-        )
-        .into_iter()
-        .map(|(line, _)| line)
-        .collect::<Vec<_>>()
+            Look::default(),
+        ))
     };
-    assert_eq!(told(true), ["NO LEVELS"]);
-    assert!(told(false).is_empty());
+    assert_eq!(read(true), ["NO LEVELS"]);
+    assert!(read(false).is_empty());
 }

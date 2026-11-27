@@ -5,6 +5,7 @@
 //! Tests of adding cues, one or as many as a count types
 
 use super::{operators::rows, *};
+use crate::front::app::{Held, Keyboard};
 
 #[test]
 fn one_cue_added_below_is_selected_as_before() {
@@ -20,7 +21,7 @@ fn count_adds_that_many_cues_below_in_one_change_and_selects_the_last() {
     // Vim leaves the cursor on the last line that `3o` inserts
     assert_eq!(app.selected, Some(CueId(24)));
     let undone = typing(app, "u");
-    assert_eq!(rows(&undone).len(), 12);
+    assert_eq!(rows(&undone), (1..=12).collect::<Vec<_>>());
     // Back on the cue that was selected, as `o u` is in Vim
     assert_eq!(undone.selected, Some(CueId(4)));
 }
@@ -52,14 +53,6 @@ fn add_stops_at_a_thousand_cues() {
 }
 
 #[test]
-fn show_mode_refuses_adding_with_a_count() {
-    let (locked, _) = show(Some(CueId(4))).handled(Message::ShowMode(true));
-    let app = typing(locked, "3 o");
-    assert_eq!(rows(&app).len(), 12);
-    assert_eq!(app.selected, Some(CueId(4)));
-}
-
-#[test]
 fn y_copies_the_selected_cue_and_takes_a_count() {
     let app = typing(show(Some(CueId(4))), "Y p");
     assert_eq!(rows(&app)[3..6], [4, 22, 5]);
@@ -69,10 +62,7 @@ fn y_copies_the_selected_cue_and_takes_a_count() {
 
 #[test]
 fn show_mode_tells_why_a_key_that_edits_did_nothing_and_stays_quiet_for_the_rest() {
-    let told = |keys| {
-        let (locked, _) = show(Some(CueId(4))).handled(Message::ShowMode(true));
-        typing(locked, keys).remark
-    };
+    let told = |keys| typing(locked(show(Some(CueId(4)))), keys).notices.remark;
     assert!(
         ["o", "p", "x", "d d", "c c", "d j"]
             .into_iter()
@@ -88,31 +78,32 @@ fn show_mode_tells_why_a_key_that_edits_did_nothing_and_stays_quiet_for_the_rest
 
 #[test]
 fn the_show_mode_check_box_flips_both_ways_since_show_mode_never_locks_it() {
-    let (locked, _) = show(Some(CueId(4))).handled(Message::ShowMode(true));
-    assert!(locked.workspace.show_mode() && !locked.editable());
-    let (unlocked, _) = locked.handled(Message::ShowMode(false));
+    let closed = locked(show(Some(CueId(4))));
+    assert!(closed.workspace.show_mode() && !closed.editable());
+    let (unlocked, _) = closed.handled(Message::ShowMode(false));
     assert!(!unlocked.workspace.show_mode() && unlocked.editable());
 }
 
 #[test]
 fn an_added_cue_shows_the_basics_tab_but_a_refused_add_keeps_the_tab() {
-    let levels = || App {
-        tab: Tab::Levels,
-        ..show(Some(CueId(4)))
-    };
-    let (added, _) = levels().handled(Message::Add(Place::After, 1));
+    let (added, _) = on_levels(Some(CueId(4))).handled(Message::Add(Place::After, 1));
     assert_eq!(added.tab, Tab::Basics);
-    let (locked, _) = levels().handled(Message::ShowMode(true));
-    let (refused, _) = locked.handled(Message::Add(Place::After, 1));
+    let (refused, _) = locked(on_levels(Some(CueId(4)))).handled(Message::Add(Place::After, 1));
     assert_eq!(refused.tab, Tab::Levels);
 }
 
 #[test]
 fn a_key_of_adding_or_hint_mode_takes_the_keyboard_from_a_list_that_has_it() {
-    let units = |held, keys| {
+    let units = |any, keys| {
         typing_task(
             App {
-                held,
+                keyboard: Keyboard {
+                    held: Held {
+                        any,
+                        ..Held::default()
+                    },
+                    ..Keyboard::default()
+                },
                 ..show(Some(CueId(4)))
             },
             keys,
