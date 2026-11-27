@@ -98,6 +98,14 @@ for a dialog does not, is shown as not answering after five seconds, and it
 holds up no other device.
 Changing an output opens again only the devices that the change touches, so
 that the sound on the others plays on.
+A cue that sends to outputs on two devices goes on playing on one of them while
+the other changes: its output moves to another device, the device stops or
+opens again, an output needs more of its channels, or the cue stops sending to
+it or begins to.
+Only the sound on the device that changed stops or starts, from where the cue
+is.
+Moving an output to another place in the list changes no device and leaves the
+sound playing.
 A device that stops while cues play on it, as one unplugged or a Dante Virtual
 Soundcard that restarts, holds their clocks until it tells that it stopped, or
 until it has asked for no sound for three seconds, after which they go on by

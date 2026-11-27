@@ -12,14 +12,10 @@ mod looping;
 
 use std::{fs, thread, time::Duration};
 
-use kira::{
-    AudioManager, AudioManagerSettings,
-    backend::mock::{MockBackend, MockBackendSettings},
-    sound::streaming::StreamingSoundData,
-};
+use kira::{AudioManager, backend::mock::MockBackend, sound::streaming::StreamingSoundData};
 use tempfile::TempDir;
 
-use super::{silence_at, voice::audio};
+use super::{mock_manager, silence_at, voice::audio};
 use crate::back::{
     Command, Cue, CueId, Workspace,
     audio::sound::voice::{Voice, clipped},
@@ -91,12 +87,7 @@ impl Rig {
     /// Starts the sound of cue 1, which runs in `workspace`, as one opened
     /// where the run is
     fn start(directory: &TempDir, workspace: Workspace) -> Self {
-        let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
-            backend_settings: MockBackendSettings { sample_rate: RATE },
-            internal_buffer_size: FRAMES,
-            ..AudioManagerSettings::default()
-        })
-        .expect("the mock backend starts");
+        let mut manager = mock_manager(RATE, FRAMES);
         let active = workspace.active_of(CueId(1)).expect("the cue runs");
         let clip = active.sound().expect("the cue has sound");
         let data = StreamingSoundData::from_file(directory.path().join("silence.wav"))

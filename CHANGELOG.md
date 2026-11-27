@@ -238,6 +238,46 @@ Major changes and improvements in each release of cinq, newest first.
 - On Windows, a cue pasted into a show in another directory names its file
   with backslashes throughout.  Before, the slashes of its relative name
   stayed among them, as `C:\shows\storm\sounds/rain.ogg`.
+- An audio device whose driver fails while cinq opens it is tried again every
+  two seconds, as one that refuses is, and its output says `cannot open` with
+  the reason `the audio driver failed`.  One whose driver fails as cinq closes
+  a stream keeps answering.  Before, either stayed `not answering` until cinq
+  restarted.
+- A sound file that is cut short, as a copy that stopped halfway is, no longer
+  keeps a processor core busy while its sound waits to start: cinq lets the
+  sound go once it fails to decode, and opens the file again at GO.  Before,
+  the decoding tried again without pause from up to ten seconds before the cue
+  until GO.
+- A file that makes its reader panic, as a device or a pipe named by a video
+  cue does, or a sound file whose header gives a sample rate of zero, now
+  reads `cannot be read` among the warnings.  Before, the panic ended the
+  loading of the files for good, so that no cue of the show loaded until cinq
+  restarted.
+- `cinq --audio-devices` ends quietly when the program that reads its list
+  stops early, as `head -n 1` does, where it printed that it could not list
+  the audio devices and failed.
+- A WAV file of more than two channels reads `holds more than two channels` as
+  its cue loads, and the cue reads BROKEN, where it passed and went silent at
+  GO while a thread of the decoder spun a processor core for good.
+- A start that fails, and `cinq --audio-devices` when it fails, leave with
+  status 1 even when standard error is a closed pipe or a full disk.  Before,
+  the write of the message panicked and the status was 101.
+- Moving an output to another place in the list while a cue plays on outputs of
+  two audio devices leaves the sound playing.  Before, the sound stopped and
+  started again on both devices, which cut it.
+- A sound that starts again while its cue plays, as when an edit of the sends
+  moves it to another audio device, plays on from where its cue is, even when
+  the selection has gone back to that cue.  Before, it started from the
+  beginning of the file and drew the clock of the cue back with it.
+- Choosing another audio device for the outputs on the default device in
+  `config.toml` leaves the sound playing on outputs that name their own
+  devices.  Before, every device closed and every sound stopped, and the
+  outputs on named devices opened again.
+- A cue that sends to outputs on two devices goes on playing on one of them
+  unbroken while the other changes: its output moves to another device, the
+  device stops or opens again, an output needs more of its channels, or the
+  cue stops sending to it or begins to again.  Only the sound on that device
+  stops or starts, where the sound on both devices was cut and began again.
 
 ## v0.1.7
 

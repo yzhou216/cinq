@@ -55,15 +55,11 @@ impl Cinq {
     }
 
     /// Applies one message and lets the parts with side effects catch up.
-    /// This is the only place where state is replaced, and the video,
-    /// sound, light, and network output and the keeper of unsaved changes
-    /// are the only parts it calls that have side effects; everything else
-    /// builds new values.  The video output goes first, so that a run whose
-    /// picture cannot play has its sound stopped in the same update.  Each
-    /// reading of the configuration file and each choice of an audio device
-    /// routes the sound to the device chosen, or tries again to open one
-    /// that failed.  Taking the state out of `self` instead of cloning it
-    /// keeps updates free of copies.
+    /// The video output goes first, so that a run whose picture cannot play
+    /// has its sound stopped in the same update.  Each reading of the
+    /// configuration file and each choice of an audio device routes the
+    /// sound to the device chosen.  Taking the state out of `self` instead
+    /// of cloning it keeps updates free of copies.
     pub(in crate::front) fn update(&mut self, message: Message) -> Task<Message> {
         let routed = matches!(
             message,

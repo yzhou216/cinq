@@ -16,12 +16,17 @@ mod opening;
 mod patch;
 mod preloading;
 mod retry;
+mod routing;
 mod starting;
 mod voice;
 mod wording;
 
 use std::{fs, path::Path, thread, time::Duration};
 
+use kira::{
+    AudioManager, AudioManagerSettings,
+    backend::mock::{MockBackend, MockBackendSettings},
+};
 use tempfile::TempDir;
 
 use super::{
@@ -30,6 +35,17 @@ use super::{
     upcoming,
 };
 use crate::back::{Clip, CueId, Workspace};
+
+/// Returns the manager of kira on its mock backend, which plays one buffer of
+/// `frames` frames at `rate` frames a second each time a test lets it
+fn mock_manager(rate: u32, frames: usize) -> AudioManager<MockBackend> {
+    AudioManager::new(AudioManagerSettings {
+        backend_settings: MockBackendSettings { sample_rate: rate },
+        internal_buffer_size: frames,
+        ..AudioManagerSettings::default()
+    })
+    .expect("the mock backend starts")
+}
 
 fn upcoming_cues(workspace: &Workspace) -> Vec<u32> {
     cues_within(workspace, READY_AHEAD)
@@ -56,10 +72,14 @@ pub(in crate::back) fn silence(seconds: f32) -> Vec<u8> {
     silence_at(seconds, 8000)
 }
 
-/// Returns `seconds` of silence as a WAV file: mono, in 16 bits, at `rate`
-/// frames a second
-fn silence_at(seconds: f32, rate: u32) -> Vec<u8> {
-    let data = (seconds * rate as f32) as u32 * 2;
+pub(in crate::back) fn silence_at(seconds: f32, rate: u32) -> Vec<u8> {
+    silence_in(seconds, rate, 1)
+}
+
+/// Returns `seconds` of silence as a WAV file in 16 bits
+fn silence_in(seconds: f32, rate: u32, channels: u16) -> Vec<u8> {
+    let width = 2 * channels;
+    let data = (seconds * rate as f32) as u32 * u32::from(width);
     [
         b"RIFF".as_slice(),
         &(36 + data).to_le_bytes(),
@@ -67,10 +87,10 @@ fn silence_at(seconds: f32, rate: u32) -> Vec<u8> {
         b"fmt ",
         &16_u32.to_le_bytes(),
         &1_u16.to_le_bytes(),
-        &1_u16.to_le_bytes(),
+        &channels.to_le_bytes(),
         &rate.to_le_bytes(),
-        &(rate * 2).to_le_bytes(),
-        &2_u16.to_le_bytes(),
+        &(rate * u32::from(width)).to_le_bytes(),
+        &width.to_le_bytes(),
         &16_u16.to_le_bytes(),
         b"data",
         &data.to_le_bytes(),

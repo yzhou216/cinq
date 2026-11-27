@@ -59,10 +59,17 @@ fn main() -> ExitCode {
                 iced::Error::WindowCreationFailed(reason) => reason.to_string(),
                 iced::Error::GraphicsCreationFailed(reason) => reason.to_string(),
             };
-            eprintln!("cinq: {error}: {reason}");
-            ExitCode::FAILURE
+            failed(&format!("{error}: {reason}"))
         }
     }
+}
+
+/// Writes `message` on standard error and returns the status of a failure.
+/// A write that fails, as to a closed pipe or a full disk, leaves the status
+/// as it is, where `eprintln!` would panic and end with another.
+fn failed(message: &str) -> ExitCode {
+    let _ = writeln!(io::stderr(), "cinq: {message}");
+    ExitCode::FAILURE
 }
 
 /// Lists the ID and the name of each audio device on standard output, one
@@ -72,13 +79,15 @@ fn audio_devices() -> ExitCode {
         devices
             .iter()
             .try_for_each(|(id, name)| writeln!(io::stdout(), "{id}\t{name}"))
+            // Reader that stops early, as head does, is no failure
+            .or_else(|error| match error.kind() {
+                io::ErrorKind::BrokenPipe => Ok(()),
+                _ => Err(error),
+            })
             .map_err(|error| error.to_string())
     });
     match listed {
         Ok(()) => ExitCode::SUCCESS,
-        Err(error) => {
-            eprintln!("cinq: cannot list the audio devices: {error}");
-            ExitCode::FAILURE
-        }
+        Err(error) => failed(&format!("cannot list the audio devices: {error}")),
     }
 }

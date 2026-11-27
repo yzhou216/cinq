@@ -86,14 +86,16 @@ fn stopped(targets: &mut [Target<'_>], plays: Vec<Play>) {
         });
 }
 
+/// Opens `file` on `target` as far into `clip` as `played` seconds
 pub(super) fn opened(
     target: &mut Target<'_>,
     file: &Path,
     active: &Active,
     clip: Clip,
+    played: f64,
 ) -> Result<Play, String> {
     let data = StreamingSoundData::from_file(file).map_err(crate::back::audio::reason)?;
-    let data = clipped(data, clip, active.played(), active.level);
+    let data = clipped(data, clip, played, active.level);
     placed(target, data)
 }
 

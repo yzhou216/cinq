@@ -7,14 +7,10 @@
 
 use std::{fs, thread, time::Duration};
 
-use kira::{
-    AudioManager, AudioManagerSettings,
-    backend::mock::{MockBackend, MockBackendSettings},
-    sound::streaming::StreamingSoundData,
-};
+use kira::{AudioManager, backend::mock::MockBackend, sound::streaming::StreamingSoundData};
 use tempfile::TempDir;
 
-use super::silence;
+use super::{mock_manager, silence};
 use crate::back::{
     Command, Cue, CueId, Kind, Media, Workspace,
     audio::sound::{
@@ -80,12 +76,7 @@ pub(super) fn sounding(
     directory: &TempDir,
     workspace: &Workspace,
 ) -> (AudioManager<MockBackend>, Voice) {
-    let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
-        backend_settings: MockBackendSettings { sample_rate: 8000 },
-        internal_buffer_size: 80,
-        ..AudioManagerSettings::default()
-    })
-    .expect("the mock backend starts");
+    let mut manager = mock_manager(8000, 80);
     let active = workspace.active_of(CueId(1)).expect("the cue runs");
     let clip = active.sound().expect("the cue has sound");
     let data = StreamingSoundData::from_file(directory.path().join("silence.wav"))
@@ -138,7 +129,7 @@ fn played_while(
 }
 
 #[test]
-fn clock_of_run_goes_to_where_its_sound_is_and_stays_as_a_video_or_audio_cue_plays() {
+fn clock_of_run_follows_its_sound_for_a_video_or_audio_cue() {
     // The sound is a buffer behind the clock, which holds from the second
     // sync on, since the position of the sound is where it was as the last
     // buffer began

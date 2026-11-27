@@ -127,6 +127,7 @@ _tutorial.pdf_
 	leaves the rest as it is.
 	A change moves those outputs as soon as the file is saved, and the sounds
 	that play go on from where they are on the new device.
+	Outputs that name a device of their own go on playing unbroken.
 	A device can take a moment to start, during which nothing is heard and
 	the cues that play wait for it, while the rest of the window goes on.
 	While the device is not there, or cannot be opened, those outputs are

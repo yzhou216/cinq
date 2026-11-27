@@ -66,7 +66,7 @@ fn retrying_devices_that_are_not_there_keeps_the_sounds_made_ready() {
 }
 
 #[test]
-fn retrying_a_device_that_a_run_plays_on_makes_its_sound_again() {
+fn retrying_a_device_that_a_run_plays_on_keeps_the_sound_made_ready_for_its_next_go() {
     let (mut audio, mut mix_a, _) = open_on_both(Fake::default());
     let (directory, wanted) = silent_file();
     make_ready(&mut audio, &wanted);
@@ -74,10 +74,10 @@ fn retrying_a_device_that_a_run_plays_on_makes_its_sound_again() {
     audio.patched(patch(&show(Channels::MAIN, Channels::Stereo(11, 12))));
     settle(&mut audio);
     assert!(
-        !audio.preloader.ready(CueId(1)),
-        "the run on device b ended"
+        audio.preloader.ready(CueId(1)),
+        "the sound that ended is not the one made ready"
     );
-    assert_eq!(sounds(&mut mix_a), 1);
+    assert_eq!(sounds(&mut mix_a), 2);
 }
 
 /// Returns how many opens a retry asks for when the devices `a` and `b`

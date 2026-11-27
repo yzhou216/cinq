@@ -3,8 +3,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Tests of the threads that open the devices, on devices that need no
-//! sound card: the order of opens and closes of one device, and a device
-//! that never answers
+//! sound card
+
+mod panicking;
 
 use std::{
     sync::{
@@ -110,38 +111,18 @@ fn noted(events: &Mutex<Vec<String>>, event: &str) {
 }
 
 #[test]
-fn stream_that_an_open_made_stale_closes_before_the_next_open_of_its_device() {
+fn stream_that_opens_for_a_default_device_that_was_left_closes_when_it_answers() {
     let (mut audio, gate, events) = recorded();
-    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
+    audio.default = Some("a".to_owned());
+    audio.sync(Workspace::default(), READY_AHEAD);
     noted(&events, "open 0");
     audio.route(Some("elsewhere"));
-    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
+    audio.sync(Workspace::default(), READY_AHEAD);
     gate.release();
-    until(&mut audio, |audio| is_open(audio, "a"));
-    assert_eq!(
-        logged(&events),
-        ["open 0", "opened 0", "close 0", "open 1", "opened 1"]
-    );
-}
-
-#[test]
-fn open_that_has_yet_to_start_when_the_devices_change_never_starts() {
-    let (mut audio, gate, events) = recorded();
-    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
-    noted(&events, "open 0");
-    // The open that follows the first route waits behind the first open,
-    // and the second route makes it stale before it starts
-    audio.route(Some("one"));
-    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
-    audio.route(Some("two"));
-    audio.sync(on_a(Channels::MAIN), READY_AHEAD);
-    gate.release();
-    settle(&mut audio);
-    assert_eq!(
-        logged(&events),
-        ["open 0", "opened 0", "close 0", "open 1", "opened 1"],
-        "the open between them never starts"
-    );
+    until(&mut audio, |audio| {
+        is_open(audio, "elsewhere") && logged(&events).contains(&"close 0".to_owned())
+    });
+    assert!(!is_open(&audio, "a"));
 }
 
 /// Devices of which `a` never answers until it is let go, and `b` opens

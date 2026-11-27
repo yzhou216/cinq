@@ -6,8 +6,9 @@
 //! outputs that its cue sends to
 //!
 //! A run whose sends change while it plays ramps to its new gains.  One
-//! that comes to play on other devices starts again on them from where it
-//! is, as a sound cannot move from one device to another.
+//! that comes to play on other devices starts again on them only, from
+//! where it is, as a sound cannot move from one device to another, while
+//! its sounds on the devices it keeps play on unbroken.
 
 use std::{collections::HashMap, path::PathBuf};
 
@@ -42,26 +43,40 @@ impl Audio {
             patch,
             mixers,
             voices,
+            begun,
             preloader,
             ..
         } = self;
         let sounding = sounding(workspace);
         let mut gains = routes(patch, mixers, workspace, &sounding);
-        let (mut kept, ended) = settled(std::mem::take(voices), &sounding, &gains);
+        let (mut kept, ended) = settled(std::mem::take(voices), &sounding);
         ended.into_values().for_each(|voice| voice.stop(mixers));
-        let (playing, failures): (_, Vec<Command>) = sounding
+        let (playing, failures): (HashMap<_, _>, Vec<Command>) = sounding
             .into_iter()
             .map(|(id, (cue, active, clip))| {
                 let wanted = gains.remove(&id).unwrap_or_default();
                 let voice = match kept.remove(&id) {
-                    Some(voice) => Ok(voice.routed(&wanted, mixers)),
-                    None => started(mixers, wanted, preloader, workspace.path(cue), active, clip),
+                    Some(voice) => {
+                        reconciled(mixers, voice, wanted, workspace.path(cue), active, clip)
+                    }
+                    None => {
+                        let again = begun.get(&id) == Some(&active.run);
+                        started(
+                            mixers,
+                            wanted,
+                            (!again).then_some(&mut *preloader),
+                            workspace.path(cue),
+                            active,
+                            clip,
+                        )
+                    }
                 };
                 voice
                     .map(|voice| (id, voice.followed(active)))
                     .map_err(|reason| unplayable(workspace, cue, reason))
             })
             .partition_result();
+        *begun = playing.iter().map(|(&id, voice)| (id, voice.run)).collect();
         *voices = playing;
         let reports = reports(workspace, voices, mixers);
         failures.into_iter().chain(reports).collect()
@@ -79,7 +94,6 @@ fn sounding(workspace: &Workspace) -> Sounding<'_> {
         .collect()
 }
 
-/// Returns the gains that each sounding cue has on the devices of its sends
 fn routes(patch: &Patch, mixers: &Mixers, workspace: &Workspace, sounding: &Sounding) -> Routes {
     sounding
         .iter()
@@ -90,25 +104,50 @@ fn routes(patch: &Patch, mixers: &Mixers, workspace: &Workspace, sounding: &Soun
         .collect()
 }
 
-/// Returns the voices that play on the devices they did, and those whose cue
-/// has stopped, which GO has fired again, or which plays elsewhere now
+/// Returns the voices whose run goes on, and those whose cue has stopped or
+/// which GO has fired again
 fn settled(
     voices: HashMap<CueId, Voice>,
     sounding: &Sounding,
-    gains: &Routes,
 ) -> (HashMap<CueId, Voice>, HashMap<CueId, Voice>) {
     voices.into_iter().partition(|(id, voice)| {
-        let same = |gains: &Vec<(Key, Gains)>| {
-            voice
-                .keys()
-                .into_iter()
-                .eq(gains.iter().map(|(key, _)| key))
-        };
         sounding
             .get(id)
             .is_some_and(|(_, active, _)| active.run == voice.run)
-            && gains.get(id).is_some_and(same)
     })
+}
+
+/// Returns the voice of a run that goes on, as it plays on the devices that
+/// `gains` name now.  Moving an output among the devices that it plays on
+/// leaves the sound where it is.
+fn reconciled(
+    mixers: &mut Mixers,
+    voice: Voice,
+    gains: Vec<(Key, Gains)>,
+    path: Option<PathBuf>,
+    active: &Active,
+    clip: Clip,
+) -> Result<Voice, String> {
+    let voice = voice
+        .retained(|key| gains.iter().any(|(wanted, _)| wanted == key), mixers)
+        .routed(&gains, mixers);
+    let missing: Vec<_> = gains
+        .into_iter()
+        .filter(|(key, _)| !voice.keys().contains(&key))
+        .collect();
+    if missing.is_empty() {
+        return Ok(voice);
+    }
+    let Some(path) = path else {
+        voice.stop(mixers);
+        return Err(Problem::NoFile.to_string());
+    };
+    voice
+        .joined(targets(mixers, missing), &path, active, clip)
+        .map_err(|(reason, voice)| {
+            voice.stop(mixers);
+            reason
+        })
 }
 
 /// Returns the commands that tell of the voices that were heard, and of those
@@ -143,11 +182,13 @@ fn ended_early(workspace: &Workspace, cue: &Cue) -> Command {
 }
 
 /// Starts the sound of a run on each device that `gains` name, from the
-/// sound made ready for it where there is one
+/// sound that `preloader` made ready for it where there is one.  A run that
+/// starts again, on other devices, has none to take, since the sound made
+/// ready waits at the start of its clip and is for the next GO of its cue.
 fn started(
     mixers: &mut Mixers,
     gains: Vec<(Key, Gains)>,
-    preloader: &mut Preloader,
+    preloader: Option<&mut Preloader>,
     path: Option<PathBuf>,
     active: &Active,
     clip: Clip,
@@ -155,7 +196,12 @@ fn started(
     let path = path.ok_or_else(|| Problem::NoFile.to_string())?;
     let wanted = Wanted { path, clip };
     let targets = targets(mixers, gains);
-    match preloader.take(active.id, &wanted) {
+    // With no device to play on, the sound made ready stays for the device
+    // that comes to play the run
+    let ready = preloader
+        .filter(|_| !targets.is_empty())
+        .and_then(|preloader| preloader.take(active.id, &wanted));
+    match ready {
         Some(Ok(sound)) => Voice::start(targets, sound, &wanted.path, active, clip),
         // Sound that could not be made ready, whose file may have come back
         // since

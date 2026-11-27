@@ -46,8 +46,8 @@ fn output_that_needs_more_channels_opens_its_device_again_and_no_other() {
         audio.mixers.get(&Some("b".to_owned())),
         Some(Err(Fault::Missing(_)))
     ));
-    assert_eq!(cues(&audio), [1], "only the sound on device a plays on");
-    assert_eq!(sounds(&mut mix_a), 1, "the sound of the other cues goes");
+    assert_eq!(cues(&audio), [1, 3], "only sounds on device a play on");
+    assert_eq!(sounds(&mut mix_a), 2, "the sound of cue 2 goes");
     assert_eq!(sounds(&mut mix_b), 0);
 }
 
@@ -60,8 +60,8 @@ fn output_that_moves_to_another_device_closes_the_one_it_left() {
     settle(&mut audio);
     assert!(is_open(&audio, "a"));
     assert!(!audio.mixers.contains_key(&Some("b".to_owned())));
-    assert_eq!(cues(&audio), [1]);
-    assert_eq!(sounds(&mut mix_a), 1);
+    assert_eq!(cues(&audio), [1, 3]);
+    assert_eq!(sounds(&mut mix_a), 2);
 }
 
 #[test]
@@ -159,7 +159,7 @@ fn moving_copying_cutting_and_pasting_outputs_open_only_the_devices_that_changed
     change(&mut audio, &cut);
     assert_eq!(opened.load(Ordering::SeqCst), 0);
     assert!(is_open(&audio, "a") && !audio.mixers.contains_key(&Some("b".to_owned())));
-    assert_eq!(cues(&audio), [1]);
+    assert_eq!(cues(&audio), [1, 3]);
     // Pasting one back opens device b alone
     let back = cut.apply(Command::PasteOutputs {
         at: 1,
@@ -170,8 +170,8 @@ fn moving_copying_cutting_and_pasting_outputs_open_only_the_devices_that_changed
     change(&mut audio, &back);
     assert_eq!(opened.load(Ordering::SeqCst), 1, "only device b opens");
     assert!(is_open(&audio, "a"));
-    assert_eq!(cues(&audio), [1]);
-    assert_eq!(sounds(&mut mix_a), 1);
+    assert_eq!(cues(&audio), [1, 3]);
+    assert_eq!(sounds(&mut mix_a), 2);
 }
 
 #[test]

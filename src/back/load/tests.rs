@@ -8,11 +8,15 @@
 mod recheck;
 mod watch;
 
-use std::path::Path;
+use std::{fs, path::Path};
 
 use super::{Load, load_files};
 use crate::back::{
-    Command, Cue, CueId, Kind, Media, silent, video::tests::movie::movie, workspace::tests::fresh,
+    Command, Cue, CueId, Kind, Media,
+    audio::tests::{silence, silence_at},
+    silent,
+    video::tests::movie::movie,
+    workspace::tests::fresh,
 };
 
 fn playing(id: u32, kind: Kind, file: &str) -> Cue {
@@ -60,4 +64,28 @@ fn video_file_loads_as_a_picture_for_a_video_cue_and_as_no_sound_for_an_audio_cu
     let found = found(cues, directory.path());
     assert_eq!(found[0], (1, silent(0.5)));
     assert!(matches!(found[1], (2, Media::Failed(_))), "{found:?}");
+}
+
+#[cfg(unix)]
+#[test]
+fn file_that_panics_the_reader_fails_instead_of_ending_the_load() {
+    // A buffered reader panics where a file reports position zero after each read
+    let found = found(vec![playing(1, Kind::Video, "/dev/zero")], Path::new("/"));
+    assert!(matches!(found[..], [(1, Media::Failed(_))]), "{found:?}");
+}
+
+#[test]
+fn sound_file_that_panics_the_decoder_fails_alone_and_the_others_load() {
+    let directory = tempfile::tempdir().expect("a directory can be made");
+    // Header of a sound that plays at no frames a second
+    fs::write(directory.path().join("rateless.wav"), silence_at(0.1, 0))
+        .expect("the file can be written");
+    fs::write(directory.path().join("good.wav"), silence(0.1)).expect("the file can be written");
+    let cues = vec![
+        playing(1, Kind::Audio, "rateless.wav"),
+        playing(2, Kind::Audio, "good.wav"),
+    ];
+    let found = found(cues, directory.path());
+    assert_eq!(found[0], (1, Media::Failed("cannot be read".to_owned())));
+    assert!(matches!(found[1], (2, Media::Loaded { .. })), "{found:?}");
 }

@@ -11,11 +11,10 @@
 //! while the main thread goes on with the clock, the stage, and the keys,
 //! and a device that never answers, as an ASIO driver that waits for a
 //! dialog, holds up its own thread alone.  A thread takes the jobs of its
-//! device in order, so that no two opens of one device run together, and it
-//! closes a stream that a newer open has made stale before it takes the
-//! next job.  The streams stay on the thread that opened them, and close
-//! there once the mixer that holds them goes, since closing a stream can
-//! wait on the thread of its device, which the interface must not.
+//! device in order, so that no two opens of one device run together.  The
+//! streams stay on the thread that opened them, and close there once the
+//! mixer that holds them goes, since closing a stream can wait on the thread
+//! of its device, which the interface must not.
 
 mod job;
 mod lane;
@@ -23,7 +22,7 @@ mod lane;
 use std::{
     collections::{HashMap, HashSet},
     sync::{
-        Arc, Mutex, MutexGuard, PoisonError,
+        Arc,
         mpsc::{self, Receiver, Sender},
     },
     thread,
@@ -41,7 +40,7 @@ const PATIENCE: Duration = Duration::from_secs(5);
 
 /// Starts the thread of a device, which takes the jobs that it receives,
 /// and answers on `done`, until every sender of its jobs has gone
-type Spawn = Box<dyn Fn(Receiver<Job>, Sender<Answer>, Arc<Mutex<u64>>) + Send>;
+type Spawn = Box<dyn Fn(Receiver<Job>, Sender<Answer>) + Send>;
 
 pub(in crate::back::audio) struct Opener {
     spawn: Spawn,
@@ -49,11 +48,6 @@ pub(in crate::back::audio) struct Opener {
     lanes: HashMap<Key, Sender<Job>>,
     done: Sender<Answer>,
     answers: Receiver<Answer>,
-    /// Number of the sync of devices that new jobs belong to, which the
-    /// threads read to tell that a job is stale, shared so that a thread
-    /// answers or finds itself stale as a whole, never between the two
-    shared: Arc<Mutex<u64>>,
-    generation: u64,
     /// Devices being opened, which no second open starts for, and since
     /// when
     opening: HashMap<Key, Instant>,
@@ -74,15 +68,13 @@ impl Opener {
         let make = Arc::new(make);
         let (done, answers) = mpsc::channel();
         Self {
-            spawn: Box::new(move |jobs, done, generation| {
-                let lane = Lane::new(Arc::clone(&make), done, generation);
+            spawn: Box::new(move |jobs, done| {
+                let lane = Lane::new(Arc::clone(&make), done);
                 thread::spawn(move || lane.serve(&jobs));
             }),
             lanes: HashMap::new(),
             done,
             answers,
-            shared: Arc::new(Mutex::new(0)),
-            generation: 0,
             opening: HashMap::new(),
             probing: HashSet::new(),
             patience: PATIENCE,
@@ -96,26 +88,6 @@ impl Opener {
         Self { patience, ..self }
     }
 
-    /// Lets go of what the threads answer for the devices asked for so far,
-    /// and forgets that they are being opened, so that a new sync of the
-    /// outputs asks again.  The threads go on: a job that has yet to start
-    /// is dropped, and a stream that an open then makes is closed at once,
-    /// before the next open of its device, so that a device that one
-    /// program can open at a time never sees two.
-    pub(in crate::back::audio) fn restart(&mut self) {
-        self.generation = {
-            let mut shared = lock(&self.shared);
-            *shared += 1;
-            *shared
-        };
-        // Answers that came before the bump are those of the old devices,
-        // and no thread sends another until its job is of the new
-        // generation, so that their mixers close ahead of the next open
-        self.answers.try_iter().for_each(drop);
-        self.opening.clear();
-        self.probing.clear();
-    }
-
     /// Asks the thread of the device of `need` to open it, unless it is
     /// being opened already
     pub(in crate::back::audio) fn open(&mut self, need: Need) {
@@ -123,11 +95,9 @@ impl Opener {
             return;
         }
         self.opening.insert(need.key.clone(), Instant::now());
-        let generation = self.generation;
         let lane = self.lane(&need.key);
         let job = Job::Open {
             need,
-            generation,
             hold: lane.clone(),
         };
         let _ = lane.send(job);
@@ -137,10 +107,7 @@ impl Opener {
     /// unless it is being asked already
     pub(in crate::back::audio) fn probe(&mut self, need: Need) {
         if self.probing.insert(need.key.clone()) {
-            let job = Job::Offers {
-                generation: self.generation,
-                need: need.clone(),
-            };
+            let job = Job::Offers { need: need.clone() };
             let _ = self.lane(&need.key).send(job);
         }
     }
@@ -181,14 +148,8 @@ impl Opener {
     fn lane(&mut self, key: &Key) -> &Sender<Job> {
         self.lanes.entry(key.clone()).or_insert_with(|| {
             let (jobs, waiting) = mpsc::channel();
-            (self.spawn)(waiting, self.done.clone(), Arc::clone(&self.shared));
+            (self.spawn)(waiting, self.done.clone());
             jobs
         })
     }
-}
-
-/// Takes the lock on a generation, which a thread that panicked leaves a
-/// number that is still right
-fn lock(generation: &Mutex<u64>) -> MutexGuard<'_, u64> {
-    generation.lock().unwrap_or_else(PoisonError::into_inner)
 }

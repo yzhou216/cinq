@@ -18,6 +18,7 @@
 //! [`mixer`](sound::mixer) of cinq's own plays each device, since kira mixes
 //! in stereo alone.
 
+mod channels;
 mod devices;
 mod opening;
 mod patch;
@@ -58,6 +59,9 @@ pub struct Audio {
     /// Thread that opens the devices, which answers once each is open
     opener: Opener,
     voices: HashMap<CueId, Voice>,
+    /// Latest run of each cue whose sound has started, which a sound that
+    /// starts again for the same run is told from the first start by
+    begun: HashMap<CueId, u32>,
     preloader: Preloader,
     /// When a device last answered an open, from which the devices that
     /// failed are tried again
@@ -79,33 +83,20 @@ impl Audio {
             mixers: HashMap::new(),
             opener: Opener::new(),
             voices: HashMap::new(),
+            begun: HashMap::new(),
             preloader: Preloader::new(),
             tried: Instant::now(),
             probes: Probes::default(),
         }
     }
 
-    /// Plays the outputs on the default device on the device whose ID is
-    /// `default`, unless they play there already.  The sounds that play end
-    /// with the old devices, and the next sync starts them on the new ones
-    /// from where they are.  The sounds made ready ahead are made again, or
-    /// a cue that plays and that the next GO fires again would start over
-    /// from the sound made ready for that GO.
+    /// Changes the device that outputs on the default device play on, as
+    /// [`Audio::open`] takes it.  The next sync opens the new device and
+    /// closes the old, which ends the sounds on the old one and starts them
+    /// again on the new from where they are.  Outputs on named devices play
+    /// on unbroken.
     pub fn route(&mut self, default: Option<&str>) {
-        if self.default.as_deref() != default {
-            self.default = default.map(str::to_owned);
-            self.patch = Patch::default();
-            self.voices.clear();
-            self.preloader = Preloader::new();
-            // Old streams close first, which frees a device that a new one
-            // may open again
-            self.mixers.clear();
-            // The threads of the devices go on, so that none opens one
-            // device twice at once
-            self.opener.restart();
-            self.probes.clear();
-            self.tried = Instant::now();
-        }
+        self.default = default.map(str::to_owned);
     }
 
     /// Returns why each output that cannot play cannot: its device is not
@@ -203,15 +194,16 @@ pub(super) struct Probed {
 /// Reads how long the sound of a file plays, or why it cannot be played.
 /// This opens the file and reads its format without decoding the sound.
 pub(super) fn probe(file: &Path) -> Result<Probed, String> {
-    StreamingSoundData::from_file(file)
-        .map(|data| {
-            let duration = data.duration().as_secs_f64();
-            Probed {
-                duration: duration as f32,
-                ahead: (READ_AHEAD * duration / data.num_frames().max(1) as f64) as f32,
-            }
-        })
-        .map_err(reason)
+    let data = StreamingSoundData::from_file(file).map_err(reason)?;
+    let channels = channels::of_wav(file).map_err(unreadable)?;
+    if channels.is_some_and(|count| count > 2) {
+        return Err("holds more than two channels".to_owned());
+    }
+    let duration = data.duration().as_secs_f64();
+    Ok(Probed {
+        duration: duration as f32,
+        ahead: (READ_AHEAD * duration / data.num_frames().max(1) as f64) as f32,
+    })
 }
 
 /// Tells why a file cannot be played, in words of cinq's own where the

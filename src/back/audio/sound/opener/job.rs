@@ -18,13 +18,9 @@ use crate::back::audio::{
 /// What a thread is asked to do
 pub(super) enum Job {
     /// Open the device of a need, and hand the mixer a way to close it
-    Open {
-        need: Need,
-        generation: u64,
-        hold: Sender<Job>,
-    },
+    Open { need: Need, hold: Sender<Job> },
     /// Tell how many channels the device of a need would open with
-    Offers { need: Need, generation: u64 },
+    Offers { need: Need },
     /// Close the stream of the identity
     Close(u64),
 }

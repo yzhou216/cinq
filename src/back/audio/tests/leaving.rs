@@ -9,8 +9,8 @@
 use std::{fs, iter, thread, time::Duration};
 
 use kira::{
-    AudioManager, AudioManagerSettings,
-    backend::mock::{MockBackend, MockBackendSettings},
+    AudioManager,
+    backend::mock::MockBackend,
     sound::{
         EndPosition, FromFileError, Region,
         streaming::{StreamingSoundData, StreamingSoundHandle},
@@ -21,7 +21,7 @@ use tempfile::TempDir;
 use super::{
     collecting,
     devamping::{RATE, vamp},
-    silence_at, upcoming,
+    mock_manager, silence_at, upcoming,
     voice::target,
     waiting as waiting_for,
 };
@@ -131,12 +131,7 @@ fn advanced(
 /// `frames` frames short of the end of the loop, with the decoder as far
 /// ahead as it runs.  Returns how many times the sound went back.
 fn wraps_after_taking_the_loop_away(frames: usize) -> usize {
-    let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
-        backend_settings: MockBackendSettings { sample_rate: RATE },
-        internal_buffer_size: 120,
-        ..AudioManagerSettings::default()
-    })
-    .expect("the mock backend starts");
+    let mut manager = mock_manager(RATE, 120);
     let directory = TempDir::new().expect("a temporary directory can be made");
     let file = directory.path().join("silence.wav");
     fs::write(&file, silence_at(4.0, RATE)).expect("the file can be written");

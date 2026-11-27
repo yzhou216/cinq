@@ -76,12 +76,6 @@ impl Probes {
         }
     }
 
-    pub(in crate::back::audio) fn clear(&mut self) {
-        self.0.clear();
-    }
-
-    /// Returns how long to wait after the latest look at the device of
-    /// `key` for the next
     #[cfg(test)]
     fn wait(&self, key: &Key) -> Option<Duration> {
         self.0.get(key).map(|probe| probe.wait)

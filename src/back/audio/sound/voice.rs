@@ -4,12 +4,10 @@
 
 //! Sound of one run of an audio or video cue
 //!
-//! The run plays once on each device that its outputs are on, each sound in
-//! a kira manager of its own, whose renderer the mixer of the device
-//! drives, as [`super::feed`] tells.  The clock of the run follows the
-//! sound on the device of the first output that the cue sends to.  Sounds
-//! on two devices keep the clocks of their devices, which drift apart
-//! unless the devices share a clock.
+//! The run plays once on each device that its outputs are on.  Its clock
+//! follows the sound on the first device that it started on.  Sounds on two
+//! devices keep the clocks of their devices, which drift apart unless the
+//! devices share a clock.
 
 mod follow;
 mod hearing;
@@ -51,18 +49,20 @@ impl Voice {
         active: &Active,
         clip: Clip,
     ) -> Result<Self, String> {
-        let plays = each(&mut targets, |target| opened(target, file, active, clip))?;
+        let plays = each(&mut targets, |target| {
+            opened(target, file, active, clip, active.played())
+        })?;
         Ok(Self::with(plays, active, circles(clip, active.played())))
     }
 
     /// Starts a sound made ready ahead on the first target, which waits at
     /// the start of its clip, at the level that the run has now, and opens
-    /// the file on the others.  A run that the clock started between two
-    /// ticks, as a pre-wait or a chain does, has played part of a tick
-    /// already, and its sound starts late by that part: kira keeps what it
-    /// has decoded ahead when a playing sound seeks, so seeking would play
-    /// the start twice.  Returns why the sound cannot start, as when a
-    /// mixer has more to do than it can take.
+    /// the file on the others at the start of the clip too, so that every
+    /// device plays together.  The sound starts late by what the clock has
+    /// played of the run since: kira keeps what it has decoded ahead when a
+    /// playing sound seeks, so seeking would play the start twice.  Returns
+    /// why the sound cannot start, as when a mixer has more to do than it
+    /// can take.
     pub(super) fn start(
         mut targets: Vec<Target<'_>>,
         preloaded: Preloaded,
@@ -80,7 +80,7 @@ impl Voice {
                 play.sound.set_volume(active.level, now);
                 play
             }),
-            None => opened(target, file, active, clip),
+            None => opened(target, file, active, clip, 0.0),
         })?;
         // The sound made ready ahead has the loop of its clip, whether or not
         // the clip has been let go on since
@@ -113,10 +113,20 @@ impl Voice {
         self.looped
     }
 
-    /// Returns where in its file the first sound is
+    /// Returns where in its file the last sound is, which is the one that the
+    /// run started latest
     #[cfg(test)]
     pub(in crate::back::audio) fn position(&self) -> Option<f64> {
-        self.plays.first().map(|play| play.sound.position())
+        self.plays.last().map(|play| play.sound.position())
+    }
+
+    /// Returns where in its file each sound is, in the order of the devices
+    #[cfg(test)]
+    pub(in crate::back::audio) fn positions(&self) -> Vec<f64> {
+        self.plays
+            .iter()
+            .map(|play| play.sound.position())
+            .collect()
     }
 
     /// Returns the devices that the run plays on, in order
@@ -125,6 +135,63 @@ impl Voice {
             .iter()
             .filter_map(|play| play.place.as_ref().map(|place| &place.key))
             .collect()
+    }
+
+    /// Stops the sounds on the devices that `keep` refuses, and leaves the
+    /// run playing on the others unbroken
+    pub(in crate::back::audio) fn retained(
+        self,
+        keep: impl Fn(&Key) -> bool,
+        mixers: &mut Mixers,
+    ) -> Self {
+        let (stay, leave): (Vec<_>, Vec<_>) = self
+            .plays
+            .into_iter()
+            .partition(|play| play.place.as_ref().is_none_or(|place| keep(&place.key)));
+        Self {
+            plays: leave,
+            ..self
+        }
+        .stop(mixers);
+        Self {
+            plays: stay,
+            ..self
+        }
+    }
+
+    /// Returns whether no sound of the run plays
+    pub(in crate::back::audio) fn is_empty(&self) -> bool {
+        self.plays.is_empty()
+    }
+
+    /// Starts the run on `targets` as well, from where it has played, in the
+    /// pause state of its other sounds.  Where a sound cannot start, returns
+    /// the reason with the voice as it was, for the caller to stop.
+    pub(in crate::back::audio) fn joined(
+        self,
+        mut targets: Vec<Target<'_>>,
+        file: &Path,
+        active: &Active,
+        clip: Clip,
+    ) -> Result<Self, (String, Self)> {
+        match each(&mut targets, |target| {
+            opened(target, file, active, clip, active.played())
+        }) {
+            Ok(started) => {
+                let paused = self.paused;
+                let joining = started.into_iter().map(|mut play| {
+                    if paused {
+                        play.sound.pause(Tween::default());
+                    }
+                    play
+                });
+                Ok(Self {
+                    plays: self.plays.into_iter().chain(joining).collect(),
+                    ..self
+                })
+            }
+            Err(reason) => Err((reason, self)),
+        }
     }
 
     /// Stops the sounds, which their mixers fade out as quickly as kira's

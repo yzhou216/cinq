@@ -12,7 +12,7 @@
 mod tests;
 mod watch;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, panic, path::PathBuf};
 
 use itertools::Itertools;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
@@ -97,10 +97,19 @@ pub fn load_files(loads: Vec<Load>) -> Vec<Command> {
 }
 
 /// Reads how long a file plays for the kind of cue that plays it, and how
-/// long its sound plays, or why it cannot be played.  The sound track of a
-/// video file has to play as well, since the cue plays it along with the
-/// picture, while a video file without one plays its picture alone.
-fn probe((path, kind): &(PathBuf, Kind)) -> Media {
+/// long its sound plays, or why it cannot be played.  A reader that panics
+/// counts as one that cannot read the file, since the panic would end the
+/// load of every file of the show, and the interface would wait for it for
+/// good.
+fn probe(file: &(PathBuf, Kind)) -> Media {
+    panic::catch_unwind(|| read(file))
+        .unwrap_or_else(|_| Media::Failed("cannot be read".to_owned()))
+}
+
+/// Reads the file for [`probe`].  The sound track of a video file has to
+/// play as well, since the cue plays it along with the picture, while a
+/// video file without one plays its picture alone.
+fn read((path, kind): &(PathBuf, Kind)) -> Media {
     let loaded = match kind {
         Kind::Video => video::probe(path).and_then(|(duration, sound)| {
             let sound = sound

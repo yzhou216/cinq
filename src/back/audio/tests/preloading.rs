@@ -4,9 +4,11 @@
 
 //! Tests of the thread that makes the sounds wanted ready
 
-use std::{path::Path, sync::mpsc};
+use std::{fs, path::Path, sync::mpsc};
 
-use super::{ask, made, silent_file, whole};
+use tempfile::TempDir;
+
+use super::{ask, collecting, made, silence, silent_file, whole};
 use crate::back::{
     CueId,
     audio::sound::preload::{Ask, Preloader, serve},
@@ -64,4 +66,19 @@ fn a_run_of_asks_for_one_cue_opens_only_the_last() {
         made.as_slice(),
         [(CueId(1), made, Ok(_))] if *made == wanted
     ));
+}
+
+#[test]
+fn sound_that_fails_to_decode_while_it_waits_is_let_go() {
+    let directory = TempDir::new().expect("a temporary directory can be made");
+    let file = directory.path().join("cut.wav");
+    // A file whose header promises more than it holds, as a copy cut short does
+    let mut bytes = silence(0.1);
+    bytes.truncate(44 + 400);
+    fs::write(&file, bytes).expect("the file can be written");
+    let wanted = whole(&file);
+    let mut preloader = Preloader::new();
+    preloader.want(vec![ask(&wanted)]);
+    let failed = collecting(&mut preloader, |preloader| preloader.failed(CueId(1)));
+    assert!(failed.is_some(), "the sound is let go once it fails");
 }

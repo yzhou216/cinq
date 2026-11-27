@@ -12,7 +12,9 @@
 //! let go, which ends its decoding.  Edits to a clip replace its ask faster
 //! than files open, so the thread opens only the newest ask of each cue.
 
-use std::{collections::HashMap, convert::Infallible, iter, path::PathBuf, sync::mpsc, thread};
+use std::{
+    collections::HashMap, convert::Infallible, iter, mem, path::PathBuf, sync::mpsc, thread,
+};
 
 use itertools::Itertools;
 
@@ -54,6 +56,16 @@ impl SoundData for Preloaded {
     }
 }
 
+impl Preloaded {
+    /// Returns the sound, or why it failed to decode, which drops it and so
+    /// ends its decoding
+    fn unfailed(mut self) -> Result<Self, String> {
+        self.handle
+            .pop_error()
+            .map_or(Ok(self), |error| Err(crate::back::audio::reason(error)))
+    }
+}
+
 /// Sound for the thread to make ready
 pub(in crate::back::audio) struct Ask {
     pub(in crate::back::audio) cue: CueId,
@@ -86,7 +98,9 @@ impl Preloader {
     }
 
     /// Takes in the sounds that the thread has made since the last call,
-    /// apart from those that are no longer wanted
+    /// apart from those that are no longer wanted, and lets go of those that
+    /// have failed to decode meanwhile, whose decoding would otherwise try
+    /// again without pause until a run takes them
     pub(in crate::back::audio) fn collect(&mut self) {
         self.made.try_iter().for_each(|(cue, wanted, sound)| {
             if self.asked.get(&cue) == Some(&wanted) {
@@ -94,12 +108,24 @@ impl Preloader {
                 self.ready.insert(cue, (wanted, sound));
             }
         });
+        self.ready = mem::take(&mut self.ready)
+            .into_iter()
+            .map(|(cue, (wanted, sound))| (cue, (wanted, sound.and_then(Preloaded::unfailed))))
+            .collect();
     }
 
     /// Returns whether a sound is ready for `cue`, to start without waiting
     #[cfg(test)]
     pub(in crate::back::audio) fn ready(&self, cue: CueId) -> bool {
         self.ready.contains_key(&cue)
+    }
+
+    /// Returns whether what was made ready for `cue` is a failure
+    #[cfg(test)]
+    pub(in crate::back::audio) fn failed(&self, cue: CueId) -> bool {
+        self.ready
+            .get(&cue)
+            .is_some_and(|(_, sound)| sound.is_err())
     }
 
     /// Takes the sound made ready for `cue`, or why it could not be made,

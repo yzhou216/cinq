@@ -20,18 +20,17 @@ use crate::back::audio::{
     Audio, Fault,
     devices::fault::RETRY,
     patch::{Key, Need, Patch},
-    sound::{mixer::channels_of, opener::Answer, preload::Preloader},
+    sound::{mixer::channels_of, opener::Answer},
 };
 
 impl Audio {
     /// Opens the devices that the outputs need and that are not open, or
     /// that were opened for fewer channels than the outputs need now.
     /// Closes those that the outputs no longer need, which ends the sounds
-    /// on them as [`Audio::route`] does for all.  The other devices play on
-    /// unbroken, so that a change to one output cannot cut the sound of the
-    /// rest.  A device that fails to open, or that stops, opens again as
-    /// [`Audio::revived`] tells.  Outputs that move within the channels that
-    /// are open only ramp the sounds there, as the next sync does.
+    /// on them.  The other devices play on unbroken, so that a change to one
+    /// output cannot cut the sound of the rest.  Outputs that move within
+    /// the channels that are open only ramp the sounds there, as the next
+    /// sync does.
     pub(super) fn patched(&mut self, patch: Patch) {
         let needs = patch.needs();
         let fits = |need: &Need| match self.mixers.get(&need.key) {
@@ -122,10 +121,9 @@ impl Audio {
     }
 
     /// Opens the devices of `needs` anew and closes those of the keys in
-    /// `gone`, after ending the sounds that play on any of them, which the
-    /// next part of the sync starts again where they should play.  A device
-    /// that failed keeps its fault until its thread answers, and one that was
-    /// open and stopped keeps that, so that the warnings do not flicker.
+    /// `gone`, after ending the sounds that play on any of them.  A device
+    /// that failed keeps its fault until its thread answers, and one that
+    /// was open and stopped keeps that, so that the warnings do not flicker.
     fn reopened(&mut self, needs: Vec<Need>, gone: Vec<Key>) {
         let keys: Vec<Key> = needs
             .iter()
@@ -136,19 +134,16 @@ impl Audio {
         if keys.is_empty() {
             return;
         }
-        let (stopped, kept): (Vec<_>, Vec<_>) = std::mem::take(&mut self.voices)
+        self.voices = std::mem::take(&mut self.voices)
             .into_iter()
-            .partition(|(_, voice)| voice.keys().iter().any(|key| keys.contains(key)));
-        self.voices = kept.into_iter().collect();
-        // Only a run that restarts needs its sound made again, as
-        // `route` explains, and a retry of a device that nobody
-        // plays on keeps the sounds that are ready for the next GO
-        if !stopped.is_empty() {
-            self.preloader = Preloader::new();
-        }
-        stopped
-            .into_iter()
-            .for_each(|(_, voice)| voice.stop(&mut self.mixers));
+            .map(|(id, voice)| {
+                (
+                    id,
+                    voice.retained(|key| !keys.contains(key), &mut self.mixers),
+                )
+            })
+            .filter(|(_, voice)| !voice.is_empty())
+            .collect();
         // Old streams close first, which frees a device that a new one may
         // open again, as the thread of a device takes its jobs in order
         keys.iter().for_each(|key| {
